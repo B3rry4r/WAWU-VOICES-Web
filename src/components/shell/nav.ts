@@ -24,6 +24,13 @@ export function activeNav(pathname: string): NavId | null {
   return null;
 }
 
+/** Public pages that draw their own page and carry no app chrome at all: the share page behind a link (/s/[code]). */
+export const CHROMELESS_PREFIXES = ["/s"];
+
+export function isChromeless(pathname: string): boolean {
+  return CHROMELESS_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
 export function hidesTabBar(pathname: string): boolean {
   return FULLSCREEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }

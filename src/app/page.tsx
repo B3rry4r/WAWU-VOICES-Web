@@ -1,7 +1,7 @@
-import { PageTitle } from "@/components/shell/PageTitle";
+import { HomeScreen } from "@/components/feed/HomeScreen";
 
 export const metadata = { title: "VOICES" };
 
 export default function HomePage() {
-  return <PageTitle>Home</PageTitle>;
+  return <HomeScreen />;
 }
