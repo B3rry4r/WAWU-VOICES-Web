@@ -1,0 +1,278 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Banner, Button, Icon, IconButton, Skeleton } from "@/components/vx";
+import { getPayment, getTiers, verifyPayment, type Payment, type PayMethod } from "@/lib/api/units";
+import { clearByPayment, findByPayment, newKey, safePath } from "./attempt";
+import { startCheckout, startErrorText } from "./checkout";
+import { awaitingDrafts } from "./draft";
+import { dateTimeLagos, extraVoiceTitle, failureText, methodLabel, naira, packLine, units } from "./format";
+import { useSignedIn } from "./hooks";
+import { postAwaitingDraft, type DraftOutcome } from "./post-draft";
+import { isFinal, runReturn, type ReturnState } from "./payment-return";
+import { SignInNeeded } from "./ui";
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// One verify per payment per page load (React runs effects twice in development).
+const verifying = new Map<string, Promise<Payment>>();
+function verifyOnce(id: string, key: string, txId?: string): Promise<Payment> {
+  let p = verifying.get(id);
+  if (!p) {
+    p = verifyPayment(id, key, txId).finally(() => setTimeout(() => verifying.delete(id), 0));
+    verifying.set(id, p);
+  }
+  return p;
+}
+
+function Details({ rows }: { rows: Array<[string, string]> }) {
+  return (
+    <dl className="m-0 flex flex-col rounded-l bg-surface-2 px-4 py-1 text-[15px] font-medium leading-[21px] dt:bg-surface-2">
+      {rows.map(([k, v]) => (
+        <div key={k} className="flex justify-between gap-3 border-b border-line py-[10px] last:border-b-0">
+          <dt className="text-ink-2">{k}</dt>
+          <dd className="m-0 text-right font-bold tabular-nums">{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function Hero({ tone, title, body, big }: { tone: "ok" | "bad" | "wait"; title: string; body?: ReactNode; big?: boolean }) {
+  const circle = tone === "ok" ? "bg-mint text-green-text" : tone === "bad" ? "bg-danger-bg text-danger" : "bg-surface-2 text-ink-2";
+  return (
+    <div className="flex flex-col items-center gap-[10px] px-2 text-center">
+      <span className={`flex items-center justify-center rounded-full ${circle} ${big ? "h-[88px] w-[88px]" : "h-[72px] w-[72px]"} dt:h-24 dt:w-24`} aria-hidden="true">
+        <Icon name={tone === "ok" ? "circle-check" : tone === "bad" ? "circle-x" : "clock"} size={big ? 44 : 36} />
+      </span>
+      <h1 className={`m-[4px_0_0] font-display font-normal tracking-[-0.01em] ${big ? "text-[34px] leading-[38px]" : "text-[30px] leading-[34px]"} dt:text-[36px] dt:leading-10`}>{title}</h1>
+      {body ? <p className="m-0 text-[16px] leading-6 text-ink-2">{body}</p> : null}
+    </div>
+  );
+}
+
+function Shell({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+  return (
+    <div className="flex flex-col gap-3 pb-6">
+      <div className="-ml-2 flex dt:hidden">
+        <IconButton icon="x" label="Close" variant="ghost" onClick={onClose} />
+      </div>
+      <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4 dt:mt-4 dt:rounded-xl dt:bg-surface dt:p-10 dt:shadow-[inset_0_0_0_1px_var(--line)]">{children}</div>
+    </div>
+  );
+}
+
+function Actions({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col gap-3 dt:flex-row dt:flex-wrap [&>*]:dt:flex-none">{children}</div>;
+}
+
+function methodOf(p: Payment | undefined): PayMethod {
+  const m = (p?.method ?? "").toLowerCase();
+  return m === "bank_transfer" || m === "banktransfer" ? "banktransfer" : m === "ussd" ? "ussd" : "card";
+}
+
+export function PaymentDoneScreen() {
+  const signedIn = useSignedIn();
+  const params = useSearchParams();
+  const router = useRouter();
+  const paymentId = params.get("paymentId") ?? params.get("payment") ?? "";
+  const urlStatus = params.get("status");
+  const txId = params.get("transaction_id");
+  const [state, setState] = useState<ReturnState>({ kind: "confirming" });
+  const [draft, setDraft] = useState<DraftOutcome | null>(null);
+  const [heldBefore, setHeldBefore] = useState(false);
+  const [run, setRun] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const postedFor = useRef<string | null>(null);
+
+  useEffect(() => setHeldBefore(awaitingDrafts().length > 0), []);
+
+  useEffect(() => {
+    if (signedIn !== true) return undefined;
+    let live = true;
+    setState({ kind: "confirming" });
+    void runReturn(
+      { paymentId, urlStatus, transactionId: txId },
+      { getPayment, verifyPayment: (id, key, tx) => verifyOnce(id, key, tx), sleep },
+      (s) => setState(s),
+      () => !live,
+    );
+    return () => {
+      live = false;
+    };
+  }, [signedIn, paymentId, urlStatus, txId, run]);
+
+  // A final state: forget the purchase attempt (the next purchase is a clean one). Success also posts a held draft.
+  useEffect(() => {
+    if (!isFinal(state) || !paymentId) return;
+    clearByPayment(paymentId);
+  }, [state, paymentId]);
+
+  const postDraft = useCallback(() => {
+    void postAwaitingDraft().then((o) => {
+      setDraft(o);
+      // The draft spent from the balance: read the payment again so "Your balance is now" is the real figure.
+      if (o.status === "posted" && paymentId) {
+        void getPayment(paymentId).then((fresh) => setState((cur) => (cur.kind === "success" ? { kind: "success", payment: fresh } : cur)), () => undefined);
+      }
+    });
+  }, [paymentId]);
+  useEffect(() => {
+    if (state.kind !== "success" || postedFor.current === paymentId) return;
+    postedFor.current = paymentId;
+    postDraft();
+  }, [state, paymentId, postDraft]);
+
+  const from = safePath(findByPayment(paymentId)?.from);
+  const home = "/units";
+  const close = () => router.push(from ?? home);
+
+  async function tryAgain(p?: Payment) {
+    if (retrying) return;
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const t = await getTiers();
+      const tier = p ? t.tiers.find((x) => `${x.name} pack` === p.title) : undefined;
+      const offer = p ? t.extraVoice.find((x) => extraVoiceTitle(x.maxSeconds) === p.title) : undefined;
+      if (tier) await startCheckout({ kind: "UNITS", tierId: tier.id, method: methodOf(p) }, from);
+      else if (offer) await startCheckout({ kind: "EXTRA_VOICE", tokenKind: offer.kind }, from);
+      else router.push("/units/buy");
+    } catch (e) {
+      setRetryError(startErrorText(e));
+      setRetrying(false);
+    }
+  }
+
+  if (signedIn === null) return <Shell onClose={close}><Skeleton variant="tile" /></Shell>;
+  if (!signedIn) return <Shell onClose={close}><SignInNeeded /></Shell>;
+
+  if (state.kind === "confirming") {
+    return (
+      <Shell onClose={close}>
+        <div role="status" aria-live="polite" className="flex flex-col gap-4">
+          <Hero tone="wait" title="Confirming your payment" body="This takes a moment. Please do not pay again." />
+          <Skeleton variant="tile" />
+        </div>
+      </Shell>
+    );
+  }
+
+  if (state.kind === "slow") {
+    return (
+      <Shell onClose={close}>
+        <Hero tone="wait" title="Still confirming" body="Your bank has not confirmed this payment yet. If you were charged, your units arrive as soon as it does. Please do not pay again." />
+        <Actions>
+          <Button icon="refresh-cw" onClick={() => setRun((n) => n + 1)}>Check again</Button>
+          <Button variant="secondary" href={home}>Back to Voice Units</Button>
+        </Actions>
+      </Shell>
+    );
+  }
+
+  if (state.kind === "error") {
+    return (
+      <Shell onClose={close}>
+        <Banner tone="danger" title="Could not check this payment" action="Try again" actionIcon="refresh-cw" onAction={() => setRun((n) => n + 1)}>
+          {startErrorText(state.error)}
+        </Banner>
+      </Shell>
+    );
+  }
+
+  if (state.kind === "notfound") {
+    return (
+      <Shell onClose={close}>
+        <Hero tone="bad" title="We could not find that payment" body="It is not on this account. Check that you are signed in to the account you paid with." />
+        <Actions>
+          <Button href={home}>Back to Voice Units</Button>
+        </Actions>
+      </Shell>
+    );
+  }
+
+  if (state.kind === "success") {
+    const p = state.payment;
+    const isUnits = p.kind === "UNITS" && p.unitsMilli !== null;
+    const rows: Array<[string, string]> = [
+      ["Pack", packLine(p)],
+      ["Paid", naira(p.amountKobo)],
+    ];
+    const m = methodLabel(p);
+    if (m) rows.push(["Method", m]);
+    if (p.receiptNo) rows.push(["Reference", p.receiptNo]);
+    if (p.verifiedAt) rows.push(["Time", dateTimeLagos(p.verifiedAt)]);
+    if (!isUnits) rows[0][0] = "Item";
+    const posted = draft?.status === "posted" ? draft : null;
+    const target = posted ? `/q/${posted.questionId}` : from ?? home;
+    return (
+      <Shell onClose={close}>
+        <Hero
+          tone="ok"
+          big
+          title={isUnits ? `${units(p.unitsMilli as number)} units added` : "Extra voice token added"}
+          body={
+            isUnits ? (
+              <>Payment received.{p.balanceMilli !== null ? <> Your balance is now <b className="text-ink">{units(p.balanceMilli)} Voice Units</b>.</> : null}</>
+            ) : (
+              <>Payment received. Use it on one message{p.token ? ` of up to ${p.token.maxSeconds} seconds` : ""}. It does not renew.</>
+            )
+          }
+        />
+        {posted ? (
+          <Banner tone="success" title="Your answer is posted">We kept your draft and sent it the moment your units arrived.</Banner>
+        ) : draft?.status === "kept" ? (
+          <Banner tone="info" title="Your draft is still saved">{draft.message}</Banner>
+        ) : draft?.status === "retry" ? (
+          <Banner tone="warning" title="Your draft is still saved" action="Post it now" actionIcon="send" onAction={postDraft}>
+            We could not post it just now.
+          </Banner>
+        ) : null}
+        <Details rows={rows} />
+        <Actions>
+          <Button icon={posted ? "message-circle" : undefined} href={target}>{posted ? "Back to the conversation" : from ? "Back" : "Back to Voice Units"}</Button>
+          <Button variant="secondary" icon="file-down" href={`/units/receipt/${p.id}`}>Receipt</Button>
+        </Actions>
+      </Shell>
+    );
+  }
+
+  // The payment did not complete: failed, refunded, expired, cancelled, or the amount did not match.
+  const p = "payment" in state ? state.payment : undefined;
+  const copy = {
+    failed: { title: "Payment did not go through", body: `${failureText(p?.failureReason ?? null)} No units were added.` },
+    refunded: { title: "This payment was refunded", body: "The money went back to you. No units were added." },
+    expired: { title: "This payment expired", body: "You did not pay in time. No units were added. You can start again." },
+    cancelled: { title: "Payment cancelled", body: "You did not finish paying. No units were added." },
+    mismatch: { title: "We could not confirm this payment", body: "The amount paid does not match this payment. Nothing was added." },
+  }[state.kind];
+  const rows: Array<[string, string]> = [];
+  if (p) {
+    rows.push(["Pack", p.kind === "UNITS" ? `${p.title.replace(/ pack$/i, "")}, ${naira(p.amountKobo)}` : `${p.title}, ${naira(p.amountKobo)}`]);
+    const m = methodLabel(p);
+    if (m) rows.push(["Method", m]);
+  }
+  const hold = heldBefore || awaitingDrafts().length > 0;
+  const canSwitch = p?.kind === "UNITS" && state.kind !== "mismatch";
+  return (
+    <Shell onClose={close}>
+      <Hero tone="bad" title={copy.title} body={copy.body} />
+      {hold ? <Banner tone="info" title="Your draft is still saved">It posts as soon as your units arrive.</Banner> : null}
+      {p && state.kind !== "refunded" ? (
+        <Banner tone="warning" title="Seeing a debit?">
+          If your bank shows one for this payment, it comes back to you. Support can trace it with reference {p.receiptNo ?? p.txRef}.
+        </Banner>
+      ) : null}
+      {rows.length ? <Details rows={rows} /> : null}
+      {retryError ? <Banner tone="danger" onClose={() => setRetryError(null)}>{retryError}</Banner> : null}
+      <Actions>
+        <Button icon="refresh-cw" loading={retrying} onClick={() => void tryAgain(p)}>Try again</Button>
+        {canSwitch ? (
+          <Button variant="secondary" href={`/units/buy?pack=${encodeURIComponent((p?.title ?? "").replace(/ pack$/i, "").toLowerCase())}&method=banktransfer`}>Pay by transfer or USSD</Button>
+        ) : null}
+      </Actions>
+    </Shell>
+  );
+}
