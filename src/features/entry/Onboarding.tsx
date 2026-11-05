@@ -156,7 +156,7 @@ export function Onboarding() {
               <Button size="l" icon="mic" href="/join/country">Get started</Button>
               <Button size="l" variant="secondary" href="/sign-in">I have an account</Button>
             </div>
-            <p className="m-0 text-[14px] leading-5 text-ink-2">VOICES is for adults (18+). By continuing you accept the Community rules.</p>
+            <p className="m-0 text-[14px] leading-5 text-ink-2">VOICES is for adults (18+). By continuing you accept the <Link href="/settings/legal/rules" className="text-green-text">Community rules</Link>.</p>
           </div>
         </div>
         <div className="h-8 flex-none" />

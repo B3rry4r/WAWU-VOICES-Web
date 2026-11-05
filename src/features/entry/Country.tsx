@@ -2,11 +2,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Badge, Button, Icon, Logo, TopicChip } from "@/components/vx";
+import { Badge, Button, Icon, TopicChip } from "@/components/vx";
 import { useLoad } from "@/components/feed/useLoad";
 import { listCountries } from "@/lib/api/me";
 import { readDraft, saveDraft } from "@/lib/auth/entry-draft";
-import { BottomBar, EntryFrame, EntryScroll, ErrorBanner } from "./ui";
+import { BottomBar, DeskCard, DeskHeader, EntryFrame, EntryScroll, ErrorBanner, sendSignedIn } from "./ui";
+import { isSignedIn } from "@/lib/api/auth";
 
 export const LANGUAGES: { code: string; label: string }[] = [
   { code: "en", label: "English" },
@@ -25,9 +26,15 @@ export function Country() {
   const [code, setCode] = useState("NG");
   const [langs, setLangs] = useState<string[]>(["en", "pcm"]);
   useEffect(() => {
+    // Signed in without a profile: straight on to finish it. With one: Home.
+    if (isSignedIn()) {
+      void sendSignedIn((p) => router.replace(p));
+      return;
+    }
     const d = readDraft();
     setCode(d.countryCode);
     setLangs(d.languages);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const go = () => {
     saveDraft({ countryCode: code, languages: langs });
@@ -65,15 +72,16 @@ export function Country() {
   }
   return (
     <EntryFrame>
-      <header className="flex flex-none items-center gap-3 px-4 h-[107px] pt-[47px] dt:h-auto dt:mx-auto dt:w-full dt:max-w-[560px] dt:flex-col dt:items-start dt:gap-6 dt:pt-8">
-        <Link href="/welcome" className="hidden dt:block" aria-label="VOICES home"><Logo height={34} alt="VOICES home" /></Link>
+      <header className="flex h-[107px] flex-none items-center gap-3 px-4 pt-[47px] dt:hidden">
         <div className="flex items-center gap-2">
           <Link href="/join" className="vx-iconbtn vx-iconbtn--s vx-iconbtn--ghost -ml-2 text-ink" aria-label="Back"><Icon name="arrow-left" size={24} /></Link>
           <span className="text-[16px] font-semibold leading-5 text-ink-2">Set up</span>
         </div>
       </header>
-      <EntryScroll>
-        <div className="mx-auto flex w-full max-w-[560px] flex-col gap-5 px-4 pb-6 pt-2">
+      <DeskHeader />
+      <EntryScroll className="flex flex-col">
+        <DeskCard>
+          <span className="vx-eyebrow hidden text-green-text dt:block">Set up</span>
           <h1 className="m-0 font-display text-[28px] font-normal leading-8">Where are you speaking from?</h1>
           {rows}
           <p className="m-0 flex items-start gap-2 text-[15px] leading-[22px] text-ink-2"><Icon name="globe" size={18} className="mt-[2px] flex-none" />VOICES starts in Nigeria. Your country sets your questions, prices and polls.</p>
@@ -82,9 +90,11 @@ export function Country() {
             {LANGUAGES.map((l) => <TopicChip key={l.code} label={l.label} selected={langs.includes(l.code)} onClick={(on) => toggle(l.code, on)} />)}
           </div>
           <p className="m-0 text-[15px] leading-[22px] text-ink-2">The app is in English. We use your languages to transcribe your voice and to find voices you understand.</p>
-          <div className="hidden dt:block"><Button size="l" disabled={load.state !== "ready" || langs.length === 0} onClick={go}>Continue</Button></div>
-          <p className="m-0 hidden text-[13px] font-medium leading-[18px] text-ink-2 dt:block">You can change both later in Settings.</p>
-        </div>
+          <div className="hidden items-center gap-4 dt:flex">
+            <Button size="l" disabled={load.state !== "ready" || langs.length === 0} onClick={go}>Continue</Button>
+            <p className="m-0 text-[13px] font-medium leading-[18px] text-ink-2">You can change both later in Settings.</p>
+          </div>
+        </DeskCard>
       </EntryScroll>
       <div className="dt:hidden">
         <BottomBar>

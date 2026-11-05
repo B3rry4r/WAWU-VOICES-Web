@@ -24,6 +24,27 @@ export class ApiError extends Error {
   }
 }
 
+/** WAWU ID gives tokens to suspended, banned and pending-deletion accounts too. VOICES does not let them in. */
+export class AccountBlockedError extends ApiError {
+  constructor() {
+    super(403, "ACCOUNT_SUSPENDED", "This account cannot sign in to VOICES right now.", true);
+    this.name = "AccountBlockedError";
+  }
+}
+
+function claimStatus(token: string): unknown {
+  try {
+    return (JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as { status?: unknown }).status;
+  } catch {
+    return undefined;
+  }
+}
+
+/** A status that is present and not "active" (in the token claim or the user object) blocks the account. */
+export function isBlockedStatus(accessToken: string, userStatus?: unknown): boolean {
+  return [claimStatus(accessToken), userStatus].some((st) => st !== undefined && st !== null && String(st).toLowerCase() !== "active");
+}
+
 /** No answer at all: offline, DNS, or our timeout. */
 export class NetworkError extends ApiError {
   readonly kind: "timeout" | "offline";
@@ -80,7 +101,7 @@ async function rotatedElsewhere(before: string): Promise<boolean> {
   return false;
 }
 
-async function doRefresh(before: string): Promise<boolean | null> {
+async function doRefresh(before: string, retried = false): Promise<boolean | null> {
   const current = sessionStorage.getRefreshToken();
   if (!current) return false;
   // Another tab won while we waited for the lock: its tokens are already in storage.
@@ -91,6 +112,19 @@ async function doRefresh(before: string): Promise<boolean | null> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: current }),
     });
+    if (res.status === 429) {
+      // Too many tries: keep the session, wait as long as WAWU ID asks (at most 30 s), and ask once more.
+      if (retried) return null;
+      let secs = Number(res.headers.get("retry-after")) || 0;
+      try {
+        const b = (await res.json()) as { retryAfterSeconds?: unknown };
+        if (typeof b.retryAfterSeconds === "number") secs = b.retryAfterSeconds;
+      } catch {
+        /* no body */
+      }
+      await wait(Math.min(Math.max(secs, 0), 30) * 1000);
+      return doRefresh(before, true);
+    }
     if (!res.ok) {
       if (res.status >= 500) return null;
       // Refused: if another tab rotated meanwhile, use its tokens; sign out only when nothing changed.
@@ -99,9 +133,15 @@ async function doRefresh(before: string): Promise<boolean | null> {
     const raw = (await res.json()) as { data?: { accessToken?: string; refreshToken?: string }; accessToken?: string; refreshToken?: string };
     const d = raw.data ?? raw;
     if (!d.accessToken || !d.refreshToken) return false;
+    // A token refreshed into a suspended state is not kept.
+    if (isBlockedStatus(d.accessToken)) {
+      sessionStorage.clear();
+      throw new AccountBlockedError();
+    }
     sessionStorage.setTokens(d.accessToken, d.refreshToken);
     return true;
-  } catch {
+  } catch (e) {
+    if (e instanceof AccountBlockedError) throw e;
     return null;
   }
 }
@@ -145,7 +185,15 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
     if (ok) return raw(path, opts, true);
     if (ok === false) sessionStorage.clear();
   }
-  if (!res.ok) throw await readError(res);
+  if (!res.ok) {
+    const err = await readError(res);
+    // The API refuses every write from a suspended, banned or pending-deletion account: say so plainly, keep no session.
+    if (err.status === 403 && err.code === "ACCOUNT_SUSPENDED") {
+      sessionStorage.clear();
+      throw new AccountBlockedError();
+    }
+    throw err;
+  }
   return res;
 }
 

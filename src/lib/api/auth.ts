@@ -1,4 +1,4 @@
-import { apiFetch, ApiError } from "./client";
+import { AccountBlockedError, ApiError, apiFetch, isBlockedStatus } from "./client";
 import { WAWU_ID_BASE } from "./config";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import { clearEntryState } from "@/lib/auth/entry-draft";
@@ -51,30 +51,14 @@ export function nationalPhone(typed: string, dial = "+234"): string {
   return rest.replace(/^0+/, "");
 }
 
-/** WAWU ID gives tokens to suspended, banned and pending-deletion accounts too. VOICES does not let them in. */
-export class AccountBlockedError extends Error {
-  constructor() {
-    super("This account cannot sign in to VOICES right now.");
-    this.name = "AccountBlockedError";
-  }
-}
+export { AccountBlockedError } from "./client";
 export const isAccountBlocked = (e: unknown): boolean => e instanceof AccountBlockedError;
-
-function claimStatus(token: string): unknown {
-  try {
-    return (JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as { status?: unknown }).status;
-  } catch {
-    return undefined;
-  }
-}
 
 /** Keep the tokens only for an active account. A status that is present and not "active" clears them and refuses. */
 function keepSession(r: WawuIdTokenResult): WawuIdUser {
-  for (const st of [claimStatus(r.accessToken), r.user?.status]) {
-    if (st !== undefined && st !== null && String(st).toLowerCase() !== "active") {
-      sessionStorage.clear();
-      throw new AccountBlockedError();
-    }
+  if (isBlockedStatus(r.accessToken, r.user?.status)) {
+    sessionStorage.clear();
+    throw new AccountBlockedError();
   }
   sessionStorage.setTokens(r.accessToken, r.refreshToken);
   return r.user;

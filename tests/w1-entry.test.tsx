@@ -721,4 +721,61 @@ describe("round 1: refused sign-ins, redirects, two tabs, reloads", () => {
     await userEvent.setup().upload(document.querySelector('input[type="file"]') as HTMLInputElement, ok);
     expect(await screen.findByRole("button", { name: "Change photo" })).toBeTruthy();
   });
+  it("a token refreshed into a suspended state is not kept, POST /me is never made, and the message is plain", async () => {
+    const u = idp.seed("slide@example.com", "longenough1", "Sli De", "+2348032140010");
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "stale", refreshToken: idp.tokensFor(u).refreshToken }));
+    idp.statusOf["slide@example.com"] = "suspended";
+    api = (url) => (url.endsWith("/me") ? err(401, "UNAUTHORIZED", "expired") : null);
+    await expect(apiFetch("/me", { authed: true })).rejects.toMatchObject({ message: "This account cannot sign in to VOICES right now." });
+    expect(stored()).toEqual({ accessToken: null, refreshToken: null });
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(0);
+    delete idp.statusOf["slide@example.com"];
+  });
+  it("a 403 ACCOUNT_SUSPENDED from POST /me says the plain words, never a generic error, and clears the session", async () => {
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
+    saveDraft({ fullName: "Ada Okafor", countryCode: "NG", languages: ["en"], topics: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: true }, { categoryId: "c2", alertsOn: true }] });
+    api = (u, m) => (u.includes("handle-check") ? json({ handle: "x", available: true }) : m === "POST" && u.endsWith("/me") ? err(403, "ACCOUNT_SUSPENDED", "Account suspended") : null);
+    render(<ProfileSetup />);
+    await screen.findByText(/is free/);
+    await userEvent.setup().click(screen.getAllByRole("button", { name: "Finish" })[0]);
+    expect(await screen.findByText("This account cannot sign in to VOICES right now.")).toBeTruthy();
+    expect(screen.queryByText("Something went wrong on our side. Try again in a moment.")).toBeNull();
+    expect(stored()).toEqual({ accessToken: null, refreshToken: null });
+  });
+  it("a 429 from the refresh endpoint keeps the session, waits, and asks once more", async () => {
+    const u = idp.seed("busy@example.com", "longenough1", "Bu Sy", "+2348032140011");
+    const first = idp.tokensFor(u);
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "stale", refreshToken: first.refreshToken }));
+    idp.failNext = { status: 429, body: { statusCode: 429, message: "Too many tries.", retryAfterSeconds: 0.05 } };
+    let n = 0;
+    api = (url) => (url.endsWith("/me") ? (++n === 1 ? err(401, "UNAUTHORIZED", "expired") : json(ME_DONE)) : null);
+    const me = await apiFetch<{ handle: string }>("/me", { authed: true });
+    expect(me.handle).toBe("ada.o");
+    expect(idCalls("/auth/refresh")).toHaveLength(2);
+    expect(stored()?.accessToken).toBeTruthy();
+    expect(stored()?.accessToken).not.toBe("stale");
+  });
+  it("a 429 twice still keeps the session", async () => {
+    const u = idp.seed("busy2@example.com", "longenough1", "Bu Sy", "+2348032140012");
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "stale", refreshToken: idp.tokensFor(u).refreshToken }));
+    const real = globalThis.fetch;
+    let hits = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: string, init?: RequestInit) => (String(input).endsWith("/auth/refresh") ? (hits++, json({ statusCode: 429, message: "Too many tries.", retryAfterSeconds: 0 }, 429)) : real(input, init))));
+    api = (url) => (url.endsWith("/me") ? err(401, "UNAUTHORIZED", "expired") : null);
+    await expect(apiFetch("/me", { authed: true })).rejects.toBeTruthy();
+    expect(hits).toBe(2);
+    expect(stored()?.refreshToken).toBeTruthy();
+  });
+  it("Country sends a signed-in person without a profile straight to topics", async () => {
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
+    api = (u) => (u.endsWith("/me") ? json(ME_NEW) : u.endsWith("/countries") ? json({ items: [] }) : null);
+    render(<Country />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/join/topics"));
+    expect(push).not.toHaveBeenCalled();
+  });
+  it("Onboarding at 1440 links the Community rules", async () => {
+    render(<Onboarding />);
+    await screen.findByText("Nigeria is talking");
+    expect(screen.getAllByRole("link", { name: "Community rules" })[0].getAttribute("href")).toBe("/settings/legal/rules");
+  });
 });

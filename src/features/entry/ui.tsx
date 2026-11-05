@@ -7,50 +7,53 @@ import { ApiError, NetworkError } from "@/lib/api/client";
 import { isSignedIn } from "@/lib/api/auth";
 import { getMe } from "@/lib/api/me";
 
-/**
- * The entry screens draw their own page with no tab bar or side nav (the boards show none). The shell still
- * wraps every route, so this layer sits over it. When the shell lists these routes as chromeless (request in
- * the W1 hand-back) the layer can become a plain div.
- */
+/** The entry screens draw their own page (the shell lists these routes as chromeless): a full-height column whose middle scrolls. */
 export function EntryFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
-  // The shell does not apply a saved theme on load yet, so the entry screens do: "light" or "dark" saved in Settings wins over the device.
-  useEffect(() => {
-    try {
-      const t = window.localStorage.getItem("voices-theme");
-      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
-    } catch {
-      /* storage unavailable: follow the device */
-    }
-  }, []);
-  return <div className={`fixed inset-0 z-[70] flex flex-col overflow-hidden bg-bg text-ink ${className}`}>{children}</div>;
+  return <div className={`flex h-dvh flex-col overflow-hidden bg-bg text-ink ${className}`}>{children}</div>;
 }
 
 /** Scrolls on its own so the bottom action bar stays put, as the phone boards draw it. */
-export function EntryScroll({ children }: { children: ReactNode }) {
-  return <main data-entry-scroll="" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</main>;
+export function EntryScroll({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <main data-entry-scroll="" className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${className}`}>{children}</main>;
 }
 
 export function BottomBar({ children }: { children: ReactNode }) {
   return <div className="flex flex-none flex-col gap-2 bg-surface px-4 pb-6 pt-3 shadow-[0_-1px_0_var(--line)]">{children}</div>;
 }
 
-/** Back arrow, progress bar and "N of 2" (Topics and ProfileSetup). */
-export function StepHeader({ step, back }: { step: 1 | 2; back: string }) {
+/** Phone: back arrow (when there is somewhere to go back to), progress bar and "N of 2" (Topics and ProfileSetup). */
+export function StepHeader({ step, back }: { step: 1 | 2; back?: string }) {
   return (
-    <header className="flex flex-none items-center gap-3 px-4 pb-1 h-[107px] pt-[47px] dt:h-auto dt:mx-auto dt:w-full dt:max-w-[560px] dt:flex-col dt:items-start dt:gap-4 dt:pt-8">
-      <Link href="/" className="hidden dt:block" aria-label="VOICES home"><Logo height={34} alt="VOICES home" /></Link>
-      <div className="flex w-full items-center gap-3">
-        <Link href={back} className="vx-iconbtn vx-iconbtn--s vx-iconbtn--ghost -ml-2 text-ink" aria-label="Back"><Icon name="arrow-left" size={24} /></Link>
-        <span className="block h-[6px] flex-1 rounded-full bg-surface-2" role="img" aria-label={`Step ${step} of 2`}>
-          <i className="block h-[6px] rounded-full bg-green" style={{ width: `${step * 50}%` }} />
-        </span>
-        <span className="text-[14px] font-semibold leading-[18px] text-ink-2">
-          <span className="dt:hidden">{step} of 2</span>
-          <span className="hidden dt:inline">Step {step} of 2</span>
-        </span>
-      </div>
+    <header className="flex h-[107px] flex-none items-center gap-3 px-4 pb-1 pt-[47px] dt:hidden">
+      {back ? <Link href={back} className="vx-iconbtn vx-iconbtn--s vx-iconbtn--ghost -ml-2 text-ink" aria-label="Back"><Icon name="arrow-left" size={24} /></Link> : null}
+      <span className="block h-[6px] flex-1 rounded-full bg-surface-2" role="img" aria-label={`Step ${step} of 2`}>
+        <i className="block h-[6px] rounded-full bg-green" style={{ width: `${step * 50}%` }} />
+      </span>
+      <span className="text-[14px] font-semibold leading-[18px] text-ink-2">{step} of 2</span>
     </header>
   );
+}
+
+/** Desktop header of the set-up steps: the logo at the left, "Step N of 2" with its bar at the right (none on Country). */
+export function DeskHeader({ step }: { step?: 1 | 2 }) {
+  return (
+    <header className="mx-auto hidden w-full max-w-[1120px] flex-none items-center justify-between px-8 py-6 dt:flex">
+      <Link href="/welcome" className="flex" aria-label="VOICES home"><Logo height={34} alt="VOICES home" /></Link>
+      {step ? (
+        <span className="flex items-center gap-4">
+          <span className="block h-[6px] w-[100px] rounded-full bg-surface-2" role="img" aria-label={`Step ${step} of 2`}>
+            <i className="block h-[6px] rounded-full bg-green" style={{ width: `${step * 50}%` }} />
+          </span>
+          <span className="text-[14px] font-semibold leading-[18px] text-ink-2">Step {step} of 2</span>
+        </span>
+      ) : null}
+    </header>
+  );
+}
+
+/** The content column: a plain column on a phone, the centred white card of the 1440 boards from 1024 px. `wide` sets the card width. */
+export function DeskCard({ wide = "dt:max-w-[560px]", children }: { wide?: string; children: ReactNode }) {
+  return <div className={`mx-auto flex w-full max-w-[560px] flex-col gap-5 px-4 pb-6 pt-1 dt:my-auto dt:rounded-[28px] dt:border dt:border-line dt:bg-surface dt:p-8 ${wide}`}>{children}</div>;
 }
 
 /** The drawn switch: 52 by 32, green when on. A real checkbox with role switch underneath. */
@@ -77,10 +80,12 @@ export function refusalWords(e: unknown, fallback: string): string {
 
 export const isOffline = (e: unknown): boolean => e instanceof NetworkError;
 
+const e403 = (e: unknown): boolean => e instanceof ApiError && e.code === "ACCOUNT_SUSPENDED";
+
 export function ErrorBanner({ error, onRetry, fallback, title = "This did not work" }: { error: unknown; onRetry?: () => void; fallback: string; title?: string }) {
   const off = isOffline(error);
   return (
-    <Banner tone={off ? "offline" : "danger"} title={off ? "You are offline" : title} action={onRetry ? "Try again" : undefined} onAction={onRetry}>
+    <Banner tone={off ? "offline" : "danger"} title={off ? "You are offline" : e403(error) ? "This account cannot be used" : title} action={onRetry && !e403(error) ? "Try again" : undefined} onAction={onRetry}>
       {refusalWords(error, fallback)}
     </Banner>
   );

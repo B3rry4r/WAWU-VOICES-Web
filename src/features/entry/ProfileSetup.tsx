@@ -3,11 +3,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar, Button, Icon, TextField } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
+import { isAccountBlocked } from "@/lib/api/auth";
 import { getPublicConfig } from "@/lib/api/feed";
 import { checkHandle, createMe, getMe, PHOTO_MAX_BYTES, PHOTO_MIMES, setCategories, updateProfile, uploadAvatar } from "@/lib/api/me";
 import { handleFromName, tokenName } from "@/lib/auth/claims";
 import { clearDraft, peekHeldPost, readDraft, takeReturn, type JoinDraft } from "@/lib/auth/entry-draft";
-import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, StepHeader, refusalWords, useNeedSession } from "./ui";
+import { BottomBar, DeskCard, DeskHeader, EntryFrame, EntryScroll, ErrorBanner, StepHeader, refusalWords, useNeedSession } from "./ui";
 
 const HANDLE_RE = /^[a-z0-9._]{3,20}$/;
 type Check = { state: "idle" } | { state: "checking" } | { state: "free" } | { state: "taken" } | { state: "bad"; why: string };
@@ -47,7 +48,7 @@ export function ProfileSetup() {
         setHandle(me.handle);
         made.current = true;
       }
-    }, () => undefined);
+    }, (e) => { if (isAccountBlocked(e)) setFailure(e); });
   }, []);
   useEffect(() => {
     if (draft && !(draft.topics && draft.topics.length >= 3)) router.replace("/join/topics");
@@ -69,7 +70,7 @@ export function ProfileSetup() {
     const t = setTimeout(() => {
       checkHandle(h)
         .then((r) => live && setCheck(r.available ? { state: "free" } : { state: "taken" }))
-        .catch(() => live && setCheck({ state: "idle" }));
+        .catch((e) => { if (!live) return; setCheck({ state: "idle" }); if (isAccountBlocked(e)) setFailure(e); });
     }, 400);
     return () => { live = false; clearTimeout(t); };
   }, [handle, existing]);
@@ -135,8 +136,9 @@ export function ProfileSetup() {
   return (
     <EntryFrame>
       <StepHeader step={2} back="/join/topics" />
-      <EntryScroll>
-        <div className="mx-auto flex w-full max-w-[560px] flex-col gap-5 px-4 pb-6 pt-1">
+      <DeskHeader step={2} />
+      <EntryScroll className="flex flex-col">
+        <DeskCard wide="dt:max-w-[640px]">
           <h1 className="m-0 font-display text-[28px] font-normal leading-8">How should people know you?</h1>
           {failure ? <ErrorBanner error={failure} onRetry={() => setFailure(null)} fallback={refusalWords(failure, "We could not save your profile. Try again.")} /> : null}
           <div className="flex items-center gap-4">
@@ -154,8 +156,8 @@ export function ProfileSetup() {
           </div>
           <TextField label="Your name" value={name} onChange={setName} autoComplete="name" />
           <TextField label="Handle" prefix="@" value={handle} onChange={setHandle} autoComplete="off" hint={hint} error={error} />
-          <div className="hidden dt:flex dt:flex-col dt:gap-2">{submit}{note}</div>
-        </div>
+          <div className="hidden items-center gap-4 dt:flex"><span className="w-[260px] flex-none">{submit}</span>{note}</div>
+        </DeskCard>
       </EntryScroll>
       <div className="dt:hidden"><BottomBar>{submit}{note}</BottomBar></div>
     </EntryFrame>

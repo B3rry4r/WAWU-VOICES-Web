@@ -5,7 +5,7 @@ import { Button, Icon, TopicChip, type IconName } from "@/components/vx";
 import { useLoad } from "@/components/feed/useLoad";
 import { getCategories } from "@/lib/api/feed";
 import { readDraft, saveDraft } from "@/lib/auth/entry-draft";
-import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, StepHeader, Switch, useNeedSession } from "./ui";
+import { BottomBar, DeskCard, DeskHeader, EntryFrame, EntryScroll, ErrorBanner, StepHeader, Switch, useNeedSession } from "./ui";
 
 export const MIN_TOPICS = 3;
 
@@ -35,9 +35,10 @@ export function Topics() {
   const label = enough ? `Continue with ${have.length} topics` : `Pick ${MIN_TOPICS - have.length} more`;
   return (
     <EntryFrame>
-      <StepHeader step={1} back="/join/country" />
-      <EntryScroll>
-        <div className="mx-auto flex w-full max-w-[560px] flex-col gap-[18px] px-4 pb-6 pt-1">
+      <StepHeader step={1} />
+      <DeskHeader step={1} />
+      <EntryScroll className="flex flex-col">
+        <DeskCard wide="dt:max-w-[760px]">
           <section aria-labelledby="h-topics" className="flex flex-col gap-3">
             <h1 id="h-topics" className="m-0 font-display text-[28px] font-normal leading-8">What do you want to talk about?</h1>
             <p className="m-0 text-[16px] leading-6 text-ink-2">Pick at least 3. We use them to fill your Home. Today&apos;s question shows for everyone.</p>
@@ -53,20 +54,23 @@ export function Topics() {
                 <h2 id="h-alerts" className="m-0 font-display text-[22px] font-normal leading-[27px]">Category alerts</h2>
                 <p className="m-0 text-[15px] leading-[22px] text-ink-2">Get told when a new question lands in a topic you picked.</p>
               </div>
-              <div className="vx-notes">
+              <div className="vx-notes dt:grid dt:grid-cols-2">
                 {cats.filter((c) => have.includes(c.id)).map((c, n) => (
-                  <label key={c.id} className={`flex min-h-[56px] cursor-pointer items-center gap-3 px-4 ${n ? "shadow-[0_-1px_0_var(--line)]" : ""}`}>
+                  <label key={c.id} className={`flex min-h-[56px] cursor-pointer items-center gap-3 px-4 ${n ? "shadow-[0_-1px_0_var(--line)] dt:shadow-none" : ""} border-line dt:[&:nth-child(even)]:border-l dt:[&:nth-child(n+3)]:border-t`}>
                     <Icon name={ICONS[c.slug] ?? "message-square"} size={20} />
                     <span className="flex-1 text-[16px] font-semibold leading-[22px]">{c.name}</span>
                     <Switch checked={alerts[c.id] ?? true} label={`Alerts for ${c.name}`} onChange={(on) => setAlerts({ ...alerts, [c.id]: on })} />
                   </label>
                 ))}
               </div>
-              <p className="m-0 text-[13px] font-medium leading-[18px] text-ink-2">Change or turn off alerts any time in Settings.</p>
+              <p className="m-0 text-[13px] font-medium leading-[18px] text-ink-2 dt:hidden">Change or turn off alerts any time in Settings.</p>
             </section>
           ) : null}
-          <div className="hidden dt:block"><Button size="l" disabled={!enough} onClick={next}>{label}</Button></div>
-        </div>
+          <div className="hidden items-center gap-4 dt:flex">
+            <Button size="l" disabled={!enough} onClick={next}>{label}</Button>
+            {have.length ? <p className="m-0 text-[13px] font-medium leading-[18px] text-ink-2">Change or turn off alerts any time in Settings.</p> : null}
+          </div>
+        </DeskCard>
       </EntryScroll>
       <div className="dt:hidden"><BottomBar><Button size="l" block disabled={!enough} onClick={next}>{label}</Button></BottomBar></div>
     </EntryFrame>
