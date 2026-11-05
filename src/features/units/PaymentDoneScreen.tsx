@@ -4,12 +4,12 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useRouter, useSearchParams } from "next/navigation";
 import { Banner, Button, Icon, IconButton, Skeleton } from "@/components/vx";
 import { getPayment, getTiers, verifyPayment, type Payment, type PayMethod } from "@/lib/api/units";
-import { clearByPayment, findByPayment, newKey, safePath } from "./attempt";
+import { clearByPayment, findByPayment, safePath, type Attempt } from "./attempt";
 import { startCheckout, startErrorText } from "./checkout";
-import { awaitingDrafts } from "./draft";
+import { findPostedFor, getDraft } from "./draft";
 import { dateTimeLagos, extraVoiceTitle, failureText, methodLabel, naira, packLine, units } from "./format";
-import { useSignedIn } from "./hooks";
-import { postAwaitingDraft, type DraftOutcome } from "./post-draft";
+import { useDesktop, useSignedIn } from "./hooks";
+import { postDraftForPurchase, type DraftOutcome } from "./post-draft";
 import { isFinal, runReturn, type ReturnState } from "./payment-return";
 import { SignInNeeded } from "./ui";
 
@@ -28,11 +28,11 @@ function verifyOnce(id: string, key: string, txId?: string): Promise<Payment> {
 
 function Details({ rows }: { rows: Array<[string, string]> }) {
   return (
-    <dl className="m-0 flex flex-col rounded-l bg-surface-2 px-4 py-1 text-[15px] font-medium leading-[21px] dt:bg-surface-2">
+    <dl className="m-0 flex flex-col rounded-l bg-surface px-4 py-1 text-[15px] font-medium leading-[21px] shadow-[inset_0_0_0_1px_var(--line)]">
       {rows.map(([k, v]) => (
         <div key={k} className="flex justify-between gap-3 border-b border-line py-[10px] last:border-b-0">
           <dt className="text-ink-2">{k}</dt>
-          <dd className="m-0 text-right font-bold tabular-nums">{v}</dd>
+          <dd className="m-0 break-all text-right font-bold tabular-nums">{v}</dd>
         </div>
       ))}
     </dl>
@@ -55,16 +55,17 @@ function Hero({ tone, title, body, big }: { tone: "ok" | "bad" | "wait"; title: 
 function Shell({ children, onClose }: { children: ReactNode; onClose: () => void }) {
   return (
     <div className="flex flex-col gap-3 pb-6">
-      <div className="-ml-2 flex dt:hidden">
-        <IconButton icon="x" label="Close" variant="ghost" onClick={onClose} />
+      <div className="flex justify-end dt:hidden">
+        <span className="rounded-full bg-surface shadow-[inset_0_0_0_1px_var(--line)]"><IconButton icon="x" label="Close" variant="ghost" onClick={onClose} /></span>
       </div>
       <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4 dt:mt-4 dt:rounded-xl dt:bg-surface dt:p-10 dt:shadow-[inset_0_0_0_1px_var(--line)]">{children}</div>
     </div>
   );
 }
 
+/** The buttons sit at the foot, apart from the details by a rule on a phone, and side by side on a desktop. */
 function Actions({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col gap-3 dt:flex-row dt:flex-wrap [&>*]:dt:flex-none">{children}</div>;
+  return <div className="mt-2 flex flex-col gap-3 border-t border-line pt-4 dt:flex-row dt:flex-wrap dt:border-0 dt:pt-0 [&>*]:dt:flex-none">{children}</div>;
 }
 
 function methodOf(p: Payment | undefined): PayMethod {
@@ -77,24 +78,29 @@ export function PaymentDoneScreen() {
   const params = useSearchParams();
   const router = useRouter();
   const paymentId = params.get("paymentId") ?? params.get("payment") ?? "";
-  const urlStatus = params.get("status");
   const txId = params.get("transaction_id");
   const [state, setState] = useState<ReturnState>({ kind: "confirming" });
   const [draft, setDraft] = useState<DraftOutcome | null>(null);
-  const [heldBefore, setHeldBefore] = useState(false);
+  const [attempt, setAttempt] = useState<Attempt | undefined>();
+  const attemptRef = useRef<Attempt | undefined>();
+  const desktop = useDesktop();
   const [run, setRun] = useState(0);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
   const postedFor = useRef<string | null>(null);
 
-  useEffect(() => setHeldBefore(awaitingDrafts().length > 0), []);
-
   useEffect(() => {
     if (signedIn !== true) return undefined;
     let live = true;
+    // The purchase attempt that made this payment says which draft (if any) this purchase is for. Read it before a final
+    // state clears it. A page with no attempt (a refresh later, another browser) posts nothing.
+    if (!attemptRef.current) {
+      attemptRef.current = findByPayment(paymentId);
+      setAttempt(attemptRef.current);
+    }
     setState({ kind: "confirming" });
     void runReturn(
-      { paymentId, urlStatus, transactionId: txId },
+      { paymentId, transactionId: txId },
       { getPayment, verifyPayment: (id, key, tx) => verifyOnce(id, key, tx), sleep },
       (s) => setState(s),
       () => !live,
@@ -102,7 +108,7 @@ export function PaymentDoneScreen() {
     return () => {
       live = false;
     };
-  }, [signedIn, paymentId, urlStatus, txId, run]);
+  }, [signedIn, paymentId, txId, run]);
 
   // A final state: forget the purchase attempt (the next purchase is a clean one). Success also posts a held draft.
   useEffect(() => {
@@ -110,22 +116,37 @@ export function PaymentDoneScreen() {
     clearByPayment(paymentId);
   }, [state, paymentId]);
 
-  const postDraft = useCallback(() => {
-    void postAwaitingDraft().then((o) => {
-      setDraft(o);
-      // The draft spent from the balance: read the payment again so "Your balance is now" is the real figure.
-      if (o.status === "posted" && paymentId) {
-        void getPayment(paymentId).then((fresh) => setState((cur) => (cur.kind === "success" ? { kind: "success", payment: fresh } : cur)), () => undefined);
-      }
-    });
-  }, [paymentId]);
+  const postDraft = useCallback(
+    (force = false) => {
+      void postDraftForPurchase(attemptRef.current?.draftQuestionId, paymentId, { force }).then((o) => {
+        setDraft(o);
+        // The draft spent from the balance: read the payment again so "Your balance is now" is the real figure.
+        if (o.status === "posted" && paymentId) {
+          void getPayment(paymentId).then((fresh) => setState((cur) => (cur.kind === "success" ? { kind: "success", payment: fresh } : cur)), () => undefined);
+        }
+      });
+    },
+    [paymentId],
+  );
+  // Only a Voice Units purchase posts a draft, only the one it was made for, once. A token purchase never does.
   useEffect(() => {
     if (state.kind !== "success" || postedFor.current === paymentId) return;
     postedFor.current = paymentId;
-    postDraft();
+    if (state.payment.kind === "UNITS") postDraft();
   }, [state, paymentId, postDraft]);
 
-  const from = safePath(findByPayment(paymentId)?.from);
+  // Another tab of this browser may post the draft first: when it records that it did, this tab shows the same banner.
+  useEffect(() => {
+    if (state.kind !== "success" || state.payment.kind !== "UNITS") return undefined;
+    const check = () => {
+      const q = findPostedFor(paymentId);
+      if (q) setDraft((cur) => (cur?.status === "posted" ? cur : { status: "posted", questionId: q }));
+    };
+    window.addEventListener("storage", check);
+    return () => window.removeEventListener("storage", check);
+  }, [state, paymentId]);
+
+  const from = safePath(attempt?.from);
   const home = "/units";
   const close = () => router.push(from ?? home);
 
@@ -137,7 +158,7 @@ export function PaymentDoneScreen() {
       const t = await getTiers();
       const tier = p ? t.tiers.find((x) => `${x.name} pack` === p.title) : undefined;
       const offer = p ? t.extraVoice.find((x) => extraVoiceTitle(x.maxSeconds) === p.title) : undefined;
-      if (tier) await startCheckout({ kind: "UNITS", tierId: tier.id, method: methodOf(p) }, from);
+      if (tier) await startCheckout({ kind: "UNITS", tierId: tier.id, method: methodOf(p) }, from, undefined, attemptRef.current?.draftQuestionId);
       else if (offer) await startCheckout({ kind: "EXTRA_VOICE", tokenKind: offer.kind }, from);
       else router.push("/units/buy");
     } catch (e) {
@@ -223,6 +244,10 @@ export function PaymentDoneScreen() {
         />
         {posted ? (
           <Banner tone="success" title="Your answer is posted">We kept your draft and sent it the moment your units arrived.</Banner>
+        ) : draft?.status === "offer" ? (
+          <Banner tone="info" title="You have a saved draft" action="Post it now" actionIcon="send" onAction={() => postDraft(true)}>
+            You wrote it a while ago, so it was not posted on its own.
+          </Banner>
         ) : draft?.status === "kept" ? (
           <Banner tone="info" title="Your draft is still saved">{draft.message}</Banner>
         ) : draft?.status === "retry" ? (
@@ -233,19 +258,18 @@ export function PaymentDoneScreen() {
         <Details rows={rows} />
         <Actions>
           <Button icon={posted ? "message-circle" : undefined} href={target}>{posted ? "Back to the conversation" : from ? "Back" : "Back to Voice Units"}</Button>
-          <Button variant="secondary" icon="file-down" href={`/units/receipt/${p.id}`}>Receipt</Button>
+          <Button variant={desktop ? "secondary" : "ghost"} icon="file-down" href={`/units/receipt/${p.id}`}>Receipt</Button>
         </Actions>
       </Shell>
     );
   }
 
-  // The payment did not complete: failed, refunded, expired, cancelled, or the amount did not match.
+  // The payment did not complete: failed, refunded, expired, or the amount did not match.
   const p = "payment" in state ? state.payment : undefined;
   const copy = {
     failed: { title: "Payment did not go through", body: `${failureText(p?.failureReason ?? null)} No units were added.` },
     refunded: { title: "This payment was refunded", body: "The money went back to you. No units were added." },
     expired: { title: "This payment expired", body: "You did not pay in time. No units were added. You can start again." },
-    cancelled: { title: "Payment cancelled", body: "You did not finish paying. No units were added." },
     mismatch: { title: "We could not confirm this payment", body: "The amount paid does not match this payment. Nothing was added." },
   }[state.kind];
   const rows: Array<[string, string]> = [];
@@ -253,8 +277,10 @@ export function PaymentDoneScreen() {
     rows.push(["Pack", p.kind === "UNITS" ? `${p.title.replace(/ pack$/i, "")}, ${naira(p.amountKobo)}` : `${p.title}, ${naira(p.amountKobo)}`]);
     const m = methodLabel(p);
     if (m) rows.push(["Method", m]);
+    if (!p.receiptNo) rows.push(["Payment reference", p.txRef]);
   }
-  const hold = heldBefore || awaitingDrafts().length > 0;
+  const qd = attemptRef.current?.draftQuestionId;
+  const hold = !!qd && !!getDraft(qd);
   const canSwitch = p?.kind === "UNITS" && state.kind !== "mismatch";
   return (
     <Shell onClose={close}>

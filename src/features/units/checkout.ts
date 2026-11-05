@@ -32,9 +32,10 @@ function checkoutHref(url: string): string | null {
 }
 
 /** Begin a payment and go to the hosted checkout. One Idempotency-Key per choice, kept across retries (see attempt.ts). */
-export function startCheckout(spec: CheckoutSpec, from?: string, go: (url: string) => void = (u) => window.location.assign(u)): Promise<void> {
+export function startCheckout(spec: CheckoutSpec, from?: string, go: (url: string) => void = (u) => window.location.assign(u), draftQuestionId?: string): Promise<void> {
   const choice = choiceId(spec.kind === "UNITS" ? spec : { kind: "EXTRA_VOICE", tokenKind: spec.tokenKind });
-  const attempt = attemptFor(choice, safePath(from));
+  // Only a Voice Units purchase carries a draft: a token purchase never posts one.
+  const attempt = attemptFor(choice, safePath(from), Date.now(), spec.kind === "UNITS" ? draftQuestionId : undefined);
   const known = attempt.checkoutUrl && attempt.expiresAt && attempt.expiresAt > Date.now() ? checkoutHref(attempt.checkoutUrl) : null;
   if (known) {
     go(known);
@@ -65,7 +66,7 @@ export function startCheckout(spec: CheckoutSpec, from?: string, go: (url: strin
 }
 
 /** Pay buttons: `start` is safe to call twice (a second tap while one is running does nothing). `busy` names what is running. */
-export function useCheckout(from?: string) {
+export function useCheckout(from?: string, draftQuestionId?: string) {
   const running = useRef(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +90,7 @@ export function useCheckout(from?: string) {
       setBusy(id);
       setError(null);
       try {
-        await startCheckout(spec, from);
+        await startCheckout(spec, from, undefined, draftQuestionId);
         // Leaving for the checkout: keep the button busy until the page goes.
       } catch (e) {
         running.current = false;
@@ -97,7 +98,7 @@ export function useCheckout(from?: string) {
         setError(startErrorText(e));
       }
     },
-    [from],
+    [from, draftQuestionId],
   );
 
   return { busy, error, start, clearError: () => setError(null) };

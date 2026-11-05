@@ -62,11 +62,11 @@ describe("payment return rules", () => {
     expect((await harness([pay("INITIATED")], err(422, "PAYMENT_AMOUNT_MISMATCH")).run()).pop()!.kind).toBe("mismatch");
     expect((await harness([pay("INITIATED")], pay("FAILED")).run()).pop()!.kind).toBe("failed");
   });
-  it("says cancelled when the address says so and nothing was paid", async () => {
+  it("says nothing of cancelling from the address: an unconfirmed payment stays unconfirmed (reconcile may still credit it)", async () => {
     const h = harness([pay("INITIATED")]);
     const seen = await h.run({ urlStatus: "cancelled" });
-    expect(seen.pop()!.kind).toBe("cancelled");
-    expect(h.d.sleep).not.toHaveBeenCalled();
+    expect(seen.map((s) => s.kind)).not.toContain("cancelled");
+    expect(seen.pop()!.kind).toBe("slow");
   });
   it("cancelled in the address does not hide a payment that did go through", async () => {
     const seen = await harness([pay("INITIATED")], pay("SUCCEEDED")).run({ urlStatus: "cancelled" });

@@ -14,7 +14,6 @@ export type ReturnState =
   | { kind: "failed"; payment: Payment }
   | { kind: "refunded"; payment: Payment }
   | { kind: "expired" }
-  | { kind: "cancelled" }
   | { kind: "mismatch" }
   | { kind: "notfound" }
   | { kind: "slow" }
@@ -28,7 +27,7 @@ export interface ReturnDeps {
 
 export interface ReturnParams {
   paymentId: string;
-  /** From Flutterwave's redirect: status=successful|completed|cancelled, tx_ref, transaction_id. Hints only. */
+  /** From Flutterwave's redirect (status, tx_ref, transaction_id). Only the transaction id is sent on, as a hint; the address never decides what is shown. */
   urlStatus?: string | null;
   transactionId?: string | null;
 }
@@ -93,7 +92,6 @@ export async function runReturn(p: ReturnParams, deps: ReturnDeps, emit: (s: Ret
       // PAYMENT_NOT_VERIFIED, 429, 5xx, offline: not final yet; keep polling the payment below.
     }
   }
-  if ((p.urlStatus ?? "").toLowerCase() === "cancelled") return say({ kind: "cancelled" });
 
   // Step 3: poll until final.
   for (let i = 0; i < POLL_TRIES; i++) {

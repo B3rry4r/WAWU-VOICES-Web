@@ -2,8 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { startCheckout, useCheckout } from "@/features/units/checkout";
-import { postAwaitingDraft } from "@/features/units/post-draft";
-import { saveDraft, setAwaiting, getDraft } from "@/features/units/draft";
+import { postDraftForPurchase } from "@/features/units/post-draft";
+import { saveDraft, setAwaiting, getDraft, getRecord } from "@/features/units/draft";
 import { ApiError, NetworkError } from "@/lib/api/client";
 
 const INIT = { paymentId: "01a1ad10-f09a-73fc-9902-42da40d26dec", txRef: "voices-1", amountKobo: 69000, currency: "NGN", unitsMilli: 55000, checkoutUrl: "https://checkout.flutterwave.com/v3/hosted/pay/abc", expiresAt: new Date(Date.now() + 30 * 60_000).toISOString() };
@@ -127,35 +127,71 @@ describe("the pay button", () => {
   });
 });
 
-describe("a held draft posts after units arrive", () => {
-  it("posts the waiting draft once, with its own key, then forgets it", async () => {
-    saveDraft("q1", "My take");
-    setAwaiting("q1", true);
-    const key = getDraft("q1")!.key;
+describe("a held draft posts only for the purchase it was made for", () => {
+  const hold = (q = "q1", at = Date.now()) => { saveDraft(q, "My take", at); setAwaiting(q, true); return getDraft(q)!; };
+  it("posts the named draft once, with its own key, and keeps a record that it posted", async () => {
+    const d = hold();
     const post = vi.fn(async () => ({}));
-    expect(await postAwaitingDraft(post)).toEqual({ status: "posted", questionId: "q1" });
-    expect(post).toHaveBeenCalledWith("q1", "My take", key);
+    expect(await postDraftForPurchase("q1", "pay-1", { post })).toEqual({ status: "posted", questionId: "q1" });
+    expect(post).toHaveBeenCalledWith("q1", "My take", d.key);
     expect(getDraft("q1")).toBeUndefined();
-    expect(await postAwaitingDraft(post)).toEqual({ status: "none" });
+    expect(getRecord("q1")?.posted).toBe("pay-1");
+    // a second tab for the same payment: reported as posted, never posted twice
+    expect(await postDraftForPurchase("q1", "pay-1", { post })).toEqual({ status: "posted", questionId: "q1" });
+    expect(post).toHaveBeenCalledTimes(1);
+    // and one with no attempt of its own (a new tab) still reads the record
+    expect(await postDraftForPurchase(undefined, "pay-1", { post })).toEqual({ status: "posted", questionId: "q1" });
+    // another payment never posts it
+    expect(await postDraftForPurchase("q1", "pay-2", { post })).toEqual({ status: "none" });
+    expect(post).toHaveBeenCalledTimes(1);
   });
-  it("does nothing when no draft waits (not every draft is posted)", async () => {
-    saveDraft("q1", "My take");
+  it("posts nothing when the purchase names no draft (a token purchase, a refresh of an old page)", async () => {
+    hold("q-old");
     const post = vi.fn();
-    expect(await postAwaitingDraft(post)).toEqual({ status: "none" });
+    expect(await postDraftForPurchase(undefined, "pay-9", { post })).toEqual({ status: "none" });
     expect(post).not.toHaveBeenCalled();
   });
-  it("keeps the draft and says why when the server refuses", async () => {
+  it("posts only the named draft, not a newer one for another question", async () => {
+    hold("q-a", 1000);
+    hold("q-b", Date.now());
+    const post = vi.fn(async (_q: string, _b: string, _k: string) => ({}));
+    await postDraftForPurchase("q-a", "pay-1", { post, now: 2000 });
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post.mock.calls[0][0]).toBe("q-a");
+    expect(getDraft("q-b")?.awaitingUnits).toBe(true);
+  });
+  it("never posts a draft older than 24 hours on its own, only offers it; the offer posts it", async () => {
+    const now = Date.now();
+    hold("q1", now - 25 * 3600_000);
+    const post = vi.fn(async () => ({}));
+    expect(await postDraftForPurchase("q1", "pay-1", { post, now })).toEqual({ status: "offer", questionId: "q1" });
+    expect(post).not.toHaveBeenCalled();
+    expect(await postDraftForPurchase("q1", "pay-1", { post, now, force: true })).toEqual({ status: "posted", questionId: "q1" });
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+  it("a draft that is not waiting for units is not posted", async () => {
     saveDraft("q1", "My take");
-    setAwaiting("q1", true);
+    const post = vi.fn();
+    expect(await postDraftForPurchase("q1", "pay-1", { post })).toEqual({ status: "none" });
+  });
+  it("keeps the draft and says why when the server refuses", async () => {
+    hold();
     const post = vi.fn(async () => { throw new ApiError(404, "NOT_FOUND", "That question is closed.", true); });
-    expect(await postAwaitingDraft(post)).toEqual({ status: "kept", questionId: "q1", message: "That question is closed." });
+    expect(await postDraftForPurchase("q1", "pay-1", { post })).toEqual({ status: "kept", questionId: "q1", message: "That question is closed." });
     expect(getDraft("q1")?.awaitingUnits).toBe(false);
   });
   it("keeps the draft waiting when the connection is lost, so a refresh posts it", async () => {
-    saveDraft("q1", "My take");
-    setAwaiting("q1", true);
+    hold();
     const post = vi.fn(async () => { throw new NetworkError("offline"); });
-    expect(await postAwaitingDraft(post)).toEqual({ status: "retry", questionId: "q1" });
+    expect(await postDraftForPurchase("q1", "pay-1", { post })).toEqual({ status: "retry", questionId: "q1" });
     expect(getDraft("q1")?.awaitingUnits).toBe(true);
+  });
+  it("a token purchase never carries a draft, a units purchase does", async () => {
+    stubFetch(() => json(INIT, 201));
+    await startCheckout({ kind: "EXTRA_VOICE", tokenKind: "SECONDS_30" }, "/q/q1", vi.fn(), "q1");
+    await startCheckout(unitsSpec, "/q/q1", vi.fn(), "q1");
+    const t = JSON.parse(window.sessionStorage.getItem("voices-buy-attempts")!);
+    expect(t["EXTRA_VOICE:SECONDS_30"].draftQuestionId).toBeUndefined();
+    expect(t["UNITS:tier-buzz:card"].draftQuestionId).toBe("q1");
   });
 });

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge, Banner, Button, Icon, IconButton, Tabs } from "@/components/vx";
 import { getTiers, getWallet, type PayMethod, type TiersResponse, type UnitTier, type Wallet } from "@/lib/api/units";
 import { safePath } from "./attempt";
 import { useCheckout } from "./checkout";
-import { awaitingDrafts } from "./draft";
+import { awaitingDrafts, getDraft } from "./draft";
 import { costRows, extraVoiceTitle, naira, nairaExact, smallestPack, units, unitsLabel } from "./format";
 import { useLoad, useSignedIn } from "./hooks";
 import { Card, ErrorBlock, Line, LoadingBlock, Note, SignInNeeded } from "./ui";
@@ -21,13 +21,17 @@ function isMethod(v: string | null): v is PayMethod {
   return v === "card" || v === "banktransfer" || v === "ussd";
 }
 
+function holdsDraftFor(q: string): boolean {
+  return !!getDraft(q)?.awaitingUnits;
+}
+
 function seconds(n: number): string {
   return n >= 60 && n % 60 === 0 ? `${n / 60} ${n === 60 ? "minute" : "minutes"}` : `${n} seconds`;
 }
 
-function PackCard({ tier, on, onPick }: { tier: UnitTier; on: boolean; onPick: () => void }) {
+function PackCard({ tier, on, onPick, onKey }: { tier: UnitTier; on: boolean; onPick: () => void; onKey: (e: KeyboardEvent<HTMLButtonElement>) => void }) {
   return (
-    <button type="button" role="radio" aria-checked={on ? "true" : "false"} className="vx-tier" onClick={onPick}>
+    <button type="button" role="radio" aria-checked={on ? "true" : "false"} tabIndex={on ? 0 : -1} data-tier={tier.id} className="vx-tier" onClick={onPick} onKeyDown={onKey}>
       <span className="vx-tier__name">{tier.name}</span>
       <span className="vx-tier__units">
         {units(tier.unitsMilli)}
@@ -58,11 +62,24 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
   const [method, setMethod] = useState<PayMethod>(() => (isMethod(params.get("method")) ? (params.get("method") as PayMethod) : "card"));
   const [holdsDraft, setHoldsDraft] = useState(false);
   useEffect(() => setHoldsDraft(awaitingDrafts().length > 0), []);
-  const checkout = useCheckout(from);
+  const qFrom = /^\/q\/([^/?]+)/.exec(from ?? "")?.[1];
+  const draftQ = qFrom && holdsDraftFor(qFrom) ? qFrom : undefined;
+  const checkout = useCheckout(from, draftQ);
   const tier = sorted.find((t) => t.id === sel) ?? sorted[0];
   const min = smallestPack(sorted);
   const free = wallet.freePostsRemaining + wallet.freePostsUsed;
   const offer = tiers.walletOffer;
+
+  // Arrow keys move between the packs (a radio group): the chosen one is the only tab stop.
+  function moveRadio(e: KeyboardEvent<HTMLButtonElement>) {
+    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const i = sorted.findIndex((t) => t.id === tier?.id);
+    const next = sorted[(i + step + sorted.length) % sorted.length];
+    setSel(next.id);
+    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-tier="${next.id}"]`)?.focus());
+  }
 
   if (!tier) return <Banner tone="info">There are no Voice Unit packs to buy right now.</Banner>;
 
@@ -81,7 +98,7 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
         ) : null}
         <div className="vx-tiers" role="radiogroup" aria-label="Unit packs">
           {sorted.map((t) => (
-            <PackCard key={t.id} tier={t} on={t.id === tier.id} onPick={() => setSel(t.id)} />
+            <PackCard key={t.id} tier={t} on={t.id === tier.id} onPick={() => setSel(t.id)} onKey={moveRadio} />
           ))}
         </div>
         <div className="vx-field">

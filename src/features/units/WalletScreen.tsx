@@ -16,6 +16,7 @@ import {
   type ExtraVoiceOffer,
   type LedgerItem,
 } from "@/lib/api/units";
+import { Rail } from "@/components/shell/ShellSlots";
 import { startErrorText, useCheckout } from "./checkout";
 import { costRows, ledgerFigure, ledgerNote, naira, smallestPack, units, whenLong, whenShort } from "./format";
 import { readErrorText, useDesktop, useLoad, useSignedIn } from "./hooks";
@@ -31,10 +32,10 @@ const KIND_ICON: Record<LedgerItem["kind"], IconName> = {
   REFUND: "rotate-ccw",
 };
 
-export function CostCard({ costs, title = "What things cost", className = "" }: { costs: ActionCosts; title?: string; className?: string }) {
+export function CostCard({ costs, title = "What things cost", className = "", eyebrow = false }: { costs: ActionCosts; title?: string; className?: string; eyebrow?: boolean }) {
   return (
     <Card label={title} className={`!pb-[6px] ${className}`}>
-      <h2 className="m-0 mb-[6px] text-[16px] font-bold leading-[22px]">{title}</h2>
+      {eyebrow ? <h2 className="vx-eyebrow m-0 mb-1 text-ink-2">{title}</h2> : <h2 className="m-0 mb-[6px] text-[16px] font-bold leading-[22px]">{title}</h2>}
       {costRows(costs).map((r) => (
         <Line key={r.label} label={r.label} value={r.value} />
       ))}
@@ -170,7 +171,7 @@ function History() {
           type="button"
           onClick={download}
           disabled={saving}
-          className="inline-flex min-h-[44px] items-center gap-2 border-0 bg-transparent p-0 text-[14px] font-semibold text-green-text"
+          className="hidden min-h-[44px] items-center gap-2 border-0 bg-transparent p-0 text-[14px] font-semibold text-green-text dt:inline-flex"
         >
           <Icon name="file-down" size={18} />
           {saving ? "Preparing" : "Download statement"}
@@ -231,7 +232,7 @@ function SignedOut() {
   return (
     <div className="flex flex-col gap-5">
       <SignInNeeded />
-      {result.state === "ready" ? <CostCard costs={result.data.costs} /> : result.state === "error" ? <ErrorBlock error={result.error} onRetry={reload} /> : <LoadingBlock rows={1} />}
+      {result.state === "ready" ? (<><CostCard costs={result.data.costs} className="dt:hidden" /><Rail><CostCard costs={result.data.costs} eyebrow /></Rail></>) : result.state === "error" ? <ErrorBlock error={result.error} onRetry={reload} /> : <LoadingBlock rows={1} />}
     </div>
   );
 }
@@ -278,7 +279,10 @@ function SignedIn() {
         <Note className="text-[13px]">Text and voice both count. Deleting a post does not give one back. After these, each post shows its unit cost first.</Note>
       </Card>
 
-      <CostCard costs={wallet.costs} />
+      <CostCard costs={wallet.costs} className="dt:hidden" />
+      <Rail>
+        <CostCard costs={wallet.costs} eyebrow />
+      </Rail>
 
       <section aria-labelledby="tok-h" className="flex flex-col gap-3">
         <div className="flex flex-col gap-[2px]">

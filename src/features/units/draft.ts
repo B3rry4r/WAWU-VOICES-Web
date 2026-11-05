@@ -12,7 +12,12 @@ export interface HeldDraft {
   savedAt: number;
   /** The person tapped "Get Voice Units": post this draft when the units arrive. */
   awaitingUnits: boolean;
+  /** The id of the payment whose units posted this draft. A posted draft is kept as a record (a second tab shows the right banner) and is never posted again. */
+  posted?: string;
 }
+
+/** A draft older than this is never posted on its own, only offered (the words may no longer be the person's mind). */
+export const AUTO_POST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 type Table = Record<string, HeldDraft>;
 const memory: Table = {};
@@ -46,8 +51,24 @@ function key(): string {
   return `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** The draft still held for a question (not one that already posted). */
 export function getDraft(questionId: string): HeldDraft | undefined {
+  const d = read()[questionId];
+  return d && !d.posted ? d : undefined;
+}
+
+/** The record for a question including a draft that already posted. */
+export function getRecord(questionId: string): HeldDraft | undefined {
   return read()[questionId];
+}
+
+/** The draft posted for this payment: keep the record, stop waiting. */
+export function markPosted(questionId: string, paymentId: string): void {
+  const t = read();
+  if (t[questionId]) {
+    t[questionId] = { ...t[questionId], awaitingUnits: false, posted: paymentId };
+    write(t);
+  }
 }
 
 /** Save the words for a question. Keeps the same post key for the same text, so a retry stays one post. */
@@ -60,7 +81,8 @@ export function saveDraft(questionId: string, body: string, now = Date.now()): H
     return undefined;
   }
   const prev = t[questionId];
-  const d: HeldDraft = { questionId, body: text, key: prev && prev.body === text ? prev.key : key(), savedAt: now, awaitingUnits: prev?.awaitingUnits ?? false };
+  const live = prev && !prev.posted ? prev : undefined;
+  const d: HeldDraft = { questionId, body: text, key: live && live.body === text ? live.key : key(), savedAt: now, awaitingUnits: live?.awaitingUnits ?? false };
   t[questionId] = d;
   write(t);
   return d;
@@ -83,6 +105,11 @@ export function clearDraft(questionId: string): void {
 /** The drafts waiting for units to arrive, newest first. */
 export function awaitingDrafts(): HeldDraft[] {
   return Object.values(read())
-    .filter((d) => d.awaitingUnits)
+    .filter((d) => d.awaitingUnits && !d.posted)
     .sort((a, b) => b.savedAt - a.savedAt);
+}
+
+/** The question whose held draft was posted by this payment's units, if any (a second tab or browser reads this). */
+export function findPostedFor(paymentId: string): string | undefined {
+  return Object.values(read()).find((d) => d.posted === paymentId)?.questionId;
 }

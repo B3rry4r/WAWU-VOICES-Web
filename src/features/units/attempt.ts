@@ -13,6 +13,8 @@ export interface Attempt {
   createdAt: number;
   /** A Voice Units screen the person came from, a path inside VOICES (never an address). */
   from?: string;
+  /** The question whose held draft this purchase is for. Only this draft may post when this purchase succeeds. */
+  draftQuestionId?: string;
   paymentId?: string;
   checkoutUrl?: string;
   expiresAt?: number;
@@ -70,11 +72,18 @@ function fresh(a: Attempt, now: number): boolean {
 }
 
 /** The live attempt for this choice, or a new one. */
-export function attemptFor(choice: string, from?: string, now = Date.now()): Attempt {
+export function attemptFor(choice: string, from?: string, now = Date.now(), draftQuestionId?: string): Attempt {
   const t = read();
   const have = t[choice];
-  if (have && fresh(have, now)) return have;
-  const a: Attempt = { key: newKey(), createdAt: now, ...(from ? { from } : {}) };
+  if (have && fresh(have, now)) {
+    if (have.draftQuestionId !== draftQuestionId) {
+      have.draftQuestionId = draftQuestionId;
+      t[choice] = have;
+      write(t);
+    }
+    return have;
+  }
+  const a: Attempt = { key: newKey(), createdAt: now, ...(from ? { from } : {}), ...(draftQuestionId ? { draftQuestionId } : {}) };
   t[choice] = a;
   write(t);
   return a;

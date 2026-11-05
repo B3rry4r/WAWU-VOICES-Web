@@ -12,6 +12,7 @@ import { WalletScreen } from "@/features/units/WalletScreen";
 import { BuyUnitsScreen } from "@/features/units/BuyUnitsScreen";
 import { OutOfPostsSheet } from "@/features/units/OutOfPostsSheet";
 import { saveDraft, setAwaiting } from "@/features/units/draft";
+import { attemptFor, saveAttempt } from "@/features/units/attempt";
 
 const PID = "01a1ad10-f09a-73fc-9902-42da40d26dec";
 const costs = { baseKoboPerUnit: 1380, freeReactionsPerDay: 20, freeVotesPerDay: 3, textPostMilli: 500, voicePostMilli: 1000, reactionAfterFreeMilli: 100, voteAfterFreeMilli: 200, minPackKobo: 13800, extraVoice30Kobo: 15000, extraVoice60Kobo: 20000, textMaxChars: 500, freeVoiceSeconds: 10 };
@@ -113,6 +114,8 @@ describe("PaymentDone (the return page)", () => {
     search = `paymentId=${PID}&status=successful&transaction_id=5`;
     saveDraft("q-1", "My take on payday");
     setAwaiting("q-1", true);
+    attemptFor("UNITS:t-buzz:card", "/q/q-1", Date.now(), "q-1");
+    saveAttempt("UNITS:t-buzz:card", { paymentId: PID });
     let posts = 0;
     const handler: Handler = (m) => {
       if (m === `GET /payments/${PID}`) return json(payment("SUCCEEDED"));
@@ -128,6 +131,64 @@ describe("PaymentDone (the return page)", () => {
     render(<PaymentDoneScreen />);
     expect(await screen.findByText("55 units added")).toBeTruthy();
     expect(posts).toBe(1);
+  });
+  it("an old success page refreshed (no attempt) posts no draft, even one written later and waiting", async () => {
+    search = `paymentId=${PID}`;
+    saveDraft("q-2", "Written after");
+    setAwaiting("q-2", true);
+    let posts = 0;
+    api((m) => (m === `GET /payments/${PID}` ? json(payment("SUCCEEDED")) : m.startsWith("POST /questions/") ? (posts++, json({}, 201)) : undefined));
+    render(<PaymentDoneScreen />);
+    expect(await screen.findByText("55 units added")).toBeTruthy();
+    await act(async () => { await new Promise((r) => setTimeout(r, 100)); });
+    expect(posts).toBe(0);
+    expect(screen.queryByText("Your answer is posted")).toBeNull();
+  });
+  it("a token purchase never posts a waiting draft or claims units arrived", async () => {
+    search = `paymentId=${PID}`;
+    saveDraft("q-3", "Old abandoned draft");
+    setAwaiting("q-3", true);
+    attemptFor("EXTRA_VOICE:SECONDS_30", "/q/q-3", Date.now(), undefined);
+    saveAttempt("EXTRA_VOICE:SECONDS_30", { paymentId: PID });
+    let posts = 0;
+    api((m) => (m === `GET /payments/${PID}` ? json(payment("SUCCEEDED", { kind: "EXTRA_VOICE", title: "Extra voice, 30 seconds", unitsMilli: null, bonusMilli: null, token: { id: "t", kind: "SECONDS_30", maxSeconds: 30, status: "AVAILABLE", createdAt: "2026-12-02T17:14:00Z" } })) : m.startsWith("POST /questions/") ? (posts++, json({}, 201)) : undefined));
+    render(<PaymentDoneScreen />);
+    expect(await screen.findByText("Extra voice token added")).toBeTruthy();
+    await act(async () => { await new Promise((r) => setTimeout(r, 100)); });
+    expect(posts).toBe(0);
+    expect(screen.queryByText(/units arrived/)).toBeNull();
+  });
+  it("the second tab of a race shows the posted banner and does not post again", async () => {
+    search = `paymentId=${PID}`;
+    saveDraft("q-4", "Raced draft");
+    setAwaiting("q-4", true);
+    attemptFor("UNITS:t-buzz:card", "/q/q-4", Date.now(), "q-4");
+    saveAttempt("UNITS:t-buzz:card", { paymentId: PID });
+    let posts = 0;
+    const h: Handler = (m) => (m === `GET /payments/${PID}` ? json(payment("SUCCEEDED")) : m === "POST /questions/q-4/answers" ? (posts++, json({}, 201)) : undefined);
+    api(h);
+    render(<PaymentDoneScreen />);
+    expect(await screen.findByText("Your answer is posted")).toBeTruthy();
+    cleanup();
+    window.sessionStorage.clear(); // a new tab: no attempt of its own
+    api(h);
+    render(<PaymentDoneScreen />);
+    expect(await screen.findByText("Your answer is posted")).toBeTruthy();
+    expect(posts).toBe(1);
+  });
+  it("an unconfirmed payment with cancelled in the address says it is being confirmed, not cancelled", async () => {
+    search = `paymentId=${PID}&status=cancelled`;
+    api((m) => (m === `GET /payments/${PID}` ? json(payment("INITIATED")) : m === `POST /payments/${PID}/verify` ? err(409, "PAYMENT_NOT_VERIFIED", "x") : undefined));
+    render(<PaymentDoneScreen />);
+    expect(await screen.findByText("Confirming your payment")).toBeTruthy();
+    expect(screen.queryByText(/cancelled/i)).toBeNull();
+  });
+  it("a failed payment with no receipt number labels the reference", async () => {
+    search = `paymentId=${PID}`;
+    api((m) => (m === `GET /payments/${PID}` ? json(payment("FAILED")) : undefined));
+    render(<PaymentDoneScreen />);
+    expect(await screen.findByText("Payment reference")).toBeTruthy();
+    expect(screen.getByText("voices-1", { selector: "dd" })).toBeTruthy();
   });
 });
 
@@ -198,6 +259,12 @@ describe("Get Voice Units screen", () => {
     expect(screen.getByText("+5 bonus")).toBeTruthy();
     await userEvent.click(screen.getByRole("radio", { name: /Spark/ }));
     expect(screen.getByRole("button", { name: /Pay ₦138 for 10 units/ })).toBeTruthy();
+    // arrow keys move between the packs
+    screen.getByRole("radio", { name: /Spark/ }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: /Buzz/ }).getAttribute("aria-checked")).toBe("true");
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("radio", { name: /Spark/ }).getAttribute("aria-checked")).toBe("true");
   });
   it("sends the chosen method with the payment", async () => {
     const loc = { ...window.location, assign: vi.fn() };
