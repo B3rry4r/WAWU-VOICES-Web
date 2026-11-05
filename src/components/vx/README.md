@@ -1,6 +1,6 @@
 # VOICES components (web/src/components/vx)
 
-Typed TSX port of the approved design system (45 components). Same names, props, states and class names as the design bundle; icons come from lucide-react (0.460). One stylesheet, `vx.css`, reads the token variables.
+Typed TSX port of the approved design system (45 components). Same names, props, states and class names as the design bundle; icons come from lucide-react (^1.31.0, see package.json). One stylesheet, `vx.css`, reads the token variables.
 
 ## Use
 

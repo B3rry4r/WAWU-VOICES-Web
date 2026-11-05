@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { Button, IconButton } from './actions';
 import { cx } from './helpers';
@@ -29,7 +29,51 @@ export function Sheet(p: SheetProps): ReactElement | null {
     document.addEventListener('keydown', esc);
     return () => document.removeEventListener('keydown', esc);
   }, [onClose]);
-  if (p.open === false) return null;
+  const open = p.open !== false;
+  const sheetRef = useRef<HTMLDivElement>(null);
+  // Focus trap: move focus in on open, keep Tab inside, give focus back to the opener on close.
+  useEffect(() => {
+    if (!open) return undefined;
+    const sheet = sheetRef.current;
+    if (!sheet) return undefined;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusables = () =>
+      Array.from(
+        sheet.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+    // The first focusable is the Close button in the head; prefer the first body control when there is one.
+    const items = focusables();
+    const first = items.find((el) => el.getAttribute('aria-label') !== 'Close') ?? items[0];
+    if (first) first.focus();
+    else sheet.focus();
+    function trap(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return;
+      const list = focusables();
+      if (list.length === 0) {
+        e.preventDefault();
+        sheet?.focus();
+        return;
+      }
+      const head = list[0];
+      const tail = list[list.length - 1];
+      const at = document.activeElement;
+      if (e.shiftKey && (at === head || at === sheet || !sheet?.contains(at))) {
+        e.preventDefault();
+        tail.focus();
+      } else if (!e.shiftKey && (at === tail || !sheet?.contains(at))) {
+        e.preventDefault();
+        head.focus();
+      }
+    }
+    document.addEventListener('keydown', trap);
+    return () => {
+      document.removeEventListener('keydown', trap);
+      if (opener && opener.isConnected) opener.focus();
+    };
+  }, [open]);
+  if (!open) return null;
   return (
     <div
       className={cx('vx-overlay', dialog && 'vx-overlay--dialog', p.inline && 'vx-overlay--inline')}
@@ -37,7 +81,7 @@ export function Sheet(p: SheetProps): ReactElement | null {
         if (e.target === e.currentTarget && onClose) onClose();
       }}
     >
-      <div className={cx('vx-sheet', p.className)} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div ref={sheetRef} tabIndex={-1} className={cx('vx-sheet', p.className)} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <span className="vx-sheet__grab" aria-hidden="true" />
         <div className="vx-sheet__head">
           <div style={{ flex: 1 }}>
