@@ -7,6 +7,7 @@ import { Button, EmptyState, NotificationRow, Skeleton, Tabs } from "@/component
 import type { NotificationRowProps } from "@/components/vx";
 import { listNotifications, markNotificationsRead } from "@/lib/api/reach";
 import type { Notification, NotificationFilter } from "@/lib/api/reach";
+import { announceUnread } from "@/components/shell/unread";
 import { AppBar, isToday, useSignedIn, whenLabel } from "@/features/reach/shared";
 
 type Load = "loading" | "error" | "ready";
@@ -74,6 +75,7 @@ export function NotificationsPage() {
         setItems(p.items);
         setNext(p.nextCursor);
         setUnread(p.unread);
+        announceUnread(p.unread);
         setLoad("ready");
       })
       .catch(() => { if (!stop) setLoad("error"); });
@@ -101,6 +103,7 @@ export function NotificationsPage() {
     try {
       const r = await markNotificationsRead([]);
       setUnread(r.unread);
+      announceUnread(r.unread);
     } catch {
       setItems(before);
       setNote("Could not mark them as read. Try again.");
@@ -115,6 +118,7 @@ export function NotificationsPage() {
       try {
         const r = await markNotificationsRead([n.id]);
         setUnread(r.unread);
+        announceUnread(r.unread);
       } catch {
         setItems((old) => old.map((x) => (x.id === n.id ? { ...x, read: false } : x)));
         setNote("Could not mark it as read. Try again.");
