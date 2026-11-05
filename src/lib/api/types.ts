@@ -4129,6 +4129,27 @@ export interface components {
             whatNextPrompt?: string;
             status?: components["schemas"]["TopicStatus"];
         };
+        CreateQuestionRequest: {
+            /** Format: uuid */
+            topicId?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            kind: components["schemas"]["QuestionKind"];
+            text: string;
+            hint?: string;
+            /** Format: date */
+            scheduledFor?: string;
+            slotIndex?: number;
+            isSpare?: boolean;
+            pinned?: boolean;
+            featured?: boolean;
+            sensitive?: boolean;
+            /** Format: date-time */
+            startsAt?: string;
+            /** Format: date-time */
+            endsAt?: string;
+            status?: components["schemas"]["QuestionStatus"];
+        };
         UpsertQuestionRequest: {
             /** Format: uuid */
             topicId?: string;
@@ -4237,6 +4258,8 @@ export interface components {
             status: "OPEN" | "RESOLVED";
             questionText: string | null;
             listenCount: number;
+            /** @enum {string|null} */
+            postKind: "VOICE" | "TEXT" | "REPLY_VOICE" | "REPLY_TEXT" | null;
         };
         ModerationItemDetail: {
             listenCount: number;
@@ -5903,10 +5926,12 @@ export interface operations {
                 };
             };
             401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
             404: components["responses"]["E404"];
             409: components["responses"]["E409"];
             422: components["responses"]["E422"];
             429: components["responses"]["E429"];
+            503: components["responses"]["E503"];
         };
     };
     getAnswer: {
@@ -8101,7 +8126,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpsertQuestionRequest"];
+                "application/json": components["schemas"]["CreateQuestionRequest"];
             };
         };
         responses: {
