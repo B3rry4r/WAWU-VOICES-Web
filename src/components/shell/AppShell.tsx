@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, House, Mic, User } from "lucide-react";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { ChartNoAxesColumn, Compass, House, Mic, User } from "lucide-react";
+import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react";
 import { DeskSearch } from "./DeskSearch";
 import { ShellSlotsContext } from "./ShellSlots";
-import { NAV, activeNav, hidesTabBar, isChromeless, type NavId } from "./nav";
+import { Bell, UnreadProvider } from "./Bell";
+import { NAV, activeNav, hidesTabBar, isChromeless, onWeekly, showsLogoBar, type NavId } from "./nav";
 
 const ICONS: Record<Exclude<NavId, "speak">, typeof House> = { home: House, discover: Compass, profile: User };
 
-/** Messages, the bell and the country pill are not shown until the tasks that build them add them back (V-10).
+/** Messages never (V-10); the country pill comes back when its screen is built. The bell shows for a signed-in person.
  *  Phone chrome below 1024 px, desktop chrome (left nav, centre, right rail) from 1024 px. Page content goes in children; `rail` fills the right rail. */
 export function AppShell({ children, rail }: { children: ReactNode; rail?: ReactNode }) {
   const [railEl, setRailEl] = useState<HTMLElement | null>(null);
@@ -24,9 +25,12 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
   const pathname = usePathname() ?? "/";
   const active = activeNav(pathname);
   const bare = hidesTabBar(pathname);
+  const weekly = onWeekly(pathname);
+  const logoBar = showsLogoBar(pathname);
   if (isChromeless(pathname)) return <>{children}</>;
 
   return (
+    <UnreadProvider>
     <ShellSlotsContext.Provider value={slots}>
     <div className="sh-root">
       {/* desktop left nav */}
@@ -37,11 +41,20 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
         </Link>
         {NAV.filter((n) => n.id !== "speak").map((n) => {
           const Icon = ICONS[n.id as Exclude<NavId, "speak">];
+          const here = active === n.id && !(n.id === "discover" && weekly);
           return (
-            <Link key={n.id} href={n.href} className="sh-tab" aria-current={active === n.id ? "page" : undefined}>
-              <span className="sh-tab__ic"><Icon size={22} strokeWidth={active === n.id ? 2.4 : 2} aria-hidden="true" /></span>
-              {n.label}
-            </Link>
+            <Fragment key={n.id}>
+              <Link href={n.href} className="sh-tab" aria-current={here ? "page" : undefined}>
+                <span className="sh-tab__ic"><Icon size={22} strokeWidth={here ? 2.4 : 2} aria-hidden="true" /></span>
+                {n.label}
+              </Link>
+              {n.id === "discover" ? (
+                <Link href="/weekly" className="sh-tab" aria-current={weekly ? "page" : undefined}>
+                  <span className="sh-tab__ic"><ChartNoAxesColumn size={22} strokeWidth={weekly ? 2.4 : 2} aria-hidden="true" /></span>
+                  Weekly report
+                </Link>
+              ) : null}
+            </Fragment>
           );
         })}
         <Link href="/speak" className="sh-sidenav__speak" aria-current={active === "speak" ? "page" : undefined}>
@@ -50,15 +63,16 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
         </Link>
       </nav>
 
-      {/* phone top bar */}
-      <header className={claims > 0 ? "sh-topbar sh-topbar--page" : "sh-topbar"}>
-        {claims > 0 ? null : (
+      {/* phone top bar: the logo bar on the tab screens only; elsewhere the screen draws its own app bar (PhoneBar or inline) */}
+      <header className={claims > 0 ? "sh-topbar sh-topbar--page" : logoBar ? "sh-topbar" : "sh-topbar sh-topbar--none"}>
+        {claims > 0 || !logoBar ? null : (
           <Link href="/" className="sh-topbar__logo" aria-label="VOICES home">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo-wordmark-green.png" alt="VOICES" />
           </Link>
         )}
         <div ref={setBarEl} className="sh-topbar__slot" />
+        {logoBar ? <Bell /> : null}
       </header>
 
       <div className="sh-centre">
@@ -90,5 +104,6 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
       )}
     </div>
     </ShellSlotsContext.Provider>
+    </UnreadProvider>
   );
 }

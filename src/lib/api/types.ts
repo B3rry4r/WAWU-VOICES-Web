@@ -264,6 +264,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/by-handle/{handle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person's public profile and recent voices, by handle
+         * @description The same answer as GET /people/{userId}: blocks and the public-status rule apply the same way. The handle is matched without case. Auth: guest or signed in.
+         */
+        get: operations["getPersonByHandle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{userId}": {
         parameters: {
             query?: never;
@@ -730,6 +750,26 @@ export interface paths {
          * @description Auth: signed in with a finished profile.
          */
         post: operations["createUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/uploads/{fileId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tell the server the photo PUT is done
+         * @description Checks the object is there and the size that was signed, then confirms the file so it can be used (an avatar in PATCH /me/profile avatarFileId). 409 UPLOAD_NOT_RECEIVED if the PUT has not landed. Repeating it is safe. Auth: signed in with a finished profile. Rate limit: 20 per 10 minutes per account.
+         */
+        post: operations["completeUpload"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2119,7 +2159,7 @@ export interface paths {
         put?: never;
         /**
          * Create a question (daily, flash, follow-up)
-         * @description Auth: signed in with role EDITOR or ADMIN.
+         * @description kind is required here. Auth: signed in with role EDITOR or ADMIN.
          */
         post: operations["adminCreateQuestion"];
         delete?: never;
@@ -2143,7 +2183,7 @@ export interface paths {
         head?: never;
         /**
          * Edit, schedule, feature, close a question
-         * @description Auth: signed in with role EDITOR or ADMIN.
+         * @description Leave kind out to keep the question's own kind. Auth: signed in with role EDITOR or ADMIN.
          */
         patch: operations["adminUpdateQuestion"];
         trace?: never;
@@ -3436,6 +3476,13 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        UploadedFile: {
+            /** Format: uuid */
+            fileId: string;
+            kind: components["schemas"]["FileKind"];
+            /** Format: date-time */
+            confirmedAt: string;
+        };
         /** @description votes and percent appear once the person has voted, or the poll is closed, or results are live. */
         PollOption: {
             /** Format: uuid */
@@ -4059,6 +4106,7 @@ export interface components {
         AdminQuestion: {
             /** Format: uuid */
             id: string;
+            kind: components["schemas"]["QuestionKind"];
             slotIndex: number | null;
             /** Format: date */
             day: string | null;
@@ -4081,12 +4129,33 @@ export interface components {
             whatNextPrompt?: string;
             status?: components["schemas"]["TopicStatus"];
         };
-        UpsertQuestionRequest: {
+        CreateQuestionRequest: {
             /** Format: uuid */
             topicId?: string;
             /** Format: uuid */
             categoryId?: string;
             kind: components["schemas"]["QuestionKind"];
+            text: string;
+            hint?: string;
+            /** Format: date */
+            scheduledFor?: string;
+            slotIndex?: number;
+            isSpare?: boolean;
+            pinned?: boolean;
+            featured?: boolean;
+            sensitive?: boolean;
+            /** Format: date-time */
+            startsAt?: string;
+            /** Format: date-time */
+            endsAt?: string;
+            status?: components["schemas"]["QuestionStatus"];
+        };
+        UpsertQuestionRequest: {
+            /** Format: uuid */
+            topicId?: string;
+            /** Format: uuid */
+            categoryId?: string;
+            kind?: components["schemas"]["QuestionKind"];
             text: string;
             hint?: string;
             /** Format: date */
@@ -4187,6 +4256,10 @@ export interface components {
             createdAt: string;
             /** @enum {string} */
             status: "OPEN" | "RESOLVED";
+            questionText: string | null;
+            listenCount: number;
+            /** @enum {string|null} */
+            postKind: "VOICE" | "TEXT" | "REPLY_VOICE" | "REPLY_TEXT" | null;
         };
         ModerationItemDetail: {
             listenCount: number;
@@ -5110,6 +5183,36 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
+    getPersonByHandle: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicProfile"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
     getPerson: {
         parameters: {
             query?: {
@@ -5800,6 +5903,35 @@ export interface operations {
             415: components["responses"]["E415"];
             422: components["responses"]["E422"];
             429: components["responses"]["E429"];
+        };
+    };
+    completeUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadedFile"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+            503: components["responses"]["E503"];
         };
     };
     getAnswer: {
@@ -7994,7 +8126,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpsertQuestionRequest"];
+                "application/json": components["schemas"]["CreateQuestionRequest"];
             };
         };
         responses: {

@@ -118,6 +118,8 @@ export function signOut(): void {
   sessionStorage.clear();
   clearEntryState();
   if (refreshToken) void idCall("/auth/logout", { refreshToken }).catch(() => undefined);
+  // a kept recording belongs to the person who made it
+  void import("@/features/speak/draft").then((m) => m.clearDraft()).catch(() => undefined);
 }
 
 export function isSignedIn(): boolean {

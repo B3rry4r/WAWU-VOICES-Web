@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Archivo, Bagel_Fat_One } from "next/font/google";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/shell/AppShell";
+import { THEME_SCRIPT } from "@/components/shell/theme-script";
 import "./globals.css";
 import "../components/vx/vx.css";
 
@@ -13,7 +14,10 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${bagel.variable} ${archivo.variable}`}>
+    <html lang="en" className={`${bagel.variable} ${archivo.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
         <AppShell>{children}</AppShell>
       </body>
