@@ -44,10 +44,17 @@ export const getHome = () => apiFetch<Home>("/home", opts());
 export const getTodaysQuestion = () => apiFetch<Question>("/questions/today", opts());
 export const getTrending = (limit = 20, cursor?: string) =>
   apiFetch<S["AnswerPage"]>(`/feed/trending${qs({ limit, cursor })}`, opts());
-export const getTrendingQuestions = (limit = 5) => apiFetch<S["QuestionPage"]>(`/feed/trending-questions${qs({ limit })}`, opts());
+export const getTrendingQuestions = (limit = 5, categoryId?: string) => apiFetch<S["QuestionPage"]>(`/feed/trending-questions${qs({ limit, categoryId })}`, opts());
 export const getCurrentTopic = () => apiFetch<Topic>("/topics/current", opts());
 export const getCategories = () => apiFetch<S["CategoryList"]>("/categories", opts());
 export const getCategory = (slug: string, tab: string, cursor?: string) =>
   apiFetch<CategoryDetail>(`/categories/${encodeURIComponent(slug)}${qs({ tab, cursor, limit: 10 })}`, opts());
 export const search = (q: string, type?: string) => apiFetch<SearchResults>(`/search${qs({ q, type, limit: 20 })}`, opts());
+export type Me = S["Me"];
+/** The signed-in person: first name for the greeting, allowances for the vote cost. Signed in with a finished profile only. */
+export const getMe = () => apiFetch<Me>("/me", { authed: true });
+export const getMyCategories = () => apiFetch<S["CategoryFollowList"]>("/me/categories", { authed: true });
+export const setMyCategories = (categories: S["CategoryFollow"][]) =>
+  apiFetch<S["SetCategoriesRequest"]>("/me/categories", { method: "PUT", authed: true, body: { categories } });
+export const getNewsTags = () => apiFetch<S["TagInfoList"]>("/news/tags", opts());
 export const getPublicConfig = () => apiFetch<PublicConfig>("/config/public");
