@@ -10,7 +10,8 @@ import type { IconName } from './Icon';
 export interface UnitsChipProps {
   units: string;
   freeLeft?: number;
-  state?: 'low' | 'empty';
+  /** 'plain' never swaps to the low or empty look, whatever the figure is. */
+  state?: 'low' | 'empty' | 'plain';
   /** A link (to the wallet) instead of a button. false draws it as plain text, for a screen that has nowhere to go yet. */
   href?: string | false;
   onClick?: () => void;
@@ -19,7 +20,7 @@ export interface UnitsChipProps {
 
 export function UnitsChip(p: UnitsChipProps): ReactElement {
   const u = parseFloat(p.units);
-  const state = p.state || (u === 0 ? 'empty' : u < 2 ? 'low' : '');
+  const state = p.state === 'plain' ? '' : p.state || (u === 0 ? 'empty' : u < 2 ? 'low' : '');
   const cls = cx('vx-units', state && 'vx-units--' + state, p.href === false && 'vx-units--static', p.className);
   const label = state === 'empty' ? 'No Voice Units. Get units' : p.units + (p.href === false ? ' Voice Units' : ' Voice Units. Open Voice Units');
   const body = (
@@ -59,6 +60,8 @@ export interface ProfileHeaderProps {
   freeLeft?: number;
   /** Where the units chip goes. false draws it as plain text. */
   unitsHref?: string | false;
+  /** Passed to the units chip ('plain' keeps "0 units" as plain figures). */
+  unitsState?: UnitsChipProps['state'];
   referral?: string;
   /** Tapping the copy button. `copied` swaps its icon and label to a tick and "Copied". */
   onCopyReferral?: () => void;
@@ -119,7 +122,7 @@ export function ProfileHeader(p: ProfileHeaderProps): ReactElement {
         </div>
         {row ? (
           <div className="vx-prof__row">
-            {p.units !== undefined ? <UnitsChip units={p.units} freeLeft={p.freeLeft} href={p.unitsHref} /> : null}
+            {p.units !== undefined ? <UnitsChip units={p.units} freeLeft={p.freeLeft} href={p.unitsHref} state={p.unitsState} /> : null}
             {p.referral ? (
               <span className="vx-refcode">
                 {p.referral}

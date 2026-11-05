@@ -68,6 +68,7 @@ export function ProfileCard(p: {
       units={p.own ? units : undefined}
       freeLeft={p.freePosts}
       unitsHref={WALLET_LIVE ? "/wallet" : false}
+      unitsState="plain"
       referral={p.own ? p.referral : undefined}
       copied={copied}
       onCopyReferral={() => void copy()}
