@@ -5,9 +5,8 @@ import { Avatar, Button, EmptyState, Icon, NewsTag, Tabs, TextField } from "@/co
 import { decideNews, listNews } from "@/lib/api/admin";
 import type { AdminNewsItem, NewsDecision } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
-import { canOpen } from "./roles";
 import { ago, clock } from "./time";
-import { AuditList, Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction } from "./ui";
+import { AuditList, Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction, Gated } from "./ui";
 
 type NewsTagId = "VERIFIED_NEWS" | "UNVERIFIED_NEWS" | "GOSSIP";
 const KIND: Record<NewsTagId, "verified" | "unverified" | "gossip"> = { VERIFIED_NEWS: "verified", UNVERIFIED_NEWS: "unverified", GOSSIP: "gossip" };
@@ -16,8 +15,8 @@ const TAB_QUERY: Record<string, string> = { flagged: "flagged", asking: "asking-
 
 const tagOf = (it: AdminNewsItem): NewsTagId => (it.answer.news?.tag as NewsTagId | undefined) ?? "UNVERIFIED_NEWS";
 
-export function AdminNewsPage() {
-  const { roles, reloadToday } = useAdmin();
+function NewsBody() {
+  const { reloadToday } = useAdmin();
   const [tab, setTab] = useState("flagged");
   const [items, setItems] = useState<AdminNewsItem[] | null>(null);
   const [counts, setCounts] = useState({ flagged: 0, askingVerified: 0, allChanges: 0 });
@@ -49,7 +48,6 @@ export function AdminNewsPage() {
     void load();
   }, [load]);
 
-  if (!canOpen(roles, "news")) return <EmptyState icon="compass" title="We could not find that" body="Go back to Today." />;
 
   const it = items?.find((i) => i.answer.id === selected) ?? null;
 
@@ -219,5 +217,13 @@ function Decide({ item, readOnly, onDone }: { item: AdminNewsItem; readOnly: boo
         <AuditList title="Change log" lines={item.changeLog.map((l) => ({ ...l, text: `${clock(l.at)} · ${l.text}` }))} />
       </div>
     </Card>
+  );
+}
+
+export function AdminNewsPage() {
+  return (
+    <Gated page="news">
+      <NewsBody />
+    </Gated>
   );
 }

@@ -102,3 +102,76 @@ describe("Weekly approval", () => {
     expect((screen.getByRole("button", { name: "Hold the report" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
+
+import { AdminCalendarPage } from "@/features/admin/CalendarPage";
+import { AdminModerationPage } from "@/features/admin/ModerationPage";
+import { AdminAdsPage } from "@/features/admin/AdsPage";
+
+describe("round 1", () => {
+  it("editing a FLASH question sends its own kind, never DAILY", async () => {
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (u: string, init?: RequestInit) => {
+      if (u.endsWith("/me")) return json(200, me(["EDITOR"]));
+      if (u.includes("/admin/today")) return json(200, null);
+      if (u.includes("/admin/questions/") && init?.method === "PATCH") { sent.push(JSON.parse(String(init.body))); return json(200, {}); }
+      if (u.includes("/admin/topics/t1")) return json(200, { topic: { id: "t1", weekNumber: 1, title: "T", startsOn: "2026-11-05", status: "LIVE", sensitive: false }, questions: [{ id: "q1", kind: "FLASH", slotIndex: 1, day: "2026-11-05", text: "Is your bank app working right now?", hint: null, status: "LIVE", pinned: false, isSpare: false, categoryId: null, voiceCount: 0 }], spare: [], poll: null });
+      if (u.includes("/admin/topics")) return json(200, { items: [{ weekNumber: 1, topicId: "t1", title: "T", startsOn: "2026-11-05", status: "LIVE" }], nextCursor: null, counts: { live: 1, scheduled: 0, inReview: 0, draft: 0, sensitive: 0 }, totals: { weeks: 1, questions: 1 } });
+      return json(404, { error: { code: "NOT_FOUND", message: "no" } });
+    }));
+    render(<AdminFrame><AdminCalendarPage /></AdminFrame>);
+    const u = userEvent.setup();
+    await u.click(await screen.findByRole("button", { name: /Edit question/ }));
+    await u.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(sent.length).toBe(1));
+    expect(sent[0]).toMatchObject({ kind: "FLASH" });
+  });
+
+  it("moderation loads the list once and no item detail until one is opened", async () => {
+    const calls: string[] = [];
+    const item = (id: string) => ({ id, queue: "REPORTED", targetType: "ANSWER", targetId: id, reasons: ["threat"], reportCount: 3, priority: false, summary: "Reported 3 times · voice 0:14", createdAt: "2026-11-05T10:00:00Z", status: "OPEN", questionText: "Which promise?", listenCount: 220, postKind: "VOICE" });
+    vi.stubGlobal("fetch", vi.fn(async (u: string) => {
+      calls.push(u);
+      if (u.endsWith("/me")) return json(200, me(["MODERATOR"]));
+      if (u.includes("/admin/today")) return json(200, null);
+      if (u.includes("/admin/moderation/items/")) return json(200, { listenCount: 220, item: item("a"), author: null, content: null, transcript: null, playUrl: null, screening: [], context: null, audit: [] });
+      if (u.includes("/admin/moderation/items")) return json(200, { items: ["a", "b", "c", "d"].map(item), nextCursor: null, counts: { REPORTED: 4, open: 4, oldestOpenAt: null } });
+      return json(404, { error: { code: "NOT_FOUND", message: "no" } });
+    }));
+    render(<AdminFrame><AdminModerationPage /></AdminFrame>);
+    await waitFor(() => expect(screen.getAllByText(/Voice reply on "Which promise\?"/).length).toBe(4));
+    expect(screen.getAllByText(/220 listens/).length).toBeGreaterThan(0);
+    // only the first row's detail (the open item) is fetched
+    expect(calls.filter((c) => c.includes("/admin/moderation/items/")).length).toBe(1);
+    expect(calls.filter((c) => /\/admin\/moderation\/items(\?|$)/.test(c)).length).toBe(1);
+  });
+
+  it("an advert the API refuses to approve shows the API's reason and the checks as returned", async () => {
+    const ad = { id: "a1", brand: "Zobo", kind: "FEED_CARD", status: "AWAITING_APPROVAL", live: false, headline: "H", body: null, linkUrl: null, ctaLabel: null, imageUrl: null, audioClipId: null, categoryIds: [], states: [], ageBands: [], startsOn: null, endsOn: null, frequencyCapPerDay: 3, priceKobo: null, views: 0, taps: 0, listens: 0, rejectReason: null, changeRequest: null, checks: [{ text: "Labelled Ad, with a working link", ok: false }] };
+    vi.stubGlobal("fetch", vi.fn(async (u: string) => {
+      if (u.endsWith("/me")) return json(200, me(["AD_MANAGER"]));
+      if (u.includes("/admin/today")) return json(200, null);
+      if (u.includes("/decision")) return json(422, { error: { code: "VALIDATION_FAILED", message: "Some details need fixing.", details: { fields: [{ path: "linkUrl", message: "The advert needs a working link before it can be approved." }] } } });
+      if (u.includes("/admin/ads")) return json(200, { items: [ad], nextCursor: null, awaitingApproval: 1 });
+      if (u.includes("/categories")) return json(200, { items: [] });
+      return json(404, { error: { code: "NOT_FOUND", message: "no" } });
+    }));
+    render(<AdminFrame><AdminAdsPage /></AdminFrame>);
+    const u = userEvent.setup();
+    await u.click(await screen.findByRole("button", { name: "Approve" }));
+    await waitFor(() => expect(screen.getByText("The advert needs a working link before it can be approved.")).toBeTruthy());
+    expect(screen.getByLabelText("Needs a look")).toBeTruthy();
+    expect(screen.queryByLabelText("Passed")).toBeNull();
+  });
+
+  it("no list is fetched for a role that may not open the page", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (u: string) => {
+      calls.push(u);
+      if (u.endsWith("/me")) return json(200, me(["MODERATOR"]));
+      return json(404, { error: { code: "NOT_FOUND", message: "no" } });
+    }));
+    render(<AdminFrame><AdminAdsPage /></AdminFrame>);
+    await waitFor(() => expect(screen.getByText("We could not find that")).toBeTruthy());
+    expect(calls.some((c) => c.includes("/admin/ads"))).toBe(false);
+  });
+});

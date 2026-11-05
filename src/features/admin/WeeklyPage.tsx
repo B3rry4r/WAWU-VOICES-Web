@@ -6,9 +6,8 @@ import { approveWeekly, editWeekly, holdWeekly, listWeekly } from "@/lib/api/adm
 import type { AdminWeeklyReport } from "@/lib/api/admin";
 import { readPollSummary, readThemes } from "@/features/reach/weekly-map";
 import { useAdmin } from "./AdminFrame";
-import { canOpen } from "./roles";
 import { clock, dayMonth, fromLocalInput, slot, toLocalInput } from "./time";
-import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, SavedLine, StatePill, useAction } from "./ui";
+import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, SavedLine, StatePill, useAction, Gated, DateTimeField } from "./ui";
 
 const STATUS_WORDS: Record<string, string> = { DRAFT: "Draft", HELD: "Held", APPROVED: "Approved", PUBLISHED: "Published" };
 
@@ -27,8 +26,8 @@ function statusPill(r: AdminWeeklyReport) {
   return <StatePill tone="sun" icon="clock">Draft · nothing is public yet</StatePill>;
 }
 
-export function AdminWeeklyPage() {
-  const { roles, reloadToday } = useAdmin();
+function WeeklyBody() {
+  const { reloadToday } = useAdmin();
   const [reports, setReports] = useState<AdminWeeklyReport[] | null>(null);
   const [id, setId] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -48,7 +47,6 @@ export function AdminWeeklyPage() {
     void load();
   }, [load]);
 
-  if (!canOpen(roles, "weekly")) return <EmptyState icon="compass" title="We could not find that" body="Go back to Today." />;
 
   const report = reports?.find((r) => r.id === id) ?? null;
   const replace = (r: AdminWeeklyReport) => {
@@ -201,7 +199,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
           <>
             <TextField label="Editor notes (kept in the log)" multiline value={notes} onChange={setNotes} />
             <div>
-              <TextField label="Publish at" type="datetime-local" value={at} onChange={setAt} hint="Goes to the web, the app and the share card at once. Lagos time." />
+              <DateTimeField label="Publish at" value={at} onChange={setAt} hint="Goes to the web, the app and the share card at once. Lagos time." />
             </div>
             <ErrorLine>{!editing && !holding ? act.error : null}</ErrorLine>
             {holding ? (
@@ -229,5 +227,13 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
         ) : null}
       </div>
     </div>
+  );
+}
+
+export function AdminWeeklyPage() {
+  return (
+    <Gated page="weekly">
+      <WeeklyBody />
+    </Gated>
   );
 }

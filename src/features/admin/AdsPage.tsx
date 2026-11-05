@@ -6,15 +6,14 @@ import { createAd, decideAd, listAds } from "@/lib/api/admin";
 import type { AdminAd, UpsertAdRequest } from "@/lib/api/admin";
 import { getCategories } from "@/lib/api/feed";
 import { useAdmin } from "./AdminFrame";
-import { canOpen } from "./roles";
 import { dayMonth } from "./time";
-import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, useAction } from "./ui";
+import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, useAction, Gated } from "./ui";
 
 const KIND_WORDS: Record<AdminAd["kind"], string> = {
   FEED_CARD: "Ad · feed card",
   BANNER: "Ad · banner",
   AUDIO_SLOT: "Ad · audio slot in the feed",
-  WALLET_OFFER: "Wallet offer · buy-units sheet",
+  WALLET_OFFER: "Voice Units offer · buy-units sheet",
 };
 const KIND_VARIANT: Record<AdminAd["kind"], "card" | "audio" | "banner"> = { FEED_CARD: "card", BANNER: "banner", AUDIO_SLOT: "audio", WALLET_OFFER: "banner" };
 
@@ -33,8 +32,8 @@ function dates(a: AdminAd): string {
   return a.startsOn && a.endsOn ? `${s} to ${e}` : s || e;
 }
 
-export function AdminAdsPage() {
-  const { roles, reloadToday } = useAdmin();
+function AdsBody() {
+  const { reloadToday } = useAdmin();
   const [items, setItems] = useState<AdminAd[] | null>(null);
   const [awaiting, setAwaiting] = useState(0);
   const [error, setError] = useState<Error | null>(null);
@@ -62,7 +61,6 @@ export function AdminAdsPage() {
     );
   }, [load]);
 
-  if (!canOpen(roles, "ads")) return <EmptyState icon="compass" title="We could not find that" body="Go back to Today." />;
 
   const ad = items?.find((a) => a.id === selected) ?? null;
   const audience = (a: AdminAd) => [a.categoryIds.map((id) => cats[id]).filter(Boolean).join(", ") || "Everyone", a.states.length ? a.states.join(", ") : "Nigeria"].join(" · ");
@@ -283,5 +281,13 @@ function NewAd({ cats, onClose, onCreated }: { cats: Record<string, string>; onC
         </div>
       </div>
     </Card>
+  );
+}
+
+export function AdminAdsPage() {
+  return (
+    <Gated page="ads">
+      <AdsBody />
+    </Gated>
   );
 }

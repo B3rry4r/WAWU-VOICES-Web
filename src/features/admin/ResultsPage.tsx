@@ -5,9 +5,8 @@ import { Avatar, Button, EmptyState, Icon, Tabs, TextField, TopicChip } from "@/
 import { decideResult, listResultPostsAdmin, listResultThreads } from "@/lib/api/admin";
 import type { AdminResultPost, ResultThread } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
-import { canOpen } from "./roles";
 import { clock } from "./time";
-import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction } from "./ui";
+import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction, Gated } from "./ui";
 
 function Mark({ post }: { post: AdminResultPost["post"] }) {
   const ok = post.status === "VERIFIED";
@@ -19,8 +18,8 @@ function Mark({ post }: { post: AdminResultPost["post"] }) {
   );
 }
 
-export function AdminResultsPage() {
-  const { roles, reloadToday } = useAdmin();
+function ResultsBody() {
+  const { reloadToday } = useAdmin();
   const [threads, setThreads] = useState<ResultThread[] | null>(null);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [items, setItems] = useState<AdminResultPost[] | null>(null);
@@ -64,7 +63,6 @@ export function AdminResultsPage() {
     void loadPosts();
   }, [loadPosts]);
 
-  if (!canOpen(roles, "results")) return <EmptyState icon="compass" title="We could not find that" body="Go back to Today." />;
 
   const total = (threads ?? []).reduce((n, t) => n + t.toCheck, 0);
   const it = items?.find((i) => i.post.id === selected) ?? null;
@@ -233,5 +231,13 @@ function Check({ row, onDone }: { row: AdminResultPost; onDone: (row: AdminResul
         </div>
       )}
     </Card>
+  );
+}
+
+export function AdminResultsPage() {
+  return (
+    <Gated page="results">
+      <ResultsBody />
+    </Gated>
   );
 }

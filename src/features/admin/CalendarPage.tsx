@@ -4,10 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, EmptyState, Icon, TextField, TopicChip } from "@/components/vx";
 import { createTopic, getTopic, listTopics, updateQuestion, updateTopic } from "@/lib/api/admin";
 import type { AdminQuestion, AdminTopic, AdminTopicList, CalendarWeek, TopicStatus } from "@/lib/api/admin";
-import { useAdmin } from "./AdminFrame";
-import { canOpen } from "./roles";
 import { dayMonth, dayStringShort, dayStringWeekday, slot, weekRange } from "./time";
-import { Card, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, useAction } from "./ui";
+import { Card, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, useAction, Gated } from "./ui";
 
 const STATUS_WORDS: Record<TopicStatus, string> = { DRAFT: "Draft", IN_REVIEW: "In review", SCHEDULED: "Scheduled", LIVE: "Live", CLOSED: "Closed" };
 
@@ -18,8 +16,7 @@ function StatusPill({ s }: { s: TopicStatus }) {
 
 type Filter = "all" | "LIVE" | "SCHEDULED" | "IN_REVIEW" | "DRAFT" | "sensitive";
 
-export function AdminCalendarPage() {
-  const { roles } = useAdmin();
+function CalendarBody() {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
@@ -58,7 +55,6 @@ export function AdminCalendarPage() {
     void load();
   }, [load]);
 
-  if (!canOpen(roles, "calendar")) return <EmptyState icon="compass" title="We could not find that" body="Go back to Today." />;
 
   async function more() {
     if (!page?.nextCursor) return;
@@ -230,7 +226,7 @@ function QuestionRow({ q, onSaved }: { q: AdminQuestion; onSaved: () => void }) 
   const act = useAction();
   async function save() {
     const ok = await act.run(async () => {
-      await updateQuestion(q.id, { kind: "DAILY", text: text.trim() });
+      await updateQuestion(q.id, { kind: q.kind, text: text.trim() });
       return true;
     });
     if (ok) {
@@ -316,5 +312,13 @@ function WeekForm(p: { mode: "new"; suggestedWeek: number; onClose: () => void; 
         </div>
       </div>
     </Card>
+  );
+}
+
+export function AdminCalendarPage() {
+  return (
+    <Gated page="calendar">
+      <CalendarBody />
+    </Gated>
   );
 }

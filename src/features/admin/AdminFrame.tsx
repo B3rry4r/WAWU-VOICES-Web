@@ -61,6 +61,9 @@ export function AdminFrame({ children }: { children: ReactNode }) {
 
   const yes = gate.s === "yes";
   useEffect(() => {
+    if (yes) document.title = "Admin | VOICES";
+  }, [yes]);
+  useEffect(() => {
     if (!yes) return;
     let live = true;
     getAdminToday().then(
@@ -81,17 +84,21 @@ export function AdminFrame({ children }: { children: ReactNode }) {
 
   if (gate.s === "checking") return <div className="min-h-[60vh]" aria-busy="true" aria-label="Loading" />;
   if (gate.s === "no" || !value) {
-    return <EmptyState icon="compass" title="We could not find that" body="Go back to Home and pick another page." action="Go to Home" onAction={() => window.location.assign("/")} />;
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <EmptyState icon="compass" title="We could not find that" body="Go back to Home and pick another page." action="Go to Home" onAction={() => window.location.assign("/")} />
+      </div>
+    );
   }
 
   return (
     <Ctx.Provider value={value}>
-      <div className="ad-root fixed inset-0 z-[100] overflow-auto bg-bg text-ink">
+      <div className="ad-root min-h-screen bg-bg text-ink">
         <div className="hidden min-h-full dt:grid dt:grid-cols-[248px_minmax(0,1fr)]">
           <Sidebar />
           <div className="min-w-0 px-10 pb-16 pt-8">{children}</div>
         </div>
-        <div className="flex min-h-full items-center justify-center p-6 dt:hidden">
+        <div className="flex min-h-screen items-center justify-center p-6 dt:hidden">
           <p className="m-0 max-w-[320px] text-center text-[16px] leading-6 text-ink-2">Open the admin on a computer.</p>
         </div>
       </div>

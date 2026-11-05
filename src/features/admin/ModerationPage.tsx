@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Avatar, Button, EmptyState, Skeleton, Tabs, TextField } from "@/components/vx";
+import { Avatar, Button, EmptyState, Tabs, TextField } from "@/components/vx";
 import { getModerationItem, listModeration, moderationAction } from "@/lib/api/admin";
 import type { ModerationActionKind, ModerationItem, ModerationItemDetail } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
 import { AdminPlayer } from "./Player";
-import { canOpen } from "./roles";
 import { ago, dayMonth, minutesWords } from "./time";
-import { AuditList, Card, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction } from "./ui";
+import { AuditList, Card, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction, Gated } from "./ui";
 
 type Counts = Record<string, number | string | null>;
 
@@ -50,8 +49,8 @@ function contentOf(d: ModerationItemDetail): { kind: string; body: string | null
   return { kind: c.kind ?? "", body: c.body ?? null, createdAt: c.createdAt ?? null };
 }
 
-export function AdminModerationPage() {
-  const { roles, reloadToday } = useAdmin();
+function ModerationBody() {
+  const { reloadToday } = useAdmin();
   const [tab, setTab] = useState("reported");
   const [items, setItems] = useState<ModerationItem[] | null>(null);
   const [counts, setCounts] = useState<Counts>({});
@@ -86,19 +85,6 @@ export function AdminModerationPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  // The quoted question and the kind of post for each visible row come from the item's detail.
-  useEffect(() => {
-    if (!items) return;
-    for (const it of items.slice(0, 12)) {
-      if (details[it.id]) continue;
-      getModerationItem(it.id).then(
-        (d) => setDetails((m) => ({ ...m, [it.id]: d })),
-        () => undefined,
-      );
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
 
   useEffect(() => {
     setDetailError(null);
@@ -144,7 +130,6 @@ export function AdminModerationPage() {
     reloadToday();
   }
 
-  if (!canOpen(roles, "moderation")) return <EmptyState icon="compass" title="We could not find that" body="Go back to Today." />;
 
   const open = Number(counts.open ?? 0);
   const oldest = typeof counts.oldestOpenAt === "string" ? minutesWords(Math.max(0, Math.round((Date.now() - new Date(counts.oldestOpenAt).getTime()) / 60000))) : null;
@@ -185,22 +170,18 @@ export function AdminModerationPage() {
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">
             {items.map((it) => {
               const tag = reasonTag(it);
-              const d = details[it.id];
-              const c = d ? contentOf(d) : null;
-              const what = c ? (c.kind === "VOICE" ? "Voice reply" : "Text answer") : null;
+              const what = it.postKind === "VOICE" ? "Voice reply" : it.postKind === "TEXT" ? "Text answer" : it.postKind === "REPLY_VOICE" ? "Voice reply to a voice" : it.postKind === "REPLY_TEXT" ? "Text reply" : null;
               return (
                 <button key={it.id} type="button" role="listitem" className={queueRow(selected === it.id)} onClick={() => setSelected(it.id)} aria-current={selected === it.id ? "true" : undefined}>
                   <span className="flex flex-wrap items-center gap-2 text-[13px] leading-[18px] text-ink-2">
                     <span className={`rounded-s px-2 py-0.5 text-[12px] font-bold ${tag.cls}`}>{tag.text}</span>
-                    {it.summary}
+                    {it.summary}{it.listenCount > 0 ? ` · ${it.listenCount} ${it.listenCount === 1 ? "listen" : "listens"}` : ""}
                   </span>
                   {what ? (
                     <span className="mt-2 block text-[15px] font-semibold leading-[22px]">
-                      {d?.context?.text ? `${what} on "${d.context.text}"` : what}
+                      {it.questionText ? `${what} on "${it.questionText}"` : what}
                     </span>
-                  ) : (
-                    <span className="mt-2 block"><Skeleton variant="line" width="70%" /></span>
-                  )}
+                  ) : null}
                 </button>
               );
             })}
@@ -311,5 +292,13 @@ function Panel(p: {
 
       <AuditList title="Audit trail" lines={d.audit.map((a) => ({ ...a, text: `${new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(a.at)).replace(" ", "")} · ${a.text}` }))} />
     </div>
+  );
+}
+
+export function AdminModerationPage() {
+  return (
+    <Gated page="moderation">
+      <ModerationBody />
+    </Gated>
   );
 }

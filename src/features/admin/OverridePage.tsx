@@ -5,9 +5,8 @@ import { Button, Dialog, EmptyState, Tabs, TextField } from "@/components/vx";
 import { cancelOverride, createOverride, listOverrides, previewOverride } from "@/lib/api/admin";
 import type { AdminOverride, CreateOverrideRequest, OverridePreview } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
-import { canOpen } from "./roles";
 import { clock, dayClock, dayStringWeekday, fromLocalInput, longDate, toLocalInput, weekdayDay } from "./time";
-import { Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, PageHead, SavedLine, StatePill, Switch, useAction } from "./ui";
+import { Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, PageHead, SavedLine, StatePill, Switch, useAction, Gated, DateTimeField } from "./ui";
 
 const HEADLINE_MAX = 120;
 
@@ -15,8 +14,8 @@ function nowLocal(addHours = 0): string {
   return toLocalInput(new Date(Date.now() + addHours * 3600_000));
 }
 
-export function AdminOverridePage() {
-  const { roles, today, reloadToday } = useAdmin();
+function OverrideBody() {
+  const { today, reloadToday } = useAdmin();
   const [kind, setKind] = useState<"TEXT" | "LINK">("TEXT");
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState("");
@@ -78,7 +77,6 @@ export function AdminOverridePage() {
     return () => window.clearTimeout(t);
   }, [request, filled, timesOk]);
 
-  if (!canOpen(roles, "override")) return <EmptyState icon="compass" title="We could not find that" body="Go back to Today." />;
 
   const q = today?.todaysQuestion;
   const live = today?.flowState === "OVERRIDE_LIVE";
@@ -149,8 +147,8 @@ export function AdminOverridePage() {
           <Card>
             <CardTitle>When and how</CardTitle>
             <div className="grid grid-cols-2 gap-4">
-              <TextField label="Starts" type="datetime-local" value={starts} onChange={setStarts} />
-              <TextField label="Ends" type="datetime-local" value={ends} onChange={setEnds} hint={timesOk ? "Lagos time. You can change it." : "The end has to be after the start."} error={timesOk ? undefined : "The end has to be after the start."} />
+              <DateTimeField label="Starts" value={starts} onChange={setStarts} />
+              <DateTimeField label="Ends" value={ends} onChange={setEnds} hint="Lagos time. You can change it." error={timesOk ? undefined : "The end has to be after the start."} />
             </div>
             <div className="mb-2 mt-4 text-[15px] font-bold">The question it replaces</div>
             <Tabs variant="segmented" block label="The question it replaces" items={[{ id: "move", label: "Move to next slot" }, { id: "drop", label: "Drop it" }]} value={drop ? "drop" : "move"} onChange={(v) => setDrop(v === "drop")} />
@@ -276,5 +274,13 @@ function LogRow({ o, onChanged }: { o: AdminOverride; onChanged: () => void }) {
         </tr>
       ) : null}
     </>
+  );
+}
+
+export function AdminOverridePage() {
+  return (
+    <Gated page="override">
+      <OverrideBody />
+    </Gated>
   );
 }

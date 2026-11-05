@@ -2,7 +2,11 @@
 
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
-import { Banner, Icon, Skeleton } from "@/components/vx";
+import { useAdmin } from "./AdminFrame";
+import { canOpen } from "./roles";
+import type { AdminPageId } from "./roles";
+import { fromLocalInput, slot } from "./time";
+import { Banner, EmptyState, Icon, Skeleton } from "@/components/vx";
 import type { IconName } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 
@@ -181,3 +185,45 @@ export function AuditList({ lines, title }: { lines: { at: string; text: string;
 
 export const queueRow = (selected: boolean) =>
   `block w-full cursor-pointer border-0 border-b border-line bg-surface p-4 text-left text-ink last:border-b-0 ${selected ? "!bg-mint shadow-[inset_0_0_0_2px_var(--green)]" : "hover:bg-surface-2"}`;
+
+/** Renders the page only for a role that may open it; nothing is fetched before this passes. */
+export function Gated({ page, children }: { page: AdminPageId; children: ReactNode }) {
+  const { roles } = useAdmin();
+  if (!canOpen(roles, page)) return <EmptyState icon="compass" title="We could not find that" body="Go back to Today." />;
+  return <>{children}</>;
+}
+
+/** A date and time that reads like the board ("Mon 30 Nov, 10:30am", Lagos time). The picker opens from the field. `value` is a datetime-local string in Lagos time. */
+export function DateTimeField({ label, value, onChange, hint, error }: { label: string; value: string; onChange: (v: string) => void; hint?: string; error?: string }) {
+  const input = useRef<HTMLInputElement>(null);
+  const id = label.toLowerCase().replace(/\W+/g, "-");
+  let shown = "Pick a time";
+  try {
+    shown = slot(fromLocalInput(value));
+  } catch {
+    /* an unfinished value keeps the prompt */
+  }
+  return (
+    <div className={`vx-field ${error ? "is-error" : ""}`}>
+      <label className="vx-field__label" htmlFor={id}>{label}</label>
+      <div className="relative">
+        <button
+          id={id}
+          type="button"
+          className="vx-field__box w-full cursor-pointer border-0 bg-transparent px-4 text-left text-[16px] text-ink"
+          onClick={() => {
+            try {
+              input.current?.showPicker();
+            } catch {
+              input.current?.focus();
+            }
+          }}
+        >
+          {shown}
+        </button>
+        <input ref={input} type="datetime-local" tabIndex={-1} aria-hidden="true" value={value} onChange={(e) => onChange(e.target.value)} className="pointer-events-none absolute bottom-0 left-0 h-0 w-0 opacity-0" />
+      </div>
+      {error || hint ? <div className="vx-field__hint">{error ?? hint}</div> : null}
+    </div>
+  );
+}
