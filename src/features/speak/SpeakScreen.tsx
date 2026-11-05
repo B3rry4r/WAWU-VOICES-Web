@@ -1,0 +1,549 @@
+"use client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Banner, Button, Icon, Skeleton, StageBar } from "@/components/vx";
+import { short } from "@/components/vx/helpers";
+import { isSignedIn } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/client";
+import * as api from "@/lib/api/speak";
+import { baseMime } from "@/lib/audio-ref/mime";
+import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
+import { putWithRetry } from "@/lib/audio-ref/upload";
+import { clearDraft, clearPendingPayment, getPendingPayment, loadDraft, saveDraft, setPendingPayment, type Draft } from "./draft";
+import { ExtraVoiceSheet } from "./ExtraVoiceSheet";
+import { durationLabel, limitSeconds, naira, peaksFromLevels, refusalText, tokenFor, uuidKey } from "./logic";
+import { BackLink, PassPanel, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
+import "./speak.css";
+
+/** Where a guest goes to sign in. The recording waits in this browser (IndexedDB) until they are back (V-19). */
+export const JOIN_PATH = "/join";
+
+type Phase = "idle" | "recording" | "preview";
+type Step = { step: "upload"; pct: number } | { step: "process" } | { step: "post" };
+interface Take { blob: Blob; mime: string; seconds: number; peaks: number[]; key: string }
+interface Info { question: api.Question; config: api.PublicConfig; allowance: api.Allowances | null }
+interface Note { tone: "info" | "danger" | "success" | "offline"; title?: string; text: string; action?: string; onAction?: () => void }
+
+const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
+  permission_denied: { title: "The microphone is blocked", body: "Allow the microphone for this site in your browser settings, then tap Try again. Nothing is recorded until you tap the button." },
+  no_microphone: { title: "No microphone found", body: "Plug in or switch on a microphone, then tap Try again." },
+  unsupported: { title: "This browser cannot record", body: "Use an up-to-date Chrome, Firefox or Safari (iPhone: iOS 14.3 or newer), or write your answer instead." },
+  failed: { title: "Recording did not start", body: "Tap Try again. If it keeps happening, write your answer instead." },
+};
+
+function useRail(): HTMLElement | null {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  useEffect(() => setEl(document.querySelector<HTMLElement>(".sh-rail")), []);
+  return el;
+}
+
+export function SpeakScreen({ questionId }: { questionId?: string }) {
+  const router = useRouter();
+  const pathname = usePathname() ?? "/speak";
+  const params = useSearchParams();
+  const qParam = questionId ?? params.get("q") ?? undefined;
+  const rail = useRail();
+
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [info, setInfo] = useState<Info | null>(null);
+  const [loadErr, setLoadErr] = useState<ApiError | Error | null>(null);
+  const [reload, setReload] = useState(0);
+
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [left, setLeft] = useState(10);
+  const [levels, setLevels] = useState<number[]>([]);
+  const [micError, setMicError] = useState<RecorderError | null>(null);
+  const [take, setTake] = useState<Take | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [sending, setSending] = useState<Step | null>(null);
+  const [sheet, setSheet] = useState<{ kind?: api.ExtraVoiceTokenKind; hasTake: boolean } | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [sheetErr, setSheetErr] = useState<string | null>(null);
+
+  const rec = useRef<VoiceRecorder | null>(null);
+  const levelsRef = useRef<number[]>([]);
+  const discard = useRef(false);
+  const interrupted = useRef(false);
+  const trapped = useRef(false);
+  const ignorePop = useRef(false);
+  const sendState = useRef<{ key: string; clipId?: string; putUrl?: string; tokenId?: string; uploaded?: boolean; completed?: boolean } | null>(null);
+  const payKey = useRef(uuidKey());
+
+  useEffect(() => setSignedIn(isSignedIn()), []);
+
+  // The question, the public config and (signed in) my allowance.
+  useEffect(() => {
+    if (signedIn === null) return;
+    let live = true;
+    setInfo(null);
+    setLoadErr(null);
+    (async () => {
+      try {
+        const [question, config, allowance] = await Promise.all([
+          qParam ? api.getQuestion(qParam) : api.getToday(),
+          api.getPublicConfig(),
+          signedIn ? api.getAllowance().catch((e: unknown) => { if (e instanceof ApiError && e.status === 401) return null; throw e; }) : Promise.resolve(null),
+        ]);
+        if (live) setInfo({ question, config, allowance });
+      } catch (e) {
+        if (live) setLoadErr(e as Error);
+      }
+    })();
+    return () => { live = false; };
+  }, [signedIn, qParam, reload]);
+
+  const refreshAllowance = useCallback(async () => {
+    try {
+      const allowance = await api.getAllowance();
+      setInfo((i) => (i ? { ...i, allowance } : i));
+      return allowance;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const question = info?.question;
+  const config = info?.config;
+  const allowance = info?.allowance ?? null;
+  const freeSeconds = allowance?.costs.freeVoiceSeconds ?? config?.voiceFreeSeconds ?? 10;
+  const tokens = allowance?.extraVoiceTokens ?? [];
+  const limit = limitSeconds(freeSeconds, tokens);
+  const freeTotal = config?.freePosts ?? 10;
+  const freeLeft = allowance?.freePostsRemaining ?? freeTotal;
+  const offers = config?.extraVoice ?? [];
+  const qid = question?.id;
+  const open = question ? question.status === "LIVE" : true;
+
+  const pushNote = (n: Note) => setNotes((l) => [...l.filter((x) => x.text !== n.text), n]);
+  const clearNotes = () => setNotes([]);
+
+  // Restore a kept recording: a guest who signed in, someone back from checkout, a reload.
+  useEffect(() => {
+    if (!qid) return;
+    let live = true;
+    loadDraft().then((d) => {
+      if (!live || !d || d.questionId !== qid) return;
+      setTake({ blob: d.blob, mime: d.mime, seconds: d.seconds, peaks: d.peaks, key: d.key });
+      setPhase("preview");
+    });
+    return () => { live = false; };
+  }, [qid]);
+
+  // Back from checkout: verify the payment (the server checks it with Flutterwave itself).
+  useEffect(() => {
+    if (!signedIn || !qid) return;
+    const pending = getPendingPayment();
+    const paymentId = params.get("paymentId") ?? pending?.paymentId;
+    const status = params.get("status");
+    if (!paymentId || (!params.has("paymentId") && !pending)) return;
+    if (!params.has("paymentId") && !params.has("status") && !params.has("transaction_id")) return;
+    let live = true;
+    const back = () => router.replace(pathname + (qParam && !questionId ? `?q=${qParam}` : ""));
+    if (status === "cancelled") {
+      clearPendingPayment();
+      pushNote({ tone: "info", text: "The payment was not completed. Nothing was charged, and your recording is kept." });
+      back();
+      return;
+    }
+    (async () => {
+      try {
+        const p = await api.verifyPayment(paymentId, params.get("transaction_id") ?? undefined, pending?.key ?? uuidKey());
+        if (!live) return;
+        if (p.status === "SUCCEEDED") {
+          clearPendingPayment();
+          await refreshAllowance();
+          pushNote({ tone: "success", title: "Extra time added.", text: `You can record up to ${p.token?.maxSeconds ?? 30} seconds for your next message.` });
+        } else if (p.status === "PENDING" || p.status === "INITIATED") {
+          pushNote({ tone: "info", text: "Your payment is still being confirmed. Give it a moment, then check again.", action: "Check again", onAction: () => setReload((n) => n + 1) });
+        } else {
+          clearPendingPayment();
+          pushNote({ tone: "danger", text: p.failureReason ?? "The payment did not go through. You were not charged." });
+        }
+      } catch (e) {
+        if (live) pushNote({ tone: "danger", text: refusalText(e) });
+      }
+      if (live) back();
+    })();
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedIn, qid]);
+
+  const untrap = useCallback(() => {
+    if (!trapped.current) return;
+    trapped.current = false;
+    ignorePop.current = true;
+    window.history.back();
+  }, []);
+
+  const finishRecording = useCallback(async (r: Awaited<ReturnType<VoiceRecorder["result"]>>, wasLimit: number) => {
+    rec.current = null;
+    untrap();
+    if (discard.current) {
+      discard.current = false;
+      setPhase("idle");
+      return;
+    }
+    if (r.blob.size === 0 || r.seconds < 0.5) {
+      setPhase("idle");
+      pushNote({ tone: "info", text: "That recording was too short. Tap the button and say a little more." });
+      return;
+    }
+    const t: Take = { blob: r.blob, mime: r.mime, seconds: r.seconds, peaks: peaksFromLevels(levelsRef.current), key: uuidKey() };
+    setTake(t);
+    setPhase("preview");
+    if (qid) void saveDraft({ ...t, questionId: qid, savedAt: Date.now() } satisfies Draft);
+    if (interrupted.current) {
+      interrupted.current = false;
+      pushNote({ tone: "info", text: "Your recording stopped when you left the page. Listen back, then send it or record again." });
+    } else if (r.stoppedBy === "limit" && wasLimit === freeSeconds && offers.length > 0) {
+      setSheetErr(null);
+      setSheet({ hasTake: true });
+    }
+  }, [freeSeconds, offers.length, qid, untrap]);
+
+  async function startRecording() {
+    if (!qid || phase === "recording") return;
+    setMicError(null);
+    clearNotes();
+    levelsRef.current = [];
+    setLevels([]);
+    setLeft(limit);
+    discard.current = false;
+    interrupted.current = false;
+    const r = new VoiceRecorder({
+      maxSeconds: limit,
+      onTick: (secs, level) => {
+        setLeft(secs);
+        levelsRef.current.push(level);
+        setLevels((l) => [...l.slice(-27), level]);
+      },
+    });
+    const err = await r.start();
+    if (err) {
+      setMicError(err);
+      return;
+    }
+    rec.current = r;
+    window.history.pushState({ speakRecording: true }, "");
+    trapped.current = true;
+    setPhase("recording");
+    const usedLimit = limit;
+    void r.result().then((res) => finishRecording(res, usedLimit));
+  }
+
+  function stopRecording() {
+    rec.current?.stop();
+  }
+
+  // A recording stops when the page goes away (screen locks, a call, another tab) and keeps what it heard. The Back button discards it.
+  useEffect(() => {
+    if (phase !== "recording") return;
+    const hide = () => {
+      if (document.visibilityState === "hidden" && rec.current) {
+        interrupted.current = true;
+        rec.current.stop();
+      }
+    };
+    const gone = () => {
+      if (rec.current) {
+        interrupted.current = true;
+        rec.current.stop();
+      }
+    };
+    const pop = () => {
+      if (ignorePop.current) {
+        ignorePop.current = false;
+        return;
+      }
+      if (rec.current) {
+        trapped.current = false;
+        discard.current = true;
+        rec.current.stop();
+      }
+    };
+    document.addEventListener("visibilitychange", hide);
+    window.addEventListener("pagehide", gone);
+    window.addEventListener("popstate", pop);
+    return () => {
+      document.removeEventListener("visibilitychange", hide);
+      window.removeEventListener("pagehide", gone);
+      window.removeEventListener("popstate", pop);
+    };
+  }, [phase]);
+
+  // Leaving the page releases the microphone.
+  useEffect(() => () => {
+    if (rec.current) {
+      discard.current = true;
+      rec.current.cancel();
+    }
+  }, []);
+
+  function dropTake(removeClip: boolean) {
+    const st = sendState.current;
+    if (removeClip && st?.clipId && signedIn) void api.deleteVoiceClip(st.clipId).catch(() => undefined);
+    sendState.current = null;
+    setTake(null);
+    setPhase("idle");
+    clearNotes();
+    void clearDraft();
+  }
+
+  function close() {
+    if (rec.current) {
+      discard.current = true;
+      rec.current.stop();
+    }
+    void clearDraft();
+    router.push(qid ? `/q/${qid}` : "/");
+  }
+
+  const joinHref = () => `${JOIN_PATH}?next=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}`;
+
+  async function waitReady(clipId: string): Promise<void> {
+    for (let i = 0; i < 90; i++) {
+      const c = await api.getVoiceClip(clipId);
+      if (c.status === "READY") return;
+      if (c.status === "FAILED" || c.status === "REMOVED") throw new Error("CLIP_FAILED");
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    throw new Error("CLIP_SLOW");
+  }
+
+  async function send() {
+    if (!take || !qid || sending) return;
+    if (!signedIn) {
+      await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
+      window.location.assign(joinHref());
+      return;
+    }
+    clearNotes();
+    setSending({ step: "upload", pct: 0 });
+    let st = sendState.current;
+    if (!st || st.key !== take.key) st = sendState.current = { key: take.key };
+    let stage: "create" | "upload" | "later" = "create";
+    try {
+      if (!st.clipId) {
+        const tok = tokenFor(tokens, take.seconds, freeSeconds);
+        const up = await api.createVoiceClip({
+          mime: baseMime(take.mime) as "audio/webm" | "audio/mp4" | "audio/ogg",
+          sizeBytes: take.blob.size,
+          durationMs: Math.round(take.seconds * 1000),
+          extraVoiceTokenId: tok?.id,
+        });
+        st.clipId = up.clip.id;
+        st.putUrl = up.putUrl;
+        st.tokenId = tok?.id;
+      }
+      stage = "upload";
+      if (!st.uploaded) {
+        await putWithRetry({ url: st.putUrl as string, key: "", headers: {} }, take.blob, (f) => setSending({ step: "upload", pct: Math.round(f * 100) }));
+        st.uploaded = true;
+      }
+      stage = "later";
+      if (!st.completed) {
+        await api.completeVoiceClip(st.clipId);
+        st.completed = true;
+      }
+      setSending({ step: "process" });
+      await waitReady(st.clipId);
+      setSending({ step: "post" });
+      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId);
+      await clearDraft();
+      sendState.current = null;
+      router.push(`/q/${qid}/posted?a=${r.answer.id}`);
+    } catch (e) {
+      setSending(null);
+      if (stage === "upload" && st.clipId) {
+        void api.deleteVoiceClip(st.clipId).catch(() => undefined);
+        sendState.current = null;
+      }
+      if (e instanceof Error && e.message === "CLIP_FAILED") {
+        sendState.current = null;
+        pushNote({ tone: "danger", text: "We could not process that recording. Record it again and send it." });
+        return;
+      }
+      if (e instanceof Error && e.message === "CLIP_SLOW") {
+        pushNote({ tone: "info", text: "Your voice is still being prepared. Tap Send again in a moment.", action: "Send", onAction: () => void send() });
+        return;
+      }
+      if (e instanceof ApiError && e.code === "EXTRA_VOICE_REQUIRED") {
+        sendState.current = null;
+        pushNote({ tone: "danger", text: refusalText(e) });
+        if (offers.length > 0) {
+          setSheetErr(null);
+          setSheet({ hasTake: true });
+        }
+        return;
+      }
+      if (e instanceof ApiError && (e.code === "UNAUTHENTICATED" || e.code === "TOKEN_EXPIRED")) {
+        await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
+        window.location.assign(joinHref());
+        return;
+      }
+      const retryable = !(e instanceof ApiError) || e.status === 0 || e.status >= 500;
+      pushNote({ tone: e instanceof ApiError && e.status === 0 ? "offline" : "danger", text: refusalText(e), action: retryable ? "Try again" : undefined, onAction: retryable ? () => void send() : undefined });
+    }
+  }
+
+  async function pay(offer: api.ExtraVoiceOffer, method: api.PaymentMethod) {
+    if (!qid || paying) return;
+    if (take) await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
+    if (!signedIn) {
+      window.location.assign(joinHref());
+      return;
+    }
+    setPaying(true);
+    setSheetErr(null);
+    try {
+      const back = pathname + (qParam && !questionId ? `?q=${qParam}` : "");
+      const init = await api.initExtraVoicePayment(offer.kind, method, back, payKey.current);
+      setPendingPayment({ paymentId: init.paymentId, questionId: qid, key: uuidKey() });
+      window.location.assign(init.checkoutUrl);
+    } catch (e) {
+      setSheetErr(refusalText(e));
+      setPaying(false);
+      payKey.current = uuidKey();
+    }
+  }
+
+  // ---- render ----
+  const chrome = <style>{`@media (max-width:1023px){.sh-topbar,.sh-bottombar{display:none}}`}</style>;
+  if (loadErr) {
+    const gone = loadErr instanceof ApiError && loadErr.status === 404;
+    return (
+      <div className="sp-page sp-page--plain">
+        {chrome}
+        <div className="sp-plain">
+          <Banner tone={loadErr instanceof ApiError && loadErr.status === 0 ? "offline" : "danger"} title={gone ? "We could not find this question" : "This did not load"} action={gone ? undefined : "Try again"} onAction={() => setReload((n) => n + 1)}>
+            {gone ? "It may have been removed." : loadErr instanceof ApiError && loadErr.status === 0 ? "Check your connection and try again." : "Something went wrong on our side. Try again in a moment."}
+          </Banner>
+          <Button variant="secondary" href="/">Back to Home</Button>
+        </div>
+      </div>
+    );
+  }
+  if (!info || !question || !config || !qid) {
+    return (
+      <div className="sp-page" aria-busy="true">
+        {chrome}
+        <div className="sp-loading"><Skeleton variant="tile" /></div>
+      </div>
+    );
+  }
+  if (!open) {
+    return (
+      <div className="sp-page sp-page--plain">
+        {chrome}
+        <div className="sp-plain">
+          <Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner>
+          <Button variant="secondary" href={`/q/${qid}`}>Listen to the voices</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const live = phase === "recording";
+  const costs = allowance?.costs;
+  const unitText = costs ? `${costs.voicePostMilli / 1000} unit${costs.voicePostMilli === 1000 ? "" : "s"}` : "1 unit";
+  const unitNaira = costs ? naira(Math.round((costs.voicePostMilli * costs.baseKoboPerUnit) / 1000)) : "";
+  const idleHint = (
+    <p className="vx-rec__hint">
+      {"Tap to record. You have "}
+      <b>{`${limit} seconds`}</b>
+      {limit > freeSeconds ? " with your extra voice." : freeLeft > 0 ? " on a free post." : ` for ${unitText}${unitNaira ? ` (${unitNaira})` : ""}.`}
+    </p>
+  );
+  const liveHint = (
+    <p className="vx-rec__hint" aria-live="polite">
+      <b>{`${Math.ceil(left)} seconds left`}</b>
+      {`. It stops by itself at ${limit}.`}
+    </p>
+  );
+  const feeNote = `Extra time is a one-off token for one message: ${[...offers].sort((a, b) => a.maxSeconds - b.maxSeconds).map((o) => `${naira(o.priceKobo)} for up to ${durationLabel(o.maxSeconds)}`).join(", ")}. Your first ${freeTotal} posts stay free.`;
+  const help = micError ? MIC_HELP[micError] : null;
+  const stepText = sending ? (sending.step === "upload" ? `Sending your voice, ${sending.pct}%` : sending.step === "process" ? "Getting your voice ready" : "Posting") : "";
+  const sub = "Today’s question";
+  const counts = { speak: short(question.voiceCount), discuss: short(question.answerCount), next: short(question.proposalCount) };
+  const eyebrow = [question.category?.name, question.topicTitle].filter(Boolean).join(" · ");
+
+  const panel = (
+    <section className={"vx-rec sp-rec" + (live ? " is-live" : "")} aria-label="Voice recorder">
+      <div className="vx-rec__top">
+        {live ? <span className="vx-rec__dot">Recording</span> : <Pill left={freeLeft} total={freeTotal} />}
+      </div>
+      {notes.map((n) => (
+        <Banner key={n.text} tone={n.tone} title={n.title} action={n.action} onAction={n.onAction} onClose={() => setNotes((l) => l.filter((x) => x !== n))}>
+          {n.text}
+        </Banner>
+      ))}
+      <p className="vx-rec__q">{question.text}</p>
+
+      {phase !== "preview" && help ? (
+        <div className="sp-help" role="alert">
+          <Icon name="mic-off" size={36} />
+          <h2 className="sp-help__t">{help.title}</h2>
+          <p className="sp-help__b">{help.body}</p>
+          <div className="sp-help__btns">
+            {micError !== "unsupported" ? <Button variant="onforest" icon="rotate-ccw" onClick={() => void startRecording()}>Try again</Button> : null}
+            <Button variant="onforest" icon="send" href={`/q/${qid}/write`}>Write instead</Button>
+          </div>
+        </div>
+      ) : null}
+
+      {phase !== "preview" && !help ? (
+        <>
+          <RecordStage live={live} limit={limit} left={left} levels={levels} freeLeft={freeLeft} hint={live ? liveHint : idleHint} onToggle={live ? stopRecording : () => void startRecording()} />
+          {!live && limit === freeSeconds ? <PassPanel offers={offers} onPick={(o) => { setSheetErr(null); setSheet({ kind: o.kind, hasTake: false }); }} /> : null}
+          {!live && limit === freeSeconds && offers.length > 0 ? <p className="sp-fine sp-fine--phone">{feeNote}</p> : null}
+        </>
+      ) : null}
+
+      {phase === "preview" && take ? (
+        <>
+          <TakePlayer blob={take.blob} seconds={take.seconds} peaks={take.peaks} />
+          <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>
+          {signedIn === false ? <p className="sp-fine">You sign in to post. Your recording waits here in this browser.</p> : null}
+          {sending ? (
+            <div className="sp-progress" role="status" aria-live="polite">
+              <div className="sp-progress__bar"><i style={{ width: `${sending.step === "upload" ? sending.pct : 100}%` }} /></div>
+              <span>{stepText}</span>
+            </div>
+          ) : null}
+          <div className="vx-rec__actions">
+            <Button variant="onforest" icon="rotate-ccw" disabled={!!sending} onClick={() => dropTake(true)}>Re-record</Button>
+            <Button variant="onforest" icon="trash-2" disabled={!!sending} onClick={() => dropTake(true)}>Delete</Button>
+            <Button size="l" icon="send" loading={!!sending} onClick={() => void send()}>{freeLeft > 0 ? "Send" : `Send for ${unitText}`}</Button>
+          </div>
+        </>
+      ) : null}
+    </section>
+  );
+
+  return (
+    <div className="sp-page">
+      {chrome}
+      <PhoneBar onClose={close} sub={sub} />
+      <div className="sp-body">
+        <div className="sp-head hidden dt:block">
+          <BackLink href={`/q/${qid}`} />
+          <StageBar current="speak" counts={counts} onChange={(id) => { if (id !== "speak") router.push(`/q/${qid}`); }} />
+          <p className="sp-eyebrow"><span className="vx-eyebrow">Speak</span>{eyebrow ? <span>{eyebrow}</span> : null}</p>
+          <h1 className="sp-title">{question.text}</h1>
+          {question.hint ? <p className="sp-hint">{question.hint}</p> : null}
+        </div>
+        {panel}
+        {phase === "idle" && !help ? (
+          <div className="sp-alt">
+            <Button variant="onforest" href={`/q/${qid}/write`} className="sp-alt__btn">Write instead</Button>
+          </div>
+        ) : null}
+      </div>
+      {rail ? createPortal(<RecordingTimeCard freeLeft={freeLeft} total={freeTotal} freeSeconds={freeSeconds} offers={offers} />, rail) : null}
+      {sheet && offers.length > 0 ? (
+        <ExtraVoiceSheet offers={offers} freeSeconds={freeSeconds} initial={sheet.kind} hasTake={sheet.hasTake} paying={paying} error={sheetErr} onPay={(o, m) => void pay(o, m)} onClose={() => { setSheet(null); setSheetErr(null); }} />
+      ) : null}
+    </div>
+  );
+}

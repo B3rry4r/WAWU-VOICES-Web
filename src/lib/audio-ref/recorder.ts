@@ -1,4 +1,4 @@
-import { pickMime } from './mime.js';
+import { pickMime } from './mime';
 
 export type RecorderError = 'unsupported' | 'permission_denied' | 'no_microphone' | 'failed';
 
