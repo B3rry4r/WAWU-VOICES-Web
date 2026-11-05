@@ -47,9 +47,8 @@ export const listQuestionPolls = (questionId: string) => apiFetch<S["PollList"]>
 export const getPoll = (pollId: string) => apiFetch<Poll>(`/polls/${enc(pollId)}`, read());
 export const getPollResults = (pollId: string) => apiFetch<PollResults>(`/polls/${enc(pollId)}/results`, read());
 export const getPublicConfig = () => apiFetch<PublicConfig>("/config/public");
-/** What the person can do now and what it costs. GET /me/allowance is not served on main yet, so this reads the same Allowances block from GET /me
- *  (free votes left today, balance, costs). Switch to /me/allowance?action=VOTE when the API serves it. */
-export const getVoteAllowance = async () => (await apiFetch<{ allowances: Allowances }>("/me", { authed: true })).allowances;
+/** What the person can do now and what it costs: free votes left today, balance, costs (GET /me/allowance). */
+export const getVoteAllowance = () => apiFetch<Allowances>("/me/allowance", { authed: true });
 
 /** The paid action: the key makes a repeat of the same tap safe. A 402 or 409 comes back as an ApiError. */
 export const castVote = (pollId: string, optionIds: string[], idempotencyKey: string) =>

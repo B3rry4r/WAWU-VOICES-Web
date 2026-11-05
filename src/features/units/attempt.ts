@@ -1,9 +1,12 @@
-/* One purchase attempt = one Idempotency-Key, kept in this browser tab's sessionStorage.
+/* One purchase attempt = one Idempotency-Key, kept in this browser's localStorage (shared by every tab), per person and choice.
+ * Two tabs on the same pack get the same key and so the same payment, until it settles or expires.
  * - A retry of the same choice (network error, a second tap, a reload, the back button from checkout) re-uses the key,
  *   so the server hands back the same payment and a second payment is never made.
  * - Once the POST has answered, the checkout address is kept too, so a repeat tap goes straight to it without a request.
  * - The entry is dropped when the payment reaches a final state (the return page) or the payment has expired.
  * Storage can be blocked: every call falls back to a key held in memory for this page. */
+
+import { sessionStorage as authStore } from "@/lib/auth/session-storage";
 
 const STORE = "voices-buy-attempts";
 const MAX_AGE_MS = 20 * 60 * 1000; // under the 30 minute payment expiry, well inside the server's 24 hour key window
@@ -21,15 +24,32 @@ export interface Attempt {
 }
 
 type Table = Record<string, Attempt>;
+
+/** The signed-in person (the token's `sub`), so one person's attempt is never reused for another. */
+function person(): string {
+  try {
+    const tok = authStore.getToken();
+    const part = tok?.split(".")[1];
+    if (part) {
+      const sub = (JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/"))) as { sub?: unknown }).sub;
+      if (typeof sub === "string" && sub) return sub;
+    }
+  } catch {
+    /* an unreadable token: fall through */
+  }
+  return "anon";
+}
+const slot = (choice: string) => `${person()}|${choice}`;
 const memory: Table = {};
 let blocked = false; // storage threw once: this page keeps its own copy
 
 function read(): Table {
   try {
-    const raw = window.sessionStorage.getItem(STORE);
+    const raw = window.localStorage.getItem(STORE);
     if (!raw) return blocked ? { ...memory } : {};
     const t = JSON.parse(raw) as Table;
-    return t && typeof t === "object" ? t : {};
+    if (!t || typeof t !== "object") return {};
+    return t;
   } catch {
     blocked = true;
     return { ...memory };
@@ -40,7 +60,7 @@ function write(t: Table): void {
   Object.keys(memory).forEach((k) => delete memory[k]);
   Object.assign(memory, t);
   try {
-    window.sessionStorage.setItem(STORE, JSON.stringify(t));
+    window.localStorage.setItem(STORE, JSON.stringify(t));
   } catch {
     blocked = true; // memory above still holds it for this page
   }
@@ -74,25 +94,28 @@ function fresh(a: Attempt, now: number): boolean {
 /** The live attempt for this choice, or a new one. */
 export function attemptFor(choice: string, from?: string, now = Date.now(), draftQuestionId?: string): Attempt {
   const t = read();
-  const have = t[choice];
+  const k = slot(choice);
+  const have = t[k];
   if (have && fresh(have, now)) {
     if (have.draftQuestionId !== draftQuestionId) {
       have.draftQuestionId = draftQuestionId;
-      t[choice] = have;
+      t[k] = have;
       write(t);
     }
     return have;
   }
   const a: Attempt = { key: newKey(), createdAt: now, ...(from ? { from } : {}), ...(draftQuestionId ? { draftQuestionId } : {}) };
-  t[choice] = a;
+  t[k] = a;
   write(t);
-  return a;
+  // Another tab may have written between our read and write: whatever is stored now is the attempt for everyone.
+  return read()[k] ?? a;
 }
 
 export function saveAttempt(choice: string, patch: Partial<Attempt>): void {
   const t = read();
-  if (t[choice]) {
-    t[choice] = { ...t[choice], ...patch };
+  const k = slot(choice);
+  if (t[k]) {
+    t[k] = { ...t[k], ...patch };
     write(t);
   }
 }
@@ -100,7 +123,7 @@ export function saveAttempt(choice: string, patch: Partial<Attempt>): void {
 /** Forget a choice that failed before the server answered with a payment (so the next tap is a clean attempt). */
 export function dropAttempt(choice: string): void {
   const t = read();
-  delete t[choice];
+  delete t[slot(choice)];
   write(t);
 }
 

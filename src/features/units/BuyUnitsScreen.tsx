@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Rail } from "@/components/shell/ShellSlots";
 import { Badge, Banner, Button, Icon, IconButton, PackPicker, Tabs } from "@/components/vx";
 import { getTiers, getWallet, type PayMethod, type TiersResponse, type UnitTier, type Wallet } from "@/lib/api/units";
 import { safePath } from "./attempt";
@@ -134,7 +135,8 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
         <Note>Tokens do not renew. Each purchase shows in your Voice Units history with a receipt.</Note>
       </section>
 
-      <aside className="hidden flex-col gap-3 dt:flex" aria-label="What units pay for">
+      <Rail>
+      <aside className="flex flex-col gap-3" aria-label="What units pay for">
         <Card className="!pb-[6px]">
           <h2 className="vx-eyebrow m-0 mb-1 text-ink-2">What units pay for</h2>
           {costRows(tiers.costs).map((r) => (
@@ -143,6 +145,7 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
         </Card>
         <Banner tone="info">Reading, listening, liking and sharing are always free.</Banner>
       </aside>
+      </Rail>
     </div>
   );
 }

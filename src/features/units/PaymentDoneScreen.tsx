@@ -26,9 +26,34 @@ function verifyOnce(id: string, key: string, txId?: string): Promise<Payment> {
   return p;
 }
 
-function Details({ rows }: { rows: Array<[string, string]> }) {
+/** A raw payment reference (voices-<uuid>) is long: show its last 8 characters, and keep the whole value to copy. */
+export function shortRef(ref: string): string {
+  return ref.length > 12 ? ref.slice(-8) : ref;
+}
+
+function CopyRef({ full }: { full: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(full);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* the full value is in the title for a long press */
+    }
+  }
   return (
-    <dl className="m-0 flex flex-col rounded-l bg-surface px-4 py-1 text-[15px] font-medium leading-[21px] shadow-[inset_0_0_0_1px_var(--line)]">
+    <button type="button" className="inline-flex items-center gap-1 border-0 bg-transparent p-0 font-bold text-green-text underline" title={full} aria-label={`Copy the full reference ${full}`} onClick={() => void copy()}>
+      <span className="tabular-nums">{shortRef(full)}</span>
+      <Icon name={copied ? "check" : "copy"} size={14} />
+      <span className="sr-only" role="status">{copied ? "Copied" : ""}</span>
+    </button>
+  );
+}
+
+function Details({ rows }: { rows: Array<[string, ReactNode]> }) {
+  return (
+    <dl className="m-0 flex flex-col rounded-l bg-surface px-4 py-1 text-[15px] font-medium leading-[21px] shadow-[inset_0_0_0_1px_var(--line)] dt:bg-surface-2">
       {rows.map(([k, v]) => (
         <div key={k} className="flex justify-between gap-3 border-b border-line py-[10px] last:border-b-0">
           <dt className="text-ink-2">{k}</dt>
@@ -258,7 +283,7 @@ export function PaymentDoneScreen() {
         <Details rows={rows} />
         <Actions>
           <Button icon={posted ? "message-circle" : undefined} href={target}>{posted ? "Back to the conversation" : from ? "Back" : "Back to Voice Units"}</Button>
-          <Button variant={desktop ? "secondary" : "ghost"} icon="file-down" href={`/units/receipt/${p.id}`}>Receipt</Button>
+          <Button variant={desktop ? "secondary" : "ghost"} icon="file-down" href={`/units/receipt/${p.id}`}><span className="dt:hidden">Download receipt</span><span className="hidden dt:inline">Receipt</span></Button>
         </Actions>
       </Shell>
     );
@@ -272,12 +297,12 @@ export function PaymentDoneScreen() {
     expired: { title: "This payment expired", body: "You did not pay in time. No units were added. You can start again." },
     mismatch: { title: "We could not confirm this payment", body: "The amount paid does not match this payment. Nothing was added." },
   }[state.kind];
-  const rows: Array<[string, string]> = [];
+  const rows: Array<[string, ReactNode]> = [];
   if (p) {
     rows.push(["Pack", p.kind === "UNITS" ? `${p.title.replace(/ pack$/i, "")}, ${naira(p.amountKobo)}` : `${p.title}, ${naira(p.amountKobo)}`]);
     const m = methodLabel(p);
     if (m) rows.push(["Method", m]);
-    if (!p.receiptNo) rows.push(["Payment reference", p.txRef]);
+    if (!p.receiptNo) rows.push(["Payment reference", <CopyRef key="ref" full={p.txRef} />]);
   }
   const qd = attemptRef.current?.draftQuestionId;
   const hold = !!qd && !!getDraft(qd);
@@ -288,7 +313,7 @@ export function PaymentDoneScreen() {
       {hold ? <Banner tone="info" title="Your draft is still saved">It posts as soon as your units arrive.</Banner> : null}
       {p && state.kind !== "refunded" ? (
         <Banner tone="warning" title="Seeing a debit?">
-          If your bank shows one for this payment, it comes back to you. Support can trace it with reference {p.receiptNo ?? p.txRef}.
+          If your bank shows one for this payment, it comes back to you. Support can trace it with reference {p.receiptNo ?? shortRef(p.txRef)}.
         </Banner>
       ) : null}
       {rows.length ? <Details rows={rows} /> : null}

@@ -188,7 +188,7 @@ describe("PaymentDone (the return page)", () => {
     api((m) => (m === `GET /payments/${PID}` ? json(payment("FAILED")) : undefined));
     render(<PaymentDoneScreen />);
     expect(await screen.findByText("Payment reference")).toBeTruthy();
-    expect(screen.getByText("voices-1", { selector: "dd" })).toBeTruthy();
+    expect(screen.getByText("voices-1", { selector: "dd span" })).toBeTruthy();
   });
 });
 

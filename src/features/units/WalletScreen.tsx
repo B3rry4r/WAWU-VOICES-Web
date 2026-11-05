@@ -18,7 +18,7 @@ import {
 } from "@/lib/api/units";
 import { Rail } from "@/components/shell/ShellSlots";
 import { startErrorText, useCheckout } from "./checkout";
-import { costRows, ledgerFigure, ledgerNote, naira, smallestPack, units, whenLong, whenShort } from "./format";
+import { costRows, extraVoiceTitle, ledgerFigure, ledgerNote, naira, smallestPack, units, whenLong, whenShort } from "./format";
 import { readErrorText, useDesktop, useLoad, useSignedIn } from "./hooks";
 import { Card, ErrorBlock, H2, Line, LoadingBlock, Note, SignInNeeded } from "./ui";
 
@@ -59,7 +59,7 @@ export function ExtraVoiceCards({
     <div className="grid grid-cols-2 gap-3">
       {offers.map((o) => (
         <article key={o.kind} className="flex flex-col gap-[6px] rounded-l bg-surface p-4 shadow-[inset_0_0_0_1px_var(--line)]">
-          <span className="vx-eyebrow text-ink-2">{o.label}</span>
+          <span className="vx-eyebrow text-ink-2">{extraVoiceTitle(o.maxSeconds)}</span>
           <span className="font-display text-[26px] font-normal leading-[28px]">{naira(o.priceKobo)}</span>
           <Note>{`One message, up to ${o.maxSeconds >= 60 ? `${o.maxSeconds / 60} ${o.maxSeconds === 60 ? "minute" : "minutes"}` : `${o.maxSeconds} seconds`}`}</Note>
           <div>
@@ -87,8 +87,18 @@ function HistoryRow({ item, desktop }: { item: LedgerItem; desktop: boolean }) {
           <Icon name={KIND_ICON[item.kind]} size={20} />
         </span>
         <span className="flex min-w-0 flex-col">
-          <span className="text-[15px] font-semibold leading-[21px]">{item.title}</span>
-          {segs.length > 0 || receipt ? (
+          <span className="text-[15px] font-semibold leading-[21px]">
+            {item.title}
+            {receipt && desktop && segs.length === 0 ? (
+              <span className="font-medium text-ink-2">
+                {" \u00b7 "}
+                <a className="font-semibold text-green-text underline" href={receipt}>
+                  Receipt
+                </a>
+              </span>
+            ) : null}
+          </span>
+          {segs.length > 0 || (receipt && !(desktop && segs.length === 0)) ? (
             <span className="text-[13px] font-medium leading-[18px] text-ink-2">
               {segs.join(" \u00b7 ")}
               {receipt ? (
