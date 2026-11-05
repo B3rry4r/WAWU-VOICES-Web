@@ -7858,7 +7858,7 @@ export interface operations {
     };
     adminListTopics: {
         parameters: {
-            query: {
+            query?: {
                 /** @description Opaque cursor from nextCursor */
                 cursor?: string;
                 /** @description 1 to 50, default 20 */
@@ -7867,7 +7867,7 @@ export interface operations {
                 /** @description Only sensitive weeks */
                 sensitive?: boolean;
                 /** @description Week number, topic title or question text */
-                q: string;
+                q?: string;
             };
             header?: never;
             path?: never;
