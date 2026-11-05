@@ -1,7 +1,7 @@
-import { PageTitle } from "@/components/shell/PageTitle";
+import { QuestionScreen } from "@/features/talk/QuestionScreen";
 
 export const metadata = { title: "Question" };
 
-export default function QuestionPage() {
-  return <PageTitle>Question</PageTitle>;
+export default function QuestionPage({ params }: { params: { id: string } }) {
+  return <QuestionScreen id={params.id} />;
 }
