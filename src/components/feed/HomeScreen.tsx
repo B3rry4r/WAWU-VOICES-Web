@@ -10,6 +10,7 @@ import { closesIn, shortCount } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
 import { Answers, Failed, Loading, NothingYet, Section, TextLink, Tiles, WeekCard } from "./parts";
+import { useFinishProfile } from "@/features/entry/ui";
 import { trendItems } from "./trend";
 import { useLoad } from "./useLoad";
 
@@ -26,6 +27,7 @@ export function HomeScreen() {
   const router = useRouter();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => setSignedIn(isSignedIn()), []);
+  useFinishProfile();
   const load = useLoad<Data>(async () => {
     const [home, flash, trending, ad, firstName] = await Promise.all([
       getHome(),

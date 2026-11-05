@@ -1,7 +1,7 @@
-import { LandingScreen } from "@/components/feed/LandingScreen";
+import { Landing } from "@/features/entry/Landing";
 
 export const metadata = { title: "Welcome" };
 
 export default function WelcomePage() {
-  return <LandingScreen />;
+  return <Landing />;
 }

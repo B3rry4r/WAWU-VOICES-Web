@@ -1,7 +1,7 @@
-import { TopicsScreen } from "@/components/feed/TopicsScreen";
+import { Topics } from "@/features/entry/Topics";
 
 export const metadata = { title: "Pick topics" };
 
 export default function TopicsPage() {
-  return <TopicsScreen />;
+  return <Topics />;
 }
