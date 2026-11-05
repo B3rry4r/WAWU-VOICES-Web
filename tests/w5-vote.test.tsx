@@ -103,6 +103,25 @@ describe("PollCard: the vote flow", () => {
     expect(screen.getByRole("button", { name: /Confirm vote/ })).toBeTruthy();
   });
 
+  it("402 shows the API's own message and that nothing was charged", async () => {
+    routes = (url, init) => (url.endsWith("/votes") && init.method === "POST" ? json({ error: { code: "INSUFFICIENT_UNITS", message: "You need 0.2 unit to vote." } }, 402) : null);
+    render(<PollCard poll={poll({ costToVoteMilli: 200 })} signedIn allowance={allowance({ freeVotesLeftToday: 0 })} config={null} />);
+    await pickAndConfirm();
+    expect(await screen.findByText("You need 0.2 unit to vote. Nothing was charged.")).toBeTruthy();
+  });
+
+  it("409 REQUEST_IN_PROGRESS says the vote is still being sent and keeps the key", async () => {
+    let n = 0;
+    routes = (url, init) => (url.endsWith("/votes") && init.method === "POST" ? (++n === 1 ? json({ error: { code: "REQUEST_IN_PROGRESS", message: "busy" } }, 409) : json(receipt(), 201)) : null);
+    render(<PollCard poll={poll()} signedIn allowance={allowance()} config={null} />);
+    await pickAndConfirm();
+    expect(await screen.findByText("Your vote is still being sent")).toBeTruthy();
+    await userEvent.setup().click(screen.getByRole("button", { name: /Confirm vote/ }));
+    await waitFor(() => expect(calls.filter((x) => x.method === "POST")).toHaveLength(2));
+    const keys = calls.filter((x) => x.method === "POST").map((x) => x.headers.get("Idempotency-Key"));
+    expect(keys[0]).toBe(keys[1]);
+  });
+
   it("402 then a retry uses a fresh key (the first answer was final)", async () => {
     let n = 0;
     routes = (url, init) => (url.endsWith("/votes") && init.method === "POST" ? (++n === 1 ? json({ error: { code: "INSUFFICIENT_UNITS", message: "x" } }, 402) : json(receipt(200), 201)) : null);
@@ -171,6 +190,29 @@ describe("Results: live by polling", () => {
     expect(hits).toBeGreaterThan(before);
   }, 15000);
 
+  it("a poll that closes while the page is open shows the closed banner and stops polling", async () => {
+    let hits = 0;
+    routes = (url) => {
+      if (url.endsWith("/questions/q1")) return json({ id: "q1", topicId: null, text: "Q?", voiceCount: 0, answerCount: 0, proposalCount: 0, weekNumber: 4, topicTitle: null });
+      if (url.endsWith("/questions/q1/polls")) return json({ items: [poll({ myVote: ["a"], totalVotes: 1 })] });
+      if (url.endsWith("/polls/p1/results")) {
+        hits += 1;
+        return json({ pollId: "p1", status: hits >= 2 ? "CLOSED" : "OPEN", totalVotes: 1, options: [{ id: "a", label: "Pay on time", votes: 1 }, { id: "b", label: "Pay a bonus", votes: 0 }], leadingOptionId: "a", asOf: "x", myVote: ["a"] });
+      }
+      if (url.includes("/ads/placement")) return json({ ad: null });
+      if (url.includes("/feed/trending-questions")) return json({ items: [], nextCursor: null });
+      return null;
+    };
+    render(<ResultsPage questionId="q1" />);
+    await screen.findByText("Explain my vote");
+    expect(screen.queryByText("This poll has closed")).toBeNull();
+    await act(async () => { await new Promise((r) => setTimeout(r, RESULTS_POLL_MS + 400)); });
+    expect(await screen.findByText("This poll has closed")).toBeTruthy();
+    const seen = hits;
+    await act(async () => { await new Promise((r) => setTimeout(r, RESULTS_POLL_MS + 400)); });
+    expect(hits).toBe(seen);
+  }, 20000);
+
   it("hidden results (403) show Vote to see the results", async () => {
     routes = (url) => {
       if (url.endsWith("/questions/q1")) return json({ id: "q1", topicId: null, text: "Q?", voiceCount: 0, answerCount: 0, proposalCount: 0 });
@@ -222,6 +264,27 @@ describe("Proposals", () => {
     const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/proposals"));
     expect(post?.headers.get("Idempotency-Key")).toBeTruthy();
     expect(JSON.parse(post?.body ?? "{}")).toEqual({ kind: "TEXT", body: "Put the salary date in every offer letter" });
+  }, 15000);
+
+  it("Propose: Post checks again when the text moved on since the last check, and a match stops that tap", async () => {
+    let similar = 0;
+    routes = (url, init) => {
+      if (url.endsWith("/questions/q1")) return json({ id: "q1", topicId: null, text: "What would help?", voiceCount: 0, answerCount: 0, proposalCount: 1 });
+      if (url.endsWith("/config/public")) return json({ costs: { textMaxChars: 500 } });
+      if (url.includes("/proposals/similar")) { similar += 1; return json({ items: [prop] }); }
+      if (url.includes("/feed/trending-questions")) return json({ items: [], nextCursor: null });
+      if (init.method === "POST") return json({ proposal: prop, charge: { costMilli: 0, usedFreePost: false, usedFreeDaily: false, balanceMilli: 0 }, similar: [] }, 201);
+      return null;
+    };
+    render(<ProposePage questionId="q1" />);
+    const u = userEvent.setup();
+    await u.type(await screen.findByPlaceholderText("Who should do what, and by when?"), "Put the salary date in every offer letter");
+    await u.click(screen.getByRole("button", { name: "Post" })); // before the 600 ms check has run
+    await waitFor(() => expect(similar).toBeGreaterThan(0));
+    expect(await screen.findByText("This looks like a proposal already here")).toBeTruthy();
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(0);
+    await u.click(screen.getByRole("button", { name: "Post" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/q/q1/next"));
   }, 15000);
 
   it("Propose: a 429 shows the drawn slow-down message and does not leave the page", async () => {

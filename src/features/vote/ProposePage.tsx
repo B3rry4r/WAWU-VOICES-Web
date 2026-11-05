@@ -3,12 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, MouseEvent } from "react";
-import { Badge, Banner, Composer, Icon } from "@/components/vx";
+import { Banner, Composer, Icon } from "@/components/vx";
 import { StageNav } from "@/features/stage/StageNav";
 import { ApiError } from "@/lib/api/client";
 import { createProposal, getPublicConfig, getQuestion, newKey, similarProposals } from "@/lib/api/vote";
 import type { Proposal, Question } from "@/lib/api/vote";
 import { AppBar, DeskBack, LoadFailed, Loading, shortCount, useLoadWhen, useSignedIn } from "./chrome";
+import { DeskRail } from "./DeskRail";
 import { ProposalItem } from "./WhatNextPage";
 
 /** How long to wait after the last keystroke before looking for similar proposals. */
@@ -38,6 +39,8 @@ export function ProposePage({ questionId }: { questionId: string }) {
   const key = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seq = useRef(0);
+  /** The text the last similar check was made for; Post re-checks when the text has moved on since. */
+  const checked = useRef("");
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const onInput = (e: FormEvent<HTMLDivElement>) => {
@@ -45,13 +48,15 @@ export function ProposePage({ questionId }: { questionId: string }) {
     if (timer.current) clearTimeout(timer.current);
     const mine = ++seq.current;
     if (text.trim().length < MIN_CHARS) {
+      checked.current = text.trim();
       setSimilar([]);
       return;
     }
     timer.current = setTimeout(() => {
-      similarProposals(questionId, text.trim()).then(
-        (r) => mine === seq.current && setSimilar(r.items.slice(0, 3)),
-        () => mine === seq.current && setSimilar([]),
+      const t = text.trim();
+      similarProposals(questionId, t).then(
+        (r) => { if (mine === seq.current) { checked.current = t; setSimilar(r.items.slice(0, 3)); } },
+        () => { if (mine === seq.current) setSimilar([]); },
       );
     }, CHECK_DELAY_MS);
   };
@@ -66,8 +71,21 @@ export function ProposePage({ questionId }: { questionId: string }) {
     busy.current = true;
     setSending(true);
     setError(null);
-    key.current ??= newKey();
     try {
+      // The check may be older than the text (typed fast, or the check is still in flight): look again before posting. A match stops this tap.
+      if (checked.current !== text && text.length >= MIN_CHARS) {
+        if (timer.current) clearTimeout(timer.current);
+        seq.current += 1;
+        try {
+          const r = await similarProposals(questionId, text);
+          checked.current = text;
+          setSimilar(r.items.slice(0, 3));
+          if (r.items.length) return;
+        } catch {
+          /* the check is a help, not a gate: carry on and post */
+        }
+      }
+      key.current ??= newKey();
       await createProposal(questionId, text, key.current, improves);
       key.current = null;
       router.push(`/q/${questionId}/next`);
@@ -105,6 +123,7 @@ export function ProposePage({ questionId }: { questionId: string }) {
       </div>
       {load.state === "loading" || signedIn === null ? <Loading /> : null}
       {load.state === "error" ? <LoadFailed error={load.error} retry={load.retry} what="this question" /> : null}
+      <DeskRail kind="propose" questionId={questionId} question={q} />
       {q ? (
         <>
           {week ? <p className="vx-eyebrow m-0 hidden text-green-text dt:block">{`What Next? `}<span className="font-medium normal-case tracking-normal text-ink-2">{week}</span></p> : null}
@@ -128,11 +147,6 @@ export function ProposePage({ questionId }: { questionId: string }) {
               <p className="vt-note">Support it instead, or post yours. A moderator decides if they belong in one group.</p>
             </section>
           ) : null}
-          <aside className="vt-rail hidden dt:flex" aria-label="How proposals work">
-            <span className="vx-eyebrow">How proposals work</span>
-            <Badge tone="proposed" icon="lightbulb" />
-            <p className="vt-lead m-0">Every proposal is labelled Proposed and shows how many people support or challenge it. Anyone can improve one. Similar proposals are grouped once a moderator confirms. Nothing here is a decision.</p>
-          </aside>
         </>
       ) : null}
     </div>

@@ -94,14 +94,18 @@ export function PollCard({
       }
       onVoted?.(receipt);
     } catch (e) {
-      if (e instanceof ApiError && e.status > 0) key.current = null;
-      if (e instanceof ApiError && e.status === 402) {
-        const d = (e.details ?? {}) as { costMilli?: number; balanceMilli?: number };
+      // A vote still being sent keeps its key: asking again must find the same vote, not make a second one.
+      const inProgress = e instanceof ApiError && e.status === 409 && e.code === "REQUEST_IN_PROGRESS";
+      if (e instanceof ApiError && e.status > 0 && !inProgress) key.current = null;
+      if (inProgress) {
+        setNote({ tone: "info", title: "Your vote is still being sent", text: "Give it a moment, then tap Confirm vote again. It will count once." });
+      } else if (e instanceof ApiError && e.status === 402) {
+        const d = (e.details ?? {}) as { costMilli?: number };
         const need = d.costMilli ?? cur.costToVoteMilli;
         setNote({
           tone: "danger",
           title: "Your vote did not count",
-          text: `You need ${unitsText(need)} to vote and you have ${unitsText(d.balanceMilli ?? allowance?.balanceMilli ?? 0)}. Nothing was charged.`,
+          text: `${e.explained ? e.message : `You need ${unitsText(need)} to vote.`} Nothing was charged.`,
           buy: true,
         });
       } else if (e instanceof ApiError && e.status === 409 && (e.code === "ALREADY_VOTED" || e.code === "POLL_CLOSED")) {

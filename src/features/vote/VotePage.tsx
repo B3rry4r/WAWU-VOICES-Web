@@ -8,6 +8,7 @@ import { StageNav } from "@/features/stage/StageNav";
 import { getPublicConfig, getQuestion, getVoteAllowance, loadQuestionPolls } from "@/lib/api/vote";
 import type { Allowances, Poll, PublicConfig, Question } from "@/lib/api/vote";
 import { AppBar, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
+import { DeskRail } from "./DeskRail";
 import { PollCard } from "./PollCard";
 import { pickPoll } from "./poll-pick";
 
@@ -60,6 +61,7 @@ export function VotePage({ questionId }: { questionId: string }) {
         visited={["speak", "discuss"]}
         counts={q ? { speak: shortCount(q.voiceCount), discuss: shortCount(q.answerCount), vote: main ? shortCount(main.totalVotes) : "0", next: shortCount(q.proposalCount) } : undefined}
       />
+      <DeskRail kind="vote" questionId={questionId} />
       {load.state === "loading" || signedIn === null ? <Loading /> : null}
       {load.state === "error" ? <LoadFailed error={load.error} retry={load.retry} what="this question" /> : null}
       {load.state === "ready" && !load.data.main ? (

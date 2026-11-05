@@ -11,6 +11,7 @@ import type { Poll as PollT, PollResults, Question } from "@/lib/api/vote";
 import { closesIn } from "@/lib/feed-format";
 import { AdBanner } from "./AdBanner";
 import { AppBar, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
+import { DeskRail } from "./DeskRail";
 import { pickPoll } from "./poll-pick";
 import { useRouter } from "next/navigation";
 
@@ -45,7 +46,8 @@ export function ResultsPage({ questionId }: { questionId: string }) {
   const [live, setLive] = useState<PollResults | null>(null);
   const [share, setShare] = useState(false);
   const pollId = load.state === "ready" ? load.data.poll?.id : undefined;
-  const open = load.state === "ready" && load.data.poll?.status === "OPEN" && !load.data.hidden;
+  const status = live?.status ?? (load.state === "ready" ? load.data.poll?.status : undefined);
+  const open = load.state === "ready" && status === "OPEN" && !load.data.hidden;
 
   // Live results: read again every few seconds while the poll is open and the tab is visible. Never faked.
   useEffect(() => {
@@ -54,7 +56,7 @@ export function ResultsPage({ questionId }: { questionId: string }) {
     const tick = () => {
       if (document.visibilityState === "hidden") return;
       getPollResults(pollId).then(
-        (r) => !stop && setLive(r),
+        (r) => !stop && setLive(r), // every answer carries the poll's status: a close shows at once and stops the polling
         () => undefined,
       );
     };
@@ -83,6 +85,7 @@ export function ResultsPage({ questionId }: { questionId: string }) {
         visited={["speak", "discuss"]}
         counts={q ? { speak: shortCount(q.voiceCount), discuss: shortCount(q.answerCount), vote: poll ? shortCount(results?.totalVotes ?? poll.totalVotes) : "0", next: shortCount(q.proposalCount) } : undefined}
       />
+      <DeskRail kind="results" questionId={questionId} />
       {load.state === "loading" || signedIn === null ? <Loading /> : null}
       {load.state === "error" ? <LoadFailed error={load.error} retry={load.retry} what="this poll" /> : null}
       {load.state === "ready" && !poll ? <EmptyState icon="vote" title="No poll on this question yet" body="Polls open with the question or during the week." /> : null}
@@ -98,17 +101,17 @@ export function ResultsPage({ questionId }: { questionId: string }) {
       ) : null}
       {load.state === "ready" && poll && results ? (
         <>
-          <PageHead eyebrow={weekPollLine(load.data.question).toUpperCase()} title="Results so far" lead={voted && poll.status === "OPEN" ? "Thanks for voting. The bars move as votes come in until the poll closes." : undefined} />
-          {poll.status === "CLOSED" ? <Banner tone="info" title="This poll has closed">These are the final results. One vote per account was counted.</Banner> : null}
+          <PageHead eyebrow={weekPollLine(load.data.question).toUpperCase()} title="Results so far" lead={voted && status === "OPEN" ? "Thanks for voting. The bars move as votes come in until the poll closes." : undefined} />
+          {status === "CLOSED" ? <Banner tone="info" title="This poll has closed">These are the final results. One vote per account was counted.</Banner> : null}
           <Poll
             key={poll.id + (results.myVote?.length ? "m" : "")}
             question={poll.title}
             options={results.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes }))}
             total={results.totalVotes}
-            closesIn={poll.status === "OPEN" ? closesIn(poll.endsAt) : undefined}
+            closesIn={status === "OPEN" ? closesIn(poll.endsAt) : undefined}
             state="results"
             selected={mineId}
-            live={poll.status === "OPEN"}
+            live={status === "OPEN"}
             onExplain={false}
           />
           {voted && mineLabel ? <Explain pollId={poll.id} label={mineLabel} questionId={questionId} signedIn={!!signedIn} /> : null}
