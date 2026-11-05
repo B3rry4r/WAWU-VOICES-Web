@@ -66,26 +66,52 @@ async function readError(res: Response): Promise<ApiError> {
   return new ApiError(res.status, "HTTP_" + res.status, `Request failed (${res.status})`, false);
 }
 
-let refreshing: Promise<boolean> | null = null;
+let refreshing: Promise<boolean | null> | null = null;
 
-async function refreshSession(): Promise<boolean> {
-  const refreshToken = sessionStorage.getRefreshToken();
-  if (!refreshToken) return false;
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** True when another tab has already rotated the refresh token we started from (give it a moment to write storage). */
+async function rotatedElsewhere(before: string): Promise<boolean> {
+  for (let i = 0; i < 4; i++) {
+    const now = sessionStorage.getRefreshToken();
+    if (now && now !== before) return true;
+    await wait(100);
+  }
+  return false;
+}
+
+async function doRefresh(before: string): Promise<boolean | null> {
+  const current = sessionStorage.getRefreshToken();
+  if (!current) return false;
+  // Another tab won while we waited for the lock: its tokens are already in storage.
+  if (current !== before) return true;
   try {
     const res = await fetch(`${WAWU_ID_BASE}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify({ refreshToken: current }),
     });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      if (res.status >= 500) return null;
+      // Refused: if another tab rotated meanwhile, use its tokens; sign out only when nothing changed.
+      return (await rotatedElsewhere(current)) ? true : false;
+    }
     const raw = (await res.json()) as { data?: { accessToken?: string; refreshToken?: string }; accessToken?: string; refreshToken?: string };
     const d = raw.data ?? raw;
     if (!d.accessToken || !d.refreshToken) return false;
     sessionStorage.setTokens(d.accessToken, d.refreshToken);
     return true;
   } catch {
-    return false;
+    return null;
   }
+}
+
+/** One refresh at a time across tabs (Web Locks), and one per tab. true: new tokens in storage. false: refused. null: could not ask. */
+async function refreshSession(): Promise<boolean | null> {
+  const before = sessionStorage.getRefreshToken();
+  if (!before) return false;
+  const locks = typeof navigator !== "undefined" ? (navigator as Navigator & { locks?: { request: <T>(name: string, cb: () => Promise<T>) => Promise<T> } }).locks : undefined;
+  return locks ? locks.request("voices-refresh", () => doRefresh(before)) : doRefresh(before);
 }
 
 async function raw(path: string, opts: RequestOptions, isRetry = false): Promise<Response> {
@@ -115,8 +141,9 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   }
   if (res.status === 401 && authed && !token && !isRetry) {
     if (!refreshing) refreshing = refreshSession().finally(() => { refreshing = null; });
-    if (await refreshing) return raw(path, opts, true);
-    sessionStorage.clear();
+    const ok = await refreshing;
+    if (ok) return raw(path, opts, true);
+    if (ok === false) sessionStorage.clear();
   }
   if (!res.ok) throw await readError(res);
   return res;

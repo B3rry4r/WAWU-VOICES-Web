@@ -35,7 +35,7 @@ export function Topics() {
   const label = enough ? `Continue with ${have.length} topics` : `Pick ${MIN_TOPICS - have.length} more`;
   return (
     <EntryFrame>
-      <StepHeader step={1} back="/join/verify" />
+      <StepHeader step={1} back="/join/country" />
       <EntryScroll>
         <div className="mx-auto flex w-full max-w-[560px] flex-col gap-[18px] px-4 pb-6 pt-1">
           <section aria-labelledby="h-topics" className="flex flex-col gap-3">

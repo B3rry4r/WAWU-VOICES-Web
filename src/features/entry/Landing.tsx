@@ -37,6 +37,7 @@ export function Landing() {
         <Link href="/" className="mr-6 flex" aria-label="VOICES home"><Logo height={40} alt="VOICES home" /></Link>
         <a href="#how" className="text-[15px] font-semibold text-ink no-underline">How it works</a>
         <Link href="/weekly" className="text-[15px] font-semibold text-ink no-underline">Weekly report</Link>
+        <Link href="/settings/legal/rules" className="text-[15px] font-semibold text-ink no-underline">Rules</Link>
         <span className="ml-auto flex gap-3">
           <Button variant="secondary" href="/sign-in">Sign in</Button>
           <Button icon="mic" href="/">Add your voice</Button>
@@ -58,7 +59,7 @@ export function Landing() {
         <p className="m-0 text-[17px] leading-[25px] text-ink-2 dt:max-w-[420px] dt:text-[20px] dt:leading-[30px]">
           Every day our editors ask one question. Answer with a 10 second voice or a few lines of text, hear what others said, and vote in open polls.
         </p>
-        <div className="flex flex-col gap-[14px] dt:flex-row-reverse dt:justify-end">
+        <div className="flex flex-col gap-[14px] dt:flex-row">
           <span className="hidden dt:block"><Button size="l" icon="mic" href="/">Add your voice</Button></span>
           <Button size="l" variant="secondary" icon="headphones" href="/" className="max-dt:w-full">Listen as a guest</Button>
         </div>
@@ -122,6 +123,7 @@ export function Landing() {
           <div className="mx-auto flex max-w-[1176px] items-center gap-4 px-8 py-6">
             <Logo height={28} alt="VOICES" />
             <span className="text-[14px] text-ink-2">VOICES by WAWU · © 2026</span>
+            <Link href="/settings/legal/rules" className="ml-auto text-[14px] text-ink-2 underline">Community rules</Link>
           </div>
         </footer>
       </>
@@ -137,7 +139,7 @@ export function Landing() {
             <Button size="l" variant="secondary" block href="/sign-in">Sign in</Button>
             <Button size="l" icon="mic" block href="/join">Join VOICES</Button>
           </div>
-          <p className="m-0 text-center text-[12px] font-medium leading-4 text-ink-2">When you join you accept the Community rules and Terms.</p>
+          <p className="m-0 text-center text-[12px] font-medium leading-4 text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="text-green-text">Community rules</Link> and Terms.</p>
         </BottomBar>
       </div>
     </EntryFrame>

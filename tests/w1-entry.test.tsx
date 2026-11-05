@@ -78,7 +78,7 @@ describe("return paths and phone numbers", () => {
   it("only keeps a path inside this app and never an entry screen", () => {
     expect(safeReturn("/q/abc")).toBe("/q/abc");
     expect(safeReturn("/speak?draft=1")).toBe("/speak?draft=1");
-    for (const bad of ["//evil.com", "https://evil.com", "/\\evil.com", "javascript:alert(1)", "/sign-in", "/join/topics", "/welcome", "", null, undefined]) expect(safeReturn(bad as string)).toBeNull();
+    for (const bad of ["//evil.com", "https://evil.com", "/\\evil.com", "javascript:alert(1)", "/sign-in", "/join/topics", "/welcome", "", null, undefined, "/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "/%09/evil.example", "/%0A/evil.example", "/%0D/evil.example", "/%2F/evil.example", "/%5Cevil.example", "/ /evil", "/a\u0000b", "/\u00a0/evil", "/%E2%80%A8/evil"]) expect(safeReturn(bad as string)).toBeNull();
     holdReturn("//evil.com");
     expect(peekReturn()).toBeNull();
     holdReturn("/q/abc");
@@ -144,7 +144,7 @@ describe("Onboarding and Country", () => {
     expect(gh.getAttribute("aria-checked")).toBe("false");
     await user.click(screen.getByRole("button", { name: "Hausa" }));
     await user.click(screen.getAllByRole("button", { name: "Continue" })[0]);
-    expect(readDraft()).toMatchObject({ countryCode: "NG", languages: ["en", "ha"] });
+    expect(readDraft()).toMatchObject({ countryCode: "NG", languages: ["en", "pcm", "ha"] });
     expect(push).toHaveBeenCalledWith("/sign-in?mode=join");
   });
 });
@@ -230,7 +230,7 @@ describe("Sign in", () => {
   });
   it("puts a finished profile back where it was (held draft path), and a new person on topics", async () => {
     seeded();
-    search = "next=%2Fspeak%3Fdraft%3D1";
+    search = "next=%2Fspeak%3Fdraft%3D1&held=1";
     api = (u) => (u.endsWith("/me") ? json(ME_DONE) : null);
     const user = userEvent.setup();
     render(<SignIn />);
@@ -265,7 +265,7 @@ describe("Sign in", () => {
 
 describe("Verify (the email code)", () => {
   const draftFor = (over = {}) => saveDraft({ email: "ada@example.com", codeSentAt: Date.now() - 18_000, codeLifeSec: 300, ...over });
-  const setup = () => { const u = idp.seed("ada@example.com", "longenough1", "Ada Okafor", "+2348032147720"); u.verified = false; };
+  const setup = () => { const u = idp.seed("ada@example.com", "longenough1", "Ada Okafor", "+2348032147720"); u.verified = false; void idp.startCode("ada@example.com"); };
   const enter = async (code: string) => { for (let i = 0; i < code.length; i++) await userEvent.setup().type(screen.getByLabelText(`Digit ${i + 1}`), code[i]); };
   it("shows the words about email and the resend timer", () => {
     setup(); draftFor();
@@ -316,7 +316,7 @@ describe("Verify (the email code)", () => {
     expect(stored()?.refreshToken).toBeTruthy();
   });
   it("right code with a held post: Verify and post, then back to the held path", async () => {
-    setup(); draftFor(); holdReturn("/speak");
+    setup(); draftFor(); holdReturn("/speak", "post");
     api = (u) => (u.endsWith("/me") ? json(ME_DONE) : null);
     render(<Verify />);
     await enter(RIGHT_CODE);
@@ -398,7 +398,7 @@ describe("ProfileSetup", () => {
     expect(replace).toHaveBeenCalledWith("/join/topics");
   });
   it("suggests a handle, checks it, and creates the profile then saves topics, name and photo; back to the held path", async () => {
-    holdReturn("/speak");
+    holdReturn("/speak", "post");
     api = (u, m) => {
       if (u.includes("/me/handle-check")) return json({ handle: "ada.okafor", available: true });
       if (m === "POST" && u.endsWith("/me")) return json({ ...ME_DONE, handle: "ada.okafor" }, 201);
@@ -418,7 +418,7 @@ describe("ProfileSetup", () => {
     await user.click(screen.getAllByRole("button", { name: "Finish and post my voice" })[0]);
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/speak"));
     const sent = calls.filter((c) => !c.url.includes("handle-check") && !c.url.includes("config/public")).map((c) => `${c.method} ${c.url.replace("/api/v1", "")}`);
-    expect(sent).toEqual(["POST /me", "PUT /me/categories", "POST /uploads", "PUT https://spaces.example/put", "PATCH /me/profile"]);
+    expect(sent).toEqual(["GET /me", "POST /me", "PUT /me/categories", "POST /uploads", "PUT https://spaces.example/put", "PATCH /me/profile"]);
     expect(calls.find((c) => c.method === "POST" && c.url.endsWith("/me"))?.body).toEqual({ handle: "ada.okafor", ageConfirmed: true, termsAccepted: true, rulesAccepted: true, countryCode: "NG", languages: ["en", "pcm"], categoryIds: ["c0", "c1", "c2"] });
     expect(calls.find((c) => c.url.endsWith("/me/categories"))?.body).toEqual({ categories: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: false }, { categoryId: "c2", alertsOn: true }] });
     expect(calls.find((c) => c.url.endsWith("/uploads"))?.body).toEqual({ kind: "AVATAR", mime: "image/png", sizeBytes: 1200 });
@@ -486,3 +486,239 @@ describe("ProfileSetup", () => {
   });
 });
 
+
+describe("round 1: refused sign-ins, redirects, two tabs, reloads", () => {
+  it("keeps only pathname, search and hash of a good return", () => {
+    expect(safeReturn("/q/abc?x=1#top")).toBe("/q/abc?x=1#top");
+    expect(safeReturn("/%2509/x")).toBe("/%2509/x");
+  });
+  it.each(["suspended", "banned", "pending_deletion"])("a %s account gets no session from sign in and is told so, and never reaches POST /me", async (st) => {
+    const u = idp.seed("sus@example.com", "longenough1", "Sus Pended", "+2348032140000");
+    idp.statusOf["sus@example.com"] = st;
+    const user = userEvent.setup();
+    render(<SignIn />);
+    await user.type(screen.getByLabelText("Email or phone number"), "sus@example.com");
+    await user.type(screen.getByLabelText("Password"), "longenough1");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText("This account cannot sign in to VOICES right now.")).toBeTruthy();
+    expect(stored()?.accessToken ?? null).toBeNull();
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(0);
+    expect(replace).not.toHaveBeenCalled();
+    delete idp.statusOf["sus@example.com"];
+    void u;
+  });
+  it.each(["suspended", "banned", "pending_deletion"])("a %s account confirming its code gets no session", async (st) => {
+    const u = idp.seed("sus2@example.com", "longenough1", "Sus Two", "+2348032140001");
+    u.verified = false;
+    idp.statusOf["sus2@example.com"] = st;
+    saveDraft({ email: "sus2@example.com", codeSentAt: Date.now() - 18_000, codeLifeSec: 300 });
+    await idp.startCode("sus2@example.com");
+    render(<Verify />);
+    for (let i = 0; i < 6; i++) await userEvent.setup().type(screen.getByLabelText(`Digit ${i + 1}`), RIGHT_CODE[i]);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Verify" }));
+    expect(await screen.findByText("This account cannot sign in to VOICES right now.")).toBeTruthy();
+    expect(stored()?.accessToken ?? null).toBeNull();
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(0);
+    delete idp.statusOf["sus2@example.com"];
+  });
+  it("two tabs refreshing at once: 20 runs, nobody is logged out", async () => {
+    const u = idp.seed("two@example.com", "longenough1", "Two Tabs", "+2348032140002");
+    idp.ttl = 1;
+    for (let run = 0; run < 20; run++) {
+      const first = idp.tokensFor(u);
+      window.localStorage.setItem("voices-web-session", JSON.stringify(first));
+      idp.refreshDelay = run % 3 === 0 ? 0 : 15 + (run % 5) * 10;
+      const good = (url: string) => {
+        const auth = calls[calls.length - 1].headers.get("authorization") ?? "";
+        try { const claims = JSON.parse(atob(auth.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); return claims.exp * 1000 > Date.now() + 100 ? json(ME_DONE) : err(401, "UNAUTHORIZED", "expired"); } catch { return err(401, "UNAUTHORIZED", "expired"); }
+      };
+      api = (url) => (url.endsWith("/me") ? good(url) : null);
+      idp.ttl = 900;
+      // two separate client instances (two tabs) share one storage
+      vi.resetModules();
+      const A = await import("@/lib/api/client");
+      vi.resetModules();
+      const B = await import("@/lib/api/client");
+      window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "stale", refreshToken: first.refreshToken }));
+      const ra = A.apiFetch("/me", { authed: true });
+      const rb = B.apiFetch("/me", { authed: true });
+      const [x, y] = await Promise.allSettled([ra, rb]);
+      expect(x.status, `run ${run} tab A`).toBe("fulfilled");
+      expect(y.status, `run ${run} tab B`).toBe("fulfilled");
+      expect(stored()?.accessToken, `run ${run} still signed in`).toBeTruthy();
+    }
+    idp.refreshDelay = 0;
+  });
+  it("a refresh refused for real still signs out", async () => {
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "stale", refreshToken: "never-issued" }));
+    api = (u) => (u.endsWith("/me") ? err(401, "UNAUTHORIZED", "no") : null);
+    await expect(apiFetch("/me", { authed: true })).rejects.toBeTruthy();
+    expect(stored()).toEqual({ accessToken: null, refreshToken: null });
+  });
+  it("a refresh that cannot be asked (offline) keeps the session", async () => {
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "stale", refreshToken: "r1" }));
+    idp.failNext = { status: 503, body: { statusCode: 503, message: "down" } };
+    api = (u) => (u.endsWith("/me") ? err(401, "UNAUTHORIZED", "no") : null);
+    await expect(apiFetch("/me", { authed: true })).rejects.toBeTruthy();
+    expect(stored()?.refreshToken).toBe("r1");
+  });
+  it("profile reload: PROFILE_EXISTS carries on (and sets a changed handle); only HANDLE_TAKEN says taken", async () => {
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
+    saveDraft({ fullName: "Ada Okafor", countryCode: "NG", languages: ["en"], topics: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: true }, { categoryId: "c2", alertsOn: true }] });
+    const seen: string[] = [];
+    api = (u, m, b) => {
+      seen.push(`${m} ${u.replace("/api/v1", "")}`);
+      if (u.includes("/me/handle-check")) return json({ handle: "ada.okafor", available: true });
+      if (m === "POST" && u.endsWith("/me")) return json({ error: { code: "CONFLICT", message: "You already have a profile.", details: { reason: "PROFILE_EXISTS" } } }, 409);
+      if (m === "GET" && u.endsWith("/me")) return json({ ...ME_DONE, handle: "ada.old" });
+      if (m === "PATCH") return json({});
+      if (m === "PUT") return json({ categories: [] });
+      void b;
+      return null;
+    };
+    render(<ProfileSetup />);
+    await waitFor(() => expect((screen.getByLabelText("Handle") as HTMLInputElement).value).toBe("ada.old"));
+    const h = screen.getByLabelText("Handle");
+    await userEvent.setup().clear(h);
+    await userEvent.setup().type(h, "ada.okafor");
+    await screen.findByText(/is free/);
+    await userEvent.setup().click(screen.getAllByRole("button", { name: "Finish" })[0]);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/"));
+    expect(seen).toContain("PATCH /me/profile");
+    expect(calls.find((c) => c.method === "PATCH")?.body).toMatchObject({ handle: "ada.okafor" });
+    expect(screen.queryByText("That handle is taken. Try another.")).toBeNull();
+  });
+  it("a plain 409 CONFLICT that is not a handle does not say taken", async () => {
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
+    saveDraft({ fullName: "Ada Okafor", countryCode: "NG", languages: ["en"], topics: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: true }, { categoryId: "c2", alertsOn: true }] });
+    api = (u, m) => (u.includes("handle-check") ? json({ handle: "x", available: true }) : m === "POST" && u.endsWith("/me") ? err(409, "IDEMPOTENCY_KEY_REUSED", "Key reused") : null);
+    render(<ProfileSetup />);
+    await screen.findByText(/is free/);
+    await userEvent.setup().click(screen.getAllByRole("button", { name: "Finish" })[0]);
+    expect(await screen.findByText("This did not work")).toBeTruthy();
+    expect(screen.queryByText("That handle is taken. Try another.")).toBeNull();
+  });
+  it("verify: once the code is accepted, a failing next step is retried alone and the used code is never sent again", async () => {
+    const u = idp.seed("ada@example.com", "longenough1", "Ada Okafor", "+2348032147720");
+    u.verified = false;
+    saveDraft({ email: "ada@example.com", codeSentAt: Date.now() - 18_000, codeLifeSec: 300 });
+    await idp.startCode("ada@example.com");
+    let meCalls = 0;
+    api = (url) => (url.endsWith("/me") ? (++meCalls === 1 ? err(500, "INTERNAL", "boom") : json(ME_DONE)) : null);
+    render(<Verify />);
+    for (let i = 0; i < 6; i++) await userEvent.setup().type(screen.getByLabelText(`Digit ${i + 1}`), RIGHT_CODE[i]);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Verify" }));
+    expect(await screen.findByText("This did not work")).toBeTruthy();
+    expect(readDraft().verified).toBe(true);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/"));
+    expect(idCalls("/auth/email/verify/confirm")).toHaveLength(1);
+    // a reload after acceptance carries on without asking for the code
+    cleanup(); replace.mockClear(); meCalls = 5;
+    render(<Verify />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/"));
+    expect(idCalls("/auth/email/verify/confirm")).toHaveLength(1);
+  });
+  it("verify: too many tries shows the server's words", async () => {
+    const u = idp.seed("ada@example.com", "longenough1", "Ada Okafor", "+2348032147720");
+    u.verified = false;
+    saveDraft({ email: "ada@example.com", codeSentAt: Date.now() - 18_000, codeLifeSec: 300 });
+    await idp.startCode("ada@example.com");
+    render(<Verify />);
+    for (let t = 0; t < 6; t++) {
+      for (let i = 0; i < 6; i++) await userEvent.setup().type(screen.getByLabelText(`Digit ${i + 1}`), "9");
+      await userEvent.setup().click(screen.getByRole("button", { name: "Verify" }));
+      await waitFor(() => expect(screen.getByLabelText("Digit 1")).toBeTruthy());
+    }
+    expect(await screen.findByText("Too many tries. Try again in 60 seconds.")).toBeTruthy();
+  });
+  it("a code that was accepted is gone: the stand-in answers 401 the second time", async () => {
+    const u = idp.seed("ada@example.com", "longenough1", "Ada Okafor", "+2348032147720");
+    u.verified = false;
+    await idp.startCode("ada@example.com");
+    const go = () => realFetch(`${idp.url}/auth/email/verify/confirm`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "ada@example.com", code: RIGHT_CODE }) });
+    expect((await go()).status).toBe(201);
+    expect((await go()).status).toBe(401);
+  });
+  it("sign in by phone for an unverified account asks for the email and sends the code there", async () => {
+    const u = idp.seed("ada@example.com", "longenough1", "Ada Okafor", "+2348032147720");
+    u.verified = false;
+    const user = userEvent.setup();
+    render(<SignIn />);
+    await user.type(screen.getByLabelText("Email or phone number"), "+2348032147720");
+    await user.type(screen.getByLabelText("Password"), "longenough1");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText(/Enter the email on your account/)).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText("Email on your account"), "ada@example.com");
+    await user.click(screen.getByRole("button", { name: "Send code" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/join/verify"));
+    expect(idCalls("/auth/email/verify/start")).toHaveLength(1);
+  });
+  it("PHONE_NOT_CONFIRMED gets a plain message, and any other 403 the server's words", async () => {
+    idp.seed("phone-x@example.com", "longenough1", "Pho Ne", "+2348032149999").verified = false;
+    const user = userEvent.setup();
+    render(<SignIn />);
+    await user.type(screen.getByLabelText("Email or phone number"), "phone-x@example.com");
+    await user.type(screen.getByLabelText("Password"), "longenough1");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText("Your phone number is not confirmed yet. Confirm it, then sign in.")).toBeTruthy();
+    idp.failNext = { status: 403, body: { statusCode: 403, message: "Your account is on hold.", code: "ON_HOLD" } };
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText("Your account is on hold.")).toBeTruthy();
+  });
+  it("sign out also forgets the join draft and the held return", () => {
+    saveDraft({ email: "a@b.co" });
+    holdReturn("/speak", "post");
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
+    signOut();
+    expect(window.sessionStorage.getItem("voices-join-draft")).toBeNull();
+    expect(window.sessionStorage.getItem("voices-return-to")).toBeNull();
+  });
+  it("the post wording shows only for a held post", async () => {
+    search = "next=%2Fq%2Fabc";
+    const first = render(<SignIn />);
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
+    expect(screen.queryByText(/posts as soon as you are in/)).toBeNull();
+    first.unmount();
+    window.sessionStorage.clear();
+    search = "next=%2Fspeak&held=1";
+    render(<SignIn />);
+    expect(await screen.findByText("Sign in to post")).toBeTruthy();
+    expect(screen.getByText("Your voice is saved. It posts as soon as you are in.")).toBeTruthy();
+  });
+  it("a signed-in person with no profile on an entry page goes to topics; with one, Home", async () => {
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
+    api = (u) => (u.endsWith("/me") ? json(ME_NEW) : null);
+    render(<Landing />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/join/topics"));
+    cleanup(); replace.mockClear();
+    api = (u) => (u.endsWith("/me") ? json(ME_DONE) : null);
+    render(<Landing />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/"));
+  });
+  it("Landing links the rules, puts Add your voice first at 1440 and Onboarding Skip is green", async () => {
+    render(<Landing />);
+    await screen.findByText("Nigeria is talking. Add your voice.");
+    expect(screen.getAllByRole("link", { name: /Rules|Community rules/ }).every((a) => a.getAttribute("href") === "/settings/legal/rules")).toBe(true);
+    const row = screen.getAllByRole("link", { name: "Listen as a guest" })[0].parentElement!;
+    expect(row.className).not.toMatch(/row-reverse/);
+    cleanup();
+    render(<Onboarding />);
+    await screen.findByText("Nigeria is talking");
+    expect(screen.getAllByRole("link", { name: "Skip" })[0].className).toMatch(/text-green-text/);
+  });
+  it("the photo cap is the API's 5,000,000 bytes", async () => {
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
+    saveDraft({ fullName: "Ada Okafor", countryCode: "NG", languages: ["en"], topics: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: true }, { categoryId: "c2", alertsOn: true }] });
+    render(<ProfileSetup />);
+    const big = new File([new Uint8Array(10)], "big.png", { type: "image/png" });
+    Object.defineProperty(big, "size", { value: 5_000_001 });
+    await userEvent.setup().upload(document.querySelector('input[type="file"]') as HTMLInputElement, big);
+    expect(await screen.findByText("That photo is over 5 MB. Choose a smaller one.")).toBeTruthy();
+    const ok = new File([new Uint8Array(10)], "ok.png", { type: "image/png" });
+    Object.defineProperty(ok, "size", { value: 5_000_000 });
+    await userEvent.setup().upload(document.querySelector('input[type="file"]') as HTMLInputElement, ok);
+    expect(await screen.findByRole("button", { name: "Change photo" })).toBeTruthy();
+  });
+});

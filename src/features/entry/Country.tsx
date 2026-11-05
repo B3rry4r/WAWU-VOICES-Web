@@ -6,7 +6,7 @@ import { Badge, Button, Icon, Logo, TopicChip } from "@/components/vx";
 import { useLoad } from "@/components/feed/useLoad";
 import { listCountries } from "@/lib/api/me";
 import { readDraft, saveDraft } from "@/lib/auth/entry-draft";
-import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
+import { BottomBar, EntryFrame, EntryScroll, ErrorBanner } from "./ui";
 
 export const LANGUAGES: { code: string; label: string }[] = [
   { code: "en", label: "English" },
@@ -21,16 +21,14 @@ const SYMBOL: Record<string, string> = { NGN: "₦" };
 /** /join/country: where you speak from (Nigeria live, others coming) and which languages you speak. */
 export function Country() {
   const router = useRouter();
-  const skipping = useSkipIfSignedIn();
   const load = useLoad(listCountries, []);
   const [code, setCode] = useState("NG");
-  const [langs, setLangs] = useState<string[]>(["en"]);
+  const [langs, setLangs] = useState<string[]>(["en", "pcm"]);
   useEffect(() => {
     const d = readDraft();
     setCode(d.countryCode);
     setLangs(d.languages);
   }, []);
-  if (skipping) return null;
   const go = () => {
     saveDraft({ countryCode: code, languages: langs });
     router.push("/sign-in?mode=join");

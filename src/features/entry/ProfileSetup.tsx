@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar, Button, Icon, TextField } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { getPublicConfig } from "@/lib/api/feed";
-import { checkHandle, createMe, PHOTO_MAX_BYTES, PHOTO_MIMES, setCategories, updateProfile, uploadAvatar } from "@/lib/api/me";
+import { checkHandle, createMe, getMe, PHOTO_MAX_BYTES, PHOTO_MIMES, setCategories, updateProfile, uploadAvatar } from "@/lib/api/me";
 import { handleFromName, tokenName } from "@/lib/auth/claims";
-import { clearDraft, peekReturn, readDraft, takeReturn, type JoinDraft } from "@/lib/auth/entry-draft";
+import { clearDraft, peekHeldPost, readDraft, takeReturn, type JoinDraft } from "@/lib/auth/entry-draft";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, StepHeader, refusalWords, useNeedSession } from "./ui";
 
 const HANDLE_RE = /^[a-z0-9._]{3,20}$/;
@@ -29,6 +29,7 @@ export function ProfileSetup() {
   const [posting, setPosting] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const made = useRef(false);
+  const [existing, setExisting] = useState<string | null>(null);
 
   useEffect(() => {
     const d = readDraft();
@@ -37,8 +38,16 @@ export function ProfileSetup() {
     const n = d.fullName || [t?.first, t?.last].filter(Boolean).join(" ");
     setName(n);
     setHandle(handleFromName(n));
-    setPosting(peekReturn() !== null);
+    setPosting(peekHeldPost());
     getPublicConfig().then((c) => setFree(c.freePosts)).catch(() => undefined);
+    // A reload after the profile was made: the handle is already theirs.
+    getMe().then((me) => {
+      if (me.profileComplete && me.handle) {
+        setExisting(me.handle);
+        setHandle(me.handle);
+        made.current = true;
+      }
+    }, () => undefined);
   }, []);
   useEffect(() => {
     if (draft && !(draft.topics && draft.topics.length >= 3)) router.replace("/join/topics");
@@ -53,6 +62,7 @@ export function ProfileSetup() {
   useEffect(() => {
     const h = handle.trim().toLowerCase().replace(/^@/, "");
     if (!h) return setCheck({ state: "idle" });
+    if (existing && h === existing) return setCheck({ state: "free" });
     if (!HANDLE_RE.test(h)) return setCheck({ state: "bad", why: h.length < 3 ? "Use at least 3 characters." : h.length > 20 ? "Use 20 characters or fewer." : "Letters, numbers, dots and underscores only." });
     setCheck({ state: "checking" });
     let live = true;
@@ -62,7 +72,7 @@ export function ProfileSetup() {
         .catch(() => live && setCheck({ state: "idle" }));
     }, 400);
     return () => { live = false; clearTimeout(t); };
-  }, [handle]);
+  }, [handle, existing]);
   if (!ok || !draft) return null;
 
   const pick = (f: File | undefined) => {
@@ -81,8 +91,20 @@ export function ProfileSetup() {
     const topics = draft.topics ?? [];
     try {
       if (!made.current) {
-        await createMe({ handle: h, ageConfirmed: true, termsAccepted: true, rulesAccepted: true, countryCode: draft.countryCode, languages: draft.languages, categoryIds: topics.map((t) => t.categoryId) });
+        try {
+          await createMe({ handle: h, ageConfirmed: true, termsAccepted: true, rulesAccepted: true, countryCode: draft.countryCode, languages: draft.languages, categoryIds: topics.map((t) => t.categoryId) });
+        } catch (e) {
+          // The profile was made before (a reload, a second tab): carry on, and set the handle if the person changed it.
+          const reason = e instanceof ApiError && e.status === 409 ? (e.details as { reason?: string } | undefined)?.reason : undefined;
+          if (reason !== "PROFILE_EXISTS" && !(e instanceof ApiError && e.code === "PROFILE_EXISTS")) throw e;
+          const me = await getMe();
+          if (me.handle !== h) await updateProfile({ handle: h });
+        }
         made.current = true;
+      }
+      if (made.current && existing && h !== existing) {
+        await updateProfile({ handle: h });
+        setExisting(h);
       }
       await setCategories(topics.map((t) => ({ categoryId: t.categoryId, alertsOn: t.alertsOn })));
       const patch: { displayName?: string; avatarFileId?: string } = {};
@@ -90,7 +112,7 @@ export function ProfileSetup() {
       if (photo) patch.avatarFileId = await uploadAvatar(photo);
       if (patch.displayName || patch.avatarFileId) await updateProfile(patch);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) setCheck({ state: "taken" });
+      if (err instanceof ApiError && err.status === 409 && err.code === "HANDLE_TAKEN") setCheck({ state: "taken" });
       else setFailure(err);
       setBusy(false);
       return;

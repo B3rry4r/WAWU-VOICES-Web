@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Banner, Icon, Logo } from "@/components/vx";
 import { ApiError, NetworkError } from "@/lib/api/client";
 import { isSignedIn } from "@/lib/api/auth";
+import { getMe } from "@/lib/api/me";
 
 /**
  * The entry screens draw their own page with no tab bar or side nav (the boards show none). The shell still
@@ -12,6 +13,15 @@ import { isSignedIn } from "@/lib/api/auth";
  * the W1 hand-back) the layer can become a plain div.
  */
 export function EntryFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
+  // The shell does not apply a saved theme on load yet, so the entry screens do: "light" or "dark" saved in Settings wins over the device.
+  useEffect(() => {
+    try {
+      const t = window.localStorage.getItem("voices-theme");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch {
+      /* storage unavailable: follow the device */
+    }
+  }, []);
   return <div className={`fixed inset-0 z-[70] flex flex-col overflow-hidden bg-bg text-ink ${className}`}>{children}</div>;
 }
 
@@ -76,17 +86,36 @@ export function ErrorBanner({ error, onRetry, fallback, title = "This did not wo
   );
 }
 
-/** Signed-in people have no business on a guest entry page: send them Home. Returns true while that check runs. */
+/** A signed-in person with no VOICES profile goes on to finish it (topics), never stranded; one with a profile goes to `to`. */
+export async function sendSignedIn(replace: (path: string) => void, to = "/"): Promise<void> {
+  try {
+    const me = await getMe();
+    replace(me.profileComplete ? to : "/join/topics");
+  } catch {
+    replace(to);
+  }
+}
+
+/** Signed-in people have no business on a guest entry page: send them on. Returns true while that runs. */
 export function useSkipIfSignedIn(to = "/"): boolean {
   const router = useRouter();
   const [skipping, setSkipping] = useState(false);
   useEffect(() => {
     if (isSignedIn()) {
       setSkipping(true);
-      router.replace(to);
+      void sendSignedIn((p) => router.replace(p), to);
     }
   }, [router, to]);
   return skipping;
+}
+
+/** On a page everyone may read (Home): a signed-in person who has no VOICES profile yet is sent to finish it. */
+export function useFinishProfile(): void {
+  const router = useRouter();
+  useEffect(() => {
+    if (!isSignedIn()) return;
+    getMe().then((me) => { if (!me.profileComplete) router.replace("/join/topics"); }, () => undefined);
+  }, [router]);
 }
 
 /** Join steps after sign-in need a session: without one, go to the sign-up form. */

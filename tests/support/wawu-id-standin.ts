@@ -7,7 +7,11 @@
  * Switches a test or a picture can use through the email it types:
  *   taken@...      register answers 409 (email or phone taken)
  *   (any account) login answers 403 EMAIL_NOT_VERIFIED until its code is confirmed
- * The right code is always 123456; any other code answers 401 "Invalid or expired code".
+ * The right code is 123456 once a code has been sent (register or verify/start). A code is deleted when accepted (a second
+ * confirm answers 401 like the real service), and five wrong tries answer 429 with retryAfterSeconds.
+ * Controls for tests and pictures: statusOf[email] (token and user status, default "active"), ttl (access seconds),
+ * refreshDelay (ms), and POST /__ctl/set|calls|reset over HTTP. A phone-only account (email starting phone-) is refused
+ * login with 403 PHONE_NOT_CONFIRMED.
  */
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -28,6 +32,10 @@ export class WawuIdStandIn {
   private jwk!: Record<string, unknown>;
   private refresh = new Map<string, string>();
   url = "";
+  ttl = 900;
+  refreshDelay = 0;
+  statusOf: Record<string, string> = {};
+  private codes = new Map<string, { tries: number }>();
   /** Set to make the next verify/start or any call answer with this status (for the network-error states). */
   failNext: { status: number; body: unknown } | null = null;
 
@@ -56,14 +64,14 @@ export class WawuIdStandIn {
 
   private tokens(u: User) {
     const [firstName, ...rest] = u.fullName.split(" ");
-    const accessToken = this.sign({ jti: randomUUID(), sub: u.id, email: u.email, phone: u.phone, firstName, lastName: rest.join(" "), country: "Nigeria", status: "ACTIVE" });
+    const accessToken = this.sign({ jti: randomUUID(), sub: u.id, email: u.email, phone: u.phone, firstName, lastName: rest.join(" "), country: "Nigeria", status: this.statusOf[u.email] ?? "active" }, this.ttl);
     const refreshToken = this.sign({ sub: u.id, jti: randomUUID(), type: "refresh" }, 30 * 86400);
     this.refresh.set(refreshToken, u.id);
     return { accessToken, refreshToken };
   }
 
   private userOut(u: User) {
-    return { id: u.id, fullName: u.fullName, email: u.email, phone: u.phone, status: "ACTIVE" };
+    return { id: u.id, fullName: u.fullName, email: u.email, phone: u.phone, status: this.statusOf[u.email] ?? "active" };
   }
 
   private async handle(req: IncomingMessage, res: import("node:http").ServerResponse): Promise<void> {
@@ -71,12 +79,24 @@ export class WawuIdStandIn {
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     res.setHeader("content-type", "application/json");
+    if ((req.url ?? "").startsWith("/__ctl")) {
+      let c = "";
+      for await (const x of req) c += x;
+      const b = c ? (JSON.parse(c) as Record<string, any>) : {};
+      const p = (req.url ?? "").split("?")[0];
+      if (p === "/__ctl/set") { if (b.ttl) this.ttl = b.ttl; if (b.status) this.statusOf[b.status[0]] = b.status[1]; if (b.refreshDelay !== undefined) this.refreshDelay = b.refreshDelay; }
+      if (p === "/__ctl/calls") { res.end(JSON.stringify(this.calls)); return; }
+      if (p === "/__ctl/reset") this.calls.length = 0;
+      res.end("{}");
+      return;
+    }
     if (req.method === "OPTIONS") { res.statusCode = 204; res.end(); return; }
     const path = (req.url ?? "").split("?")[0];
     if (path === "/.well-known/jwks.json") { res.end(JSON.stringify({ keys: [this.jwk] })); return; }
     let raw = "";
     for await (const c of req) raw += c;
     const body = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    if (path === "/auth/refresh" && this.refreshDelay) await new Promise((r) => setTimeout(r, this.refreshDelay));
     this.calls.push({ method: req.method ?? "GET", path, body });
     const send = (status: number, payload: unknown) => { res.statusCode = status; res.end(JSON.stringify(payload)); };
     const refuse = (statusCode: number, message: string, code?: string) => send(statusCode, { statusCode, message, ...(code ? { code } : {}) });
@@ -90,16 +110,22 @@ export class WawuIdStandIn {
         if (!body.password || body.password.length < 8) return refuse(400, "password must be longer than or equal to 8 characters");
         const u: User = { id: randomUUID(), email, phone: String(body.phone), fullName: String(body.fullName ?? `${body.firstName} ${body.lastName}`), password: body.password, verified: false };
         this.users.set(u.id, u);
+        this.codes.set(email, { tries: 0 });
         return send(201, { data: { ...this.tokens(u), user: this.userOut(u) } });
       }
       case "/auth/email/verify/start": {
         const u = byEmail(body.email);
         if (!u) return refuse(404, "No account found with this email");
+        if (!u.verified) this.codes.set(u.email, { tries: 0 });
         return send(201, { data: { message: u.verified ? "Email already verified" : "Verification code sent", expiresIn: u.verified ? 0 : 300 } });
       }
       case "/auth/email/verify/confirm": {
         const u = byEmail(body.email);
-        if (!u || body.code !== RIGHT_CODE) return refuse(401, "Invalid or expired code");
+        const pending = u ? this.codes.get(u.email) : undefined;
+        if (!u || !pending) return refuse(401, "Invalid or expired code");
+        if (pending.tries >= 5) return send(429, { statusCode: 429, message: "Too many tries. Try again in 60 seconds.", retryAfterSeconds: 60 });
+        if (body.code !== RIGHT_CODE) { pending.tries++; return refuse(401, "Invalid or expired code"); }
+        this.codes.delete(u.email);
         u.verified = true;
         return send(201, { data: { ...this.tokens(u), user: this.userOut(u) } });
       }
@@ -108,6 +134,7 @@ export class WawuIdStandIn {
         const u = byEmail(id) ?? [...this.users.values()].find((x) => x.phone === body.identifier);
         if (!u) return refuse(404, "No account found with this email or phone number.", "USER_NOT_IN_WAWUID");
         if (u.password !== body.password) return refuse(401, "Invalid credentials");
+        if (u.email.startsWith("phone-") && !u.verified) return refuse(403, "Confirm your phone number before signing in.", "PHONE_NOT_CONFIRMED");
         if (!u.verified) return refuse(403, "Verify your email address before signing in.", "EMAIL_NOT_VERIFIED");
         return send(201, { data: { ...this.tokens(u), user: this.userOut(u) } });
       }
@@ -123,6 +150,11 @@ export class WawuIdStandIn {
       default:
         return refuse(404, "Cannot " + req.method + " " + path);
     }
+  }
+
+  /** Send a code as verify/start does (for tests that begin at the code step). */
+  async startCode(email: string): Promise<void> {
+    this.codes.set(email.toLowerCase(), { tries: 0 });
   }
 
   /** Seed a verified person (for tests that start signed in). */

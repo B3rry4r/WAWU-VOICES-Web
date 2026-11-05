@@ -2,13 +2,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
-import { Button, Icon } from "@/components/vx";
+import { Banner, Button, Icon } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
-import { confirmEmailVerification, startEmailVerification } from "@/lib/api/auth";
-import { peekReturn, readDraft, saveDraft } from "@/lib/auth/entry-draft";
+import { confirmEmailVerification, isAccountBlocked, isSignedIn, startEmailVerification } from "@/lib/api/auth";
+import { peekHeldPost, readDraft, saveDraft } from "@/lib/auth/entry-draft";
 import { AuthSheet } from "./AuthSheet";
 import { afterSession } from "./SignIn";
-import { ErrorBanner, isOffline, refusalWords, useSkipIfSignedIn } from "./ui";
+import { ErrorBanner, isOffline, refusalWords, sendSignedIn } from "./ui";
 
 const RESEND_AFTER_SEC = 60;
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -16,7 +16,6 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2,
 /** /join/verify: the six digit code sent by email (V-20), drawn as the Verify board's code screen. */
 export function Verify() {
   const router = useRouter();
-  const skipping = useSkipIfSignedIn();
   const [email, setEmail] = useState<string | null>(null);
   const [sentAt, setSentAt] = useState<number | undefined>();
   const [life, setLife] = useState(300);
@@ -27,6 +26,7 @@ export function Verify() {
   const [note, setNote] = useState<string | null>(null);
   const [failure, setFailure] = useState<unknown>(null);
   const [posting, setPosting] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -38,14 +38,30 @@ export function Verify() {
     setEmail(d.email);
     setSentAt(d.codeSentAt);
     setLife(d.codeLifeSec ?? 300);
-    setPosting(peekReturn() !== null);
-  }, [router]);
+    setPosting(peekHeldPost());
+    // Already signed in: a code that was accepted only needs its next step again; anything else moves on.
+    if (isSignedIn()) {
+      if (d.verified) {
+        setPhase("verified");
+        void goOn();
+      } else void sendSignedIn((p) => router.replace(p));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-  if (skipping || !email) return null;
+  if (!email) return null;
 
+  async function goOn() {
+    setFailure(null);
+    try {
+      await afterSession((p) => router.replace(p));
+    } catch (err) {
+      setFailure(err); // only this step is retried, never the used code
+    }
+  }
   const code = digits.join("");
   const elapsed = sentAt ? Math.floor((now - sentAt) / 1000) : Infinity;
   const wait = Math.max(0, RESEND_AFTER_SEC - elapsed);
@@ -89,7 +105,9 @@ export function Verify() {
       await confirmEmailVerification(email, code);
     } catch (err) {
       setPhase("entry");
-      if (isOffline(err)) setFailure(err);
+      if (isAccountBlocked(err)) setBlocked(true);
+      else if (isOffline(err)) setFailure(err);
+      else if (err instanceof ApiError && err.status === 429) setFailure(err);
       else if (err instanceof ApiError && (err.status === 401 || err.status === 400)) {
         setWrong(true);
         setDigits(["", "", "", "", "", ""]);
@@ -97,13 +115,9 @@ export function Verify() {
       } else setFailure(err);
       return;
     }
+    saveDraft({ verified: true });
     setPhase("verified");
-    try {
-      await afterSession((p) => router.replace(p));
-    } catch (err) {
-      setPhase("entry");
-      setFailure(err);
-    }
+    await goOn();
   };
 
   const resend = async () => {
@@ -134,6 +148,7 @@ export function Verify() {
         <div className="flex flex-col items-center gap-3 py-6 text-green-text" role="status">
           <Icon name="circle-check" size={56} />
           <p className="m-0 text-[15px] font-medium leading-[22px] text-ink-2">{email}</p>
+          {failure ? <div className="w-full text-ink"><ErrorBanner error={failure} onRetry={goOn} fallback="Something went wrong on our side. Try again in a moment." /></div> : null}
         </div>
       </AuthSheet>
     );
@@ -143,6 +158,7 @@ export function Verify() {
   return (
     <AuthSheet title="Enter your code" subtitle={`We sent 6 digits by email to ${email}.`}>
       <div className="flex flex-col gap-[18px]">
+        {blocked ? <Banner tone="danger" title="This account cannot sign in to VOICES right now." /> : null}
         {failure ? <ErrorBanner error={failure} onRetry={() => setFailure(null)} fallback={refusalWords(failure, "Something went wrong on our side. Try again in a moment.")} /> : null}
         <fieldset className="m-0 flex flex-col gap-[10px] border-0 p-0">
           <legend className="vx-sr">Verification code</legend>

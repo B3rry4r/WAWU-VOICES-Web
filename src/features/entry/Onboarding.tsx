@@ -29,7 +29,7 @@ export function Onboarding() {
   const load = useLoad(() => Promise.all([getTodaysQuestion(), getPublicConfig(), getCurrentPoll()]), []);
   if (skipping) return null;
   const logo = <Link href="/welcome" className="flex" aria-label="VOICES"><Logo height={34} alt="VOICES" /></Link>;
-  const skip = <Link href="/join/country" className="-mr-2 inline-flex min-h-[44px] items-center px-2 text-[15px] font-semibold leading-5 no-underline">Skip</Link>;
+  const skip = <Link href="/join/country" className="-mr-2 inline-flex min-h-[44px] items-center px-2 text-[15px] font-semibold leading-5 text-green-text no-underline">Skip</Link>;
   if (load.state !== "ready") {
     return (
       <EntryFrame>

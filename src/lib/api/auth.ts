@@ -1,6 +1,7 @@
 import { apiFetch, ApiError } from "./client";
 import { WAWU_ID_BASE } from "./config";
 import { sessionStorage } from "@/lib/auth/session-storage";
+import { clearEntryState } from "@/lib/auth/entry-draft";
 
 /*
  * WAWU ID owns sign-up, sign-in, the email code and password reset (the same service the WAWU website uses).
@@ -50,11 +51,38 @@ export function nationalPhone(typed: string, dial = "+234"): string {
   return rest.replace(/^0+/, "");
 }
 
-/** `identifier` is email or phone. Stores the tokens and returns the WAWU ID user. A person whose email is not yet confirmed gets ApiError code EMAIL_NOT_VERIFIED. */
-export async function signIn(identifier: string, password: string): Promise<WawuIdUser> {
-  const r = await idCall<WawuIdTokenResult>("/auth/login", { identifier: identifier.trim(), password });
+/** WAWU ID gives tokens to suspended, banned and pending-deletion accounts too. VOICES does not let them in. */
+export class AccountBlockedError extends Error {
+  constructor() {
+    super("This account cannot sign in to VOICES right now.");
+    this.name = "AccountBlockedError";
+  }
+}
+export const isAccountBlocked = (e: unknown): boolean => e instanceof AccountBlockedError;
+
+function claimStatus(token: string): unknown {
+  try {
+    return (JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as { status?: unknown }).status;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Keep the tokens only for an active account. A status that is present and not "active" clears them and refuses. */
+function keepSession(r: WawuIdTokenResult): WawuIdUser {
+  for (const st of [claimStatus(r.accessToken), r.user?.status]) {
+    if (st !== undefined && st !== null && String(st).toLowerCase() !== "active") {
+      sessionStorage.clear();
+      throw new AccountBlockedError();
+    }
+  }
   sessionStorage.setTokens(r.accessToken, r.refreshToken);
   return r.user;
+}
+
+/** `identifier` is email or phone. Stores the tokens and returns the WAWU ID user. A person whose email is not yet confirmed gets ApiError code EMAIL_NOT_VERIFIED. */
+export async function signIn(identifier: string, password: string): Promise<WawuIdUser> {
+  return keepSession(await idCall<WawuIdTokenResult>("/auth/login", { identifier: identifier.trim(), password }));
 }
 
 /**
@@ -81,15 +109,14 @@ export async function startEmailVerification(email: string): Promise<{ expiresIn
 }
 
 export async function confirmEmailVerification(email: string, code: string): Promise<WawuIdUser> {
-  const r = await idCall<WawuIdTokenResult>("/auth/email/verify/confirm", { email: email.trim().toLowerCase(), code });
-  sessionStorage.setTokens(r.accessToken, r.refreshToken);
-  return r.user;
+  return keepSession(await idCall<WawuIdTokenResult>("/auth/email/verify/confirm", { email: email.trim().toLowerCase(), code }));
 }
 
 /** Ends the session here first, then tells WAWU ID to kill the refresh token (best effort). */
 export function signOut(): void {
   const refreshToken = sessionStorage.getRefreshToken();
   sessionStorage.clear();
+  clearEntryState();
   if (refreshToken) void idCall("/auth/logout", { refreshToken }).catch(() => undefined);
 }
 
@@ -98,3 +125,4 @@ export function isSignedIn(): boolean {
 }
 
 export const isEmailNotVerified = (e: unknown): boolean => e instanceof ApiError && e.status === 403 && e.code === "EMAIL_NOT_VERIFIED";
+export const isPhoneNotConfirmed = (e: unknown): boolean => e instanceof ApiError && e.status === 403 && e.code === "PHONE_NOT_CONFIRMED";

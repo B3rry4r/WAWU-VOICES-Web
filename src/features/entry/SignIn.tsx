@@ -1,11 +1,11 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, TextField } from "@/components/vx";
+import { Banner, Button, TextField } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
-import { isEmailNotVerified, nationalPhone, register, signIn, startEmailVerification } from "@/lib/api/auth";
+import { isAccountBlocked, isEmailNotVerified, isPhoneNotConfirmed, nationalPhone, register, signIn, startEmailVerification } from "@/lib/api/auth";
 import { getMe } from "@/lib/api/me";
-import { holdReturn, peekReturn, readDraft, saveDraft, takeReturn } from "@/lib/auth/entry-draft";
+import { holdReturn, peekHeldPost, readDraft, saveDraft, takeReturn } from "@/lib/auth/entry-draft";
 import { AuthSheet } from "./AuthSheet";
 import { ErrorBanner, isOffline, useSkipIfSignedIn } from "./ui";
 
@@ -25,6 +25,8 @@ export function SignIn() {
   const skipping = useSkipIfSignedIn();
   const [join, setJoin] = useState(params.get("mode") === "join");
   const [hasReturn, setHasReturn] = useState(false);
+  const [needEmail, setNeedEmail] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,8 +39,8 @@ export function SignIn() {
 
   useEffect(() => {
     const next = params.get("next");
-    if (next) holdReturn(next);
-    setHasReturn(peekReturn() !== null);
+    if (next) holdReturn(next, params.get("held") === "1" ? "post" : "page");
+    setHasReturn(peekHeldPost());
     const d = readDraft();
     if (d.email) setEmail(d.email);
     if (d.fullName) setFullName(d.fullName);
@@ -55,6 +57,7 @@ export function SignIn() {
     e.preventDefault();
     if (busy) return;
     setFailure(null);
+    setBlocked(false);
     const bad: Record<string, string> = {};
     if (join) {
       if (fullName.trim().length < 2) bad.fullName = "Tell us your name.";
@@ -63,6 +66,8 @@ export function SignIn() {
       if (national.length < 7 || national.length > 11) bad.phone = "Enter your phone number without the +234.";
       if (password.length < 8) bad.password = "Use at least 8 characters.";
       if (!consent) bad.consent = "Confirm you are 18 or older and accept the rules.";
+    } else if (needEmail) {
+      if (!EMAIL_RE.test(email.trim())) bad.email = "Enter the email address on your account.";
     } else {
       if (!identifier.trim()) bad.identifier = "Enter your email or phone number.";
       if (!password) bad.password = "Enter your password.";
@@ -84,10 +89,23 @@ export function SignIn() {
         router.push("/join/verify");
         return;
       }
+      if (needEmail) {
+        const r = await startEmailVerification(email);
+        saveDraft({ email: email.trim().toLowerCase(), codeSentAt: Date.now(), codeLifeSec: r.expiresIn || 300 });
+        router.push("/join/verify");
+        return;
+      }
       await signIn(identifier, password);
       await afterSession((p) => router.replace(p));
     } catch (err) {
-      if (!join && isEmailNotVerified(err) && identifier.includes("@")) {
+      if (!join && isEmailNotVerified(err)) {
+        if (!identifier.includes("@")) {
+          // Signed in by phone: the code goes to the account's email, so ask for it.
+          setNeedEmail(true);
+          setErrs({ email: "Your email is not verified yet. Enter the email on your account and we will send a code." });
+          setBusy(false);
+          return;
+        }
         try {
           const r = await startEmailVerification(identifier);
           saveDraft({ email: identifier.trim().toLowerCase(), codeSentAt: Date.now(), codeLifeSec: r.expiresIn || 300 });
@@ -97,11 +115,13 @@ export function SignIn() {
         router.push("/join/verify");
         return;
       }
-      if (isOffline(err)) setFailure(err);
+      if (isAccountBlocked(err)) setBlocked(true);
+      else if (isPhoneNotConfirmed(err)) setErrs({ identifier: "Your phone number is not confirmed yet. Confirm it, then sign in." });
+      else if (isOffline(err)) setFailure(err);
       else if (err instanceof ApiError && err.status === 409) setErrs({ email: "An account with this email or phone already exists. Sign in instead." });
       else if (err instanceof ApiError && err.status === 401) setErrs({ password: "That email, phone or password is not right." });
       else if (err instanceof ApiError && err.status === 404 && err.code === "USER_NOT_IN_WAWUID") setErrs({ identifier: "No account found with this email or phone number. Join VOICES to make one." });
-      else if (err instanceof ApiError && err.status === 403) setErrs({ identifier: "Verify your email address before signing in." });
+      else if (err instanceof ApiError && err.status === 403 && err.explained) setErrs({ identifier: err.message });
       else if (err instanceof ApiError && err.status === 400 && err.explained) setErrs({ password: err.message });
       else setFailure(err);
       setBusy(false);
@@ -114,6 +134,7 @@ export function SignIn() {
       subtitle={hasReturn ? "Your voice is saved. It posts as soon as you are in." : undefined}
     >
       <form noValidate onSubmit={submit} className="flex flex-col gap-4">
+        {blocked ? <Banner tone="danger" title="This account cannot sign in to VOICES right now." /> : null}
         {failure ? <ErrorBanner error={failure} onRetry={() => setFailure(null)} fallback="Something went wrong on our side. Try again in a moment." /> : null}
         {join ? (
           <>
@@ -122,7 +143,10 @@ export function SignIn() {
             <TextField label="Phone number" prefix={DIAL} inputMode="tel" value={phone} onChange={setPhone} autoComplete="tel-national" placeholder="803 214 7720" error={errs.phone} hint="One account per number." />
           </>
         ) : (
-          <TextField label="Email or phone number" value={identifier} onChange={setIdentifier} autoComplete="username" error={errs.identifier} />
+          <>
+            <TextField label="Email or phone number" value={identifier} onChange={setIdentifier} autoComplete="username" error={errs.identifier} />
+            {needEmail ? <TextField label="Email on your account" type="email" inputMode="email" value={email} onChange={setEmail} autoComplete="email" error={errs.email} /> : null}
+          </>
         )}
         <TextField label="Password" type="password" value={password} onChange={setPassword} autoComplete={join ? "new-password" : "current-password"} error={errs.password} hint={join ? "At least 8 characters." : undefined} />
         {join ? (
@@ -134,7 +158,7 @@ export function SignIn() {
             {errs.consent ? <p id="consent-err" role="alert" className="m-0 mt-1 text-[13px] font-medium leading-[18px] text-danger">{errs.consent}</p> : null}
           </div>
         ) : null}
-        <Button size="l" block type="submit" loading={busy}>{join ? "Send code" : "Sign in"}</Button>
+        <Button size="l" block type="submit" loading={busy}>{join || needEmail ? "Send code" : "Sign in"}</Button>
         <p className="m-0 text-center text-[15px] leading-[22px]">
           {join ? "Have an account? " : "New to VOICES? "}
           <button type="button" className="inline-flex min-h-[44px] items-center border-0 bg-transparent p-0 font-semibold text-green-text underline" onClick={() => switchTo(!join)}>{join ? "Sign in" : "Join VOICES"}</button>
