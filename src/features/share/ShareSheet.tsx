@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Icon, Sheet } from "@/components/vx";
 import type { IconName } from "@/components/vx";
+import { apiFetch } from "@/lib/api/client";
+import { API_BASE } from "@/lib/api/config";
 import { createShareLink, recordShareEvent } from "@/lib/api/reach";
 import type { ShareLink, ShareObjectType, ShareTarget } from "@/lib/api/reach";
 import { sessionStorage } from "@/lib/auth/session-storage";
@@ -48,6 +50,29 @@ function cardOf(l: ShareLink): Card {
   return { state: "none" };
 }
 
+/** One link per open: React runs an effect twice in development, and both runs share the one request in flight. */
+const inFlight = new Map<string, Promise<ShareLink>>();
+export function makeLinkOnce(objectType: ShareObjectType, objectId: string, signedIn: boolean): Promise<ShareLink> {
+  const key = `${objectType}:${objectId}:${signedIn}`;
+  const have = inFlight.get(key);
+  if (have) return have;
+  const p = createShareLink(objectType, objectId, signedIn).finally(() => {
+    setTimeout(() => inFlight.delete(key), 0);
+  });
+  inFlight.set(key, p);
+  return p;
+}
+
+/** Where the card is while it is being made: GET /share/{code}/card answers 202 until the image exists (then 200, an image). */
+export async function cardIsReady(code: string): Promise<boolean> {
+  try {
+    const r = await apiFetch<unknown>(`/share/${encodeURIComponent(code)}/card`);
+    return r !== undefined;
+  } catch (e) {
+    return e instanceof SyntaxError; // a 200 carries an image, not JSON: the card is there
+  }
+}
+
 function Round({ children, label, onClick, href, tone, disabled }: { children: ReactNode; label: string; onClick?: () => void; href?: string; tone?: "mint"; disabled?: boolean }) {
   const body = (
     <>
@@ -88,20 +113,25 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
     setCanNative(typeof navigator !== "undefined" && typeof navigator.share === "function");
     let stop = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const make = (n: number) =>
-      createShareLink(objectType, objectId, signedIn.current)
-        .then((l) => {
-          if (stop) return;
-          setLink(l);
-          const c = cardOf(l);
-          setCard(c);
-          if (c.state === "making" && n < 10) timer = setTimeout(() => make(n + 1), 1500);
-          else if (c.state === "making") setCard({ state: "none" });
-        })
-        .catch(() => {
-          if (!stop) setFailed(true);
-        });
-    void make(0);
+    const watch = (l: ShareLink, n: number) => {
+      cardIsReady(l.code).then((ready) => {
+        if (stop) return;
+        if (ready) setCard({ state: "ready", url: `${API_BASE}/share/${encodeURIComponent(l.code)}/card` });
+        else if (n < 10) timer = setTimeout(() => watch(l, n + 1), 1500);
+        else setCard({ state: "none" });
+      });
+    };
+    makeLinkOnce(objectType, objectId, signedIn.current)
+      .then((l) => {
+        if (stop) return;
+        setLink(l);
+        const c = cardOf(l);
+        setCard(c);
+        if (c.state === "making") watch(l, 0);
+      })
+      .catch(() => {
+        if (!stop) setFailed(true);
+      });
     return () => {
       stop = true;
       if (timer) clearTimeout(timer);

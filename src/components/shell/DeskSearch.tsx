@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
+import { Bell } from "./Bell";
 
 function Field() {
   const router = useRouter();
@@ -31,6 +32,7 @@ export function DeskSearch() {
       <Suspense fallback={<div className="sh-search"><Search size={20} aria-hidden="true" /></div>}>
         <Field />
       </Suspense>
+      <Bell />
     </div>
   );
 }

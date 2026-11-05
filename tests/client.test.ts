@@ -7,6 +7,17 @@ function stub(res: Response | Error) {
   vi.stubGlobal("fetch", vi.fn(async () => { if (res instanceof Error) throw res; return res; }));
 }
 
+describe("apiFetch empty bodies", () => {
+  it("a real empty 202 (DELETE /me) returns undefined", async () => {
+    stub(new Response(null, { status: 202 }));
+    expect(await apiFetch("/api/x", { method: "DELETE" })).toBeUndefined();
+  });
+  it("a 200 with a zero-length body returns undefined", async () => {
+    stub(new Response("", { status: 200 }));
+    expect(await apiFetch("/api/x")).toBeUndefined();
+  });
+});
+
 describe("apiFetch", () => {
   it("returns the JSON body", async () => {
     stub(new Response(JSON.stringify({ ok: 1 }), { status: 200 }));

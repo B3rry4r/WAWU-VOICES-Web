@@ -49,6 +49,8 @@ export async function confirmEmailVerification(email: string, code: string): Pro
 
 export function signOut(): void {
   sessionStorage.clear();
+  // a kept recording belongs to the person who made it
+  void import("@/features/speak/draft").then((m) => m.clearDraft()).catch(() => undefined);
 }
 
 export function isSignedIn(): boolean {
