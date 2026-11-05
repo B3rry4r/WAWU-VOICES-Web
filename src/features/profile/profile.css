@@ -68,7 +68,7 @@
 .pf-blocked { display: flex; flex-direction: column; gap: var(--space-3); }
 
 /* edit profile */
-.pf-edit { display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-2) var(--space-4) var(--space-6); }
+.pf-edit { display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-1) 0 var(--space-6); }
 .pf-edit__bar { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-h); }
 .pf-edit__h1 { font-size: 24px; line-height: 28px; }
 .pf-form-sec { display: flex; flex-direction: column; gap: var(--space-2); }
