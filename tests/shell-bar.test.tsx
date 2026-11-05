@@ -92,3 +92,24 @@ describe("side nav and bell", () => {
     await waitFor(() => expect(document.querySelector('[data-testid="bell-dot"]')).toBeTruthy());
   });
 });
+
+describe("one source for the bell", () => {
+  it("phone and desktop bells share one unread call per mount", async () => {
+    signIn();
+    apiFetch.mockResolvedValue({ unread: 2 });
+    render(<AppShell>x</AppShell>);
+    await waitFor(() => expect(screen.getAllByLabelText("Notifications, 2 unread").length).toBe(2));
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+  });
+  it("the bell is lit on /notifications", async () => {
+    signIn();
+    path = "/notifications";
+    apiFetch.mockResolvedValue({ unread: 0 });
+    render(<AppShell>x</AppShell>);
+    await waitFor(() => expect(screen.getAllByLabelText("Notifications").length).toBeGreaterThan(0));
+    for (const b of screen.getAllByLabelText("Notifications")) {
+      expect(b.getAttribute("aria-current")).toBe("page");
+      expect(b.className).toContain("sh-iconbtn--on");
+    }
+  });
+});

@@ -6,7 +6,7 @@ import { ChartNoAxesColumn, Compass, House, Mic, User } from "lucide-react";
 import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react";
 import { DeskSearch } from "./DeskSearch";
 import { ShellSlotsContext } from "./ShellSlots";
-import { Bell } from "./Bell";
+import { Bell, UnreadProvider } from "./Bell";
 import { NAV, activeNav, hidesTabBar, isChromeless, onWeekly, showsLogoBar, type NavId } from "./nav";
 
 const ICONS: Record<Exclude<NavId, "speak">, typeof House> = { home: House, discover: Compass, profile: User };
@@ -30,6 +30,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
   if (isChromeless(pathname)) return <>{children}</>;
 
   return (
+    <UnreadProvider>
     <ShellSlotsContext.Provider value={slots}>
     <div className="sh-root">
       {/* desktop left nav */}
@@ -103,5 +104,6 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
       )}
     </div>
     </ShellSlotsContext.Provider>
+    </UnreadProvider>
   );
 }

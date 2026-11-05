@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell as BellIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api/client";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import { UNREAD_EVENT } from "./unread";
@@ -38,12 +38,21 @@ export function useUnread(): number | null {
   return n;
 }
 
+const UnreadContext = createContext<number | null>(null);
+
+/** One source for every bell on the page (phone bar and desktop row): one call per route change, not one per bell. */
+export function UnreadProvider({ children }: { children: ReactNode }) {
+  const unread = useUnread();
+  return <UnreadContext.Provider value={unread}>{children}</UnreadContext.Provider>;
+}
+
 /** The bell: opens /notifications, with a dot when something is unread. Signed in only (a guest has no alerts). */
 export function Bell({ className }: { className?: string }) {
-  const unread = useUnread();
+  const unread = useContext(UnreadContext);
+  const on = (usePathname() ?? "").startsWith("/notifications");
   if (unread === null) return null;
   return (
-    <Link href="/notifications" className={"sh-iconbtn" + (className ? " " + className : "")} aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}>
+    <Link href="/notifications" aria-current={on ? "page" : undefined} className={"sh-iconbtn" + (on ? " sh-iconbtn--on" : "") + (className ? " " + className : "")} aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}>
       <BellIcon size={22} aria-hidden="true" />
       {unread > 0 ? <span className="sh-iconbtn__dot" data-testid="bell-dot" aria-hidden="true" /> : null}
     </Link>
