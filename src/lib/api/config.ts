@@ -1,7 +1,7 @@
 /**
- * Runtime config. An empty API base means same origin (production: the VOICES API is under /api on the
- * same host as the web app). No mock mode exists: the web app always calls the real API.
+ * Runtime config. The API base defaults to /api/v1 on the web app's own address (V-26: the VOICES API is under
+ * /api/v1 on the same host). No mock mode exists: the web app always calls the real API.
  */
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1";
 export const WAWU_ID_BASE = process.env.NEXT_PUBLIC_WAWU_ID_BASE ?? "https://id.wawuafrica.com";
 export const REQUEST_TIMEOUT_MS = 10000;
