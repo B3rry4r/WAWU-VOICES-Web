@@ -22,6 +22,32 @@ export function ago(iso: string, now = Date.now()): string {
   return `${Math.floor(min / 1440)}d`;
 }
 
+/** 12.4K, 21.4K, 8,200: the compact count the boards use on tiles and chips. */
+export function shortCount(n: number): string {
+  if (n >= 1e6) return `${Math.round(n / 1e5) / 10}M`;
+  if (n >= 1e4) return `${Math.round(n / 100) / 10}K`;
+  return n.toLocaleString("en-NG");
+}
+
+/** "8,200 voices", "12.4K voices": the voice count as the boards write it. */
+export function voicesShort(n: number): string {
+  return `${shortCount(n)} ${n === 1 ? "voice" : "voices"}`;
+}
+
+/** Open for answers and votes: not closed, and inside its window (V-27). */
+export function isOpen(q: { status: string; startsAt: string | null; endsAt: string | null }, now = Date.now()): boolean {
+  if (q.status === "CLOSED" || q.status === "DRAFT") return false;
+  if (q.startsAt && Date.parse(q.startsAt) > now) return false;
+  if (q.endsAt && Date.parse(q.endsAt) <= now) return false;
+  return true;
+}
+
+/** "0.2 units", "1 unit", "12.5 units": Voice Units from milli-units. */
+export function unitsLabel(milli: number): string {
+  const u = milli / 1000;
+  return `${Number.isInteger(u) ? u : u.toFixed(1).replace(/\.0$/, "")} ${u === 1 ? "unit" : "units"}`;
+}
+
 export function voicesLabel(n: number): string {
   return `${n.toLocaleString("en-NG")} ${n === 1 ? "voice" : "voices"}`;
 }
