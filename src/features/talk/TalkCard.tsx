@@ -3,11 +3,18 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { AnswerCard, Button, Sheet, Toast, REACTIONS } from "@/components/vx";
 import { ShareSheet } from "@/features/share";
-import { makePlayer } from "@/lib/audio-ref/player";
 import { answerCardProps } from "@/lib/feed-format";
+import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, ReactionKind } from "@/lib/api/talk";
-import { failText, isOutOfPosts, outOfPostsHref, uuidKey } from "./lib";
+import { failText, isOutOfPosts, outOfPostsHref, unitsText, useClipPlayback, uuidKey } from "./lib";
+
+/** The 402 on a reaction: the price and balance come from the server's details, never from this file. */
+function outOfReactionsText(e: unknown): string {
+  const d = (e instanceof ApiError ? e.details : undefined) as { costMilli?: number; balanceMilli?: number } | undefined;
+  const cost = typeof d?.costMilli === "number" ? ` Another reaction costs ${unitsText(d.costMilli)}${typeof d.balanceMilli === "number" ? `, and your balance is ${unitsText(d.balanceMilli)}` : ""}.` : "";
+  return `You have used your free reactions today.${cost} Get Voice Units to react.`;
+}
 
 const kindOf = (name: string): ReactionKind => name.toUpperCase().replace(/[ -]/g, "_") as ReactionKind;
 const nameOf = (kind: string | null): string | undefined => REACTIONS.find((r) => kindOf(r.name) === kind)?.name;
@@ -22,7 +29,7 @@ export function useToast(): [ReactNode, (text: string, tone?: "success" | "info"
     return () => clearTimeout(h);
   }, [t]);
   const node = t ? (
-    <div className="pointer-events-none fixed inset-x-4 bottom-24 z-[var(--z-toast)] mx-auto flex max-w-[420px] justify-center" role="status">
+    <div className="pointer-events-none fixed inset-x-4 bottom-24 z-[var(--z-toast)] mx-auto flex max-w-[420px] justify-center">
       <Toast tone={t.tone}>{t.text}</Toast>
     </div>
   ) : null;
@@ -58,39 +65,38 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   const [rev, setRev] = useState(0);
   const [more, setMore] = useState(false);
   const [shareNode, share] = useShareSheet();
-  const audio = useRef<HTMLAudioElement | null>(null);
-  useEffect(() => () => { audio.current?.pause(); }, []);
+  const liked = useRef(answer.iLiked);
+  const likeBusy = useRef(false);
+  const onFail = useCallback((e: unknown) => push(failText(e), "danger"), [push]);
+  const onStart = useCallback(() => { void api.countListen(answer.id); }, [answer.id]);
+  const clip = useClipPlayback(answer.clip?.id, onFail, onStart);
   useEffect(() => setA(answer), [answer]);
+  useEffect(() => { liked.current = a.iLiked; }, [a.iLiked]);
   const upd = (n: Answer) => { setA(n); onChange?.(n); };
   const back = () => setRev((r) => r + 1);
 
-  async function play(start: boolean) {
-    if (!a.clip) return;
-    if (!start) { audio.current?.pause(); return; }
-    try {
-      if (!audio.current) {
-        const p = await api.getPlayUrl(a.clip.id);
-        audio.current = makePlayer(p.url);
-        void api.countListen(a.id);
-      }
-      await audio.current.play();
-    } catch (e) {
-      push(failText(e), "danger");
-    }
-  }
-
+  /** One like request at a time; the next action comes from the ref (what the server last said), never from a stale render. */
   async function like() {
-    const was = a.iLiked;
+    if (likeBusy.current) return;
+    likeBusy.current = true;
+    const was = liked.current;
     try {
       const s = was ? await api.unlikeAnswer(a.id) : await api.likeAnswer(a.id);
+      liked.current = s.iLiked;
       upd({ ...a, iLiked: s.iLiked, likeCount: s.likeCount });
+      if (s.iLiked === was) back();
     } catch (e) {
       back();
       push(failText(e), "danger");
+    } finally {
+      likeBusy.current = false;
     }
   }
 
+  const reactBusy = useRef(false);
   async function react(name: string) {
+    if (reactBusy.current) return;
+    reactBusy.current = true;
     const kind = kindOf(name);
     const removing = a.myReaction === kind;
     try {
@@ -99,8 +105,10 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
       if (s.charge && !removing) onAllowance?.({ balanceMilli: s.charge.balanceMilli, ...(s.charge.usedFreeDaily && freeReactions !== undefined ? { freeReactionsLeftToday: Math.max(0, freeReactions - 1) } : {}) });
     } catch (e) {
       back();
-      if (isOutOfPosts(e)) push("You have used your free reactions today. A reaction now costs 0.1 unit, and you have no units. Get Voice Units to react.", "info");
+      if (isOutOfPosts(e)) push(outOfReactionsText(e), "info");
       else push(failText(e), "danger");
+    } finally {
+      reactBusy.current = false;
     }
   }
 
@@ -109,9 +117,9 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
     if (!el) return;
     const label = el.getAttribute("aria-label") ?? "";
     const stop = () => { e.stopPropagation(); e.preventDefault(); };
-    if (el.classList.contains("vx-player__play")) { void play(label.startsWith("Play")); return; }
+    if (el.classList.contains("vx-player__play")) { void clip.toggle(label.startsWith("Play")); return; }
     if (el.classList.contains("vx-player__speed")) return;
-    if (label.startsWith("Like,")) { void like(); return; }
+    if (label.startsWith("Like,")) { if (likeBusy.current) { stop(); return; } void like(); return; }
     if (label === "React" || label.startsWith("Your reaction")) {
       if (!signedIn) { stop(); push("Sign in to react. Reading, listening and liking stay free.", "info"); }
       return;
@@ -132,7 +140,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
     <>
       <div onClickCapture={capture}>
         <AnswerCard
-          key={rev}
+          key={`${rev}-${clip.rev}`}
           {...props}
           reaction={nameOf(a.myReaction)}
           freeReactions={freeReactions}

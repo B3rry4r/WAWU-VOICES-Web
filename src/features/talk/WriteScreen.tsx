@@ -6,7 +6,7 @@ import type { IntentKind } from "@/components/vx/speak";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
-import { AppBar, Problem, ShellTweaks, failText, holdDraft, isOutOfPosts, nairaOfMilli, outOfPostsHref, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote, dropHeld } from "./lib";
+import { AppBar, Problem, ShellTweaks, failText, heldDraft, holdDraft, isOutOfPosts, nairaOfMilli, outOfPostsHref, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote, dropHeld } from "./lib";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -34,6 +34,7 @@ export function WriteScreen({ qid }: { qid: string }) {
   const [tries, setTries] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const busy = useRef(false);
   const root = useRef<HTMLDivElement>(null);
   const key = useRef<{ text: string; k: string } | null>(null);
   const slot = replyTo ? `r:${replyTo}` : `q:${qid}`;
@@ -60,6 +61,7 @@ export function WriteScreen({ qid }: { qid: string }) {
   if (!q || initial === null || (signedIn && !allow)) return <>{header}<div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="tile" /><Skeleton variant="answer" /></div></>;
   if (q.status !== "LIVE") return <>{header}<div className="mt-4"><Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner></div></>;
 
+  const whoLabel = parent?.author ? `@${parent.author.handle}` : "Anonymous";
   const left = allow?.freePostsRemaining ?? 0;
   const c = allow?.costs;
   const nairaText = c ? nairaOfMilli(c.textPostMilli, c.baseKoboPerUnit) : "";
@@ -67,12 +69,15 @@ export function WriteScreen({ qid }: { qid: string }) {
   const textCost = c ? `${unitsText(c.textPostMilli)} (${nairaText})` : undefined;
 
   async function send() {
-    if (sending) return;
+    if (busy.current) return;
     const { text, tag, stance } = readComposer(root.current);
     const body = text.trim();
     if (!body) return;
     if (replyTo && !stance) { setMsg("Pick how you are replying: I agree, I disagree or My experience."); return; }
-    if (!key.current || key.current.text !== body) key.current = { text: body, k: uuidKey() };
+    // A held draft (a post that was refused for units) keeps ITS key: the post after a purchase is the same post.
+    const held = replyTo ? undefined : heldDraft(qid);
+    if (!key.current || key.current.text !== body) key.current = { text: body, k: held && held.body === body ? held.key : uuidKey() };
+    busy.current = true;
     setSending(true);
     setMsg(null);
     try {
@@ -87,9 +92,14 @@ export function WriteScreen({ qid }: { qid: string }) {
         router.push(`/q/${qid}/posted?a=${r.answer.id}`);
       }
     } catch (e) {
+      busy.current = false;
       setSending(false);
       if (isOutOfPosts(e)) {
         saveTyped(slot, body);
+        if (replyTo) {
+          router.push(`/units/buy?from=${encodeURIComponent(close)}`);
+          return;
+        }
         holdDraft(qid, body, key.current.k);
         router.push(outOfPostsHref(qid));
         return;
@@ -103,7 +113,7 @@ export function WriteScreen({ qid }: { qid: string }) {
       {header}
       <div className="mt-4 grid gap-4 dt:max-w-[640px]">
         {replyTo ? (
-          <p className="m-0 text-[15px] text-[var(--ink-2)]">{`Replying to @${parent?.author?.handle ?? "this voice"}: ${parent?.body ?? "a voice"}`.slice(0, 160)}</p>
+          <p className="m-0 text-[15px] text-[var(--ink-2)]">{`Replying to ${whoLabel}: ${parent?.body ?? "a voice"}`.slice(0, 160)}</p>
         ) : (
           <div>
             <span className="vx-eyebrow text-[var(--green-text)]">Answering</span>
@@ -114,9 +124,9 @@ export function WriteScreen({ qid }: { qid: string }) {
         <div ref={root} onInputCapture={(e) => { if ((e.target as HTMLElement).tagName === "TEXTAREA") saveTyped(slot, (e.target as HTMLTextAreaElement).value); }}>
           <Composer
             freeLeft={left}
-            maxLength={500}
+            maxLength={c?.textMaxChars}
             defaultValue={initial}
-            replyTo={replyTo ? `@${parent?.author?.handle ?? "this voice"}` : undefined}
+            replyTo={replyTo ? whoLabel : undefined}
             intent={stanceQ ? INTENT_OF[stanceQ] : undefined}
             showTags={!replyTo}
             newsTag="none"

@@ -168,3 +168,148 @@ describe("Write: posting spends free posts and units", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 });
+
+const voice = (id: string, clip: string) => answer({ id, kind: "VOICE", body: null, clip: { id: clip, status: "READY", durationMs: 8000, maxDurationMs: 10000, peaks: [], transcript: null } as never });
+const playUrl = (c: Call) => (c.url.includes("/voice-clips/") && c.url.endsWith("/play") ? json({ url: `https://cdn.test/${c.url.split("/voice-clips/")[1].split("/")[0]}.webm`, expiresAt: new Date(Date.now() + 600000).toISOString(), mime: "audio/webm" }) : undefined);
+
+describe("TalkCard: like and voices", () => {
+  it("two fast taps on Like send one request, and the next tap after it settles sends the opposite", async () => {
+    let liked = false;
+    stub((c) => {
+      if (!c.url.endsWith("/answers/a1/like")) return undefined;
+      return new Promise<Response>((r) => setTimeout(() => { liked = c.method === "PUT"; r(json({ answerId: "a1", iLiked: liked, likeCount: liked ? 4 : 3 })); }, 150)) as never;
+    });
+    // fetch stub must return a promise of Response
+    const f = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    const orig = f.getMockImplementation()!;
+    f.mockImplementation(async (u: string, i?: RequestInit) => (await (orig(u, i) as Promise<Response> | Response)) as Response);
+    render(<TalkCard answer={answer()} signedIn push={vi.fn()} />);
+    const btn = () => screen.getByRole("button", { name: /^Like,/ });
+    await userEvent.click(btn());
+    await new Promise((r) => setTimeout(r, 60));
+    await userEvent.click(btn());
+    await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/like")).length).toBe(1));
+    await waitFor(() => expect(btn().getAttribute("aria-pressed")).toBe("true"));
+    await new Promise((r) => setTimeout(r, 200));
+    await userEvent.click(btn());
+    await waitFor(() => expect(calls.filter((c) => c.method === "DELETE").length).toBe(1));
+    expect(calls.filter((c) => c.method === "PUT").length).toBe(1);
+  });
+
+  it("a voice whose URL cannot be fetched puts the button back and says so", async () => {
+    const push2 = vi.fn();
+    stub((c) => (c.url.endsWith("/play") ? err(404, "NOT_FOUND") : undefined));
+    render(<TalkCard answer={voice("a1", "c1")} signedIn push={push2} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Play voice/ }));
+    await waitFor(() => expect(push2).toHaveBeenCalled());
+    expect(await screen.findByRole("button", { name: /^Play voice/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Pause voice/ })).toBeNull();
+  });
+
+  it("starting one voice stops the other and resets its button", async () => {
+    const plays: string[] = [];
+    const pauses: string[] = [];
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(function (this: HTMLMediaElement) { plays.push(this.src); return Promise.resolve(); });
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(function (this: HTMLMediaElement) { pauses.push(this.src); });
+    stub((c) => playUrl(c));
+    render(<><TalkCard answer={voice("a1", "c1")} signedIn push={vi.fn()} /><TalkCard answer={voice("a2", "c2")} signedIn push={vi.fn()} /></>);
+    const play = () => screen.getAllByRole("button", { name: /^(Play|Pause) voice/ });
+    await userEvent.click(play()[0]);
+    await waitFor(() => expect(plays.length).toBe(1));
+    await userEvent.click(play()[1]);
+    await waitFor(() => expect(plays.length).toBe(2));
+    expect(pauses.some((s) => s.includes("c1.webm"))).toBe(true);
+    expect(play()[0].getAttribute("aria-label")).toMatch(/^Play voice/);
+    expect(play()[1].getAttribute("aria-label")).toMatch(/^Pause voice/);
+    vi.restoreAllMocks();
+  });
+
+  it("an expired signed URL is asked for again once", async () => {
+    let n = 0;
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(() => (n++ === 0 ? Promise.reject(new Error("403")) : Promise.resolve()));
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+    stub((c) => playUrl(c));
+    const push2 = vi.fn();
+    render(<TalkCard answer={voice("a1", "c1")} signedIn push={push2} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Play voice/ }));
+    await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/play")).length).toBe(2));
+    expect(push2).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
+  it("the out-of-reactions message uses the server's price and never a typed one", async () => {
+    const push2 = vi.fn();
+    stub((c) => (c.method === "PUT" ? json({ error: { code: "INSUFFICIENT_UNITS", message: "x", requestId: "r", details: { costMilli: 250, balanceMilli: 0 } } }, 402) : undefined));
+    render(<TalkCard answer={answer()} signedIn push={push2} />);
+    await userEvent.click(screen.getByRole("button", { name: "React" }));
+    await userEvent.click(screen.getByRole("radio", { name: /Funny/ }));
+    await waitFor(() => expect(push2).toHaveBeenCalled());
+    const t = String(push2.mock.calls[0][0]);
+    expect(t).toMatch(/0\.[23] unit/);
+    expect(t).not.toMatch(/0\.1/);
+  });
+});
+
+describe("Write: keys and double sends", () => {
+  it("returning with a held draft reuses its Idempotency-Key", async () => {
+    window.localStorage.setItem("voices-held-drafts", JSON.stringify({ q1: { questionId: "q1", body: "Held words", key: "held-key-1", savedAt: 1, awaitingUnits: false } }));
+    stub((c) => {
+      if (c.url.endsWith("/questions/q1")) return json(question);
+      if (c.url.endsWith("/wallet")) return json({ allowances: allowance(5) });
+      if (c.method === "POST") return json({ answer: answer({ id: "n1" }), charge: { costMilli: 0, usedFreePost: true, usedFreeDaily: false, balanceMilli: 0 }, allowances: allowance(4) }, 201);
+      return undefined;
+    });
+    await writeAnswer("Held words");
+    await waitFor(() => expect(calls.some((c) => c.method === "POST")).toBe(true));
+    expect(calls.find((c) => c.method === "POST")!.headers.get("Idempotency-Key")).toBe("held-key-1");
+  });
+
+  it("a double click on Post sends once", async () => {
+    stub((c) => {
+      if (c.url.endsWith("/questions/q1")) return json(question);
+      if (c.url.endsWith("/wallet")) return json({ allowances: allowance(5) });
+      if (c.method === "POST") return json({ answer: answer({ id: "n1" }), charge: { costMilli: 0, usedFreePost: true, usedFreeDaily: false, balanceMilli: 0 }, allowances: allowance(4) }, 201);
+      return undefined;
+    });
+    render(<WriteScreen qid="q1" />);
+    await userEvent.type(await screen.findByRole("textbox"), "Once");
+    await userEvent.dblClick(screen.getByRole("button", { name: /^Post/ }));
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect(calls.filter((c) => c.method === "POST").length).toBe(1);
+  });
+
+  it("the length limit comes from the API", async () => {
+    stub((c) => {
+      if (c.url.endsWith("/questions/q1")) return json(question);
+      if (c.url.endsWith("/wallet")) return json({ allowances: { ...allowance(5), costs: { ...allowance(5).costs, textMaxChars: 120 } } });
+      return undefined;
+    });
+    render(<WriteScreen qid="q1" />);
+    expect((await screen.findByRole("textbox")).getAttribute("maxlength")).toBe("120");
+  });
+});
+
+import { ThreadScreen } from "@/features/talk/ThreadScreen";
+describe("Thread: closed question and anonymous voices", () => {
+  const thread = (status: string, author: unknown) => stub((c) => {
+    if (c.url.endsWith("/questions/q1")) return json({ ...question, status });
+    if (c.url.endsWith("/answers/a1")) return json(answer({ author: author as never }));
+    if (c.url.includes("/answers/a1/replies")) return json({ items: [], nextCursor: null, counts: { agree: 0, disagree: 0, experience: 0 } });
+    if (c.url.endsWith("/wallet")) return json({ allowances: allowance(5) });
+    return undefined;
+  });
+  it("hides the reply bar and stance chips when the question is closed", async () => {
+    thread("CLOSED", answer().author);
+    render(<ThreadScreen qid="q1" aid="a1" />);
+    expect(await screen.findByText("This question has closed.")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "How are you replying?" })).toBeNull();
+    expect(screen.queryByText(/in words/)).toBeNull();
+  });
+  it("shows the reply bar when it is open, and says Anonymous without an author", async () => {
+    thread("LIVE", null);
+    render(<ThreadScreen qid="q1" aid="a1" />);
+    expect(await screen.findByText("Reply to Anonymous in words")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/this voice\b.*@|@this voice/);
+    expect(document.body.textContent).toMatch(/replies to Anonymous/);
+  });
+});

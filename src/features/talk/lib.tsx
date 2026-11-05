@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Banner, Icon, IconButton } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { isSignedIn } from "@/lib/api/auth";
+import { getPlayUrl } from "@/lib/api/talk";
+import { makePlayer, playWithResign } from "@/lib/audio-ref/player";
 
 /** Signed in or not, read in the browser (the session lives in local storage). null until the first effect. */
 export function useSignedIn(): boolean | null {
@@ -135,4 +137,43 @@ export function unitsText(milli: number): string {
 export function nairaOfMilli(milli: number, baseKoboPerUnit: number): string {
   const kobo = (milli * baseKoboPerUnit) / 1000;
   return `₦${(kobo / 100).toFixed(2).replace(/\.00$/, "")}`;
+}
+
+/** One voice plays at a time: starting one stops the one before it and puts its button back. */
+let playing: { stop: () => void } | null = null;
+
+/** Playback for one clip. `rev` changes whenever the player button must go back to its start state
+ *  (the voice ended, another voice took over, or the URL could not be played): use it as the key of the player. */
+export function useClipPlayback(clipId: string | undefined, onFail: (e: unknown) => void, onStart?: () => void) {
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const expires = useRef(0);
+  const [rev, setRev] = useState(0);
+  const reset = useCallback(() => setRev((r) => r + 1), []);
+  const me = useRef({ stop: () => undefined as void });
+  me.current.stop = () => { audio.current?.pause(); reset(); };
+  useEffect(() => () => { audio.current?.pause(); if (playing === me.current) playing = null; }, []);
+
+  const toggle = useCallback(async (start: boolean) => {
+    if (!clipId) return;
+    if (!start) { audio.current?.pause(); return; }
+    try {
+      if (playing && playing !== me.current) playing.stop();
+      playing = me.current;
+      const sign = async () => { const p = await getPlayUrl(clipId); expires.current = Date.parse(p.expiresAt) || 0; return p.url; };
+      if (!audio.current || (expires.current && Date.now() > expires.current - 20000)) {
+        audio.current?.pause();
+        audio.current = makePlayer(await sign());
+        audio.current.onended = () => { if (playing === me.current) playing = null; reset(); };
+        onStart?.();
+      }
+      await playWithResign(audio.current, sign);
+    } catch (e) {
+      if (playing === me.current) playing = null;
+      audio.current = null;
+      reset();
+      onFail(e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clipId, onFail, reset]);
+  return { rev, toggle };
 }

@@ -6,6 +6,7 @@ import { Avatar, Banner, Button, EmptyState, FreePosts, Skeleton, Tabs } from "@
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, AnswerSort, Question } from "@/lib/api/talk";
 import { closesIn } from "@/lib/feed-format";
+import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { Stage } from "@/features/stage/Stage";
 import { AppBar, BarButton, Problem, ShellTweaks, failText, useSignedIn } from "./lib";
@@ -24,6 +25,9 @@ export function QuestionScreen({ id }: { id: string }) {
   useEffect(() => {
     if (signedIn) api.getAllowance().then(setAllow, () => setAllow(null));
   }, [signedIn]);
+  const [cfgSeconds, setCfgSeconds] = useState<number | null>(null);
+  useEffect(() => { getPublicConfig().then((c) => setCfgSeconds(c.voiceFreeSeconds), () => undefined); }, []);
+  const seconds = allow?.maxVoiceSeconds ?? cfgSeconds;
   const [saved, setSaved] = useState<boolean | null>(null);
   useEffect(() => { if (q.state === "ready") setSaved(q.data.iSaved); }, [q]);
 
@@ -106,7 +110,7 @@ export function QuestionScreen({ id }: { id: string }) {
               <Button size="l" icon="mic" block href="/speak">Speak</Button>
               <Button size="l" variant="secondary" block href={writeHref}>Write instead</Button>
             </div>
-            <p className="m-0 text-[14px] leading-5 text-[var(--ink-2)]">You have 10 seconds on a free post. Reading and listening are always free.</p>
+            {seconds ? <p className="m-0 text-[14px] leading-5 text-[var(--ink-2)]">{`You have ${seconds} seconds on a free post. Reading and listening are always free.`}</p> : null}
           </>
         ) : (
           <Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner>

@@ -18,7 +18,7 @@ export function Stage({ questionId, active, counts }: { questionId: string; acti
       <style>{`@media (max-width:1023px){.vx-stage-wrap .vx-stage__n{display:none}}`}</style>
       <StageBar
         current={active}
-        counts={counts}
+        counts={counts && Object.fromEntries(Object.entries(counts).map(([k, v]) => [k, ` ${v}`]))}
         onChange={(s) => {
           if (s === "speak") router.push("/speak");
           else if (s === "discuss") router.push(`/q/${questionId}`);
