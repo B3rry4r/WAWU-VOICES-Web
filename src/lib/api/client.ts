@@ -126,5 +126,8 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const res = await raw(path, opts);
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  // Any success with an empty body (a 202 with no content, or a zero length) is "no data", never a parse error.
+  const text = await res.text();
+  if (!text.trim()) return undefined as T;
+  return JSON.parse(text) as T;
 }

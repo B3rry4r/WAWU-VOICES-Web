@@ -1,7 +1,7 @@
-import { PageTitle } from "@/components/shell/PageTitle";
+import { MePage } from "@/features/profile/MePage";
 
 export const metadata = { title: "Profile" };
 
 export default function ProfilePage() {
-  return <PageTitle>Profile</PageTitle>;
+  return <MePage />;
 }
