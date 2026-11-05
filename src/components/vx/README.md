@@ -68,6 +68,23 @@ import { Button, Poll, AnswerCard } from '@/components/vx';
 
 Full prop types are exported from `index.ts` (`ButtonProps`, `PollProps` and so on). `Icon.names` lists the 65 icon names; `REACTIONS` is the 10 v4.0 reactions; `TIERS` the design's six reference unit packs.
 
+## Controlled props (SHARED-1c)
+
+All optional; leave them out and a component keeps its own state as before.
+
+- Poll: `onSelect`, `onConfirm(optionId)` (may return a promise), `voted`, `closed` (head says "Poll closed"); "1 vote" is singular.
+- AnswerCard: `liked`/`likeCount` + `onLike(next)`, `reaction` + `onReact(name|null)`, `trayOpen` + `onTrayChange`, `reactionCounts` (by name), `playing`/`onPlay`/`onPause`, `onReply`, `onShare`, `onMore`; "1 reaction" is singular.
+- VoicePlayer: `playing` + `onPlay`/`onPause`, `src`.
+- Composer: `value`/`onChange`, `maxChars`, `noFree`, `meter={false}`, `busy`, `onSubmit(text)`, `onIntentChange`, `onTagChange`.
+- ProposalCard: `stance` + `onSupport`/`onChallenge`/`onImprove`.
+- ProfileHeader: `playing`/`onPlay`/`onPause`, `voiceCard={false}`, `voiceNote`, `unitsHref`, `copied`/`onCopyReferral`, `editHref`. UnitsChip: `href`.
+- Switch: `checked`, `onChange`, `label`, `disabled`.
+- AdSlot: `onWhy` (false hides the link), `onOpen`, `cta={false}`. ResultComment: `hideActions`, `onReply`, `onReport`.
+- WeeklyReportCard: `onShare`, `hidePdf` (the PDF button is left out unless `hidePdf={false}`; V-10).
+- PackPicker (new) and BuyUnitsSheet: `packs`, `selected`, `onSelect`, `methods`, `method`, `onMethod`, `payLabel`, `onPay`, `busy`.
+- Recorder: `onStateChange` (then `state`/`elapsed`/`recorded` are the truth), `onStart`, `onStop`, `onRetry`, `onDiscard`, `levels`, `src`; the ring no longer blocks taps.
+- StageBar: `className="vx-stage--counts-wide"` shows the counts from 1024 px up only.
+
 ## Not here
 
 Fonts, tokens and the page shell belong to the web scaffold. Pictures that prove this port: `scratchpad/voices-build/shots/ds-port/`.

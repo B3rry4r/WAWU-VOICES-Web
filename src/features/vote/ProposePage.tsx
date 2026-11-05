@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent, MouseEvent } from "react";
 import { Banner, Composer, Icon } from "@/components/vx";
 import { StageNav } from "@/features/stage/StageNav";
 import { ApiError } from "@/lib/api/client";
@@ -34,7 +33,7 @@ export function ProposePage({ questionId }: { questionId: string }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<{ title: string; text: string } | null>(null);
   const [signNote, setSignNote] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
+  const [text, setText] = useState("");
   const busy = useRef(false);
   const key = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,8 +42,8 @@ export function ProposePage({ questionId }: { questionId: string }) {
   const checked = useRef("");
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
-  const onInput = (e: FormEvent<HTMLDivElement>) => {
-    const text = (e.target as HTMLTextAreaElement).value ?? "";
+  const onInput = (text: string) => {
+    setText(text);
     if (timer.current) clearTimeout(timer.current);
     const mine = ++seq.current;
     if (text.trim().length < MIN_CHARS) {
@@ -61,8 +60,8 @@ export function ProposePage({ questionId }: { questionId: string }) {
     }, CHECK_DELAY_MS);
   };
 
-  async function post() {
-    const text = box.current?.querySelector("textarea")?.value.trim() ?? "";
+  async function post(typed: string) {
+    const text = typed.trim();
     if (!text || busy.current) return;
     if (!signedIn) {
       setSignNote(true);
@@ -102,15 +101,6 @@ export function ProposePage({ questionId }: { questionId: string }) {
     }
   }
 
-  const onClickCapture = (e: MouseEvent<HTMLDivElement>) => {
-    const btn = (e.target as HTMLElement).closest("button");
-    if (btn && (btn.textContent ?? "").trim() === "Post") {
-      e.stopPropagation();
-      e.preventDefault();
-      void post();
-    }
-  };
-
   const q: Question | null = load.state === "ready" ? load.data.question : null;
   const week = q?.topicTitle ? (q.weekNumber ? `Week ${q.weekNumber} · ${q.topicTitle}` : q.topicTitle) : null;
 
@@ -132,9 +122,7 @@ export function ProposePage({ questionId }: { questionId: string }) {
           {improves ? <Banner tone="info" title="You are improving a proposal">Your version will show as an improvement on it.</Banner> : null}
           {signNote ? <Banner tone="info" title="Sign in to post" onClose={() => setSignNote(false)}>Reading is open to everyone. Posting a proposal needs an account.</Banner> : null}
           {error ? <Banner tone="danger" title={error.title} onClose={() => setError(null)}>{error.text}</Banner> : null}
-          <div ref={box} onInput={onInput} onClickCapture={onClickCapture} aria-busy={sending} className={sending ? "pointer-events-none opacity-70" : undefined}>
-            <Composer label="Your proposal" placeholder="Who should do what, and by when?" freeLeft={1} maxLength={load.state === "ready" ? load.data.max : undefined} onVoice={false} />
-          </div>
+          <Composer label="Your proposal" placeholder="Who should do what, and by when?" meter={false} value={text} onChange={onInput} busy={sending} onSubmit={(t) => void post(t)} maxChars={load.state === "ready" ? load.data.max : undefined} onVoice={false} />
           {similar.length ? (
             <section className="vt-similar" aria-label="This looks like a proposal already here">
               <div className="vt-similar__head">

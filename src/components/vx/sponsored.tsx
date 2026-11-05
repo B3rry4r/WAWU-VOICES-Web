@@ -12,9 +12,14 @@ export interface AdSlotProps {
   brand: string;
   headline: string;
   body?: string;
-  cta?: string;
+  /** The button label. false leaves the button out (an ad with no link). */
+  cta?: string | false;
   href?: string;
   duration?: number;
+  /** "Why this ad?" opens something. false leaves the link out (no screen for it yet); left out, it is drawn as before. */
+  onWhy?: (() => void) | false;
+  /** The button was tapped (to count the tap). */
+  onOpen?: () => void;
   className?: string;
 }
 
@@ -29,7 +34,7 @@ export function AdSlot(p: AdSlotProps): ReactElement {
           <span className="vx-ad__brand"><Badge tone="ad" />{p.brand}</span>
           <p className="vx-ad__head">{p.headline}</p>
         </div>
-        <Button variant="secondary" size="s" href={p.href || '#'}>{p.cta || 'Open'}</Button>
+        <Button variant="secondary" size="s" href={p.href || '#'} onClick={p.onOpen}>{p.cta || 'Open'}</Button>
       </aside>
     );
   }
@@ -42,10 +47,12 @@ export function AdSlot(p: AdSlotProps): ReactElement {
       <p className="vx-ad__head">{p.headline}</p>
       {p.body ? <p className="vx-ad__body">{p.body}</p> : null}
       {v === 'audio' ? <VoicePlayer duration={p.duration || 15} seed={21} tone="surface" /> : null}
-      <div className="vx-ad__top">
-        <Button variant="secondary" size="s" iconEnd="chevron-right" href={p.href || '#'}>{p.cta || 'Learn more'}</Button>
-        <button type="button" className="vx-ad__why">Why this ad?</button>
-      </div>
+      {p.cta === false && p.onWhy === false ? null : (
+        <div className="vx-ad__top">
+          {p.cta === false ? null : <Button variant="secondary" size="s" iconEnd="chevron-right" href={p.href || '#'} onClick={p.onOpen}>{p.cta || 'Learn more'}</Button>}
+          {p.onWhy === false ? null : <button type="button" className="vx-ad__why" onClick={p.onWhy}>Why this ad?</button>}
+        </div>
+      )}
     </aside>
   );
 }

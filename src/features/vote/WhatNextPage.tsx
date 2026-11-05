@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Banner, Button, EmptyState, ProposalCard, Tabs } from "@/components/vx";
 import { ShareSheet } from "@/features/share";
@@ -60,32 +59,16 @@ function Summary({ s, proposals, groups }: { s: EditorialSummary; proposals: num
   );
 }
 
-/** One proposal with Support, Challenge and Improve it wired to the API. The design card keeps its own tap state, so each tap is
- *  caught first, sent, and the card is drawn again from what the server answers. */
+/** One proposal with Support, Challenge and Improve it wired to the API. The card is controlled: it shows what the server last said. */
 export function ProposalItem({ p, groups, signedIn, questionId, onNeedSignIn, onSupported }: { p: Proposal; groups: Map<string, ProposalGroup>; signedIn: boolean; questionId: string; onNeedSignIn: () => void; onSupported?: () => void }) {
   const router = useRouter();
   const [cur, setCur] = useState(p);
   const [err, setErr] = useState<string | null>(null);
-  const wrap = useRef<HTMLDivElement>(null);
-  const seeding = useRef(false);
   const busy = useRef(false);
   useEffect(() => setCur(p), [p]);
 
-  // The card starts with no stance of its own: press the person's current one once, quietly, so it draws as chosen.
-  useEffect(() => {
-    if (!cur.myStance || !wrap.current) return;
-    const chips = wrap.current.querySelectorAll<HTMLButtonElement>(".vx-prop__acts button");
-    const chip = chips[cur.myStance === "SUPPORT" ? 0 : 1];
-    if (chip && chip.getAttribute("aria-pressed") !== "true") {
-      seeding.current = true;
-      chip.click();
-      seeding.current = false;
-    }
-  }, [cur]);
-
   const g = cur.groupId ? groups.get(cur.groupId) : undefined;
   const grouped = g && g.confirmed && g.topProposal?.id === cur.id && g.proposalCount > 1 ? g.proposalCount - 1 : 0;
-  const base = { support: cur.supportCount - (cur.myStance === "SUPPORT" ? 1 : 0), challenge: cur.challengeCount - (cur.myStance === "CHALLENGE" ? 1 : 0) };
 
   async function tap(kind: "SUPPORT" | "CHALLENGE") {
     if (busy.current) return;
@@ -107,29 +90,19 @@ export function ProposalItem({ p, groups, signedIn, questionId, onNeedSignIn, on
     }
   }
 
-  const onClickCapture = (e: MouseEvent<HTMLDivElement>) => {
-    if (seeding.current || !wrap.current) return;
-    const btn = (e.target as HTMLElement).closest("button");
-    if (!btn) return;
-    const chips = Array.from(wrap.current.querySelectorAll(".vx-prop__acts button"));
-    const i = chips.indexOf(btn);
-    if (i < 0) return;
-    e.stopPropagation();
-    e.preventDefault();
-    if (i === 2) router.push(`/q/${questionId}/propose?improves=${cur.id}`);
-    else void tap(i === 0 ? "SUPPORT" : "CHALLENGE");
-  };
-
   return (
-    <div ref={wrap} onClickCapture={onClickCapture} className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
       <ProposalCard
-        key={`${cur.id}-${cur.myStance}-${cur.supportCount}-${cur.challengeCount}`}
         author={cur.author.displayName ?? cur.author.handle}
         time={ago(cur.createdAt)}
         text={cur.body ?? ""}
-        supports={base.support}
-        challenges={base.challenge}
+        supports={cur.supportCount}
+        challenges={cur.challengeCount}
         grouped={grouped || undefined}
+        stance={cur.myStance === "SUPPORT" ? "support" : cur.myStance === "CHALLENGE" ? "challenge" : null}
+        onSupport={() => void tap("SUPPORT")}
+        onChallenge={() => void tap("CHALLENGE")}
+        onImprove={() => router.push(`/q/${questionId}/propose?improves=${cur.id}`)}
       />
       {err ? <Banner tone="danger">{err}</Banner> : null}
     </div>

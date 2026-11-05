@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Banner, Poll } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { castVote, getPoll, getVoteAllowance, type Allowances, type Poll as PollData } from "@/lib/api/polls";
@@ -26,6 +26,7 @@ export function FlashPoll({ poll, signedIn }: { poll: PollData; signedIn: boolea
   const [error, setError] = useState<string | null>(null);
   const [allow, setAllow] = useState<Allowances | null>(null);
   const key = useRef<string | null>(null);
+  const [picked, setPicked] = useState<string | undefined>(poll.myVote?.[0]);
   useEffect(() => setLive(poll), [poll]);
 
   const voted = !!live.myVote?.length;
@@ -64,20 +65,13 @@ export function FlashPoll({ poll, signedIn }: { poll: PollData; signedIn: boolea
         ? `Free: ${left - 1} of ${perDay} free votes left today.`
         : `This vote costs ${unitsLabel(priceMilli)}.`;
 
-  async function confirm(e: MouseEvent<HTMLDivElement>) {
-    const btn = (e.target as HTMLElement).closest("button");
-    if (!btn || btn.textContent?.trim() !== "Confirm vote") return;
-    e.stopPropagation();
-    e.preventDefault();
+  async function confirm(optionId: string) {
     if (busy) return;
-    const label = e.currentTarget.querySelector(".vx-poll__choice")?.textContent?.trim();
-    const opt = live.options.find((o) => o.label === label);
-    if (!opt) return;
     setBusy(true);
     setError(null);
     key.current ??= crypto.randomUUID();
     try {
-      const r = await castVote(live.id, opt.id, key.current);
+      const r = await castVote(live.id, optionId, key.current);
       key.current = null;
       setLive({ ...live, totalVotes: r.results.totalVotes, options: r.results.options, myVote: r.vote.optionIds, status: r.results.status });
       setVersion((v) => v + 1);
@@ -94,6 +88,7 @@ export function FlashPoll({ poll, signedIn }: { poll: PollData; signedIn: boolea
       } else {
         setError(message(err));
       }
+      throw err;
     } finally {
       setBusy(false);
     }
@@ -101,7 +96,7 @@ export function FlashPoll({ poll, signedIn }: { poll: PollData; signedIn: boolea
 
   const close = closesIn(live.endsAt);
   return (
-    <div onClickCapture={showVote ? confirm : undefined} aria-busy={busy} className={busy ? "pointer-events-none opacity-70" : undefined}>
+    <div>
       {error ? (
         <div className="mb-3"><Banner tone="danger" title="Your vote was not counted" onClose={() => setError(null)}>{error}</Banner></div>
       ) : null}
@@ -112,10 +107,12 @@ export function FlashPoll({ poll, signedIn }: { poll: PollData; signedIn: boolea
         total={live.totalVotes}
         closesIn={close}
         state={showVote ? "vote" : "results"}
-        selected={live.myVote?.[0]}
+        selected={showVote ? picked : live.myVote?.[0]}
         costNote={costNote}
         cost={cost}
         onExplain={false}
+        onSelect={showVote ? setPicked : undefined}
+        onConfirm={showVote ? confirm : undefined}
       />
     </div>
   );

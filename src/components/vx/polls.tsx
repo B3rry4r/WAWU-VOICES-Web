@@ -30,15 +30,31 @@ export interface PollProps {
   sponsor?: string;
   live?: boolean;
   onExplain?: (() => void) | false;
+  /** The poll has closed: the head says so instead of "Open poll", and the footnote drops "Open poll". */
+  closed?: boolean;
+  /** Controlled: true shows the results, false shows the vote steps. Leave out and the poll moves on by itself. */
+  voted?: boolean;
+  /** Controlled choice: with `onSelect`, `selected` is the choice and the poll never keeps its own. */
+  onSelect?: (optionId: string) => void;
+  /** Called by "Confirm vote" with the chosen option. May return a promise: the button waits on it, and a rejection keeps the confirm step. */
+  onConfirm?: (optionId: string) => void | Promise<void>;
   className?: string;
+}
+
+function votesText(n: number): string {
+  return fmt(n) + (n === 1 ? ' vote' : ' votes');
 }
 
 export function Poll(p: PollProps): ReactElement {
   const opts = p.options || [];
   const total = p.total || opts.reduce((s, o) => s + (o.votes || 0), 0);
-  const [state, setState] = useState<PollState>(p.state || 'vote');
-  const [chosen, setChosen] = useState<string | null>(p.selected || null);
-  const [grow, setGrow] = useState(p.state === 'results' ? false : true);
+  const [step, setState] = useState<PollState>(p.state || 'vote');
+  const [inner, setChosen] = useState<string | null>(p.selected || null);
+  const [pending, setPending] = useState(false);
+  const picking = p.onSelect !== undefined;
+  const chosen = picking ? p.selected || null : inner;
+  const state: PollState = p.voted === undefined ? step : p.voted ? 'results' : step === 'results' ? 'vote' : step;
+  const [grow, setGrow] = useState(state === 'results' ? false : true);
   useEffect(() => {
     if (state === 'results') {
       const id = setTimeout(() => setGrow(true), 40);
@@ -46,11 +62,31 @@ export function Poll(p: PollProps): ReactElement {
     }
     return undefined;
   }, [state]);
+  async function confirm() {
+    if (pending) return;
+    if (!p.onConfirm || !chosen) {
+      setGrow(false);
+      setState('results');
+      return;
+    }
+    setPending(true);
+    try {
+      await p.onConfirm(chosen);
+      if (p.voted === undefined) {
+        setGrow(false);
+        setState('results');
+      }
+    } catch {
+      /* the caller shows why; the confirm step stays so the person can tap again */
+    } finally {
+      setPending(false);
+    }
+  }
   const lead = opts.reduce<PollOption>((m, o) => ((o.votes || 0) > (m.votes || 0) ? o : m), opts[0] || { id: '', label: '' });
   const chosenOpt = opts.filter((o) => o.id === chosen)[0];
   const head = (
     <div className="vx-poll__head">
-      {p.sponsor ? <Badge tone="sponsored">Sponsored poll</Badge> : <Badge tone="green" icon="vote">Open poll</Badge>}
+      {p.sponsor ? <Badge tone="sponsored">Sponsored poll</Badge> : p.closed ? <Badge tone="neutral" icon="lock">Poll closed</Badge> : <Badge tone="green" icon="vote">Open poll</Badge>}
       {state === 'results' && p.live !== false ? <Badge tone="live" /> : null}
       {p.closesIn ? (
         <span className="vx-poll__time">
@@ -68,7 +104,10 @@ export function Poll(p: PollProps): ReactElement {
           {opts.map((o) => {
             const on = o.id === chosen;
             return (
-              <button key={o.id} type="button" role="radio" aria-checked={on ? 'true' : 'false'} className="vx-opt" onClick={() => setChosen(o.id)}>
+              <button key={o.id} type="button" role="radio" aria-checked={on ? 'true' : 'false'} className="vx-opt" onClick={() => {
+                if (picking) p.onSelect?.(o.id);
+                else setChosen(o.id);
+              }}>
                 <span className="vx-opt__radio">{on ? <Icon name="check" size={14} strokeWidth={3.5} /> : null}</span>
                 {o.label}
               </button>
@@ -92,8 +131,8 @@ export function Poll(p: PollProps): ReactElement {
           </p>
         </div>
         <div className="vx-poll__actions">
-          <Button variant="secondary" onClick={() => setState('vote')}>Back</Button>
-          <Button icon="check" onClick={() => { setGrow(false); setState('results'); }}>Confirm vote</Button>
+          <Button variant="secondary" disabled={pending} onClick={() => setState('vote')}>Back</Button>
+          <Button icon="check" loading={pending} onClick={() => void confirm()}>Confirm vote</Button>
         </div>
       </>
     );
@@ -113,17 +152,17 @@ export function Poll(p: PollProps): ReactElement {
                 </span>
                 <span className="vx-res__pct">{pct + '%'}</span>
                 <span className="vx-res__bar" role="img" aria-label={pct + ' percent'}><i style={{ width: (grow ? pct : 0) + '%' }} /></span>
-                <span className="vx-res__votes">{fmt(o.votes || 0) + ' votes'}</span>
+                <span className="vx-res__votes">{votesText(o.votes || 0)}</span>
               </li>
             );
           })}
         </ul>
         <div className="vx-poll__foot">
           <span className="vx-poll__total">
-            {fmt(total) + ' votes'}
+            {votesText(total)}
             {p.closesIn ? <span className="vx-caption">{'· ' + p.closesIn + ' left'}</span> : null}
           </span>
-          <span className="vx-caption">Open poll: one vote per account. It shows what voters here think, not the whole country.</span>
+          <span className="vx-caption">{(p.closed ? 'Closed poll' : 'Open poll') + ': one vote per account. It shows what voters here think, not the whole country.'}</span>
           {p.sponsor ? <span className="vx-poll__presented">{'Results presented by ' + p.sponsor}</span> : null}
           {p.onExplain !== false ? (
             <button type="button" className="vx-link" onClick={p.onExplain}>
@@ -161,6 +200,10 @@ export interface ResultCommentProps {
   checked?: string;
   note?: string;
   isNew?: boolean;
+  /** Leaves the Reply and Report buttons out (a preview, or a screen where they do nothing yet). */
+  hideActions?: boolean;
+  onReply?: () => void;
+  onReport?: () => void;
   className?: string;
 }
 
@@ -196,10 +239,12 @@ export function ResultComment(p: ResultCommentProps): ReactElement {
       {p.note ? <p className="vx-result__note">{p.note}</p> : null}
       <div className="vx-result__foot">
         <span className="vx-caption">{ok ? p.checked || 'Checked by the WAWU team' : p.checked || 'Not checked yet. Treat with care.'}</span>
-        <span>
-          <IconButton icon="message-circle" label="Reply" variant="ghost" size="s" />
-          <IconButton icon="flag" label="Report wrong numbers" variant="ghost" size="s" />
-        </span>
+        {p.hideActions ? null : (
+          <span>
+            <IconButton icon="message-circle" label="Reply" variant="ghost" size="s" onClick={p.onReply} />
+            <IconButton icon="flag" label="Report wrong numbers" variant="ghost" size="s" onClick={p.onReport} />
+          </span>
+        )}
       </div>
     </article>
   );
@@ -282,6 +327,9 @@ export interface WeeklyReportCardProps {
   voices: number;
   votes: number;
   updated?: string;
+  onShare?: () => void;
+  /** The PDF comes after launch (V-10), so the Download PDF button is left out unless this is false. */
+  hidePdf?: boolean;
   className?: string;
 }
 
@@ -337,8 +385,8 @@ export function WeeklyReportCard(p: WeeklyReportCardProps): ReactElement {
         <div className="vx-report__foot">
           <p className="vx-report__based">{'Based on ' + fmt(p.voices) + ' voices and ' + fmt(p.votes) + ' votes. ' + (p.updated || '') + ' People are split on some points; this is a summary, not a consensus.'}</p>
           <div className="vx-report__btns">
-            <Button variant="secondary" icon="share-2" size="s">Share</Button>
-            <Button variant="secondary" icon="file-down" size="s">Download PDF</Button>
+            <Button variant="secondary" icon="share-2" size="s" onClick={p.onShare}>Share</Button>
+            {p.hidePdf === false ? <Button variant="secondary" icon="file-down" size="s">Download PDF</Button> : null}
           </div>
         </div>
       </div>

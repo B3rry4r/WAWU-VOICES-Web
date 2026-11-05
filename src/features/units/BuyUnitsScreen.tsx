@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Badge, Banner, Button, Icon, IconButton, Tabs } from "@/components/vx";
+import { Badge, Banner, Button, Icon, IconButton, PackPicker, Tabs } from "@/components/vx";
 import { getTiers, getWallet, type PayMethod, type TiersResponse, type UnitTier, type Wallet } from "@/lib/api/units";
 import { safePath } from "./attempt";
 import { useCheckout } from "./checkout";
@@ -29,30 +29,6 @@ function seconds(n: number): string {
   return n >= 60 && n % 60 === 0 ? `${n / 60} ${n === 60 ? "minute" : "minutes"}` : `${n} seconds`;
 }
 
-function PackCard({ tier, on, onPick, onKey }: { tier: UnitTier; on: boolean; onPick: () => void; onKey: (e: KeyboardEvent<HTMLButtonElement>) => void }) {
-  return (
-    <button type="button" role="radio" aria-checked={on ? "true" : "false"} tabIndex={on ? 0 : -1} data-tier={tier.id} className="vx-tier" onClick={onPick} onKeyDown={onKey}>
-      <span className="vx-tier__name">{tier.name}</span>
-      <span className="vx-tier__units">
-        {units(tier.unitsMilli)}
-        <small>units</small>
-      </span>
-      <span className="vx-tier__price">{naira(tier.priceKobo)}</span>
-      <span className="vx-tier__per">{nairaExact(tier.effectiveKoboPerUnit)} a unit</span>
-      {tier.bonusMilli > 0 ? (
-        <span className="vx-tier__bonus">
-          <Badge tone="sun">{`+${units(tier.bonusMilli)} bonus`}</Badge>
-        </span>
-      ) : null}
-      {on ? (
-        <span className="vx-tier__check" aria-hidden="true">
-          <Icon name="check" size={14} strokeWidth={3.5} />
-        </span>
-      ) : null}
-    </button>
-  );
-}
-
 function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
   const params = useSearchParams();
   const from = safePath(params.get("from"));
@@ -70,17 +46,6 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
   const free = wallet.freePostsRemaining + wallet.freePostsUsed;
   const offer = tiers.walletOffer;
 
-  // Arrow keys move between the packs (a radio group): the chosen one is the only tab stop.
-  function moveRadio(e: KeyboardEvent<HTMLButtonElement>) {
-    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
-    if (!step) return;
-    e.preventDefault();
-    const i = sorted.findIndex((t) => t.id === tier?.id);
-    const next = sorted[(i + step + sorted.length) % sorted.length];
-    setSel(next.id);
-    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-tier="${next.id}"]`)?.focus());
-  }
-
   if (!tier) return <Banner tone="info">There are no Voice Unit packs to buy right now.</Banner>;
 
   return (
@@ -96,11 +61,18 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
             <span>{`You have used your ${free} free posts. Get Voice Units from ${naira(min.priceKobo)}. Your draft is saved and posts when your units arrive.`}</span>
           </div>
         ) : null}
-        <div className="vx-tiers" role="radiogroup" aria-label="Unit packs">
-          {sorted.map((t) => (
-            <PackCard key={t.id} tier={t} on={t.id === tier.id} onPick={() => setSel(t.id)} onKey={moveRadio} />
-          ))}
-        </div>
+        <PackPicker
+          packs={sorted.map((t) => ({
+            id: t.id,
+            name: t.name,
+            units: units(t.unitsMilli),
+            price: naira(t.priceKobo),
+            per: `${nairaExact(t.effectiveKoboPerUnit)} a unit`,
+            bonus: t.bonusMilli > 0 ? `+${units(t.bonusMilli)} bonus` : undefined,
+          }))}
+          selected={tier.id}
+          onSelect={setSel}
+        />
         <div className="vx-field">
           <span className="vx-field__label">Pay with</span>
           <Tabs variant="segmented" block label="Payment method" value={method} onChange={(v) => isMethod(v) && setMethod(v)} items={METHODS} />

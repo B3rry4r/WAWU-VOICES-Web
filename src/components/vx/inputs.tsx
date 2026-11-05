@@ -94,3 +94,27 @@ export function SearchField(p: SearchFieldProps): ReactElement {
     </label>
   );
 }
+
+export interface SwitchProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  /** The name a screen reader hears, when no visible label wraps the switch. */
+  label?: string;
+  disabled?: boolean;
+  className?: string;
+}
+
+/** An on or off switch (a checkbox with role "switch"). Controlled: `checked` is the truth, `onChange` hears the tap. */
+export function Switch(p: SwitchProps): ReactElement {
+  return (
+    <input
+      type="checkbox"
+      role="switch"
+      className={cx('vx-switch', p.className)}
+      checked={p.checked}
+      disabled={p.disabled}
+      aria-label={p.label}
+      onChange={(e) => p.onChange(e.target.checked)}
+    />
+  );
+}

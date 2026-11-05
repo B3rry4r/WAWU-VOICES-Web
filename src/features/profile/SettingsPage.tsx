@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Icon, IconButton, Sheet, Tabs, TextField } from "@/components/vx";
+import { Button, Icon, IconButton, Sheet, Switch as VxSwitch, Tabs, TextField } from "@/components/vx";
 import { signOut } from "@/lib/api/auth";
 import {
   deleteAccount, getExport, getFollowedCategories, listBlocks, listCategories, requestExport, setFollowedCategories, unblockUser, updateSettings,
@@ -19,7 +19,7 @@ function Switch({ label, detail, checked, onChange, disabled }: { label: string;
   return (
     <label className="pf-row-item">
       <span className="pf-row-item__txt"><b>{label}</b>{detail ? <span>{detail}</span> : null}</span>
-      <input type="checkbox" className="pf-switch" role="switch" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <VxSwitch checked={checked} disabled={disabled} onChange={onChange} />
     </label>
   );
 }

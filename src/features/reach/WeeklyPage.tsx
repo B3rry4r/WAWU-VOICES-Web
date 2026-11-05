@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { MouseEvent } from "react";
+
 import { Button, EmptyState, Icon, Poll, ShareCard, Skeleton, WeeklyReportCard } from "@/components/vx";
 import { getLatestWeeklyReport, getPollResults, getWeeklyReport } from "@/lib/api/reach";
 import type { PollResults, WeeklyReport } from "@/lib/api/reach";
@@ -98,15 +98,11 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
   const published = `Published ${lagosPublished(report.publishedAt)}.`;
   const rows = cardRows(report, poll);
   const weekLine = `Week ${report.weekNumber} · ${report.range}`;
-  const onCardClick = (e: MouseEvent<HTMLDivElement>) => {
-    const b = (e.target as HTMLElement).closest(".vx-report__btns .vx-btn:first-child");
-    if (b) setShare(true);
-  };
 
   return (
     <div className="flex flex-col gap-5">
       {header}
-      <div className="rx-report" onClick={onCardClick}>
+      <div>
         <WeeklyReportCard
           week={weekLine}
           moodLine={report.mood ?? ""}
@@ -116,6 +112,7 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
           voices={report.basedOnVoices}
           votes={report.basedOnVotes}
           updated={published}
+          onShare={() => setShare(true)}
         />
       </div>
 

@@ -88,7 +88,7 @@ describe("PollCard: the vote flow", () => {
     expect(c[0].headers.get("Idempotency-Key")).toBeTruthy();
     expect(c[0].headers.get("Authorization")).toBe("Bearer tok");
     expect(JSON.parse(c[0].body ?? "{}")).toEqual({ optionIds: ["a"] });
-    expect((await screen.findAllByText("1 votes")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("1 vote")).length).toBeGreaterThan(0);
   });
 
   it("402: a paid vote that is refused shows the error, never a result, and nothing is charged", async () => {

@@ -4,9 +4,6 @@
 .vt-lead { margin: 0; color: var(--ink-2); font-size: 16px; line-height: 24px; }
 .vt-section-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; line-height: 24px; }
 .vt-btnrow { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-/* Proposals are free (V-15): the composer's free-posts pill would say otherwise, so it stays out of this screen. */
-.vt-propose .vx-compose__foot .vx-free { display: none; }
-.vt-propose .vx-compose__foot { justify-content: flex-end; }
 .vt-similar { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-l); background: var(--surface-2); }
 .vt-similar__head { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; font-size: 16px; line-height: 20px; }
 .vt-rail { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-l); background: var(--surface); }
@@ -25,6 +22,4 @@
 .vt-note { margin: 0; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-2); }
 .vt-actionbar { position: sticky; bottom: calc(var(--bottombar-h) + env(safe-area-inset-bottom, 0px)); z-index: 3; margin: 0 calc(var(--gutter-phone) * -1); padding: 10px 12px; background: var(--surface); box-shadow: 0 -1px 0 var(--line); }
 
-.vt-explain .vx-compose__foot .vx-free { display: none; }
-.vt-explain .vx-compose__foot { justify-content: flex-end; }
 .vt-summary p.vx-eyebrow { font-size: 12px; line-height: 16px; font-weight: 700; }
