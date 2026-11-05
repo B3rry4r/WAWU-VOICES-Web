@@ -27,8 +27,6 @@ export function AdBanner({ questionId }: { questionId: string }) {
   }, [ad]);
   if (!ad) return null;
   return (
-    <div onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) recordAdEvent(ad.id, "TAP").catch(() => undefined); }}>
-      <AdSlot variant="banner" brand={ad.brand} headline={ad.headline} cta={ad.ctaLabel ?? "Open"} href={ad.linkUrl ?? undefined} />
-    </div>
+    <AdSlot variant="banner" brand={ad.brand} headline={ad.headline} cta={ad.ctaLabel ?? "Open"} href={ad.linkUrl ?? undefined} onOpen={() => { recordAdEvent(ad.id, "TAP").catch(() => undefined); }} />
   );
 }

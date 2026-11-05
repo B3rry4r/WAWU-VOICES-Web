@@ -112,6 +112,7 @@ export function ResultsPage({ questionId }: { questionId: string }) {
             state="results"
             selected={mineId}
             live={status === "OPEN"}
+            closed={status === "CLOSED"}
             onExplain={false}
           />
           {voted && mineLabel ? <Explain pollId={poll.id} label={mineLabel} questionId={questionId} signedIn={!!signedIn} /> : null}
@@ -130,13 +131,13 @@ export function ResultsPage({ questionId }: { questionId: string }) {
 /** Explain my vote (free, V-15). By voice waits for the recorder (W4); In words writes the reason into the discussion. */
 function Explain({ pollId, label, questionId, signedIn }: { pollId: string; label: string; questionId: string; signedIn: boolean }) {
   const [writing, setWriting] = useState(false);
+  const [reason, setReason] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | { error: string }>("idle");
-  const box = useRef<HTMLDivElement>(null);
   const busy = useRef(false);
   const key = useRef<string | null>(null);
 
-  async function send() {
-    const text = box.current?.querySelector("textarea")?.value.trim() ?? "";
+  async function send(typed: string) {
+    const text = typed.trim();
     if (!text || busy.current) return;
     busy.current = true;
     setState("sending");
@@ -162,9 +163,9 @@ function Explain({ pollId, label, questionId, signedIn }: { pollId: string; labe
           Your reason is in the discussion. <Link href={`/q/${questionId}`}>Open the discussion</Link>
         </Banner>
       ) : writing ? (
-        <div ref={box} className="vt-explain" onClickCapture={(e) => { if ((e.target as HTMLElement).closest("button")?.textContent?.trim() === "Post") { e.stopPropagation(); e.preventDefault(); void send(); } }}>
+        <div className="vt-explain">
           {typeof state === "object" ? <Banner tone="danger" title="Not posted">{state.error}</Banner> : null}
-          <Composer label="Your reason" placeholder="Say why you voted this way" freeLeft={1} onVoice={false} />
+          <Composer label="Your reason" placeholder="Say why you voted this way" meter={false} value={reason} onChange={setReason} busy={state === "sending"} onSubmit={(t) => void send(t)} onVoice={false} />
         </div>
       ) : (
         <div className="vt-btnrow">

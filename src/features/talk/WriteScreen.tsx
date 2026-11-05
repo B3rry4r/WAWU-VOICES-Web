@@ -2,7 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Banner, Button, Composer, EmptyState, FreePosts, Skeleton } from "@/components/vx";
-import type { IntentKind } from "@/components/vx/speak";
+import type { ComposerTag, IntentKind } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
@@ -12,16 +12,6 @@ import { AppBar, Problem, ShellTweaks, failText, isOutOfPosts, nairaOfMilli, out
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
-
-/** Reads what the design system's Composer holds (it is uncontrolled): the words, the news tag, the reply stance. */
-export function readComposer(root: HTMLElement | null): { text: string; tag: "none" | "unverified" | "gossip" | null; stance: ReplyStance | null } {
-  const ta = root?.querySelector("textarea");
-  const on = root?.querySelector(".vx-tagpick .vx-chip[aria-pressed='true']");
-  const tag = !on ? null : on.classList.contains("is-unverified") ? "unverified" : on.classList.contains("is-gossip") ? "gossip" : "none";
-  const chips = Array.from(root?.querySelectorAll(".vx-intent .vx-chip") ?? []);
-  const i = chips.findIndex((c) => c.getAttribute("aria-pressed") === "true");
-  return { text: ta?.value ?? "", tag, stance: i < 0 ? null : (["AGREE", "DISAGREE", "EXPERIENCE"] as const)[i] };
-}
 
 export function WriteScreen({ qid }: { qid: string }) {
   const router = useRouter();
@@ -37,7 +27,9 @@ export function WriteScreen({ qid }: { qid: string }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const busy = useRef(false);
-  const root = useRef<HTMLDivElement>(null);
+  const [text, setText] = useState("");
+  const [tag, setTag] = useState<ComposerTag>("none");
+  const [intent, setIntent] = useState<IntentKind | null>(stanceQ ? INTENT_OF[stanceQ] ?? null : null);
   const key = useRef<{ text: string; k: string } | null>(null);
   const slot = replyTo ? `r:${replyTo}` : `q:${qid}`;
   const [initial, setInitial] = useState<string | null>(null);
@@ -48,7 +40,7 @@ export function WriteScreen({ qid }: { qid: string }) {
     const jobs: Promise<unknown>[] = [api.getQuestion(qid).then(setQ)];
     if (replyTo) jobs.push(api.getAnswer(replyTo).then(setParent));
     if (signedIn) jobs.push(api.getAllowance().then(setAllow));
-    Promise.all(jobs).then(() => setInitial(typedDraft(slot)), setLoadErr);
+    Promise.all(jobs).then(() => { const d = typedDraft(slot); setText(d); setInitial(d); }, setLoadErr);
   }, [qid, replyTo, signedIn, slot, tries]);
 
   const close = replyTo ? `/q/${qid}/a/${replyTo}` : `/q/${qid}`;
@@ -72,7 +64,7 @@ export function WriteScreen({ qid }: { qid: string }) {
 
   async function send() {
     if (busy.current) return;
-    const { text, tag, stance } = readComposer(root.current);
+    const stance = intent ? STANCE_OF[intent] : null;
     const body = text.trim();
     if (!body) return;
     if (replyTo && !stance) { setMsg("Pick how you are replying: I agree, I disagree or My experience."); return; }
@@ -123,20 +115,23 @@ export function WriteScreen({ qid }: { qid: string }) {
             {q.hint ? <p className="m-0 mt-2 text-[15px] leading-5 text-[var(--ink-2)]">{q.hint}</p> : null}
           </div>
         )}
-        <div ref={root} onInputCapture={(e) => { if ((e.target as HTMLElement).tagName === "TEXTAREA") saveTyped(slot, (e.target as HTMLTextAreaElement).value); }}>
+        <div>
           <Composer
             freeLeft={left}
-            maxLength={c?.textMaxChars}
-            defaultValue={initial}
+            maxChars={c?.textMaxChars}
+            value={text}
+            onChange={(t) => { setText(t); saveTyped(slot, t); }}
             replyTo={replyTo ? whoLabel : undefined}
-            intent={stanceQ ? INTENT_OF[stanceQ] : undefined}
+            intent={intent ?? undefined}
+            onIntentChange={setIntent}
             showTags={!replyTo}
-            newsTag="none"
+            newsTag={tag}
+            onTagChange={setTag}
             cost={textCost}
             costShort={c ? unitsText(c.textPostMilli) : undefined}
             balance={allow ? unitsText(allow.balanceMilli) : undefined}
             onVoice={false}
-            onSend={send}
+            onSubmit={() => void send()}
           />
         </div>
         {sending ? <Banner tone="info">Posting your answer.</Banner> : null}

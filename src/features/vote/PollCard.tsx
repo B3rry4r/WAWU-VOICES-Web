@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import type { MouseEvent } from "react";
 import { Banner, Poll } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { castVote, getPoll, newKey } from "@/lib/api/vote";
@@ -57,11 +56,9 @@ export function PollCard({
   /** The poll moved on without this tap (already voted, closed): the parent reloads. */
   onChanged?: () => void;
 }) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const chosen = useRef<string | null>(poll.myVote?.[0] ?? null);
+  const [chosen, setChosen] = useState<string | null>(poll.myVote?.[0] ?? null);
   const busy = useRef(false);
   const key = useRef<string | null>(null);
-  const [sending, setSending] = useState(false);
   const [voted, setVoted] = useState<VoteReceipt | null>(null);
   const [fresh, setFresh] = useState<PollT | null>(null);
   const [note, setNote] = useState<Note | null>(null);
@@ -73,16 +70,13 @@ export function PollCard({
   const total = voted ? voted.results.totalVotes : cur.totalVotes;
   const lines = costLines(cur, allowance, config);
 
-  async function submit() {
+  async function submit(optionId: string) {
     if (busy.current) return;
-    const optionId = chosen.current;
-    if (!optionId) return;
     if (!signedIn) {
       setNote({ tone: "info", title: "Sign in to vote", text: "You can read and listen without an account. Voting needs one, so every vote is one person." });
       return;
     }
     busy.current = true;
-    setSending(true);
     setNote(null);
     key.current ??= newKey();
     try {
@@ -129,25 +123,8 @@ export function PollCard({
       }
     } finally {
       busy.current = false;
-      setSending(false);
     }
   }
-
-  const onClickCapture = (e: MouseEvent<HTMLDivElement>) => {
-    const t = e.target as HTMLElement;
-    const radio = t.closest('[role="radio"]');
-    if (radio && wrap.current) {
-      const i = Array.from(wrap.current.querySelectorAll('[role="radio"]')).indexOf(radio);
-      if (i >= 0 && cur.options[i]) chosen.current = cur.options[i].id;
-      return;
-    }
-    const btn = t.closest("button");
-    if (btn && (btn.textContent ?? "").trim() === "Confirm vote") {
-      e.stopPropagation();
-      e.preventDefault();
-      void submit();
-    }
-  };
 
   if (cur.status === "SCHEDULED") {
     return <Banner tone="info" title="This poll has not opened yet">Come back when it opens to vote.</Banner>;
@@ -172,7 +149,7 @@ export function PollCard({
           ) : null}
         </Banner>
       ) : null}
-      <div ref={wrap} onClickCapture={onClickCapture} aria-busy={sending} className={sending ? "pointer-events-none opacity-70" : undefined}>
+      <div>
         <Poll
           key={`${cur.id}-${mode}`}
           question={cur.title}
@@ -180,11 +157,15 @@ export function PollCard({
           total={total}
           closesIn={cur.status === "OPEN" ? closesIn(cur.endsAt) : undefined}
           state={mode}
-          selected={mine ?? undefined}
           cost={lines.confirm}
           costNote={lines.note}
           live={cur.status === "OPEN"}
           onExplain={mine && onExplain ? onExplain : false}
+          voted={mode === "results"}
+          closed={cur.status === "CLOSED"}
+          selected={mode === "vote" ? chosen ?? undefined : mine ?? undefined}
+          onSelect={setChosen}
+          onConfirm={submit}
         />
       </div>
     </div>

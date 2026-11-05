@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AnswerCard, Button, Sheet, Toast, REACTIONS } from "@/components/vx";
 import { ShareSheet } from "@/features/share";
 import { answerCardProps } from "@/lib/feed-format";
@@ -57,53 +57,54 @@ interface Props {
   onChange?: (a: Answer) => void;
 }
 
-/** The design system card wired to the real API. The card keeps its own toggles, so a click is read in the capture phase,
- *  sent to the API, and a refusal remounts the card from the server's truth. (A request: AnswerCard onLike / onReact / onReply / onShare / onMore props.) */
+/** The design system card wired to the real API. The card is controlled (liked, likeCount, reaction, reactionCounts, trayOpen, playing):
+ *  it shows what the server last said, a tap is sent through onLike / onReact / onReply / onShare / onMore, and a refusal puts the props back. */
 export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, onChange }: Props) {
   const router = useRouter();
   const [a, setA] = useState(answer);
-  const [rev, setRev] = useState(0);
   const [more, setMore] = useState(false);
+  const [tray, setTray] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const [shareNode, share] = useShareSheet();
-  const liked = useRef(answer.iLiked);
   const likeBusy = useRef(false);
   const onFail = useCallback((e: unknown) => push(failText(e), "danger"), [push]);
   const onStart = useCallback(() => { void api.countListen(answer.id); }, [answer.id]);
   const clip = useClipPlayback(answer.clip?.id, onFail, onStart);
   useEffect(() => setA(answer), [answer]);
-  useEffect(() => { liked.current = a.iLiked; }, [a.iLiked]);
+  // The clip reset signal (the voice ended, another took over, or it could not play): the player goes back to its start.
+  useEffect(() => { setPlaying(false); }, [clip.rev]);
   const upd = (n: Answer) => { setA(n); onChange?.(n); };
-  const back = () => setRev((r) => r + 1);
 
-  /** One like request at a time; the next action comes from the ref (what the server last said), never from a stale render. */
-  async function like() {
+  /** One like request at a time. The heart and count move at once and are put back if the server refuses. */
+  async function like(next: boolean) {
     if (likeBusy.current) return;
     likeBusy.current = true;
-    const was = liked.current;
+    const before = a;
+    setA({ ...a, iLiked: next, likeCount: Math.max(0, a.likeCount + (next ? 1 : -1)) });
     try {
-      const s = was ? await api.unlikeAnswer(a.id) : await api.likeAnswer(a.id);
-      liked.current = s.iLiked;
+      const s = next ? await api.likeAnswer(a.id) : await api.unlikeAnswer(a.id);
       upd({ ...a, iLiked: s.iLiked, likeCount: s.likeCount });
-      if (s.iLiked === was) back();
     } catch (e) {
-      back();
+      setA(before);
       push(failText(e), "danger");
     } finally {
       likeBusy.current = false;
     }
   }
 
-  // Reactions: the card toggles itself on every tap, so what it shows is always the last tap. The last tap is queued
-  // and sent once the one in flight settles, so the server's row ends equal to the screen.
-  const shown = useRef<string | null>(answer.myReaction);
+  // Reactions: what the card shows is always the last tap. The last tap is queued and sent once the one in flight settles,
+  // so the server's row ends equal to the screen.
+  const [shown, setShown] = useState<string | null>(answer.myReaction);
+  const shownRef = useRef<string | null>(answer.myReaction);
   const confirmed = useRef<string | null>(answer.myReaction);
   const reactBusy = useRef(false);
+  const show = (v: string | null) => { shownRef.current = v; setShown(v); };
   async function flush() {
     if (reactBusy.current) return;
     reactBusy.current = true;
     try {
-      while (shown.current !== confirmed.current) {
-        const target = shown.current;
+      while (shownRef.current !== confirmed.current) {
+        const target = shownRef.current;
         const s = target === null ? await api.removeReaction(a.id) : await api.setReaction(a.id, target as ReactionKind, uuidKey());
         confirmed.current = s.myReaction;
         setA((cur) => {
@@ -114,56 +115,53 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
         if (s.charge && target !== null) onAllowance?.({ balanceMilli: s.charge.balanceMilli, ...(s.charge.usedFreeDaily && freeReactions !== undefined ? { freeReactionsLeftToday: Math.max(0, freeReactions - 1) } : {}) });
       }
     } catch (e) {
-      shown.current = confirmed.current;
-      back();
+      show(confirmed.current);
       if (isOutOfPosts(e)) push(outOfReactionsText(e), "info");
       else push(failText(e), "danger");
     } finally {
       reactBusy.current = false;
     }
   }
-  function react(name: string) {
-    const kind = kindOf(name);
-    shown.current = shown.current === kind ? null : kind;
+  function react(name: string | null) {
+    if (!signedIn) return;
+    const kind = name === null ? null : kindOf(name);
+    show(kind === shownRef.current ? null : kind);
     void flush();
   }
 
-  function capture(e: MouseEvent<HTMLDivElement>) {
-    const el = (e.target as HTMLElement).closest("button");
-    if (!el) return;
-    const label = el.getAttribute("aria-label") ?? "";
-    const stop = () => { e.stopPropagation(); e.preventDefault(); };
-    if (el.classList.contains("vx-player__play")) { void clip.toggle(label.startsWith("Play")); return; }
-    if (el.classList.contains("vx-player__speed")) return;
-    if (label.startsWith("Like,")) { if (likeBusy.current) { stop(); return; } void like(); return; }
-    if (label === "React" || label.startsWith("Your reaction")) {
-      if (!signedIn) { stop(); push("Sign in to react. Reading, listening and liking stay free.", "info"); }
-      return;
-    }
-    if (el.classList.contains("vx-react__btn")) {
-      if (!signedIn) { stop(); return; }
-      react(el.querySelectorAll("span")[1]?.textContent ?? "");
-      return;
-    }
-    if (label.startsWith("Reply,")) { stop(); router.push(threadHref ?? `/q/${a.questionId}/a/${a.id}`); return; }
-    if (label === "Share") { stop(); share("ANSWER", a.id); return; }
-    if (label.startsWith("More:")) { stop(); setMore(true); }
-  }
-
   const props = answerCardProps(a);
+  const { reactions: _drop, ...card } = props;
+  void _drop;
+  const counts: Record<string, number> = {};
+  for (const r of a.reactionBreakdown) { const n = nameOf(r.kind); if (n) counts[n] = r.count; }
   const handle = a.author?.handle;
   return (
     <>
-      <div onClickCapture={capture}>
-        <AnswerCard
-          key={`${rev}-${clip.rev}`}
-          {...props}
-          reaction={nameOf(confirmed.current)}
-          freeReactions={freeReactions}
-          unfolded={unfolded}
-          compact={compact}
-        />
-      </div>
+      <AnswerCard
+        key={clip.rev}
+        {...card}
+        voice={card.voice}
+        liked={a.iLiked}
+        likeCount={a.likeCount}
+        onLike={(next) => void like(next)}
+        reaction={nameOf(shown)}
+        reactionCounts={counts}
+        onReact={(name) => react(name)}
+        trayOpen={tray}
+        onTrayChange={(open) => {
+          if (open && !signedIn) { push("Sign in to react. Reading, listening and liking stay free.", "info"); return; }
+          setTray(open);
+        }}
+        playing={playing}
+        onPlay={() => { setPlaying(true); void clip.toggle(true); }}
+        onPause={() => { setPlaying(false); void clip.toggle(false); }}
+        onReply={() => router.push(threadHref ?? `/q/${a.questionId}/a/${a.id}`)}
+        onShare={() => share("ANSWER", a.id)}
+        onMore={() => setMore(true)}
+        freeReactions={freeReactions}
+        unfolded={unfolded}
+        compact={compact}
+      />
       {shareNode}
       {more ? (
         <Sheet title="This voice" onClose={() => setMore(false)}>

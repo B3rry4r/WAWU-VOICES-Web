@@ -221,9 +221,7 @@ function BannerAd() {
   }, [adId]);
   if (!ad) return null;
   return (
-    <div onClickCapture={() => void recordAdEvent(ad.id, "TAP")}>
-      <AdSlot variant="banner" brand={ad.brand} headline={ad.headline} cta={ad.ctaLabel ?? "Open"} href={ad.linkUrl ?? undefined} />
-    </div>
+    <AdSlot variant="banner" brand={ad.brand} headline={ad.headline} cta={ad.ctaLabel ?? "Open"} href={ad.linkUrl ?? undefined} onOpen={() => void recordAdEvent(ad.id, "TAP")} />
   );
 }
 

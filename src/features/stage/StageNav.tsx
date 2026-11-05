@@ -17,9 +17,8 @@ export function stageHref(questionId: string, id: StageId): string {
 export function StageNav({ questionId, active, counts, visited }: { questionId: string; active: StageId; counts?: Partial<Record<StageId, string>>; visited?: StageId[] }) {
   const router = useRouter();
   return (
-    <div className="vx-stage-wrap -mx-4 border-b border-[var(--line)] px-4 py-3 dt:mx-0 dt:border-0">
-      <style>{`@media (max-width:1023px){.vx-stage-wrap .vx-stage__n{display:none}}`}</style>
-      <StageBar current={active} counts={counts} visited={visited} onChange={(s) => router.push(stageHref(questionId, s))} />
+    <div className="-mx-4 border-b border-[var(--line)] px-4 py-3 dt:mx-0 dt:border-0">
+      <StageBar className="vx-stage--counts-wide" current={active} counts={counts} visited={visited} onChange={(s) => router.push(stageHref(questionId, s))} />
     </div>
   );
 }

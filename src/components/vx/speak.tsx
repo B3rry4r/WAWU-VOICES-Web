@@ -35,7 +35,18 @@ export type ComposerTag = 'none' | 'unverified' | 'gossip';
 
 export interface ComposerProps {
   freeLeft?: number;
+  /** No free posts: shows the cost line and "Free posts used" instead of the meter, whatever `freeLeft` says. */
+  noFree?: boolean;
+  /** false leaves the free-posts meter out (a free action, like a proposal) and puts the button at the end. */
+  meter?: boolean;
   maxLength?: number;
+  /** The same as `maxLength`. */
+  maxChars?: number;
+  /** Controlled text: with `value`, the box shows it and `onChange` hears every edit. */
+  value?: string;
+  onChange?: (text: string) => void;
+  /** Sending: the box and the button are held and the button shows its spinner. */
+  busy?: boolean;
   defaultValue?: string;
   placeholder?: string;
   label?: string;
@@ -43,31 +54,42 @@ export interface ComposerProps {
   intent?: IntentKind;
   showTags?: boolean;
   newsTag?: ComposerTag;
+  /** With these, `intent` and `newsTag` are the truth and the box asks to change them. */
+  onIntentChange?: (intent: IntentKind | null) => void;
+  onTagChange?: (tag: ComposerTag) => void;
   cost?: string;
   costShort?: string;
   balance?: string;
   onSend?: () => void;
+  /** Called with the text when the person taps Post (the same tap as `onSend`). */
+  onSubmit?: (text: string) => void;
   onVoice?: (() => void) | false;
   className?: string;
 }
 
 export function Composer(p: ComposerProps): ReactElement {
-  const max = p.maxLength || 500;
+  const max = p.maxChars || p.maxLength || 500;
   const uid = useId();
   const taId = 'vx-compose-ta' + uid;
   const countId = 'vx-compose-count' + uid;
-  const [text, setText] = useState(p.defaultValue || '');
-  const [intent, setIntent] = useState<IntentKind | null>(p.intent || null);
-  const [tag, setTag] = useState<ComposerTag | null>(p.newsTag || null);
+  const [innerText, setText] = useState(p.defaultValue || '');
+  const text = p.value !== undefined ? p.value : innerText;
+  const [innerIntent, setIntent] = useState<IntentKind | null>(p.intent || null);
+  const [innerTag, setTag] = useState<ComposerTag | null>(p.newsTag || null);
+  const intent = p.onIntentChange ? p.intent || null : innerIntent;
+  const tag = p.onTagChange ? p.newsTag || null : innerTag;
+  const pickIntent = (v: IntentKind | null) => (p.onIntentChange ? p.onIntentChange(v) : setIntent(v));
+  const pickTag = (v: ComposerTag) => (p.onTagChange ? p.onTagChange(v) : setTag(v));
   const n = text.length;
-  const free = p.freeLeft === undefined ? 7 : p.freeLeft;
+  const free = p.noFree ? 0 : p.freeLeft === undefined ? 7 : p.freeLeft;
+  const meter = p.meter !== false;
   const intents: [IntentKind, string, 'check' | 'circle-x' | 'user'][] = [
     ['agree', 'I agree', 'check'],
     ['disagree', 'I disagree', 'circle-x'],
     ['experience', 'My experience', 'user'],
   ];
   return (
-    <section className={cx('vx-compose', p.className)} aria-label={p.replyTo ? 'Reply' : 'Your answer'}>
+    <section className={cx('vx-compose', p.className)} aria-label={p.replyTo ? 'Reply' : 'Your answer'} aria-busy={p.busy ? 'true' : undefined}>
       <label className="vx-compose__label" htmlFor={taId}>
         {p.replyTo ? 'Reply to ' + p.replyTo : p.label || 'Your answer'}
         {p.onVoice !== false ? <Button variant="ghost" size="s" icon="mic" onClick={p.onVoice}>Use voice</Button> : null}
@@ -75,26 +97,39 @@ export function Composer(p: ComposerProps): ReactElement {
       {p.replyTo ? (
         <div className="vx-intent" role="group" aria-label="How are you replying?">
           {intents.map((o) => (
-            <TopicChip key={o[0]} icon={o[2]} label={o[1]} selected={intent === o[0]} onClick={() => setIntent(intent === o[0] ? null : o[0])} />
+            <TopicChip key={o[0]} icon={o[2]} label={o[1]} selected={intent === o[0]} onClick={() => pickIntent(intent === o[0] ? null : o[0])} />
           ))}
         </div>
       ) : null}
       <div className="vx-compose__area">
-        <textarea id={taId} className="vx-compose__ta" placeholder={p.placeholder || 'Say it in your own words'} value={text} maxLength={max} rows={4} aria-describedby={countId} onChange={(e) => setText(e.target.value)} />
+        <textarea
+          id={taId}
+          className="vx-compose__ta"
+          placeholder={p.placeholder || 'Say it in your own words'}
+          value={text}
+          maxLength={max}
+          rows={4}
+          readOnly={p.busy}
+          aria-describedby={countId}
+          onChange={(e) => {
+            setText(e.target.value);
+            if (p.onChange) p.onChange(e.target.value);
+          }}
+        />
         <span id={countId} className={cx('vx-compose__count', n >= max ? 'is-over' : n >= max * 0.9 && 'is-near')}>{fmt(n) + ' / ' + fmt(max)}</span>
       </div>
       {p.showTags ? (
         <div className="vx-tagpick" role="group" aria-label="Is this news?">
           <span className="vx-caption">Is this news? Pick a tag so readers know.</span>
           <div className="vx-tagpick__row">
-            <TopicChip className="is-none" label="Not news" selected={tag === 'none'} onClick={() => setTag('none')} />
-            <TopicChip className="is-unverified" icon="shield-alert" label="Unverified News" selected={tag === 'unverified'} onClick={() => setTag('unverified')} />
-            <TopicChip className="is-gossip" icon="messages-square" label="Gossip" selected={tag === 'gossip'} onClick={() => setTag('gossip')} />
+            <TopicChip className="is-none" label="Not news" selected={tag === 'none'} onClick={() => pickTag('none')} />
+            <TopicChip className="is-unverified" icon="shield-alert" label="Unverified News" selected={tag === 'unverified'} onClick={() => pickTag('unverified')} />
+            <TopicChip className="is-gossip" icon="messages-square" label="Gossip" selected={tag === 'gossip'} onClick={() => pickTag('gossip')} />
             <TopicChip icon="lock" label="Verified News" disabled aria-label="Verified News, editors only" />
           </div>
         </div>
       ) : null}
-      {free > 0 ? null : (
+      {free > 0 || !meter ? null : (
         <div className="vx-compose__cost">
           <Icon name="coins" size={18} />
           <span>
@@ -103,9 +138,19 @@ export function Composer(p: ComposerProps): ReactElement {
           </span>
         </div>
       )}
-      <div className="vx-compose__foot">
-        {free > 0 ? <FreePosts left={free} /> : <span className="vx-caption" style={{ marginRight: 'auto' }}>Free posts used</span>}
-        <Button icon="send" disabled={n === 0} onClick={p.onSend}>{free > 0 ? 'Post' : 'Post for ' + (p.costShort || '0.5 unit')}</Button>
+      <div className={cx('vx-compose__foot', !meter && 'vx-compose__foot--end')}>
+        {!meter ? null : free > 0 ? <FreePosts left={free} /> : <span className="vx-caption" style={{ marginRight: 'auto' }}>Free posts used</span>}
+        <Button
+          icon="send"
+          disabled={n === 0}
+          loading={p.busy}
+          onClick={() => {
+            if (p.onSubmit) p.onSubmit(text);
+            if (p.onSend) p.onSend();
+          }}
+        >
+          {free > 0 || !meter ? 'Post' : 'Post for ' + (p.costShort || '0.5 unit')}
+        </Button>
       </div>
     </section>
   );
@@ -121,6 +166,16 @@ export interface RecorderProps {
   state?: RecorderState;
   elapsed?: number;
   recorded?: number;
+  /** With this, `state`, `elapsed` and `recorded` are the truth (the screen's real recorder) and the buttons only ask. */
+  onStateChange?: (state: RecorderState) => void;
+  onStart?: () => void;
+  onStop?: () => void;
+  onRetry?: () => void;
+  onDiscard?: () => void;
+  /** Level bars (0 to 1) while recording, from the real microphone. Leave out for the drawn motion. */
+  levels?: number[];
+  /** The recorded clip, so the preview plays it. */
+  src?: string;
   onSend?: () => void;
   onClose?: () => void;
   className?: string;
@@ -128,20 +183,29 @@ export interface RecorderProps {
 
 export function Recorder(p: RecorderProps): ReactElement {
   const limit = p.limit || 10;
-  const [state, setState] = useState<RecorderState>(p.state || 'idle');
-  const [t, setT] = useState(p.state === 'preview' ? p.recorded || 8 : p.state === 'recording' ? p.elapsed || 3.4 : 0);
+  const ctl = p.onStateChange !== undefined;
+  const [innerState, setInnerState] = useState<RecorderState>(p.state || 'idle');
+  const [innerT, setT] = useState(p.state === 'preview' ? p.recorded || 8 : p.state === 'recording' ? p.elapsed || 3.4 : 0);
   const [lv, setLv] = useState(() => waveBars(5, 28));
-  useTicker(state === 'recording', 100, () => {
+  const state: RecorderState = ctl ? p.state || 'idle' : innerState;
+  const t = ctl ? (state === 'preview' ? p.recorded || 0 : state === 'recording' ? p.elapsed || 0 : 0) : innerT;
+  const setState = (n: RecorderState) => {
+    setInnerState(n);
+    if (p.onStateChange) p.onStateChange(n);
+  };
+  useTicker(state === 'recording' && !ctl, 100, () => {
     setT((v) => {
       const n = v + 0.1;
       if (n >= limit) {
         setState('preview');
+        if (p.onStop) p.onStop();
         return limit;
       }
       return n;
     });
     setLv(waveBars(Math.floor(Math.random() * 999) + 1, 28));
   });
+  const levels = p.levels && p.levels.length ? p.levels : lv;
   const R = 98;
   const C = 2 * Math.PI * R;
   const frac = state === 'idle' ? 0 : Math.min(1, t / limit);
@@ -184,10 +248,13 @@ export function Recorder(p: RecorderProps): ReactElement {
             className={cx('vx-rec__btn', state === 'recording' && 'is-recording')}
             aria-label={state === 'recording' ? 'Stop recording' : 'Start recording'}
             onClick={() => {
-              if (state === 'recording') setState('preview');
-              else {
+              if (state === 'recording') {
+                setState('preview');
+                if (p.onStop) p.onStop();
+              } else {
                 setT(0);
                 setState('recording');
+                if (p.onStart) p.onStart();
               }
             }}
           >
@@ -195,13 +262,13 @@ export function Recorder(p: RecorderProps): ReactElement {
           </button>
         </div>
       ) : null}
-      {state === 'preview' ? <div className="vx-rec__player"><VoicePlayer duration={Math.round(t) || 8} tone="forest" seed={11} /></div> : null}
+      {state === 'preview' ? <div className="vx-rec__player"><VoicePlayer duration={Math.round(t) || 8} tone="forest" seed={11} src={p.src} /></div> : null}
       {state === 'preview' ? null : (
         <span className="vx-rec__timer" aria-hidden={state === 'recording' ? 'true' : undefined}>{state === 'recording' ? clock(Math.ceil(left)) : clock(limit)}</span>
       )}
       {state === 'recording' ? (
         <div className="vx-rec__live" aria-hidden="true">
-          {lv.map((b, i) => (
+          {levels.map((b, i) => (
             <i key={i} style={{ height: Math.round(6 + b * 38) }} />
           ))}
         </div>
@@ -209,8 +276,8 @@ export function Recorder(p: RecorderProps): ReactElement {
       {hint}
       {state === 'preview' ? (
         <div className="vx-rec__actions">
-          <Button variant="onforest" icon="rotate-ccw" onClick={() => { setT(0); setState('idle'); }}>Re-record</Button>
-          <Button variant="onforest" icon="trash-2" onClick={() => { setT(0); setState('idle'); }}>Delete</Button>
+          <Button variant="onforest" icon="rotate-ccw" onClick={() => { setT(0); setState('idle'); if (p.onRetry) p.onRetry(); }}>Re-record</Button>
+          <Button variant="onforest" icon="trash-2" onClick={() => { setT(0); setState('idle'); if (p.onDiscard) p.onDiscard(); }}>Delete</Button>
           <Button size="l" icon="send" onClick={p.onSend}>{free > 0 ? 'Send' : 'Send for 1 unit'}</Button>
         </div>
       ) : null}

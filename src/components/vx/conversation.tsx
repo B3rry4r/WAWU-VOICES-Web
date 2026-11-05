@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent, KeyboardEvent, ReactElement } from 'react';
 import { Button, IconButton } from './actions';
 import { useTicker } from './hooks';
@@ -16,8 +16,13 @@ export interface VoicePlayerProps {
   bars?: number;
   tone?: 'mint' | 'surface' | 'forest';
   progress?: number;
+  /** With `playing` the parent owns play and pause: the button only asks (onPlay, onPause). Without it the player keeps its own state. */
   playing?: boolean;
   speed?: boolean;
+  /** A file to play. The player makes the audio element itself and follows it; leave out to draw the wave only. */
+  src?: string;
+  onPlay?: () => void;
+  onPause?: () => void;
   onPlayingChange?: (playing: boolean) => void;
   className?: string;
 }
@@ -25,28 +30,61 @@ export interface VoicePlayerProps {
 export function VoicePlayer(p: VoicePlayerProps): ReactElement {
   const dur = p.duration || 10;
   const bars = useRef(waveBars(p.seed || dur * 3, p.bars || 34)).current;
-  const [playing, setPlaying] = useState(!!p.playing);
+  const [innerPlaying, setInnerPlaying] = useState(!!p.playing);
+  const playing = p.playing !== undefined ? p.playing : innerPlaying;
   const [prog, setProg] = useState(p.progress || 0);
   const [speed, setSpeed] = useState(1);
-  useTicker(playing, 100, () => {
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const set = (n: boolean) => {
+    setInnerPlaying(n);
+    if (n && p.onPlay) p.onPlay();
+    if (!n && p.onPause) p.onPause();
+    if (p.onPlayingChange) p.onPlayingChange(n);
+  };
+  useTicker(playing && !p.src, 100, () => {
     setProg((v) => {
       const n = v + (0.1 * speed) / dur;
       if (n >= 1) {
-        setPlaying(false);
-        if (p.onPlayingChange) p.onPlayingChange(false);
+        set(false);
         return 0;
       }
       return n;
     });
   });
+  const setRef = useRef(set);
+  setRef.current = set;
+  useEffect(() => {
+    if (!p.src || typeof Audio === 'undefined') return undefined;
+    const a = new Audio(p.src);
+    audio.current = a;
+    a.ontimeupdate = () => {
+      if (a.duration) setProg(a.currentTime / a.duration);
+    };
+    a.onended = () => {
+      setProg(0);
+      setRef.current(false);
+    };
+    a.onerror = () => setRef.current(false);
+    return () => {
+      a.pause();
+      audio.current = null;
+    };
+  }, [p.src]);
+  useEffect(() => {
+    const a = audio.current;
+    if (!a) return;
+    a.playbackRate = speed;
+    if (playing) a.play().catch(() => setRef.current(false));
+    else a.pause();
+  }, [playing, speed, p.src]);
   function toggle() {
-    const n = !playing;
-    setPlaying(n);
-    if (p.onPlayingChange) p.onPlayingChange(n);
+    set(!playing);
   }
   function seek(e: MouseEvent<HTMLDivElement>) {
     const r = e.currentTarget.getBoundingClientRect();
-    setProg(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)));
+    const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    setProg(f);
+    if (audio.current && audio.current.duration) audio.current.currentTime = f * audio.current.duration;
   }
   function keys(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === 'ArrowRight') setProg(Math.min(1, prog + 1 / dur));
@@ -131,12 +169,17 @@ export interface AnswerCardProps {
   time: string;
   place?: string;
   text?: string;
-  voice?: { duration: number; seed?: number; transcript?: string };
+  voice?: { duration: number; seed?: number; transcript?: string; src?: string };
   likes?: number;
+  /** With `onLike`, `liked` and `likeCount` are the truth and the card only asks. */
   liked?: boolean;
+  likeCount?: number;
   replies?: number;
   reactions?: { top: string[]; total: number };
-  reaction?: string;
+  /** Count of each reaction by name ("Powerful": 3). Draws the top three emoji and the total, in place of `reactions`. */
+  reactionCounts?: Record<string, number>;
+  /** With `onReact`, the person's reaction (a name from REACTIONS, or null) is this prop alone. */
+  reaction?: string | null;
   label?: string;
   tag?: NewsKind;
   sponsor?: string;
@@ -145,18 +188,47 @@ export interface AnswerCardProps {
   trayOpen?: boolean;
   compact?: boolean;
   freeReactions?: number;
+  /** Controlled voice playback (see VoicePlayer). */
+  playing?: boolean;
+  onPlay?: () => void;
+  onPause?: () => void;
+  onLike?: (next: boolean) => void;
+  onReact?: (name: string | null) => void;
+  /** With this, `trayOpen` is the truth and the card asks to open or close the reaction tray. */
+  onTrayChange?: (open: boolean) => void;
+  onReply?: () => void;
+  onShare?: () => void;
+  onMore?: () => void;
   className?: string;
 }
 
 export function AnswerCard(p: AnswerCardProps): ReactElement {
   const a = p.author || {};
-  const [liked, setLiked] = useState(!!p.liked);
-  const [reaction, setReaction] = useState<string | null>(p.reaction || null);
-  const [tray, setTray] = useState(!!p.trayOpen);
+  const [innerLiked, setLiked] = useState(!!p.liked);
+  const [innerReaction, setReaction] = useState<string | null>(p.reaction || null);
+  const [innerTray, setTray] = useState(!!p.trayOpen);
   const [open, setOpen] = useState(!!p.unfolded);
-  const [playing, setPlaying] = useState(false);
+  const [innerPlaying, setPlaying] = useState(false);
+  const likeCtl = p.onLike !== undefined;
+  const reactCtl = p.onReact !== undefined;
+  const liked = likeCtl ? !!p.liked : innerLiked;
+  const reaction = reactCtl ? p.reaction || null : innerReaction;
+  const tray = p.onTrayChange ? !!p.trayOpen : innerTray;
+  const playing = p.playing !== undefined ? p.playing : innerPlaying;
   const r = REACTIONS.filter((x) => x.name === reaction)[0];
-  const likes = (p.likes || 0) + (liked && !p.liked ? 1 : 0) - (!liked && p.liked ? 1 : 0);
+  const likes = likeCtl
+    ? p.likeCount !== undefined ? p.likeCount : p.likes || 0
+    : (p.likeCount !== undefined ? p.likeCount : p.likes || 0) + (liked && !p.liked ? 1 : 0) - (!liked && p.liked ? 1 : 0);
+  let sum = p.reactions;
+  if (p.reactionCounts) {
+    const rows = REACTIONS.map((x) => ({ x, n: p.reactionCounts![x.name] || 0 })).filter((o) => o.n > 0);
+    const total = rows.reduce((t, o) => t + o.n, 0);
+    sum = total > 0 ? { top: rows.slice().sort((m, n) => n.n - m.n).slice(0, 3).map((o) => o.x.e), total } : undefined;
+  }
+  const setTrayOpen = (n: boolean) => {
+    if (p.onTrayChange) p.onTrayChange(n);
+    else setTray(n);
+  };
   return (
     <article className={cx('vx-answer', p.sponsor && 'vx-answer--sponsored', p.className)} aria-label={p.sponsor ? 'Sponsored voice from ' + p.sponsor : 'Voice from ' + (a.handle || a.name)}>
       <div className="vx-answer__head">
@@ -169,7 +241,7 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
           <span className="vx-answer__time">{p.time + (p.place ? ' · ' + p.place : '')}</span>
         </div>
         {p.sponsor ? <Badge tone="sponsored" /> : null}
-        <IconButton icon="ellipsis" label="More: report, block, copy link" variant="ghost" size="s" />
+        <IconButton icon="ellipsis" label="More: report, block, copy link" variant="ghost" size="s" onClick={p.onMore} />
       </div>
       {p.label || p.tag ? (
         <div className="vx-answer__labels">
@@ -177,7 +249,17 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
           {p.label ? <Badge tone="rank" icon="trending-up">{p.label}</Badge> : null}
         </div>
       ) : null}
-      {p.voice ? <VoicePlayer duration={p.voice.duration} seed={p.voice.seed} onPlayingChange={setPlaying} /> : null}
+      {p.voice ? (
+        <VoicePlayer
+          duration={p.voice.duration}
+          seed={p.voice.seed}
+          src={p.voice.src}
+          playing={p.playing}
+          onPlay={p.onPlay}
+          onPause={p.onPause}
+          onPlayingChange={setPlaying}
+        />
+      ) : null}
       {p.text ? <p className="vx-answer__text">{p.text}</p> : null}
       {p.voice && p.voice.transcript ? (
         <div className="vx-answer__tx">
@@ -192,10 +274,10 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
           </div>
         </div>
       ) : null}
-      {p.reactions ? (
+      {sum ? (
         <div className="vx-answer__sum">
-          <span className="e" aria-hidden="true">{p.reactions.top.join(' ')}</span>
-          {fmt(p.reactions.total) + ' reactions'}
+          <span className="e" aria-hidden="true">{sum.top.join(' ')}</span>
+          {fmt(sum.total) + (sum.total === 1 ? ' reaction' : ' reactions')}
         </div>
       ) : null}
       <div className="vx-answer__actions">
@@ -205,25 +287,35 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
               value={reaction}
               freeLeft={p.freeReactions}
               onChange={(v) => {
-                setReaction(v);
-                setTray(false);
+                if (reactCtl) p.onReact!(v);
+                else setReaction(v);
+                setTrayOpen(false);
               }}
             />
           </div>
         ) : null}
-        <button type="button" className="vx-act" aria-pressed={liked ? 'true' : 'false'} aria-label={'Like, ' + likes + ' likes'} onClick={() => setLiked(!liked)}>
+        <button
+          type="button"
+          className="vx-act"
+          aria-pressed={liked ? 'true' : 'false'}
+          aria-label={'Like, ' + likes + ' likes'}
+          onClick={() => {
+            if (likeCtl) p.onLike!(!liked);
+            else setLiked(!liked);
+          }}
+        >
           <Icon name="heart" size={20} fill={liked} />
           {short(likes)}
         </button>
-        <button type="button" className={cx('vx-act', r && 'vx-act--reacted')} aria-expanded={tray ? 'true' : 'false'} aria-label={r ? 'Your reaction: ' + r.name + '. Change' : 'React'} onClick={() => setTray(!tray)}>
+        <button type="button" className={cx('vx-act', r && 'vx-act--reacted')} aria-expanded={tray ? 'true' : 'false'} aria-label={r ? 'Your reaction: ' + r.name + '. Change' : 'React'} onClick={() => setTrayOpen(!tray)}>
           {r ? <span className="vx-act__emoji" aria-hidden="true">{r.e}</span> : <Icon name="smile-plus" size={20} />}
           {r ? r.name : 'React'}
         </button>
-        <button type="button" className="vx-act" aria-label={'Reply, ' + (p.replies || 0) + ' replies'}>
+        <button type="button" className="vx-act" aria-label={'Reply, ' + (p.replies || 0) + ' replies'} onClick={p.onReply}>
           <Icon name="message-circle" size={20} />
           {short(p.replies || 0)}
         </button>
-        <button type="button" className="vx-act vx-act--end" aria-label="Share">
+        <button type="button" className="vx-act vx-act--end" aria-label="Share" onClick={p.onShare}>
           <Icon name="share-2" size={20} />
           {p.compact ? null : 'Share'}
         </button>
@@ -240,11 +332,23 @@ export interface ProposalCardProps {
   supports?: number;
   challenges?: number;
   grouped?: number;
+  /** The person's stance. When given (null for none), it and the two counts are the truth and the card only asks. */
+  stance?: 'support' | 'challenge' | null;
+  onSupport?: () => void;
+  onChallenge?: () => void;
+  onImprove?: () => void;
   className?: string;
 }
 
 export function ProposalCard(p: ProposalCardProps): ReactElement {
-  const [mine, setMine] = useState<'support' | 'challenge' | null>(null);
+  const [inner, setMine] = useState<'support' | 'challenge' | null>(null);
+  const ctl = p.stance !== undefined;
+  const mine = ctl ? p.stance : inner;
+  const bump = (kind: 'support' | 'challenge') => (ctl ? 0 : mine === kind ? 1 : 0);
+  const tap = (kind: 'support' | 'challenge', cb?: () => void) => () => {
+    if (cb) cb();
+    if (!ctl) setMine(mine === kind ? null : kind);
+  };
   return (
     <article className={cx('vx-prop', p.className)}>
       <div className="vx-answer__head">
@@ -263,9 +367,9 @@ export function ProposalCard(p: ProposalCardProps): ReactElement {
         </span>
       ) : null}
       <div className="vx-prop__acts">
-        <TopicChip icon="check" label="Support" count={(p.supports || 0) + (mine === 'support' ? 1 : 0)} selected={mine === 'support'} onClick={() => setMine(mine === 'support' ? null : 'support')} />
-        <TopicChip icon="circle-x" label="Challenge" count={(p.challenges || 0) + (mine === 'challenge' ? 1 : 0)} selected={mine === 'challenge'} onClick={() => setMine(mine === 'challenge' ? null : 'challenge')} />
-        <TopicChip icon="plus" label="Improve it" selected={false} />
+        <TopicChip icon="check" label="Support" count={(p.supports || 0) + bump('support')} selected={mine === 'support'} onClick={tap('support', p.onSupport)} />
+        <TopicChip icon="circle-x" label="Challenge" count={(p.challenges || 0) + bump('challenge')} selected={mine === 'challenge'} onClick={tap('challenge', p.onChallenge)} />
+        <TopicChip icon="plus" label="Improve it" selected={false} onClick={p.onImprove} />
       </div>
     </article>
   );
