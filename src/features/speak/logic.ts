@@ -18,7 +18,7 @@ export function peaksFromLevels(levels: number[], bars = 48): number[] {
 
 /** The smallest available token that covers this take, or undefined when the free seconds are enough. */
 export function tokenFor(tokens: ExtraVoiceToken[], seconds: number, freeSeconds: number): ExtraVoiceToken | undefined {
-  if (seconds <= freeSeconds + 0.001) return undefined;
+  if (seconds <= freeSeconds + 0.5) return undefined; // the server allows half a second over
   return tokens
     .filter((t) => t.status === "AVAILABLE" && t.maxSeconds + 0.5 >= seconds)
     .sort((a, b) => a.maxSeconds - b.maxSeconds)[0];

@@ -3,6 +3,8 @@
  * sign-in round trip and the payment round trip. One draft at a time. When IndexedDB is blocked the draft lives in memory.
  */
 export interface Draft {
+  /** The WAWU ID subject of the person it belongs to; null for a guest's recording, which goes to whoever signs in next, once. */
+  owner?: string | null;
   questionId: string;
   blob: Blob;
   mime: string;
@@ -11,6 +13,21 @@ export interface Draft {
   /** Stays the same for this recording so a retried post cannot post twice. */
   key: string;
   savedAt: number;
+}
+
+import { sessionStorage } from "@/lib/auth/session-storage";
+
+/** Who is signed in, read from the token's subject (only to match a draft, never trusted for anything else). */
+export function currentOwner(): string | null {
+  const t = sessionStorage.getToken();
+  if (!t) return null;
+  try {
+    const b = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const sub = (JSON.parse(atob(b + "=".repeat((4 - (b.length % 4)) % 4))) as { sub?: unknown }).sub;
+    return typeof sub === "string" ? sub : null;
+  } catch {
+    return null;
+  }
 }
 
 const DB = "voices-speak";
@@ -43,7 +60,8 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
   }
 }
 
-export async function saveDraft(d: Draft): Promise<void> {
+export async function saveDraft(input: Draft): Promise<void> {
+  const d: Draft = { ...input, owner: currentOwner() };
   memory = d;
   try {
     await run("readwrite", (s) => s.put(d, ID));
@@ -52,7 +70,7 @@ export async function saveDraft(d: Draft): Promise<void> {
   }
 }
 
-export async function loadDraft(): Promise<Draft | null> {
+async function rawLoad(): Promise<Draft | null> {
   try {
     const d = await run<Draft | undefined>("readonly", (s) => s.get(ID));
     if (d && d.blob instanceof Blob) return d;
@@ -60,6 +78,23 @@ export async function loadDraft(): Promise<Draft | null> {
     /* fall through to memory */
   }
   return memory;
+}
+
+/** The kept recording for this person. A guest's recording is handed to the first person who signs in, once; another person's is never shown and is removed. */
+export async function loadDraft(): Promise<Draft | null> {
+  const d = await rawLoad();
+  if (!d) return null;
+  const me = currentOwner();
+  const owner = d.owner ?? null;
+  if (owner === me) return d;
+  if (owner === null && me !== null) {
+    const claimed = { ...d, owner: me };
+    memory = claimed;
+    try { await run("readwrite", (s) => s.put(claimed, ID)); } catch { /* memory copy serves */ }
+    return claimed;
+  }
+  if (me !== null) await clearDraft(); // someone else's recording on this browser
+  return null;
 }
 
 export async function clearDraft(): Promise<void> {

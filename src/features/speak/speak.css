@@ -78,3 +78,6 @@
 .sp-card__rows dd { margin: 0; white-space: nowrap; }
 .sp-card__rows dt { margin: 0; }
 .sp-card__fine { margin: 0; font: 500 14px/20px var(--font-body); color: var(--ink-2); }
+
+.sp-dtonly { display: none; }
+@media (min-width: 1024px) { .sp-dtonly { display: inline; } }

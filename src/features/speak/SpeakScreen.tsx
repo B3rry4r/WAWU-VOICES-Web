@@ -65,6 +65,9 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const levelsRef = useRef<number[]>([]);
   const discard = useRef(false);
   const interrupted = useRef(false);
+  const starting = useRef(false);
+  const startedAt = useRef(0);
+  const alive = useRef(true);
   const trapped = useRef(false);
   const ignorePop = useRef(false);
   const sendState = useRef<{ key: string; clipId?: string; putUrl?: string; tokenId?: string; uploaded?: boolean; completed?: boolean } | null>(null);
@@ -189,11 +192,16 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       pushNote({ tone: "info", text: "That recording was too short. Tap the button and say a little more." });
       return;
     }
-    const t: Take = { blob: r.blob, mime: r.mime, seconds: r.seconds, peaks: peaksFromLevels(levelsRef.current), key: uuidKey() };
+    const t: Take = { blob: r.blob, mime: r.mime, seconds: r.realSeconds, peaks: peaksFromLevels(levelsRef.current), key: uuidKey() };
     setTake(t);
     setPhase("preview");
     if (qid) void saveDraft({ ...t, questionId: qid, savedAt: Date.now() } satisfies Draft);
-    if (interrupted.current) {
+    if (r.overLimit && offers.length > 0) {
+      interrupted.current = false;
+      pushNote({ tone: "info", text: `That recording ran past ${wasLimit} seconds, so it cannot be sent as it is. Add extra time, or record it again.` });
+      setSheetErr(null);
+      setSheet({ hasTake: true });
+    } else if (interrupted.current) {
       interrupted.current = false;
       pushNote({ tone: "info", text: "Your recording stopped when you left the page. Listen back, then send it or record again." });
     } else if (r.stoppedBy === "limit" && wasLimit === freeSeconds && offers.length > 0) {
@@ -203,7 +211,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }, [freeSeconds, offers.length, qid, untrap]);
 
   async function startRecording() {
-    if (!qid || phase === "recording") return;
+    if (!qid || phase === "recording" || starting.current || rec.current) return;
+    starting.current = true;
     setMicError(null);
     clearNotes();
     levelsRef.current = [];
@@ -219,12 +228,24 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         setLevels((l) => [...l.slice(-27), level]);
       },
     });
-    const err = await r.start();
+    let err: RecorderError | null;
+    try {
+      err = await r.start();
+    } catch {
+      err = "failed";
+    } finally {
+      starting.current = false;
+    }
     if (err) {
       setMicError(err);
       return;
     }
+    if (!alive.current) {
+      r.cancel();
+      return;
+    }
     rec.current = r;
+    startedAt.current = Date.now();
     window.history.pushState({ speakRecording: true }, "");
     trapped.current = true;
     setPhase("recording");
@@ -233,6 +254,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }
 
   function stopRecording() {
+    // a second tap of a double tap lands on the Stop button; it is not a request to stop
+    if (Date.now() - startedAt.current < 700) return;
     rec.current?.stop();
   }
 
@@ -274,6 +297,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   // Leaving the page releases the microphone.
   useEffect(() => () => {
+    alive.current = false;
     if (rec.current) {
       discard.current = true;
       rec.current.cancel();
@@ -316,6 +340,14 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     if (!signedIn) {
       await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
       window.location.assign(joinHref());
+      return;
+    }
+    if (take.seconds > freeSeconds + 0.5 && !tokenFor(tokens, take.seconds, freeSeconds)) {
+      pushNote({ tone: "danger", text: "A longer voice needs an extra voice token." });
+      if (offers.length > 0) {
+        setSheetErr(null);
+        setSheet({ hasTake: true });
+      }
       return;
     }
     clearNotes();
@@ -536,7 +568,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         {panel}
         {phase === "idle" && !help ? (
           <div className="sp-alt">
-            <Button variant="onforest" href={`/q/${qid}/write`} className="sp-alt__btn">Write instead</Button>
+            <Button variant="onforest" href={`/q/${qid}/write`} className="sp-alt__btn"><span className="sp-dtonly">Prefer to type? </span>Write instead</Button>
           </div>
         ) : null}
       </div>
