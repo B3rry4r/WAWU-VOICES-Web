@@ -15,6 +15,7 @@
   min-height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) var(--gutter-phone) 0; }
 .sh-topbar__logo { margin-right: auto; display: flex; }
 .sh-topbar__slot { display: contents; }
+.sh-topbar--none { min-height: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: 0; }
 .sh-topbar--page { padding-left: var(--space-2); padding-right: var(--space-2); }
 .sh-topbar__logo img { height: 34px; width: auto; display: block; }
 
