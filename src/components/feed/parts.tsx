@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnswerCard, Banner, Button, EmptyState, Skeleton, TopicOfWeek, TopicTile } from "@/components/vx";
+import { categoryLook } from "@/lib/categories";
 import type { Answer, Question, Topic } from "@/lib/api/feed";
 import { answerCardProps, voicesLabel, weekMeta } from "@/lib/feed-format";
 import type { Load } from "./useLoad";
@@ -25,42 +26,58 @@ export function Failed({ load }: { load: Extract<Load<unknown>, { state: "error"
   );
 }
 
-export function Answers({ items }: { items: Answer[] }) {
+export function Answers({ items, unfolded }: { items: Answer[]; unfolded?: boolean }) {
   return (
     <div className="grid gap-3">
       {items.map((a) => (
         <Link key={a.id} href={`/q/${a.questionId}`} className="block no-underline">
-          <AnswerCard {...answerCardProps(a)} />
+          <AnswerCard {...answerCardProps(a)} unfolded={unfolded && a.kind === "VOICE" ? true : undefined} />
         </Link>
       ))}
     </div>
   );
 }
 
+/** Two tiles side by side in the colour of their category, as the boards draw them. */
 export function Tiles({ items }: { items: Question[] }) {
   return (
-    <div className="grid gap-3">
-      {items.map((q, i) => (
-        <TopicTile key={q.id} question={q.text} category={q.category?.name} voices={q.voiceCount} tone={i % 2 ? "sun" : "forest"} href={`/q/${q.id}`} />
-      ))}
+    <div className="vx-tiles">
+      {items.map((q) => {
+        const look = q.category ? categoryLook(q.category) : null;
+        return <TopicTile key={q.id} question={q.text} category={look?.label} voices={q.voiceCount} tone={look?.tone ?? "mint"} href={`/q/${q.id}`} />;
+      })}
     </div>
   );
 }
 
-export function WeekCard({ topic, variant }: { topic: Topic; variant?: "banner" | "rail" }) {
-  return <TopicOfWeek title={topic.title} meta={weekMeta(topic, !!topic.weeklyPollId)} variant={variant} href={`/topics/${topic.id}`} />;
+/** Topic of the week. It opens the conversation of today's question (the topic page is not built), so without one it is not shown. */
+export function WeekCard({ topic, questionId, variant }: { topic: Topic; questionId?: string | null; variant?: "banner" | "rail" }) {
+  const router = useRouter();
+  if (!questionId) return null;
+  const href = `/q/${questionId}`;
+  const meta = weekMeta(topic, !!topic.weeklyPollId);
+  return variant === "rail" ? (
+    <TopicOfWeek title={topic.title} meta={meta} variant="rail" onClick={() => router.push(href)} />
+  ) : (
+    <TopicOfWeek title={topic.title} meta={meta} href={href} />
+  );
 }
 
-export function Section({ title, seeAll, children }: { title: string; seeAll?: { href: string; label?: string }; children: React.ReactNode }) {
+/** A section: an eyebrow heading (and a link on the right), then its content. `className` places it (order, visibility). */
+export function Section({ title, aside, className = "", children }: { title: React.ReactNode; aside?: React.ReactNode; className?: string; children: React.ReactNode }) {
   return (
-    <section className="mt-6">
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="m-0 font-display text-[20px] font-normal">{title}</h2>
-        {seeAll ? <Link href={seeAll.href} className="text-[14px] font-semibold">{seeAll.label ?? "See all"}</Link> : null}
+    <section className={`mt-2 flex flex-col gap-[10px] ${className}`}>
+      <div className={`flex items-center justify-between gap-2 ${aside ? "min-h-[44px]" : ""}`}>
+        <h2 className="vx-eyebrow m-0 flex items-center gap-2 text-[var(--ink-2)]">{title}</h2>
+        {aside}
       </div>
       {children}
     </section>
   );
+}
+
+export function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return <Link href={href} className="inline-flex min-h-[44px] items-center text-[14px] font-semibold no-underline">{children}</Link>;
 }
 
 export function NothingYet({ title, body }: { title: string; body: string }) {
