@@ -53,6 +53,8 @@ export interface ProfileHeaderProps {
   playing?: boolean;
   onPlay?: () => void;
   onPause?: () => void;
+  /** The clip's real waveform (the API's peak values, 0 to 255). With it the Voice Card bars follow the clip; without it they are the usual drawn bars. */
+  voiceCardPeaks?: number[];
   /** A line under the Voice Card (a play error). */
   voiceNote?: ReactNode;
   stats?: { label: string; value: number }[];
@@ -76,7 +78,15 @@ export interface ProfileHeaderProps {
 export function ProfileHeader(p: ProfileHeaderProps): ReactElement {
   const [innerPlaying, setPlaying] = useState(false);
   const playing = p.playing !== undefined ? p.playing : innerPlaying;
-  const bars = waveBars(9, 18);
+  const bars = p.voiceCardPeaks && p.voiceCardPeaks.length
+    ? Array.from({ length: 18 }, (_, i) => {
+        const peaks = p.voiceCardPeaks as number[];
+        const from = Math.floor((i * peaks.length) / 18);
+        const to = Math.max(from + 1, Math.floor(((i + 1) * peaks.length) / 18));
+        const part = peaks.slice(from, to);
+        return Math.max(0.12, Math.min(1, Math.max(...part) / 255));
+      })
+    : waveBars(9, 18);
   const row = p.units !== undefined || !!p.referral || !!p.own;
   return (
     <section className={cx('vx-prof', p.className)} aria-label="Profile">

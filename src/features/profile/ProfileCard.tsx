@@ -58,6 +58,7 @@ export function ProfileCard(p: {
       place={place ?? undefined}
       joined={joinedLabel(profile.joinedAt)}
       voiceCard={card ? Math.round((card.durationMs ?? 8000) / 1000) : false}
+      voiceCardPeaks={card?.peaks && card.peaks.length ? card.peaks : undefined}
       playing={vc.playing}
       onPlay={() => void vc.toggle()}
       onPause={() => void vc.toggle()}

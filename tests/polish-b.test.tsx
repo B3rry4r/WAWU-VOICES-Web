@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/features/share", () => ({ ShareSheet: () => null }));
 
-import { VoicePlayer } from "@/components/vx";
+import { ProfileHeader, VoicePlayer } from "@/components/vx";
 import { TalkCard } from "@/features/talk/TalkCard";
 import { PostedScreen } from "@/features/talk/PostedScreen";
 import { ReportSheet } from "@/features/results/ReportSheet";
@@ -166,5 +166,25 @@ describe("T7 /s/<code> when the API cannot be reached", () => {
     expect(render(el as React.ReactElement).container.querySelector('[data-testid="share-unavailable"]')).toBeTruthy();
     vi.stubGlobal("fetch", vi.fn(async () => json({ error: { code: "NOT_FOUND", message: "x", requestId: "r" } }, 404)));
     await expect(mod.default({ params: { code: "abc" } })).rejects.toThrow();
+  });
+});
+
+describe("P3 Voice Card bars follow the clip's peaks", () => {
+  const heights = () => Array.from(document.querySelectorAll(".vx-vcard__wave i")).map((e) => parseInt((e as HTMLElement).style.height, 10));
+  it("draws 18 bars from the given peaks (loud last, quiet first)", () => {
+    const peaks = Array.from({ length: 48 }, (_, i) => (i < 24 ? 25 : 255));
+    render(<ProfileHeader name="Ada" handle="@ada" voiceCard={8} voiceCardPeaks={peaks} stats={[]} />);
+    const h = heights();
+    expect(h.length).toBe(18);
+    expect(h[0]).toBe(Math.round(6 + 0.12 * 22)); // quiet bars keep a 0.12 floor
+    expect(h[17]).toBe(28);
+    expect(h[0]).toBeLessThan(h[17]);
+  });
+  it("without peaks keeps the usual drawn bars", () => {
+    render(<ProfileHeader name="Ada" handle="@ada" voiceCard={8} stats={[]} />);
+    const a = heights();
+    cleanup();
+    render(<ProfileHeader name="Ada" handle="@ada" voiceCard={8} voiceCardPeaks={[]} stats={[]} />);
+    expect(heights()).toEqual(a);
   });
 });
