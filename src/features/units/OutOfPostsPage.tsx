@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { QuestionScreen } from "@/features/talk/QuestionScreen";
 import { OutOfPostsSheet } from "./OutOfPostsSheet";
 import { isUuid } from "./payment-return";
 
@@ -11,5 +12,10 @@ export function OutOfPostsPage() {
   const id = isUuid(q) ? q : null;
   const keep = () => router.push(id ? `/q/${id}` : "/");
   if (!id) return null;
-  return <OutOfPostsSheet questionId={id} onKeep={keep} />;
+  return (
+    <>
+      <QuestionScreen id={id} />
+      <OutOfPostsSheet questionId={id} onKeep={keep} />
+    </>
+  );
 }

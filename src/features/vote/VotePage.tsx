@@ -7,7 +7,7 @@ import { ShareSheet } from "@/features/share";
 import { StageNav } from "@/features/stage/StageNav";
 import { getPublicConfig, getQuestion, getVoteAllowance, loadQuestionPolls } from "@/lib/api/vote";
 import type { Allowances, Poll, PublicConfig, Question } from "@/lib/api/vote";
-import { AppBar, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
+import { AppBar, nextOpening, useOpensAt, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
 import { DeskRail } from "./DeskRail";
 import { PollCard } from "./PollCard";
 import { pickPoll } from "./poll-pick";
@@ -46,6 +46,9 @@ export function VotePage({ questionId }: { questionId: string }) {
   useEffect(() => {
     if (redirect) router.replace(`/q/${questionId}/results`);
   }, [redirect, router, questionId]);
+
+  // A poll that opens by its dates while the page is open flips to open without a reload.
+  useOpensAt(load.state === "ready" ? nextOpening([load.data.main, ...load.data.others]) : null, () => (load.state === "ready" ? load.reload() : undefined));
 
   const q = load.state === "ready" ? load.data.question : null;
   const main = load.state === "ready" ? load.data.main : null;

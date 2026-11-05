@@ -10,7 +10,7 @@ import { explainMyVote, getPollResults, getQuestion, loadQuestionPolls, newKey }
 import type { Poll as PollT, PollResults, Question } from "@/lib/api/vote";
 import { closesIn } from "@/lib/feed-format";
 import { AdBanner } from "./AdBanner";
-import { AppBar, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
+import { AppBar, nextOpening, useOpensAt, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
 import { DeskRail } from "./DeskRail";
 import { pickPoll } from "./poll-pick";
 import { useRouter } from "next/navigation";
@@ -67,6 +67,8 @@ export function ResultsPage({ questionId }: { questionId: string }) {
     };
   }, [open, pollId]);
 
+  useOpensAt(load.state === "ready" ? nextOpening([load.data.poll]) : null, () => (load.state === "ready" ? load.reload() : undefined));
+
   const q = load.state === "ready" ? load.data.question : null;
   const poll = load.state === "ready" ? load.data.poll : null;
   const results = live ?? (load.state === "ready" ? load.data.results : null);
@@ -89,7 +91,7 @@ export function ResultsPage({ questionId }: { questionId: string }) {
       {load.state === "loading" || signedIn === null ? <Loading /> : null}
       {load.state === "error" ? <LoadFailed error={load.error} retry={load.retry} what="this poll" /> : null}
       {load.state === "ready" && !poll ? <EmptyState icon="vote" title="No poll on this question yet" body="Polls open with the question or during the week." /> : null}
-      {load.state === "ready" && poll && load.data.hidden ? (
+      {load.state === "ready" && poll && load.data.hidden && status !== "SCHEDULED" ? (
         <EmptyState
           icon="vote"
           title="Vote to see the results"
@@ -99,7 +101,10 @@ export function ResultsPage({ questionId }: { questionId: string }) {
           onAction={() => router.push(`/q/${questionId}/vote`)}
         />
       ) : null}
-      {load.state === "ready" && poll && results ? (
+      {load.state === "ready" && poll && status === "SCHEDULED" ? (
+        <Banner tone="info" title="This poll has not opened yet">Come back when it opens to see the results.</Banner>
+      ) : null}
+      {load.state === "ready" && poll && results && status !== "SCHEDULED" ? (
         <>
           <PageHead eyebrow={weekPollLine(load.data.question).toUpperCase()} title="Results so far" lead={voted && status === "OPEN" ? "Thanks for voting. The bars move as votes come in until the poll closes." : undefined} />
           {status === "CLOSED" ? <Banner tone="info" title="This poll has closed">These are the final results. One vote per account was counted.</Banner> : null}
@@ -155,8 +160,8 @@ function Explain({ pollId, label, questionId, signedIn }: { pollId: string; labe
   }
 
   return (
-    <section className="flex flex-col gap-3" aria-label="Explain my vote">
-      <h2 className="vt-section-title">Explain my vote</h2>
+    <section className="vt-explaincard" aria-label="Explain my vote">
+      <h2 className="vt-explaincard__title">Explain my vote</h2>
       <p className="vt-lead">{`Say why you picked “${label}”. It joins the discussion under the question.`}</p>
       {state === "done" ? (
         <Banner tone="success" title="Posted">

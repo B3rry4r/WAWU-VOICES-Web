@@ -190,8 +190,8 @@ describe("a held draft posts only for the purchase it was made for", () => {
     stubFetch(() => json(INIT, 201));
     await startCheckout({ kind: "EXTRA_VOICE", tokenKind: "SECONDS_30" }, "/q/q1", vi.fn(), "q1");
     await startCheckout(unitsSpec, "/q/q1", vi.fn(), "q1");
-    const t = JSON.parse(window.sessionStorage.getItem("voices-buy-attempts")!);
-    expect(t["EXTRA_VOICE:SECONDS_30"].draftQuestionId).toBeUndefined();
-    expect(t["UNITS:tier-buzz:card"].draftQuestionId).toBe("q1");
+    const t = JSON.parse(window.localStorage.getItem("voices-buy-attempts")!);
+    expect(t["anon|EXTRA_VOICE:SECONDS_30"].draftQuestionId).toBeUndefined();
+    expect(t["anon|UNITS:tier-buzz:card"].draftQuestionId).toBe("q1");
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Banner, EmptyState, Icon, Skeleton } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
@@ -132,4 +132,40 @@ export function PageHead({ eyebrow, title, lead }: { eyebrow?: string; title: st
       {lead ? <p className="vt-lead">{lead}</p> : null}
     </div>
   );
+}
+
+
+/** The soonest start among polls that are still SCHEDULED, or null. */
+export function nextOpening(polls: Array<{ status: string; startsAt: string } | null | undefined>): number | null {
+  let t: number | null = null;
+  for (const p of polls) {
+    if (!p || p.status !== "SCHEDULED") continue;
+    const at = Date.parse(p.startsAt);
+    if (Number.isFinite(at) && (t === null || at < t)) t = at;
+  }
+  return t;
+}
+
+/** Calls onOpen once the clock passes `at` (a poll's startsAt) while the page stays open. One timer, no polling before then. */
+export function useOpensAt(at: number | null, onOpen: () => void): void {
+  const cb = useRef(onOpen);
+  cb.current = onOpen;
+  useEffect(() => {
+    if (at === null) return undefined;
+    let id: ReturnType<typeof setTimeout>;
+    const arm = () => {
+      const left = at - Date.now();
+      // setTimeout cannot wait past about 24 days; wake early and look again. A moment after the start lets the server's clock agree.
+      if (left > 0) id = setTimeout(arm, Math.min(left + 300, 2 ** 31 - 1));
+      else cb.current();
+    };
+    arm();
+    // A tab that slept past the start flips as soon as it wakes.
+    const wake = () => document.visibilityState === "visible" && Date.now() >= at && cb.current();
+    document.addEventListener("visibilitychange", wake);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener("visibilitychange", wake);
+    };
+  }, [at]);
 }

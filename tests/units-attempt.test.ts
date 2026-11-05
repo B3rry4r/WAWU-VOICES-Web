@@ -14,9 +14,27 @@ describe("purchase attempts (one Idempotency-Key per choice)", () => {
     expect(attemptFor(choiceId({ kind: "UNITS", tierId: "t2", method: "card" })).key).not.toBe(a.key);
     expect(attemptFor(choiceId({ kind: "UNITS", tierId: "t1", method: "ussd" })).key).not.toBe(a.key);
   });
-  it("keeps the key across a reload of the tab (session storage)", () => {
+  it("keeps the key across a reload of the tab (local storage, shared by every tab)", () => {
     const a = attemptFor(c);
-    expect(JSON.parse(window.sessionStorage.getItem("voices-buy-attempts")!)[c].key).toBe(a.key);
+    expect(JSON.parse(window.localStorage.getItem("voices-buy-attempts")!)[`anon|${c}`].key).toBe(a.key);
+  });
+  it("gives two tabs of the same person and pack the same key until it settles, then a new one", () => {
+    const tab1 = attemptFor(c);
+    saveAttempt(c, { paymentId: "pay-x" });
+    const tab2 = attemptFor(c); // a second tab reads the same storage
+    expect(tab2.key).toBe(tab1.key);
+    expect(tab2.paymentId).toBe("pay-x");
+    clearByPayment("pay-x"); // it settled
+    expect(attemptFor(c).key).not.toBe(tab1.key);
+  });
+  it("does not share an attempt between two people on one browser", () => {
+    const tok = (sub: string) => `x.${btoa(JSON.stringify({ sub }))}.y`;
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: tok("ada"), refreshToken: "r" }));
+    const ada = attemptFor(c);
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: tok("tunde"), refreshToken: "r" }));
+    expect(attemptFor(c).key).not.toBe(ada.key);
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: tok("ada"), refreshToken: "r" }));
+    expect(attemptFor(c).key).toBe(ada.key);
   });
   it("starts a clean attempt after it is dropped, finished or too old", () => {
     const a = attemptFor(c, undefined, 1000);

@@ -13,24 +13,32 @@ import { ErrorBlock, LoadingBlock, SignInNeeded } from "./ui";
 export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { questionId: string; onKeep: () => void; variant?: "sheet" | "dialog" }) {
   const signedIn = useSignedIn();
   const desktop = useDesktop();
+  // The Close button takes focus while the sheet is still loading. Its ring shows only once the person uses the keyboard.
+  const [kb, setKb] = useState(false);
+  useEffect(() => {
+    const on = () => setKb(true);
+    document.addEventListener("keydown", on, { once: true });
+    return () => document.removeEventListener("keydown", on);
+  }, []);
+  const rest = kb ? undefined : "[&_.vx-iconbtn:focus-visible]:!shadow-none [&_.vx-iconbtn:focus-visible]:!outline-none";
   const variant = forced ?? (desktop ? "dialog" : "sheet");
   const { result, reload } = useLoad(() => Promise.all([getWallet(), getTiers()]), signedIn === true);
   const [draft, setDraft] = useState<string | null>(null);
   useEffect(() => setDraft(getDraft(questionId)?.body ?? null), [questionId]);
 
   if (signedIn === false) {
-    return <Sheet title="Voice Units" variant={variant} onClose={onKeep}><SignInNeeded /></Sheet>;
+    return <Sheet title="Voice Units" className={rest} variant={variant} onClose={onKeep}><SignInNeeded /></Sheet>;
   }
   if (signedIn === null || result.state === "loading") {
     return (
-      <Sheet title="Voice Units" variant={variant} onClose={onKeep}>
+      <Sheet title="Voice Units" className={rest} variant={variant} onClose={onKeep}>
         <LoadingBlock rows={1} />
       </Sheet>
     );
   }
   if (result.state === "error") {
     return (
-      <Sheet title="Voice Units" variant={variant} onClose={onKeep}>
+      <Sheet title="Voice Units" className={rest} variant={variant} onClose={onKeep}>
         <ErrorBlock error={result.error} onRetry={reload} />
       </Sheet>
     );
@@ -46,6 +54,7 @@ export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { quest
       title={`You have used your ${total} free posts`}
       subtitle={`Balance: ${unitsLabel(wallet.balanceMilli)}`}
       variant={variant}
+      className={rest}
       onClose={onKeep}
       footer={
         <div className="vx-sheet__foot">
