@@ -43,8 +43,7 @@ export const listAnswers = (qid: string, sort: AnswerSort, cursor?: string) =>
 export const getAnswer = (aid: string) => apiFetch<Answer>(`/answers/${id(aid)}`, read());
 export const listReplies = (aid: string, stance?: ReplyStance, cursor?: string) =>
   apiFetch<ReplyPage>(`/answers/${id(aid)}/replies${qs({ stance, cursor, limit: 20 })}`, read());
-/** GET /me/allowance is not served yet (SHARED-1a wires it); GET /wallet carries the same Allowances object. Move to /me/allowance once served. */
-export const getAllowance = async () => (await apiFetch<{ allowances: Allowances }>("/wallet", { authed: true })).allowances;
+export const getAllowance = () => apiFetch<Allowances>("/me/allowance", { authed: true });
 export const listReactionKinds = () => apiFetch<{ items: ReactionKindInfo[] }>("/reactions");
 
 export const likeAnswer = (aid: string) => apiFetch<LikeState>(`/answers/${id(aid)}/like`, { method: "PUT", ...read() });

@@ -7,7 +7,7 @@ import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Reply, ReplyStance } from "@/lib/api/talk";
 import { ago } from "@/lib/feed-format";
 import { useLoad } from "@/components/feed/useLoad";
-import { Stage } from "@/features/stage/Stage";
+import { StageNav } from "@/features/stage/StageNav";
 import { AppBar, BarButton, Problem, ShellTweaks, failText, useClipPlayback, useSignedIn } from "./lib";
 import { ReplyComposer } from "./ReplyComposer";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
@@ -99,7 +99,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
       <AppBar title="Replies" sub={`${ans.replyCount.toLocaleString("en-NG")} ${ans.replyCount === 1 ? "reply" : "replies"} to ${who}`} back={`/q/${qid}`}>
         <BarButton icon="share-2" label="Share this voice" onClick={() => share("ANSWER", aid)} />
       </AppBar>
-      <Stage questionId={qid} active="discuss" />
+      <StageNav questionId={qid} active="discuss" visited={["speak"]} />
       <Link href={`/q/${qid}`} className="mt-4 block rounded-[var(--radius-l)] bg-[var(--surface-2)] p-4 no-underline">
         <span className="vx-eyebrow flex items-center gap-2 text-[var(--ink-2)]">Replies to a voice on</span>
         <span className="mt-1 block font-display text-[18px] leading-6 text-[var(--ink)]">{question?.text || ans.questionText || ""}</span>

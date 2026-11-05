@@ -51,7 +51,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy }:
       <Composer
         key={n}
         freeLeft={allow.freePostsRemaining}
-        maxLength={c.textMaxChars ?? 500}
+        maxLength={c.textMaxChars}
         defaultValue={typedDraft(slot)}
         replyTo={who}
         intent={stance ? INTENT_OF[stance] : undefined}

@@ -107,7 +107,7 @@ describe("Write: posting spends free posts and units", () => {
     let n = 0;
     stub((c) => {
       if (c.url.endsWith("/questions/q1") ) return json(question);
-      if (c.url.endsWith("/wallet")) return json({ allowances: allowance(0) });
+      if (c.url.endsWith("/me/allowance")) return json(allowance(0));
       if (c.url.endsWith("/questions/q1/answers") && c.method === "POST") { n++; return err(402, "FREE_POSTS_EXHAUSTED"); }
       return undefined;
     });
@@ -125,7 +125,7 @@ describe("Write: posting spends free posts and units", () => {
   it("INSUFFICIENT_UNITS hands off the same way", async () => {
     stub((c) => {
       if (c.url.endsWith("/questions/q1")) return json(question);
-      if (c.url.endsWith("/wallet")) return json({ allowances: allowance(0) });
+      if (c.url.endsWith("/me/allowance")) return json(allowance(0));
       if (c.method === "POST") return err(402, "INSUFFICIENT_UNITS");
       return undefined;
     });
@@ -136,7 +136,7 @@ describe("Write: posting spends free posts and units", () => {
   it("a successful post goes to Posted once, with a key, and clears the typed draft", async () => {
     stub((c) => {
       if (c.url.endsWith("/questions/q1")) return json(question);
-      if (c.url.endsWith("/wallet")) return json({ allowances: allowance(7) });
+      if (c.url.endsWith("/me/allowance")) return json(allowance(7));
       if (c.url.endsWith("/questions/q1/answers") && c.method === "POST") return json({ answer: answer({ id: "new1" }), charge: { costMilli: 0, usedFreePost: true, usedFreeDaily: false, balanceMilli: 0 }, allowances: allowance(6) }, 201);
       return undefined;
     });
@@ -150,7 +150,7 @@ describe("Write: posting spends free posts and units", () => {
   it("a failure other than 402 stays on the page with plain words and keeps the text", async () => {
     stub((c) => {
       if (c.url.endsWith("/questions/q1")) return json(question);
-      if (c.url.endsWith("/wallet")) return json({ allowances: allowance(7) });
+      if (c.url.endsWith("/me/allowance")) return json(allowance(7));
       if (c.method === "POST") return err(429, "RATE_LIMITED");
       return undefined;
     });
@@ -255,7 +255,7 @@ describe("Write: keys and double sends", () => {
     window.localStorage.setItem("voices-held-drafts", JSON.stringify({ q1: { questionId: "q1", body: "Held words", key: "held-key-1", savedAt: 1, awaitingUnits: false } }));
     stub((c) => {
       if (c.url.endsWith("/questions/q1")) return json(question);
-      if (c.url.endsWith("/wallet")) return json({ allowances: allowance(5) });
+      if (c.url.endsWith("/me/allowance")) return json(allowance(5));
       if (c.method === "POST") return json({ answer: answer({ id: "n1" }), charge: { costMilli: 0, usedFreePost: true, usedFreeDaily: false, balanceMilli: 0 }, allowances: allowance(4) }, 201);
       return undefined;
     });
@@ -267,7 +267,7 @@ describe("Write: keys and double sends", () => {
   it("a double click on Post sends once", async () => {
     stub((c) => {
       if (c.url.endsWith("/questions/q1")) return json(question);
-      if (c.url.endsWith("/wallet")) return json({ allowances: allowance(5) });
+      if (c.url.endsWith("/me/allowance")) return json(allowance(5));
       if (c.method === "POST") return json({ answer: answer({ id: "n1" }), charge: { costMilli: 0, usedFreePost: true, usedFreeDaily: false, balanceMilli: 0 }, allowances: allowance(4) }, 201);
       return undefined;
     });
@@ -281,7 +281,7 @@ describe("Write: keys and double sends", () => {
   it("the length limit comes from the API", async () => {
     stub((c) => {
       if (c.url.endsWith("/questions/q1")) return json(question);
-      if (c.url.endsWith("/wallet")) return json({ allowances: { ...allowance(5), costs: { ...allowance(5).costs, textMaxChars: 120 } } });
+      if (c.url.endsWith("/me/allowance")) return json({ ...allowance(5), costs: { ...allowance(5).costs, textMaxChars: 120 } });
       return undefined;
     });
     render(<WriteScreen qid="q1" />);
@@ -295,7 +295,7 @@ describe("Thread: closed question and anonymous voices", () => {
     if (c.url.endsWith("/questions/q1")) return json({ ...question, status });
     if (c.url.endsWith("/answers/a1")) return json(answer({ author: author as never }));
     if (c.url.includes("/answers/a1/replies")) return json({ items: [], nextCursor: null, counts: { agree: 0, disagree: 0, experience: 0 } });
-    if (c.url.endsWith("/wallet")) return json({ allowances: allowance(5) });
+    if (c.url.endsWith("/me/allowance")) return json(allowance(5));
     return undefined;
   });
   it("hides the reply bar and stance chips when the question is closed", async () => {
@@ -311,5 +311,55 @@ describe("Thread: closed question and anonymous voices", () => {
     expect(await screen.findByText("Reply to Anonymous in words")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/this voice\b.*@|@this voice/);
     expect(document.body.textContent).toMatch(/replies to Anonymous/);
+  });
+});
+
+describe("TalkCard: reactions under latency end equal to the database", () => {
+  it("Sad then Funny at 400 ms ends with FUNNY on screen and in the database", async () => {
+    let db: string | null = null;
+    const puts: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url: String(url), method: init?.method ?? "GET", headers: new Headers(init?.headers), body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      if (!String(url).endsWith("/answers/a1/reaction")) return new Response("{}", { status: 404 });
+      await new Promise((r) => setTimeout(r, 400));
+      if (init?.method === "PUT") { db = JSON.parse(String(init.body)).kind; puts.push(db!); } else db = null;
+      return json({ answerId: "a1", myReaction: db, reactionCount: db ? 1 : 0, reactionBreakdown: [], charge: { costMilli: 0, usedFreePost: false, usedFreeDaily: true, balanceMilli: 0 } });
+    }));
+    render(<TalkCard answer={answer()} signedIn push={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "React" }));
+    await userEvent.click(screen.getByRole("radio", { name: /Sad/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Your reaction: Sad/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /Funny/ }));
+    await waitFor(() => expect(db).toBe("FUNNY"), { timeout: 3000 });
+    expect(puts).toEqual(["SAD", "FUNNY"]);
+    expect(screen.getByRole("button", { name: /Your reaction: Funny/ })).toBeTruthy();
+  });
+
+  it("tapping the same reaction twice quickly ends with no reaction", async () => {
+    let db: string | null = null;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url: String(url), method: init?.method ?? "GET", headers: new Headers(init?.headers) });
+      await new Promise((r) => setTimeout(r, 200));
+      if (init?.method === "PUT") db = JSON.parse(String(init.body)).kind; else db = null;
+      return json({ answerId: "a1", myReaction: db, reactionCount: 0, reactionBreakdown: [] });
+    }));
+    render(<TalkCard answer={answer()} signedIn push={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "React" }));
+    await userEvent.click(screen.getByRole("radio", { name: /Funny/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Your reaction: Funny/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /Funny/ }));
+    await waitFor(() => expect(calls.filter((c) => c.method === "DELETE").length).toBe(1), { timeout: 3000 });
+    await waitFor(() => expect(db).toBeNull(), { timeout: 3000 });
+    expect(screen.getByRole("button", { name: "React" })).toBeTruthy();
+  });
+});
+
+import { unitsText } from "@/features/talk/lib";
+describe("unitsText", () => {
+  it("says 0 units, 0.5 unit, 1 unit, 12.5 units", () => {
+    expect(unitsText(0)).toBe("0 units");
+    expect(unitsText(500)).toBe("0.5 unit");
+    expect(unitsText(1000)).toBe("1 unit");
+    expect(unitsText(12500)).toBe("12.5 units");
   });
 });

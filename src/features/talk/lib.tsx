@@ -28,11 +28,11 @@ export function uuidKey(): string {
 }
 
 /** Page app bar: back, title (and subtitle), actions on the right. */
-export function AppBar({ title, sub, back, close, children }: { title: string; sub?: string; back?: string; close?: string; children?: ReactNode }) {
+export function AppBar({ title, sub, back, close, children, phoneOnly }: { title: string; sub?: string; back?: string; close?: string; children?: ReactNode; phoneOnly?: boolean }) {
   const router = useRouter();
   const href = back ?? close;
   return (
-    <header className="sticky top-0 z-[var(--z-sticky)] -mx-4 flex min-h-14 items-center gap-1 border-b border-[var(--line)] bg-[var(--bg)] px-2 dt:static dt:mx-0 dt:border-0 dt:px-0">
+    <header className={`sticky top-0 z-[var(--z-sticky)] -mx-4 flex min-h-14 items-center gap-1 border-b border-[var(--line)] bg-[var(--bg)] px-2 dt:static dt:mx-0 dt:border-0 dt:px-0 ${phoneOnly ? "dt:hidden" : ""}`}>
       <Link href={href ?? "/"} aria-label={close ? "Close without posting" : "Back"} className="sh-iconbtn border-0 bg-transparent shadow-none" onClick={(e) => { if (!href) { e.preventDefault(); router.back(); } }}>
         <Icon name={close ? "x" : "arrow-left"} size={24} />
       </Link>
@@ -87,27 +87,6 @@ export function SignInNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** Held drafts share one store with the Voice Units screens (same key and shape as features/units/draft.ts, V-19). */
-const HELD = "voices-held-drafts";
-export interface HeldDraft { questionId: string; body: string; key: string; savedAt: number; awaitingUnits: boolean }
-function heldRead(): Record<string, HeldDraft> {
-  try { const t = JSON.parse(window.localStorage.getItem(HELD) ?? "{}"); return t && typeof t === "object" ? t : {}; } catch { return {}; }
-}
-/** `key` is the Idempotency-Key of the post that was just refused, so the post after a purchase reuses it. */
-export function holdDraft(questionId: string, body: string, key?: string): HeldDraft {
-  const t = heldRead();
-  const prev = t[questionId];
-  const d: HeldDraft = { questionId, body: body.trim(), key: key ?? (prev && prev.body === body.trim() ? prev.key : uuidKey()), savedAt: Date.now(), awaitingUnits: prev?.awaitingUnits ?? false };
-  t[questionId] = d;
-  try { window.localStorage.setItem(HELD, JSON.stringify(t)); } catch { /* blocked storage: this page only */ }
-  return d;
-}
-export function heldDraft(questionId: string): HeldDraft | undefined { return heldRead()[questionId]; }
-export function dropHeld(questionId: string): void {
-  const t = heldRead(); delete t[questionId];
-  try { window.localStorage.setItem(HELD, JSON.stringify(t)); } catch { /* ignore */ }
-}
-
 /** What a person has typed so far on the Write screen, kept in this browser only (V-19). One per question or per reply. */
 const TYPING = "voices-typing-drafts";
 export function typedDraft(slot: string): string {
@@ -132,7 +111,7 @@ export function isOutOfPosts(e: unknown): boolean {
 
 export function unitsText(milli: number): string {
   const u = milli / 1000;
-  return `${Number.isInteger(u) ? u : u.toFixed(1)} ${u <= 1 ? "unit" : "units"}`;
+  return `${Number.isInteger(u) ? u : u.toFixed(1)} ${u > 0 && u <= 1 ? "unit" : "units"}`;
 }
 export function nairaOfMilli(milli: number, baseKoboPerUnit: number): string {
   const kobo = (milli * baseKoboPerUnit) / 1000;

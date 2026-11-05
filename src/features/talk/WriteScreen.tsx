@@ -6,7 +6,9 @@ import type { IntentKind } from "@/components/vx/speak";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
-import { AppBar, Problem, ShellTweaks, failText, heldDraft, holdDraft, isOutOfPosts, nairaOfMilli, outOfPostsHref, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote, dropHeld } from "./lib";
+import { clearDraft, saveDraft } from "@/features/units/draft";
+import { StageNav } from "@/features/stage/StageNav";
+import { AppBar, Problem, ShellTweaks, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -74,9 +76,9 @@ export function WriteScreen({ qid }: { qid: string }) {
     const body = text.trim();
     if (!body) return;
     if (replyTo && !stance) { setMsg("Pick how you are replying: I agree, I disagree or My experience."); return; }
-    // A held draft (a post that was refused for units) keeps ITS key: the post after a purchase is the same post.
-    const held = replyTo ? undefined : heldDraft(qid);
-    if (!key.current || key.current.text !== body) key.current = { text: body, k: held && held.body === body ? held.key : uuidKey() };
+    // The held draft carries the post's Idempotency-Key (same text, same key), so a post after a purchase is the same post.
+    const held = replyTo ? undefined : saveDraft(qid, body);
+    if (!key.current || key.current.text !== body) key.current = { text: body, k: held ? held.key : uuidKey() };
     busy.current = true;
     setSending(true);
     setMsg(null);
@@ -88,7 +90,7 @@ export function WriteScreen({ qid }: { qid: string }) {
       } else {
         const r = await api.createAnswer(qid, body, { isNews: tag === "unverified" || tag === "gossip", newsTag: tag === "unverified" ? "UNVERIFIED_NEWS" : tag === "gossip" ? "GOSSIP" : undefined }, key.current.k);
         saveTyped(slot, "");
-        dropHeld(qid);
+        clearDraft(qid);
         router.push(`/q/${qid}/posted?a=${r.answer.id}`);
       }
     } catch (e) {
@@ -100,7 +102,6 @@ export function WriteScreen({ qid }: { qid: string }) {
           router.push(`/units/buy?from=${encodeURIComponent(close)}`);
           return;
         }
-        holdDraft(qid, body, key.current.k);
         router.push(outOfPostsHref(qid));
         return;
       }
@@ -111,6 +112,7 @@ export function WriteScreen({ qid }: { qid: string }) {
   return (
     <>
       {header}
+      <div className="hidden dt:block"><StageNav questionId={qid} active="speak" /></div>
       <div className="mt-4 grid gap-4 dt:max-w-[640px]">
         {replyTo ? (
           <p className="m-0 text-[15px] text-[var(--ink-2)]">{`Replying to ${whoLabel}: ${parent?.body ?? "a voice"}`.slice(0, 160)}</p>
@@ -145,7 +147,7 @@ export function WriteScreen({ qid }: { qid: string }) {
         <div className="hidden rounded-[var(--radius-l)] bg-[var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--line)] dt:block">
           <b className="mb-2 block">Your free posts</b>
           <FreePosts left={left} />
-          {c ? <p className="m-0 mt-2 text-[14px] leading-5 text-[var(--ink-2)]">{`Text and voice both count, and deleting a post does not give one back. After your free posts, a text post uses ${unitsText(c.textPostMilli)} (${nairaText}) and a voice up to ${allow?.maxVoiceSeconds ?? 10} seconds uses ${unitsText(c.voicePostMilli)} (${voiceNaira}).`}</p> : null}
+          {c ? <p className="m-0 mt-2 text-[14px] leading-5 text-[var(--ink-2)]">{`Text and voice both count, and deleting a post does not give one back. After your free posts, a text post uses ${unitsText(c.textPostMilli)} (${nairaText}) and a voice up to ${allow?.maxVoiceSeconds} seconds uses ${unitsText(c.voicePostMilli)} (${voiceNaira}).`}</p> : null}
         </div>
         <p className="m-0 text-center text-[13px] text-[var(--ink-2)]">Reading, listening, liking and sharing are always free.</p>
       </div>

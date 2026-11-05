@@ -2,13 +2,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Avatar, Banner, Button, EmptyState, FreePosts, Skeleton, Tabs } from "@/components/vx";
+import { Avatar, Banner, Button, EmptyState, FreePosts, Icon, Sheet, Skeleton, Tabs } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, AnswerSort, Question } from "@/lib/api/talk";
 import { closesIn } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
-import { Stage } from "@/features/stage/Stage";
+import { StageNav } from "@/features/stage/StageNav";
 import { AppBar, BarButton, Problem, ShellTweaks, failText, useSignedIn } from "./lib";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 
@@ -28,6 +28,7 @@ export function QuestionScreen({ id }: { id: string }) {
   const [cfgSeconds, setCfgSeconds] = useState<number | null>(null);
   useEffect(() => { getPublicConfig().then((c) => setCfgSeconds(c.voiceFreeSeconds), () => undefined); }, []);
   const seconds = allow?.maxVoiceSeconds ?? cfgSeconds;
+  const [sortOpen, setSortOpen] = useState(false);
   const [saved, setSaved] = useState<boolean | null>(null);
   useEffect(() => { if (q.state === "ready") setSaved(q.data.iSaved); }, [q]);
 
@@ -81,20 +82,29 @@ export function QuestionScreen({ id }: { id: string }) {
   return (
     <>
       <ShellTweaks tabBar />
-      <AppBar title={daily ? "Today’s question" : "Question"} back="/">
+      <div className="hidden items-center justify-between dt:flex">
+        <Link href="/" className="inline-flex min-h-11 items-center gap-2 text-[14px] font-semibold text-[var(--ink)] no-underline"><Icon name="arrow-left" size={18} />Back to Home</Link>
+        <BarButton icon="share-2" label="Share this question" onClick={() => share("QUESTION", id)} />
+      </div>
+      <AppBar phoneOnly title={daily ? "Today’s question" : "Question"} back="/">
         <BarButton icon="bookmark" label="Save this question" pressed={!!saved} onClick={toggleSave} />
         <BarButton icon="share-2" label="Share this question" onClick={() => share("QUESTION", id)} />
       </AppBar>
-      <Stage questionId={id} active="discuss" counts={{ speak: short(question.voiceCount), discuss: short(question.answerCount) }} />
+      <StageNav questionId={id} active="discuss" visited={["speak"]} counts={{ speak: short(question.voiceCount), discuss: short(question.answerCount), next: short(question.proposalCount) }} />
 
       <section aria-label="The question" className="flex flex-col gap-3 pb-2 pt-5">
         <div className="flex flex-wrap items-center gap-2">
+          {daily ? <span className="hidden text-[12px] font-bold uppercase leading-4 tracking-[0.08em] text-[var(--green-text)] dt:inline">Today’s question</span> : null}
           {question.category ? <span className="text-[12px] font-bold uppercase leading-4 tracking-[0.08em] text-[var(--green-text)]">{question.category.name}</span> : null}
           {question.topicTitle ? <span className="text-[13px] font-medium leading-[18px] text-[var(--ink-2)]">{question.topicTitle}</span> : null}
         </div>
         <h1 className="m-0 font-display text-[32px] font-normal leading-9 tracking-[-0.01em] [text-wrap:balance] dt:text-[44px] dt:leading-[48px]">{question.text}</h1>
         {question.hint ? <p className="m-0 text-[17px] font-medium leading-6 text-[var(--ink-2)]">{question.hint}</p> : null}
-        <div className="flex items-center gap-[10px]">
+        <div className="hidden items-center gap-4 text-[13px] leading-[18px] text-[var(--ink-2)] dt:flex">
+          <span className="inline-flex items-center gap-1"><Icon name="mic" size={14} />{`${question.voiceCount.toLocaleString("en-NG")} ${question.voiceCount === 1 ? "voice" : "voices"} so far`}</span>
+          {close && open ? <span className="inline-flex items-center gap-1"><Icon name="clock" size={14} />{`Closes in ${close}`}</span> : null}
+        </div>
+        <div className="flex items-center gap-[10px] dt:hidden">
           {question.recentVoices.length ? (
             <span className="flex items-center" aria-hidden="true">
               {question.recentVoices.slice(0, 3).map((v, i) => (
@@ -106,22 +116,46 @@ export function QuestionScreen({ id }: { id: string }) {
         </div>
         {open ? (
           <>
-            <div className="grid grid-cols-[1fr_1fr] gap-3 dt:max-w-[420px]">
+            <div className="grid grid-cols-[1fr_1fr] gap-3 dt:hidden">
               <Button size="l" icon="mic" block href="/speak">Speak</Button>
               <Button size="l" variant="secondary" block href={writeHref}>Write instead</Button>
             </div>
-            {seconds ? <p className="m-0 text-[14px] leading-5 text-[var(--ink-2)]">{`You have ${seconds} seconds on a free post. Reading and listening are always free.`}</p> : null}
+            {seconds ? <p className="m-0 text-[14px] dt:hidden leading-5 text-[var(--ink-2)]">{`You have ${seconds} seconds on a free post. Reading and listening are always free.`}</p> : null}
           </>
         ) : (
           <Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner>
         )}
       </section>
 
-      <div className="mt-4 flex items-center justify-between border-b border-[var(--line)] pt-2">
-        <h2 className="m-0 font-display text-[20px] font-normal">Voices</h2>
-        <span className="text-[13px] text-[var(--ink-2)]">{question.answerCount.toLocaleString("en-NG")}</span>
+      {open && seconds && allow ? (
+        <section aria-label="Add your voice" className="mt-4 hidden rounded-[var(--radius-l)] bg-[var(--surface)] p-5 shadow-[inset_0_0_0_1px_var(--line)] dt:block">
+          <h2 className="m-0 text-[17px] font-bold">Add your voice</h2>
+          <p className="m-0 mt-2 text-[14px] leading-5 text-[var(--ink-2)]">{`Speak for up to ${seconds} seconds, or write up to ${allow.costs.textMaxChars} characters.`}</p>
+          <div className="mt-4 flex items-center gap-3">
+            <Button size="l" icon="mic" href="/speak">Speak</Button>
+            <Button size="l" variant="secondary" href={writeHref}>Write instead</Button>
+            <span className="ml-auto"><FreePosts left={allow.freePostsRemaining} /></span>
+          </div>
+        </section>
+      ) : null}
+      <div className="mt-4 flex items-center justify-between border-b border-[var(--line)] pt-2 dt:border-0">
+        <h2 className="m-0 font-display text-[20px] font-normal dt:hidden">Voices</h2>
+        <span className="text-[13px] text-[var(--ink-2)] dt:hidden">{question.answerCount.toLocaleString("en-NG")}</span>
       </div>
-      <div className="my-3"><Tabs label="Sort voices" items={SORTS} value={sort} onChange={(s) => setSort(s as AnswerSort)} /></div>
+      <div className="my-3 flex items-center justify-between gap-3">
+        <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--mint)] px-4 text-[15px] font-bold text-[var(--green-text)] dt:hidden" aria-label={`Sort voices: ${SORTS.find((x) => x.id === sort)!.label}. Change`} onClick={() => setSortOpen(true)}>
+          <Icon name="trending-up" size={18} />{SORTS.find((x) => x.id === sort)!.label}<Icon name="chevron-down" size={18} />
+        </button>
+        <div className="hidden dt:block"><Tabs label="Sort voices" items={SORTS} value={sort} onChange={(s) => setSort(s as AnswerSort)} /></div>
+        <span className="hidden text-[13px] text-[var(--ink-2)] dt:block">{`${question.answerCount.toLocaleString("en-NG")} ${question.answerCount === 1 ? "voice" : "voices"}`}</span>
+      </div>
+      {sortOpen ? (
+        <Sheet title="Sort voices" onClose={() => setSortOpen(false)}>
+          <div className="grid gap-2 pb-2">
+            {SORTS.map((o) => <Button key={o.id} variant={o.id === sort ? "primary" : "secondary"} size="l" block onClick={() => { setSort(o.id as AnswerSort); setSortOpen(false); }}>{o.label}</Button>)}
+          </div>
+        </Sheet>
+      ) : null}
 
       {state === "loading" ? <div className="grid gap-3" aria-busy="true"><Skeleton variant="answer" /><Skeleton variant="answer" /></div> : null}
       {state === "error" && !items.length ? <Problem error={err} onRetry={() => void loadPage()} /> : null}
@@ -143,7 +177,7 @@ export function QuestionScreen({ id }: { id: string }) {
       </div>
       {state === "error" && items.length ? <div className="mt-3"><Problem error={err} onRetry={() => void loadPage(next ?? undefined)} /></div> : null}
       {next ? <div className="mt-3"><Button variant="secondary" size="l" block loading={state === "more"} onClick={() => void loadPage(next)}>Load more voices</Button></div> : null}
-      {open ? <p className="mt-6 text-center"><Link href={writeHref} className="text-[15px] font-semibold">Add your voice in words</Link></p> : null}
+      {open ? <p className="mt-6 text-center dt:hidden"><Link href={writeHref} className="text-[15px] font-semibold">Add your voice in words</Link></p> : null}
 
       {open ? (
         <div className="fixed inset-x-0 bottom-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] z-[var(--z-sticky)] border-t border-[var(--line)] bg-[var(--surface)] px-3 py-[10px] dt:hidden">
@@ -153,7 +187,6 @@ export function QuestionScreen({ id }: { id: string }) {
           </div>
         </div>
       ) : null}
-      {open && left !== undefined ? <div className="mt-4 hidden dt:block"><FreePosts left={left} /></div> : null}
       {toast}
       {shareNode}
     </>

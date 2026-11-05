@@ -93,23 +93,39 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
     }
   }
 
+  // Reactions: the card toggles itself on every tap, so what it shows is always the last tap. The last tap is queued
+  // and sent once the one in flight settles, so the server's row ends equal to the screen.
+  const shown = useRef<string | null>(answer.myReaction);
+  const confirmed = useRef<string | null>(answer.myReaction);
   const reactBusy = useRef(false);
-  async function react(name: string) {
+  async function flush() {
     if (reactBusy.current) return;
     reactBusy.current = true;
-    const kind = kindOf(name);
-    const removing = a.myReaction === kind;
     try {
-      const s = removing ? await api.removeReaction(a.id) : await api.setReaction(a.id, kind, uuidKey());
-      upd({ ...a, myReaction: s.myReaction, reactionCount: s.reactionCount, reactionBreakdown: s.reactionBreakdown });
-      if (s.charge && !removing) onAllowance?.({ balanceMilli: s.charge.balanceMilli, ...(s.charge.usedFreeDaily && freeReactions !== undefined ? { freeReactionsLeftToday: Math.max(0, freeReactions - 1) } : {}) });
+      while (shown.current !== confirmed.current) {
+        const target = shown.current;
+        const s = target === null ? await api.removeReaction(a.id) : await api.setReaction(a.id, target as ReactionKind, uuidKey());
+        confirmed.current = s.myReaction;
+        setA((cur) => {
+          const n = { ...cur, myReaction: s.myReaction, reactionCount: s.reactionCount, reactionBreakdown: s.reactionBreakdown };
+          onChange?.(n);
+          return n;
+        });
+        if (s.charge && target !== null) onAllowance?.({ balanceMilli: s.charge.balanceMilli, ...(s.charge.usedFreeDaily && freeReactions !== undefined ? { freeReactionsLeftToday: Math.max(0, freeReactions - 1) } : {}) });
+      }
     } catch (e) {
+      shown.current = confirmed.current;
       back();
       if (isOutOfPosts(e)) push(outOfReactionsText(e), "info");
       else push(failText(e), "danger");
     } finally {
       reactBusy.current = false;
     }
+  }
+  function react(name: string) {
+    const kind = kindOf(name);
+    shown.current = shown.current === kind ? null : kind;
+    void flush();
   }
 
   function capture(e: MouseEvent<HTMLDivElement>) {
@@ -126,7 +142,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
     }
     if (el.classList.contains("vx-react__btn")) {
       if (!signedIn) { stop(); return; }
-      void react(el.querySelectorAll("span")[1]?.textContent ?? "");
+      react(el.querySelectorAll("span")[1]?.textContent ?? "");
       return;
     }
     if (label.startsWith("Reply,")) { stop(); router.push(threadHref ?? `/q/${a.questionId}/a/${a.id}`); return; }
@@ -142,7 +158,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
         <AnswerCard
           key={`${rev}-${clip.rev}`}
           {...props}
-          reaction={nameOf(a.myReaction)}
+          reaction={nameOf(confirmed.current)}
           freeReactions={freeReactions}
           unfolded={unfolded}
           compact={compact}
