@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button, Icon, Sheet, Skeleton, TextField } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Answer, ReportReason, ReportReceipt } from "@/lib/api/talk";
-import { AppBar, Problem, ShellTweaks, SignInNote, failText, useSignedIn } from "./lib";
+import { AppBar, Problem, SignInNote, failText, useSignedIn } from "./lib";
 import { ApiError } from "@/lib/api/client";
 
 const REASONS: { id: ReportReason; label: string }[] = [
@@ -42,7 +42,7 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
   const handle = ans?.author?.handle;
   const back = ans ? `/q/${ans.questionId}` : "/";
   const noun = target === "REPLY" ? "reply" : "voice";
-  const header = <><ShellTweaks tabBar={false} /><AppBar title={`Report this ${noun}`} sub={handle ? `From @${handle}` : undefined} close={back} /></>;
+  const header = <><AppBar title={`Report this ${noun}`} sub={handle ? `From @${handle}` : undefined} close={back} /></>;
   if (signedIn === false) return <>{header}<div className="mt-4"><SignInNote>Sign in to report. Reading and listening stay free.</SignInNote></div></>;
   if (err) return <>{header}<div className="mt-4"><Problem error={err} onRetry={() => setTries((n) => n + 1)} /></div></>;
   if (signedIn === null || (target === "ANSWER" && !ans)) return <>{header}<div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="answer" /></div></>;

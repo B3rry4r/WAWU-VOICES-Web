@@ -4,6 +4,7 @@ import { fmt } from "@/components/vx/helpers";
 import type { SharePage } from "@/lib/api/reach";
 import { AddVoice, LinkOpened } from "./ShareActions";
 import { ClipPlayer } from "./ClipPlayer";
+import { signInHref } from "@/lib/auth/entry-draft";
 
 const NEWS_KIND = { VERIFIED_NEWS: "verified", UNVERIFIED_NEWS: "unverified", GOSSIP: "gossip" } as const;
 const LABEL_TEXT: Record<string, string> = {
@@ -50,7 +51,10 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
       <LinkOpened code={page.code} />
       <header className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-3 dt:px-8 dt:py-5">
         <Logo height={36} />
-        <span className="hidden dt:block"><Button variant="ghost" href="/welcome">What is VOICES?</Button></span>
+        <span className="flex items-center gap-2">
+          <span className="hidden dt:block"><Button variant="ghost" href="/welcome">What is VOICES?</Button></span>
+          <Button variant="secondary" href={signInHref(`/s/${page.code}`)}>Sign in</Button>
+        </span>
       </header>
       <div className="mx-auto grid max-w-[1100px] gap-6 px-4 pb-40 dt:grid-cols-[1fr_340px] dt:px-8 dt:pb-16">
         <main className="flex min-w-0 flex-col gap-5">

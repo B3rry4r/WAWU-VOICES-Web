@@ -9,7 +9,7 @@ import {
 } from "@/lib/api/profile";
 import { putBytes } from "./voiceCardRecorder";
 import { AVATAR_UPLOAD_LIVE } from "./flags";
-import { RailPortal } from "./RailPortal";
+import { Rail } from "@/components/shell/ShellSlots";
 import { ClipPlayer } from "./ClipPlayer";
 import { DeletionPending } from "./DeletionPending";
 import { LoadError, LoadingBlock, NeedsProfileNotice, SignedOutNotice, errorLine } from "./states";
@@ -145,7 +145,7 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
   const name = profile.displayName || profile.handle;
 
   return (
-    <div className="pf-fullscreen">
+    <>
       <div className="pf-edit">
         <header className="pf-edit__bar">
           <IconButton className="pf-only-phone" icon="x" label="Cancel without saving" onClick={() => router.push("/profile")} />
@@ -189,7 +189,7 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
         {saved ? <div className="pf-toast"><Toast tone="success" icon="circle-check">Profile saved</Toast></div> : null}
       </div>
 
-      <RailPortal>
+      <Rail>
         <section className="pf-panel" aria-label="Preview">
           <h2 className="vx-eyebrow pf-eyebrow">Preview</h2>
           <p className="pf-label">How others see you</p>
@@ -204,8 +204,8 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
           <p className="pf-hint">{`${profile.voiceCount} ${profile.voiceCount === 1 ? "voice" : "voices"} · ${me.reactionsReceived.toLocaleString("en-NG")} reactions · ${me.savedCount} saved`}</p>
           <p className="pf-hint">Your units, free posts and referral code stay private. Only you see them.</p>
         </section>
-      </RailPortal>
-    </div>
+      </Rail>
+    </>
   );
 }
 

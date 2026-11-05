@@ -8,6 +8,7 @@ const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 import { PostResultPage } from "@/features/results/PostResultPage";
+import { hidesTabBar } from "@/components/shell/nav";
 
 type Call = { url: string; method: string; headers: Headers; body: unknown };
 let calls: Call[];
@@ -108,12 +109,12 @@ describe("PostResultPage", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("hides the phone tab bar only while the form is on screen", async () => {
-    const { unmount } = render(<PostResultPage threadId="t1" />);
+  it("leaves the phone tab bar to the shell: the page injects no style, and the shell lists the route as full-screen", async () => {
+    render(<PostResultPage threadId="t1" />);
     await screen.findByRole("button", { name: "Post these numbers" });
-    expect(document.querySelector("style")?.textContent).toContain(".sh-bottombar{display:none}");
-    unmount();
-    expect(Array.from(document.querySelectorAll("style")).some((e) => e.textContent?.includes("sh-bottombar"))).toBe(false);
+    expect(document.querySelector("style")).toBeNull();
+    expect(hidesTabBar("/live/t1/post")).toBe(true);
+    expect(hidesTabBar("/live/t1")).toBe(false);
   });
 
   it("asks a guest to sign in and shows no form", async () => {

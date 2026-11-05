@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { Rail } from "@/components/shell/ShellSlots";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Banner, Button, Icon, Skeleton, StageBar } from "@/components/vx";
 import { short } from "@/components/vx/helpers";
@@ -32,18 +32,11 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
   failed: { title: "Recording did not start", body: "Tap Try again. If it keeps happening, write your answer instead." },
 };
 
-function useRail(): HTMLElement | null {
-  const [el, setEl] = useState<HTMLElement | null>(null);
-  useEffect(() => setEl(document.querySelector<HTMLElement>(".sh-rail")), []);
-  return el;
-}
-
 export function SpeakScreen({ questionId }: { questionId?: string }) {
   const router = useRouter();
   const pathname = usePathname() ?? "/speak";
   const params = useSearchParams();
   const qParam = questionId ?? params.get("q") ?? undefined;
-  const rail = useRail();
 
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [info, setInfo] = useState<Info | null>(null);
@@ -454,12 +447,10 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }
 
   // ---- render ----
-  const chrome = <style>{`@media (max-width:1023px){.sh-topbar,.sh-bottombar{display:none}}`}</style>;
   if (loadErr) {
     const gone = loadErr instanceof ApiError && loadErr.status === 404;
     return (
       <div className="sp-page sp-page--plain">
-        {chrome}
         <div className="sp-plain">
           <Banner tone={loadErr instanceof ApiError && loadErr.status === 0 ? "offline" : "danger"} title={gone ? "We could not find this question" : "This did not load"} action={gone ? undefined : "Try again"} onAction={() => setReload((n) => n + 1)}>
             {gone ? "It may have been removed." : loadErr instanceof ApiError && loadErr.status === 0 ? "Check your connection and try again." : "Something went wrong on our side. Try again in a moment."}
@@ -472,7 +463,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   if (!info || !question || !config || !qid) {
     return (
       <div className="sp-page" aria-busy="true">
-        {chrome}
         <div className="sp-loading"><Skeleton variant="tile" /></div>
       </div>
     );
@@ -480,7 +470,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   if (!open) {
     return (
       <div className="sp-page sp-page--plain">
-        {chrome}
         <div className="sp-plain">
           <Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner>
           <Button variant="secondary" href={`/q/${qid}`}>Listen to the voices</Button>
@@ -569,7 +558,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   return (
     <div className="sp-page">
-      {chrome}
       <PhoneBar onClose={close} sub={sub} />
       <div className="sp-body">
         <div className="sp-head hidden dt:block">
@@ -586,7 +574,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           </div>
         ) : null}
       </div>
-      {rail ? createPortal(<RecordingTimeCard freeLeft={freeLeft} total={freeTotal} freeSeconds={freeSeconds} offers={offers} />, rail) : null}
+      <Rail><RecordingTimeCard freeLeft={freeLeft} total={freeTotal} freeSeconds={freeSeconds} offers={offers} /></Rail>
       {sheet && offers.length > 0 ? (
         <ExtraVoiceSheet offers={offers} freeSeconds={freeSeconds} initial={sheet.kind} hasTake={sheet.hasTake} takeSeconds={take?.seconds} onRerecord={() => { setSheet(null); dropTake(true); }} paying={paying} error={sheetErr} onPay={(o, m) => void pay(o, m)} onClose={() => { setSheet(null); setSheetErr(null); }} />
       ) : null}

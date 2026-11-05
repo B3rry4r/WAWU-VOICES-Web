@@ -9,7 +9,7 @@ import { closesIn } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
-import { AppBar, BarButton, Problem, ShellTweaks, failText, useSignedIn } from "./lib";
+import { AppBar, BarButton, Problem, failText, useSignedIn } from "./lib";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 
 const short = (n: number) => (n >= 1e4 ? `${Math.round(n / 100) / 10}K` : n.toLocaleString("en-NG"));
@@ -52,12 +52,12 @@ export function QuestionScreen({ id }: { id: string }) {
   }, [id, sort]);
   useEffect(() => { void loadPage(); }, [loadPage, signedIn]);
 
-  if (q.state === "loading" || signedIn === null) return <><ShellTweaks tabBar /><AppBar title="Question" back="/" /><div className="mt-4 grid gap-4" aria-busy="true"><Skeleton variant="tile" /><Skeleton variant="answer" /></div></>;
+  if (q.state === "loading" || signedIn === null) return <><AppBar title="Question" back="/" /><div className="mt-4 grid gap-4" aria-busy="true"><Skeleton variant="tile" /><Skeleton variant="answer" /></div></>;
   if (q.state === "error") {
     const gone = "status" in q.error && (q.error as { status: number }).status === 404;
     return (
       <>
-        <ShellTweaks tabBar />
+        
         <AppBar title="Question" back="/" />
         <div className="mt-4">
           {gone ? <EmptyState icon="message-square" title="We could not find this question" body="It may have been removed, or the link is wrong." action="Back to Home" onAction={() => router.push("/")} /> : <Problem error={q.error} onRetry={q.retry} />}
@@ -81,7 +81,7 @@ export function QuestionScreen({ id }: { id: string }) {
   const writeHref = `/q/${id}/write`;
   return (
     <>
-      <ShellTweaks tabBar />
+      
       <div className="hidden items-center justify-between dt:flex">
         <Link href="/" className="inline-flex min-h-11 items-center gap-2 text-[14px] font-semibold text-[var(--ink)] no-underline"><Icon name="arrow-left" size={18} />Back to Home</Link>
         <BarButton icon="share-2" label="Share this question" onClick={() => share("QUESTION", id)} />

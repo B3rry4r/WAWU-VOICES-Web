@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { Banner, Icon, IconButton } from "@/components/vx";
-import { RailPortal } from "./RailPortal";
+import { Rail } from "@/components/shell/ShellSlots";
 import "./profile.css";
 
 type IconName = Parameters<typeof Icon>[0]["name"];
@@ -47,13 +47,13 @@ export function RulesPage() {
         <ol className="pf-steps">{STEPS.map((t, i) => <li key={i}><span className="pf-steps__n">{i + 1}</span><span>{t}</span></li>)}</ol>
         <div className="pf-only-phone">{named}</div>
       </article>
-      <RailPortal>
+      <Rail>
         <section className="pf-panel" aria-label="Help">
           <h2 className="vx-eyebrow pf-eyebrow">Help</h2>
           {named}
           <div className="pf-always"><b>Always free</b><span>Reading, listening, liking and sharing never cost anything. Paid posts always show their price first.</span></div>
         </section>
-      </RailPortal>
+      </Rail>
     </div>
   );
 }

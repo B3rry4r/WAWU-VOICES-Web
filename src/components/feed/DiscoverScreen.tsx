@@ -1,14 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge, Icon, TopicChip, TrendingList } from "@/components/vx";
 import { PhoneBar, Rail } from "@/components/shell/ShellSlots";
 import { getCategories, getCurrentTopic, getNewsTags, getTodaysQuestion, getTrendingQuestions } from "@/lib/api/feed";
 import { getAdPlacement, getFlashPolls } from "@/lib/api/polls";
 import { DRAWN, categoryLook } from "@/lib/categories";
 import { isSignedIn } from "@/lib/api/auth";
-import { BUILT } from "@/lib/routes";
 import { shortCount } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
@@ -40,7 +39,9 @@ function CategoryTile({ slug, name, voices, wide }: { slug: string; name: string
 export function DiscoverScreen() {
   const router = useRouter();
   const [all, setAll] = useState(false);
-  const signedIn = typeof window !== "undefined" && isSignedIn();
+  // Browser-only state is read in an effect so the server render and the first client render match (no hydration mismatch).
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => setSignedIn(isSignedIn()), []);
   const load = useLoad(async () => {
     const [cats, topic, today, trending, flash, tags, ad] = await Promise.all([
       getCategories(),
@@ -105,22 +106,14 @@ export function DiscoverScreen() {
                 News posts, sorted by their tag.<span className="hidden dt:inline"> Follow the ones you trust.</span>
               </p>
             </div>
-            {BUILT.news ? (
-              <Link href="/news" className="inline-flex min-h-[44px] items-center gap-1 text-[15px] font-semibold text-[var(--green-text)] no-underline dt:hidden">Open<Icon name="chevron-right" size={18} /></Link>
-            ) : null}
+            <Link href="/news" className="inline-flex min-h-[44px] items-center gap-1 text-[15px] font-semibold text-[var(--green-text)] no-underline dt:hidden">Open<Icon name="chevron-right" size={18} /></Link>
           </div>
           <div className="flex flex-wrap gap-2">
-            {tags.map((t) =>
-              BUILT.news ? (
-                <Link key={t.tag} href={`/news?tag=${t.tag}`} className="vx-chip no-underline"><Icon name={TAG_ICON[t.tag]} size={16} strokeWidth={2.25} />{t.label}<span className="vx-chip__count">{shortCount(t.count)}</span></Link>
-              ) : (
-                <span key={t.tag} className="vx-chip"><Icon name={TAG_ICON[t.tag]} size={16} strokeWidth={2.25} />{t.label}<span className="vx-chip__count">{shortCount(t.count)}</span></span>
-              ),
-            )}
+            {tags.map((t) => (
+              <Link key={t.tag} href={`/news?tag=${t.tag}`} className="vx-chip no-underline"><Icon name={TAG_ICON[t.tag]} size={16} strokeWidth={2.25} />{t.label}<span className="vx-chip__count">{shortCount(t.count)}</span></Link>
+            ))}
           </div>
-          {BUILT.news ? (
-            <Link href="/news" className="hidden min-h-[44px] items-center gap-1 text-[15px] font-semibold text-[var(--green-text)] no-underline dt:inline-flex">Open the Newsroom<Icon name="chevron-right" size={18} /></Link>
-          ) : null}
+          <Link href="/news" className="hidden min-h-[44px] items-center gap-1 text-[15px] font-semibold text-[var(--green-text)] no-underline dt:inline-flex">Open the Newsroom<Icon name="chevron-right" size={18} /></Link>
         </section>
 
         <div className="order-5 dt:order-3">{week}</div>

@@ -7,13 +7,12 @@ import { listMyAnswers, listSaved, type Me } from "@/lib/api/profile";
 import { PagedList } from "./PostList";
 import { PostRow } from "./PostRow";
 import { ProfileCard } from "./ProfileCard";
-import { RailPortal } from "./RailPortal";
+import { Rail } from "@/components/shell/ShellSlots";
 import { DeletionPending } from "./DeletionPending";
 import { LoadError, LoadingBlock, NeedsProfileNotice, SignedOutNotice } from "./states";
 import { applyTheme } from "./theme";
 import { useMe } from "./useMe";
 import { unitsFigure } from "./format";
-import { WALLET_LIVE } from "./flags";
 import { QuestionRow } from "./SavedRow";
 import "./profile.css";
 
@@ -44,7 +43,7 @@ function Aside({ me }: { me: Me }) {
         <h2 className="vx-eyebrow pf-eyebrow">Voice Units</h2>
         <p className="pf-big"><b>{unitsFigure(a.balanceMilli)}</b> <span>Voice Units</span></p>
         <FreePosts left={a.freePostsRemaining} />
-        {WALLET_LIVE ? <Link href="/wallet" className="vx-link pf-panel__link">Open Voice Units</Link> : null}
+        <Link href="/units" className="vx-link pf-panel__link">Open Voice Units</Link>
       </section>
       <section className="pf-panel" aria-label="Your referral code">
         <h2 className="vx-eyebrow pf-eyebrow">Your referral code</h2>
@@ -89,12 +88,7 @@ export function MePage() {
       />
       <div className="pf-phone-only">
         <div className="pf-linkpanel">
-          {WALLET_LIVE ? <LinkRow href="/wallet" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} units · ${a.freePostsRemaining} free posts left`}>Voice Units</LinkRow> : (
-            <div className="pf-linkrow pf-linkrow--static">
-              <Icon name="wallet" size={22} />
-              <span className="pf-linkrow__txt"><b>Voice Units</b><span>{`${unitsFigure(a.balanceMilli)} units · ${a.freePostsRemaining} free posts left`}</span></span>
-            </div>
-          )}
+          <LinkRow href="/units" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} units · ${a.freePostsRemaining} free posts left`}>Voice Units</LinkRow>
           <LinkRow href="/settings" icon="settings">Settings</LinkRow>
           <LinkRow href="/settings/legal/rules" icon="shield-check">Community rules</LinkRow>
         </div>
@@ -117,7 +111,7 @@ export function MePage() {
           />
         )}
       </div>
-      <RailPortal><Aside me={me} /></RailPortal>
+      <Rail><Aside me={me} /></Rail>
     </div>
   );
 }

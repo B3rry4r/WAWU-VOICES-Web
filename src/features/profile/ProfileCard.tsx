@@ -5,7 +5,6 @@ import { getPlayUrl, type Profile } from "@/lib/api/profile";
 import { isSignedIn } from "@/lib/api/auth";
 import { makePlayer, playWithResign } from "./playback";
 import { joinedLabel, placeLabel, unitsFigure } from "./format";
-import { WALLET_LIVE } from "./flags";
 
 /** Plays the Voice Card clip (the person's 10 second bio) through the play route; the ProfileHeader shows it and asks. */
 function useVoiceCard(clipId: string | undefined) {
@@ -67,7 +66,7 @@ export function ProfileCard(p: {
       own={p.own}
       units={p.own ? units : undefined}
       freeLeft={p.freePosts}
-      unitsHref={WALLET_LIVE ? "/wallet" : false}
+      unitsHref="/units"
       unitsState="plain"
       referral={p.own ? p.referral : undefined}
       copied={copied}

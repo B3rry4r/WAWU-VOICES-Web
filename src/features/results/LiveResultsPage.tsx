@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Rail } from "@/components/shell/ShellSlots";
 import { Badge, Button, EmptyState, Icon, ResultComment, Skeleton, Tabs, Toast } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { getResultThread, listResultPosts } from "@/lib/api/results";
 import type { ResultFilter, ResultPost, ResultThread } from "@/lib/api/results";
 import { ShareSheet } from "@/features/share";
 import { toComment } from "./map";
-import { AppBar, DesktopBack, LabelsPanel, RailPortal, longDate, shortDate, useSignedIn } from "./shared";
+import { AppBar, DesktopBack, LabelsPanel, longDate, shortDate, useSignedIn } from "./shared";
 
 export const POLL_MS = 20000;
 
@@ -182,7 +183,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
       )}
 
       {sharing ? <ShareSheet objectType="RESULT_THREAD" objectId={threadId} onClose={() => setSharing(false)} /> : null}
-      <RailPortal>
+      <Rail>
         {canPost ? (
           <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="Were you at a polling unit?">
             <h2 className="m-0 font-display text-[18px] font-normal leading-6">Were you at a polling unit?</h2>
@@ -191,7 +192,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
           </section>
         ) : null}
         <LabelsPanel />
-      </RailPortal>
+      </Rail>
     </>
   );
 }

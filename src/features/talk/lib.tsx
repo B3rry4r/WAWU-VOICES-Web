@@ -15,13 +15,6 @@ export function useSignedIn(): boolean | null {
   return v;
 }
 
-/** Hides the shell's phone bars the page replaces: always the logo bar (the page has its own app bar, V-5), the tab bar on full-screen tasks. */
-export function ShellTweaks({ tabBar }: { tabBar: boolean }) {
-  return (
-    <style>{`@media (max-width:1023px){.sh-topbar{display:none}${tabBar ? "" : ".sh-bottombar{display:none}.sh-main{padding-bottom:calc(var(--space-8) + env(safe-area-inset-bottom,0px))}"}}`}</style>
-  );
-}
-
 export function uuidKey(): string {
   const c = typeof crypto !== "undefined" ? crypto : undefined;
   return c && typeof c.randomUUID === "function" ? c.randomUUID() : `k${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;

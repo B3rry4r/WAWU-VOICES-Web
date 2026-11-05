@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Rail } from "@/components/shell/ShellSlots";
 import { Avatar, Banner, Button, EmptyState, Icon, NewsTag, Sheet, Skeleton } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { flagNewsTag, getNewsPost, listNews, listReplies } from "@/lib/api/news";
 import type { NewsAnswer, NewsReply } from "@/lib/api/news";
-import { RailPortal, ago, lagosClock, useSignedIn } from "@/features/results/shared";
+import { ago, lagosClock, useSignedIn } from "@/features/results/shared";
 import { NewsCard } from "./NewsCard";
 import { ClipPlayer } from "./ClipPlayer";
 import { kindOf } from "./tags";
@@ -164,7 +165,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
         </Sheet>
       ) : null}
 
-      <RailPortal>
+      <Rail>
         {post?.news ? (
           <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="About this post">
             <h2 className="m-0 font-display text-[18px] font-normal leading-6">About this post</h2>
@@ -186,7 +187,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
             ))}
           </section>
         ) : null}
-      </RailPortal>
+      </Rail>
     </>
   );
 }

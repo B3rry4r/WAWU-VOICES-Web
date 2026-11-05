@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { Icon, VerifyMark } from "@/components/vx";
 import type { IconName } from "@/components/vx";
@@ -41,15 +40,6 @@ export function DesktopBack({ href, label }: { href: string; label: string }) {
       {label}
     </Link>
   );
-}
-
-/** Puts content in the desktop right rail (the shell's empty aside). The rail is hidden below 1024 px, so phones never see it. */
-export function RailPortal({ children }: { children: ReactNode }) {
-  const [node, setNode] = useState<Element | null>(null);
-  useEffect(() => {
-    setNode(document.querySelector(".sh-rail"));
-  }, []);
-  return node ? createPortal(children, node) : null;
 }
 
 export function LabelsPanel() {

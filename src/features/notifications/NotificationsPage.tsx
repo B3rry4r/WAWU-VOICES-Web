@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { signInHref } from "@/lib/auth/entry-draft";
 import { useCallback, useEffect, useState } from "react";
 import type { MouseEvent } from "react";
 import { Button, EmptyState, NotificationRow, Skeleton, Tabs } from "@/components/vx";
@@ -137,7 +138,7 @@ export function NotificationsPage() {
       <div className="flex flex-col gap-4">
         {bar}
         {title}
-        <EmptyState icon="bell" title="Sign in to see your notifications" body="Replies, reactions and poll results show up here once you have an account." />
+        <EmptyState icon="bell" title="Sign in to see your notifications" body="Replies, reactions and poll results show up here once you have an account." action="Sign in" onAction={() => router.push(signInHref("/notifications"))} />
       </div>
     );
   }

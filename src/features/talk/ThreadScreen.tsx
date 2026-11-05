@@ -8,7 +8,7 @@ import type { Allowances, Answer, Reply, ReplyStance } from "@/lib/api/talk";
 import { ago } from "@/lib/feed-format";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
-import { AppBar, BarButton, Problem, ShellTweaks, failText, useClipPlayback, useSignedIn } from "./lib";
+import { AppBar, BarButton, Problem, failText, useClipPlayback, useSignedIn } from "./lib";
 import { ReplyComposer } from "./ReplyComposer";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 
@@ -80,8 +80,8 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
     try { await api.deleteReply(r.id); setItems((c) => c.filter((x) => x.id !== r.id)); push("Reply deleted.", "success"); void load(); } catch (e) { push(failText(e), "danger"); }
   }
 
-  if (a.state === "loading") return <><ShellTweaks tabBar /><AppBar title="Replies" back={`/q/${qid}`} /><div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="answer" /><Skeleton variant="answer" /></div></>;
-  if (a.state === "error") return <><ShellTweaks tabBar /><AppBar title="Replies" back={`/q/${qid}`} /><div className="mt-4"><Problem error={a.error} onRetry={a.retry} /></div></>;
+  if (a.state === "loading") return <><AppBar title="Replies" back={`/q/${qid}`} /><div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="answer" /><Skeleton variant="answer" /></div></>;
+  if (a.state === "error") return <><AppBar title="Replies" back={`/q/${qid}`} /><div className="mt-4"><Problem error={a.error} onRetry={a.retry} /></div></>;
   const ans = a.data;
   const who = ans.author ? `@${ans.author.handle}` : "Anonymous";
   const open = question ? question.open : true;
@@ -95,7 +95,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
   ];
   return (
     <>
-      <ShellTweaks tabBar />
+      
       <AppBar title="Replies" sub={`${ans.replyCount.toLocaleString("en-NG")} ${ans.replyCount === 1 ? "reply" : "replies"} to ${who}`} back={`/q/${qid}`}>
         <BarButton icon="share-2" label="Share this voice" onClick={() => share("ANSWER", aid)} />
       </AppBar>

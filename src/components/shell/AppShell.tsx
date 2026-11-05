@@ -7,11 +7,12 @@ import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react"
 import { DeskSearch } from "./DeskSearch";
 import { ShellSlotsContext } from "./ShellSlots";
 import { Bell, UnreadProvider } from "./Bell";
+import { GuestEntry } from "./GuestEntry";
 import { NAV, activeNav, hidesTabBar, isChromeless, onWeekly, showsLogoBar, type NavId } from "./nav";
 
 const ICONS: Record<Exclude<NavId, "speak">, typeof House> = { home: House, discover: Compass, profile: User };
 
-/** Messages never (V-10); the country pill comes back when its screen is built. The bell shows for a signed-in person.
+/** Messages never (V-10). The bell shows for a signed-in person; a guest gets the country pill and Sign in (GuestEntry).
  *  Phone chrome below 1024 px, desktop chrome (left nav, centre, right rail) from 1024 px. Page content goes in children; `rail` fills the right rail. */
 export function AppShell({ children, rail }: { children: ReactNode; rail?: ReactNode }) {
   const [railEl, setRailEl] = useState<HTMLElement | null>(null);
@@ -21,6 +22,8 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
     setClaims((n) => n + 1);
     return () => setClaims((n) => n - 1);
   }, []);
+  // The same element every render, so the ref callbacks' state updates never re-render the search row's Suspense boundary.
+  const deskSearch = useMemo(() => <DeskSearch />, []);
   const slots = useMemo(() => ({ railEl, barEl, claimBar }), [railEl, barEl, claimBar]);
   const pathname = usePathname() ?? "/";
   const active = activeNav(pathname);
@@ -31,7 +34,6 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
 
   return (
     <UnreadProvider>
-    <ShellSlotsContext.Provider value={slots}>
     <div className="sh-root">
       {/* desktop left nav */}
       <nav className="sh-desk sh-sidenav" aria-label="Main">
@@ -72,12 +74,17 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
           </Link>
         )}
         <div ref={setBarEl} className="sh-topbar__slot" />
-        {logoBar ? <Bell /> : null}
+        {logoBar ? <><GuestEntry /><Bell /></> : null}
       </header>
 
       <div className="sh-centre">
-        <DeskSearch />
-        <main className={bare ? "sh-main sh-main--bare" : "sh-main"}>{children}</main>
+        {deskSearch}
+        {/* The slots provider wraps only the page. The ref callbacks below set state while the shell hydrates, and a context
+            change above DeskSearch's Suspense boundary would hand it an update before it finished hydrating: React then throws the
+            server HTML away and re-renders the root (#423), dropping the pre-paint data-theme with it. */}
+        <ShellSlotsContext.Provider value={slots}>
+          <main className={bare ? "sh-main sh-main--bare" : "sh-main"}>{children}</main>
+        </ShellSlotsContext.Provider>
       </div>
 
       <aside ref={setRailEl} className="sh-desk sh-rail" aria-label="This week">{rail}</aside>
@@ -103,7 +110,6 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
         </nav>
       )}
     </div>
-    </ShellSlotsContext.Provider>
     </UnreadProvider>
   );
 }

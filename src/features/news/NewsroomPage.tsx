@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Rail } from "@/components/shell/ShellSlots";
 import { Button, EmptyState, Icon, Sheet, Skeleton, TopicChip } from "@/components/vx";
 import { listNews, listNewsTags, setTagFollows } from "@/lib/api/news";
 import type { NewsAnswer, NewsTag, TagInfo } from "@/lib/api/news";
-import { RailPortal, useSignedIn } from "@/features/results/shared";
+import { useSignedIn } from "@/features/results/shared";
 import { NewsCard } from "./NewsCard";
 import { SERVED } from "./served";
 import { Switch, TAGS, TagMeanings, useDesktop } from "./tags";
@@ -139,7 +140,7 @@ export function NewsroomPage() {
         </Sheet>
       ) : null}
 
-      <RailPortal>
+      <Rail>
         <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="What the tags mean">
           <h2 className="m-0 font-display text-[18px] font-normal leading-6">What the tags mean</h2>
           <TagMeanings withFlagHint />
@@ -151,7 +152,7 @@ export function NewsroomPage() {
             <p className="m-0 text-[14px] leading-5 text-ink-2">We tell you when a post with that tag goes up. Never on the lock screen.</p>
           </section>
         ) : null}
-      </RailPortal>
+      </Rail>
     </>
   );
 }

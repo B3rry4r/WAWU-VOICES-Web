@@ -93,7 +93,9 @@ function MoreSheet({ person, onClose, onBlocked }: { person: PublicProfile["prof
 
 export function PersonPage({ segment }: { segment: string }) {
   const router = useRouter();
-  const signedIn = typeof window !== "undefined" && isSignedIn();
+  // Read in an effect: the server render and the first client render must match.
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => setSignedIn(isSignedIn()), []);
   const [who, setWho] = useState<Resolved>({ status: "loading" });
   const [data, setData] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<unknown>(null);

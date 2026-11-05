@@ -7,7 +7,7 @@ import * as api from "@/lib/api/talk";
 import { API_BASE } from "@/lib/api/config";
 import type { Allowances, Answer, ShareLink } from "@/lib/api/talk";
 import { useLoad } from "@/components/feed/useLoad";
-import { AppBar, Problem, ShellTweaks, SignInNote, failText, useSignedIn } from "./lib";
+import { AppBar, Problem, SignInNote, failText, useSignedIn } from "./lib";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 
 export function PostedScreen({ qid }: { qid: string }) {
@@ -38,7 +38,7 @@ export function PostedScreen({ qid }: { qid: string }) {
     return () => { live = false; };
   }, [aid, signedIn]);
 
-  const header = <><ShellTweaks tabBar /><AppBar title="Posted" sub="Today’s question" close={`/q/${qid}`} /></>;
+  const header = <><AppBar title="Posted" sub="Today’s question" close={`/q/${qid}`} /></>;
   if (signedIn === false) return <>{header}<div className="mt-4"><SignInNote>Sign in to see your posts.</SignInNote></div></>;
   if (a.state === "loading") return <>{header}<div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="answer" /></div></>;
   if (a.state === "error") return <>{header}<div className="mt-4"><Problem error={a.error} onRetry={a.retry} /></div></>;

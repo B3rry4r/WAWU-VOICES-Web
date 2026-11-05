@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Rail } from "@/components/shell/ShellSlots";
 import { useRouter } from "next/navigation";
 import { Banner, Button, EmptyState, Icon, ResultComment, TextField } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
@@ -8,7 +9,7 @@ import { createResultPost, getMyHandle, getResultThread, isResultPhotoMime, uplo
 import { EMPTY_FORM, MAX_PHOTO_BYTES, postErrorMessage, serverFieldErrors, toRequest, validate } from "./form";
 import type { FieldErrors, PostForm } from "./form";
 import { SERVED } from "@/features/news/served";
-import { AppBar, DesktopBack, LabelsPanel, RailPortal, useSignedIn } from "./shared";
+import { AppBar, DesktopBack, LabelsPanel, useSignedIn } from "./shared";
 
 function newKey(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
@@ -111,8 +112,6 @@ export function PostResultPage({ threadId }: { threadId: string }) {
 
   return (
     <>
-      {/* A pay or write screen is a full-screen task (V-5): no phone tab bar. The shell's own list (nav.ts, fenced) should name /live/*\/post; until it does, this hides the bar here. */}
-      <style>{".sh-bottombar{display:none}"}</style>
       <AppBar href={back} back="close" backLabel="Close" title="Post the numbers you see" subtitle="Polling unit results" />
       <DesktopBack href={back} label="Back to live results" />
       <form
@@ -183,9 +182,9 @@ export function PostResultPage({ threadId }: { threadId: string }) {
           <p className="m-0 text-center text-[13px] leading-4 text-ink-2">Posting results is free. It does not use your free posts or units.</p>
         </div>
       </form>
-      <RailPortal>
+      <Rail>
         <LabelsPanel />
-      </RailPortal>
+      </Rail>
     </>
   );
 }

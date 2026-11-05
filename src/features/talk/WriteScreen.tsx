@@ -8,7 +8,7 @@ import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
 import { clearDraft, saveDraft } from "@/features/units/draft";
 import { StageNav } from "@/features/stage/StageNav";
-import { AppBar, Problem, ShellTweaks, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
+import { AppBar, Problem, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -44,7 +44,7 @@ export function WriteScreen({ qid }: { qid: string }) {
   }, [qid, replyTo, signedIn, slot, tries]);
 
   const close = replyTo ? `/q/${qid}/a/${replyTo}` : `/q/${qid}`;
-  const header = <><ShellTweaks tabBar={false} /><AppBar title={replyTo ? "Your reply" : "Your answer"} sub="Today’s question" close={close} /></>;
+  const header = <><AppBar title={replyTo ? "Your reply" : "Your answer"} sub="Today’s question" close={close} /></>;
   if (signedIn === false) {
     return <>{header}<div className="mt-4"><SignInNote>Reading and listening are free. Sign in to post your answer.</SignInNote></div></>;
   }
