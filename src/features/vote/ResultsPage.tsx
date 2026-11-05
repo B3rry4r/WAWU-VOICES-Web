@@ -1,0 +1,174 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { Banner, Button, Composer, EmptyState, Poll } from "@/components/vx";
+import { ShareSheet } from "@/features/share";
+import { StageNav } from "@/features/stage/StageNav";
+import { ApiError } from "@/lib/api/client";
+import { explainMyVote, getPollResults, getQuestion, loadQuestionPolls, newKey } from "@/lib/api/vote";
+import type { Poll as PollT, PollResults, Question } from "@/lib/api/vote";
+import { closesIn } from "@/lib/feed-format";
+import { AdBanner } from "./AdBanner";
+import { AppBar, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
+import { pickPoll } from "./poll-pick";
+import { useRouter } from "next/navigation";
+
+/** How often live results are read again: the API caches them for 2 to 5 seconds (CONVENTIONS, Ranking and caching). */
+export const RESULTS_POLL_MS = 5000;
+
+interface Data {
+  question: Question;
+  poll: PollT | null;
+  results: PollResults | null;
+  hidden: boolean;
+}
+
+async function loadAll(questionId: string): Promise<Data> {
+  const question = await getQuestion(questionId);
+  const poll = pickPoll(await loadQuestionPolls(question)) ?? null;
+  if (!poll) return { question, poll: null, results: null, hidden: false };
+  try {
+    return { question, poll, results: await getPollResults(poll.id), hidden: false };
+  } catch (e) {
+    // The API keeps counts back until the person has voted or the poll has closed.
+    if (e instanceof ApiError && e.status === 403) return { question, poll, results: null, hidden: true };
+    throw e;
+  }
+}
+
+/** /q/[id]/results: the bars, live while the poll is open, and Explain my vote. */
+export function ResultsPage({ questionId }: { questionId: string }) {
+  const router = useRouter();
+  const signedIn = useSignedIn();
+  const load = useLoadWhen<Data>(() => loadAll(questionId), [questionId, signedIn], signedIn !== null);
+  const [live, setLive] = useState<PollResults | null>(null);
+  const [share, setShare] = useState(false);
+  const pollId = load.state === "ready" ? load.data.poll?.id : undefined;
+  const open = load.state === "ready" && load.data.poll?.status === "OPEN" && !load.data.hidden;
+
+  // Live results: read again every few seconds while the poll is open and the tab is visible. Never faked.
+  useEffect(() => {
+    if (!open || !pollId) return undefined;
+    let stop = false;
+    const tick = () => {
+      if (document.visibilityState === "hidden") return;
+      getPollResults(pollId).then(
+        (r) => !stop && setLive(r),
+        () => undefined,
+      );
+    };
+    const id = setInterval(tick, RESULTS_POLL_MS);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, [open, pollId]);
+
+  const q = load.state === "ready" ? load.data.question : null;
+  const poll = load.state === "ready" ? load.data.poll : null;
+  const results = live ?? (load.state === "ready" ? load.data.results : null);
+  const shareBtn = poll && results ? <ShareButton label="Share the result" onClick={() => setShare(true)} /> : null;
+  const voted = !!(results?.myVote && results.myVote.length) || !!poll?.myVote;
+  const mineId = results?.myVote?.[0] ?? poll?.myVote?.[0];
+  const mineLabel = poll?.options.find((o) => o.id === mineId)?.label;
+
+  return (
+    <div className="vt-page">
+      <AppBar href={`/q/${questionId}/vote`} backLabel="Back" title="Results so far" sub={weekPollLine(q)} right={shareBtn} />
+      <DeskBack href={`/q/${questionId}`} label="Back to the conversation" right={shareBtn} />
+      <StageNav
+        questionId={questionId}
+        active="vote"
+        visited={["speak", "discuss"]}
+        counts={q ? { speak: shortCount(q.voiceCount), discuss: shortCount(q.answerCount), vote: poll ? shortCount(results?.totalVotes ?? poll.totalVotes) : "0", next: shortCount(q.proposalCount) } : undefined}
+      />
+      {load.state === "loading" || signedIn === null ? <Loading /> : null}
+      {load.state === "error" ? <LoadFailed error={load.error} retry={load.retry} what="this poll" /> : null}
+      {load.state === "ready" && !poll ? <EmptyState icon="vote" title="No poll on this question yet" body="Polls open with the question or during the week." /> : null}
+      {load.state === "ready" && poll && load.data.hidden ? (
+        <EmptyState
+          icon="vote"
+          title="Vote to see the results"
+          body="The bars show once you have voted, or when the poll closes. Votes stay one per account."
+          action="Vote"
+          actionIcon="check"
+          onAction={() => router.push(`/q/${questionId}/vote`)}
+        />
+      ) : null}
+      {load.state === "ready" && poll && results ? (
+        <>
+          <PageHead eyebrow={weekPollLine(load.data.question).toUpperCase()} title="Results so far" lead={voted && poll.status === "OPEN" ? "Thanks for voting. The bars move as votes come in until the poll closes." : undefined} />
+          {poll.status === "CLOSED" ? <Banner tone="info" title="This poll has closed">These are the final results. One vote per account was counted.</Banner> : null}
+          <Poll
+            key={poll.id + (results.myVote?.length ? "m" : "")}
+            question={poll.title}
+            options={results.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes }))}
+            total={results.totalVotes}
+            closesIn={poll.status === "OPEN" ? closesIn(poll.endsAt) : undefined}
+            state="results"
+            selected={mineId}
+            live={poll.status === "OPEN"}
+            onExplain={false}
+          />
+          {voted && mineLabel ? <Explain pollId={poll.id} label={mineLabel} questionId={questionId} signedIn={!!signedIn} /> : null}
+          <div className="vt-btnrow">
+            <Button variant="secondary" icon="message-circle" href={`/q/${questionId}`}>Back to the discussion</Button>
+            <Button variant="ghost" icon="share-2" onClick={() => setShare(true)}><span className="dt:hidden">Share</span><span className="hidden dt:inline">Share the result</span></Button>
+          </div>
+          <AdBanner questionId={questionId} />
+        </>
+      ) : null}
+      {share && poll ? <ShareSheet objectType="POLL_RESULT" objectId={poll.id} onClose={() => setShare(false)} /> : null}
+    </div>
+  );
+}
+
+/** Explain my vote (free, V-15). By voice waits for the recorder (W4); In words writes the reason into the discussion. */
+function Explain({ pollId, label, questionId, signedIn }: { pollId: string; label: string; questionId: string; signedIn: boolean }) {
+  const [writing, setWriting] = useState(false);
+  const [state, setState] = useState<"idle" | "sending" | "done" | { error: string }>("idle");
+  const box = useRef<HTMLDivElement>(null);
+  const busy = useRef(false);
+  const key = useRef<string | null>(null);
+
+  async function send() {
+    const text = box.current?.querySelector("textarea")?.value.trim() ?? "";
+    if (!text || busy.current) return;
+    busy.current = true;
+    setState("sending");
+    key.current ??= newKey();
+    try {
+      await explainMyVote(pollId, text, key.current);
+      key.current = null;
+      setState("done");
+    } catch (e) {
+      if (e instanceof ApiError && e.status > 0) key.current = null;
+      setState({ error: e instanceof ApiError && e.status > 0 && e.explained ? e.message : "We could not post that. Check your connection and try again." });
+    } finally {
+      busy.current = false;
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-3" aria-label="Explain my vote">
+      <h2 className="vt-section-title">Explain my vote</h2>
+      <p className="vt-lead">{`Say why you picked “${label}”. It joins the discussion under the question.`}</p>
+      {state === "done" ? (
+        <Banner tone="success" title="Posted">
+          Your reason is in the discussion. <Link href={`/q/${questionId}`}>Open the discussion</Link>
+        </Banner>
+      ) : writing ? (
+        <div ref={box} className="vt-explain" onClickCapture={(e) => { if ((e.target as HTMLElement).closest("button")?.textContent?.trim() === "Post") { e.stopPropagation(); e.preventDefault(); void send(); } }}>
+          {typeof state === "object" ? <Banner tone="danger" title="Not posted">{state.error}</Banner> : null}
+          <Composer label="Your reason" placeholder="Say why you voted this way" freeLeft={1} onVoice={false} />
+        </div>
+      ) : (
+        <div className="vt-btnrow">
+          <Button variant="secondary" icon="message-square" onClick={() => setWriting(true)}>In words</Button>
+        </div>
+      )}
+      {!signedIn ? <Banner tone="info">Sign in to explain your vote.</Banner> : null}
+    </section>
+  );
+}
