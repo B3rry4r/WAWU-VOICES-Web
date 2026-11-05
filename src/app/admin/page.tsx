@@ -1,7 +1,5 @@
-import { PageTitle } from "@/components/shell/PageTitle";
+import { AdminTodayPage } from "@/features/admin/TodayPage";
 
-export const metadata = { title: "Admin" };
-
-export default function AdminPage() {
-  return <PageTitle>Admin</PageTitle>;
+export default function Page() {
+  return <AdminTodayPage />;
 }

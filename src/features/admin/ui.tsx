@@ -1,0 +1,183 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { useCallback, useRef, useState } from "react";
+import { Banner, Icon, Skeleton } from "@/components/vx";
+import type { IconName } from "@/components/vx";
+import { ApiError } from "@/lib/api/client";
+
+/** The words the API refused with, or a plain line when it never answered. Never an internal code. */
+export function refusalWords(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.explained) {
+      // A 422 carries the useful words in details.fields[].message; the top message is only "Some details need fixing."
+      const f = (e.details as { fields?: { message?: unknown }[] } | undefined)?.fields;
+      const lines = Array.isArray(f) ? f.map((x) => (typeof x?.message === "string" ? x.message : "")).filter(Boolean) : [];
+      return lines.length ? lines.join(" ") : e.message;
+    }
+    if (e.status === 0) return "VOICES could not be reached. Check the connection and try again.";
+    if (e.status === 403) return "Your role cannot do this.";
+  }
+  return "That did not go through. Try again.";
+}
+
+export function PageHead({ eyebrow, title, sub, right }: { eyebrow?: string; title: string; sub?: string; right?: ReactNode }) {
+  return (
+    <header className="mb-5 flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        {eyebrow ? <div className="vx-eyebrow text-ink-2">{eyebrow}</div> : null}
+        <h1 className="m-0 mt-1 font-display text-[40px] font-normal leading-[44px] text-ink">{title}</h1>
+        {sub ? <p className="m-0 mt-1 text-[15px] leading-6 text-ink-2">{sub}</p> : null}
+      </div>
+      {right ? <div className="flex flex-none items-center gap-3 pt-2">{right}</div> : null}
+    </header>
+  );
+}
+
+export function Card({ children, className = "", tone }: { children: ReactNode; className?: string; tone?: "mint" | "plain" }) {
+  const bg = tone === "mint" ? "bg-surface-2" : "bg-surface";
+  return <section className={`rounded-xl border border-line ${bg} p-6 ${className}`}>{children}</section>;
+}
+
+export function CardTitle({ children }: { children: ReactNode }) {
+  return <h2 className="m-0 mb-3 font-display text-[22px] font-normal leading-7 text-ink">{children}</h2>;
+}
+
+export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`vx-eyebrow text-ink-2 ${className}`}>{children}</div>;
+}
+
+type Tone = "neutral" | "green" | "sun" | "red" | "blue" | "sponsor";
+const TONES: Record<Tone, string> = {
+  neutral: "bg-surface-2 text-ink-2",
+  green: "bg-success-bg text-success",
+  sun: "bg-sun text-forest",
+  red: "bg-danger-bg text-danger",
+  blue: "bg-verified-bg text-verified",
+  sponsor: "bg-unverified-bg text-unverified",
+};
+
+/** A small uppercase status pill: SCHEDULED, LIVE, CLOSED. */
+export function Pill({ tone = "neutral", children, dot }: { tone?: Tone; children: ReactNode; dot?: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-s px-2 py-1 text-[11px] font-extrabold uppercase leading-4 tracking-[0.06em] ${TONES[tone]}`}>
+      {dot ? <span className="h-1.5 w-1.5 rounded-pill bg-current" aria-hidden="true" /> : null}
+      {children}
+    </span>
+  );
+}
+
+/** The rounded status pill next to a title: "Normal flow running". */
+export function StatePill({ tone, icon, children }: { tone: "green" | "sun" | "red"; icon: IconName; children: ReactNode }) {
+  const c = tone === "green" ? "bg-success-bg text-success" : tone === "sun" ? "bg-warning-bg text-warning" : "bg-danger-bg text-danger";
+  return (
+    <span className={`inline-flex items-center gap-2 rounded-pill px-4 py-2 text-[15px] font-bold leading-5 ${c}`}>
+      <Icon name={icon} size={20} />
+      {children}
+    </span>
+  );
+}
+
+export function Switch({ checked, onChange, label, hint, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string; disabled?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-t border-line py-3">
+      <div className="min-w-0">
+        <div className="text-[15px] font-bold leading-5 text-ink">{label}</div>
+        {hint ? <div className="text-[13px] leading-[18px] text-ink-2">{hint}</div> : null}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`relative h-8 w-14 flex-none cursor-pointer rounded-pill border-0 p-0 transition-colors ${checked ? "bg-green" : "bg-surface-3"} disabled:opacity-50`}
+      >
+        <span className={`absolute top-1 h-6 w-6 rounded-pill bg-surface shadow-1 transition-all ${checked ? "left-7" : "left-1"}`} />
+      </button>
+    </div>
+  );
+}
+
+/** One button-tap at a time with an Idempotency-Key kept for the tap (a retry of the same tap reuses it). */
+export function useAction() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const key = useRef<string | null>(null);
+  const run = useCallback(async <T,>(fn: (idempotencyKey: string) => Promise<T>): Promise<T | undefined> => {
+    if (busy) return undefined;
+    if (!key.current) key.current = crypto.randomUUID();
+    setBusy(true);
+    setError(null);
+    try {
+      const out = await fn(key.current);
+      key.current = null;
+      return out;
+    } catch (e) {
+      // A refused tap is a finished tap; a network failure keeps the key so the retry cannot double up.
+      if (e instanceof ApiError && e.status > 0) key.current = null;
+      setError(refusalWords(e));
+      return undefined;
+    } finally {
+      setBusy(false);
+    }
+  }, [busy]);
+  const clear = useCallback(() => setError(null), []);
+  return { busy, error, run, clear };
+}
+
+export function ErrorLine({ children }: { children: ReactNode }) {
+  if (!children) return null;
+  return (
+    <div role="alert" className="flex items-start gap-2 rounded-m bg-danger-bg px-3 py-2 text-[14px] font-semibold leading-5 text-danger">
+      <Icon name="circle-x" size={18} className="mt-0.5 flex-none" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+export function SavedLine({ children }: { children: ReactNode }) {
+  if (!children) return null;
+  return (
+    <div role="status" className="flex items-start gap-2 rounded-m bg-success-bg px-3 py-2 text-[14px] font-semibold leading-5 text-success">
+      <Icon name="circle-check" size={18} className="mt-0.5 flex-none" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+export function LoadFailed({ error, retry }: { error: Error; retry: () => void }) {
+  return (
+    <Banner tone="danger" title="This did not load" action="Try again" actionIcon="refresh-cw" onAction={retry}>
+      {refusalWords(error)}
+    </Banner>
+  );
+}
+
+export function ListSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading">
+      {Array.from({ length: rows }, (_, i) => (
+        <Skeleton key={i} variant="tile" />
+      ))}
+    </div>
+  );
+}
+
+export function AuditList({ lines, title }: { lines: { at: string; text: string; by: string | null }[]; title: string }) {
+  if (!lines.length) return null;
+  return (
+    <div className="border-t border-line pt-4">
+      <Eyebrow className="mb-2">{title}</Eyebrow>
+      <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px] leading-[18px] text-ink-2">
+        {lines.map((l, i) => (
+          <li key={i}>{l.text}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export const queueRow = (selected: boolean) =>
+  `block w-full cursor-pointer border-0 border-b border-line bg-surface p-4 text-left text-ink last:border-b-0 ${selected ? "!bg-mint shadow-[inset_0_0_0_2px_var(--green)]" : "hover:bg-surface-2"}`;

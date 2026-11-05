@@ -1,0 +1,2 @@
+/* The weekly card's Share and Download PDF buttons are for readers; the approval page shows the card only (V-10: no PDF at launch). */
+.ad-report .vx-report__btns { display: none; }
