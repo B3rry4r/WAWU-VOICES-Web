@@ -6,7 +6,7 @@ import { Compass, House, Mic, User } from "lucide-react";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { DeskSearch } from "./DeskSearch";
 import { ShellSlotsContext } from "./ShellSlots";
-import { NAV, activeNav, hidesTabBar, type NavId } from "./nav";
+import { NAV, activeNav, hidesTabBar, isChromeless, type NavId } from "./nav";
 
 const ICONS: Record<Exclude<NavId, "speak">, typeof House> = { home: House, discover: Compass, profile: User };
 
@@ -24,6 +24,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
   const pathname = usePathname() ?? "/";
   const active = activeNav(pathname);
   const bare = hidesTabBar(pathname);
+  if (isChromeless(pathname)) return <>{children}</>;
 
   return (
     <ShellSlotsContext.Provider value={slots}>
