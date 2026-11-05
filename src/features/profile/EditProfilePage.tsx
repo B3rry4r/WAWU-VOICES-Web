@@ -11,8 +11,9 @@ import { putBytes } from "./voiceCardRecorder";
 import { AVATAR_UPLOAD_LIVE } from "./flags";
 import { RailPortal } from "./RailPortal";
 import { ClipPlayer } from "./ClipPlayer";
+import { DeletionPending } from "./DeletionPending";
 import { LoadError, LoadingBlock, NeedsProfileNotice, SignedOutNotice, errorLine } from "./states";
-import { handleProblem, joinedLabel, placeLabel } from "./format";
+import { HANDLE_REASON, handleProblem, joinedLabel, placeLabel } from "./format";
 import { useMe } from "./useMe";
 import { VOICE_CARD_SECONDS, VoiceRecorder, uploadVoiceCard } from "./voiceCardUpload";
 import type { VoiceClip } from "@/lib/api/profile";
@@ -98,7 +99,7 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
     setHstate({ kind: "checking" });
     const id = ++stamp.current;
     const t = setTimeout(() => {
-      checkHandle(clean).then((r) => { if (id === stamp.current) setHstate(r.available ? { kind: "ok" } : { kind: "bad", text: "That handle is taken." }); }, () => { if (id === stamp.current) setHstate({ kind: "same" }); });
+      checkHandle(clean).then((r) => { if (id === stamp.current) setHstate(r.available ? { kind: "ok" } : { kind: "bad", text: HANDLE_REASON[r.reason ?? "TAKEN"] ?? "That handle is not available." }); }, () => { if (id === stamp.current) setHstate({ kind: "same" }); });
     }, 350);
     return () => clearTimeout(t);
   }, [clean, profile.handle]);
@@ -222,6 +223,7 @@ export function EditProfilePage() {
   if (state.status === "guest") return <div className="pf-page"><SignedOutNotice what="your profile" /></div>;
   if (state.status === "error") return <div className="pf-page"><LoadError error={state.error} onRetry={reload} /></div>;
   if (state.status === "needs-profile") return <div className="pf-page"><NeedsProfileNotice /></div>;
+  if (state.me.status === "DELETION_PENDING") return <DeletionPending />;
   if (extraErr) return <div className="pf-page"><LoadError error={extraErr} onRetry={loadExtra} /></div>;
   if (!extra) return <div className="pf-page"><LoadingBlock /></div>;
   return <Form me={state.me} categories={extra.categories} followed0={extra.followed} />;

@@ -51,3 +51,13 @@ export function handleProblem(raw: string): string | null {
   if (!HANDLE_RE.test(h)) return "Use only letters, numbers, dots and underscores.";
   return null;
 }
+
+/** Plain words for the API's handle-check reasons (same sentences as the API's own messages). */
+export const HANDLE_REASON: Record<string, string> = {
+  TOO_SHORT: "A handle needs at least 3 characters.",
+  TOO_LONG: "A handle can have at most 20 characters.",
+  BAD_CHARACTERS: "Use only letters, numbers, dots and underscores.",
+  BAD_SHAPE: "A handle cannot start or end with a dot or underscore.",
+  RESERVED: "That handle is not available.",
+  TAKEN: "That handle is taken.",
+};

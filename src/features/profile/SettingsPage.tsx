@@ -105,7 +105,7 @@ function ExportRow() {
   const ready = exp?.status === "READY" && exp.downloadUrl;
   return (
     <>
-      <RowButton icon="file-down" label="Export my data" detail={busy ? "Getting your data ready..." : "Your posts, transcripts and wallet history"} onClick={start} trailing={<span />} />
+      <RowButton icon="file-down" label="Export my data" detail={busy ? "Getting your data ready..." : "Your posts, transcripts and Voice Units history"} onClick={start} trailing={<span />} />
       {ready ? <a className="pf-row-item pf-dl" href={exp.downloadUrl!} download>Download my data</a> : null}
       {error ? <p className="pf-note pf-note--err pf-pad" role="alert">{error}</p> : null}
     </>

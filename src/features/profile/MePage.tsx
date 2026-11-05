@@ -40,11 +40,11 @@ function Aside({ me }: { me: Me }) {
   const a = me.allowances;
   return (
     <>
-      <section className="pf-panel" aria-label="Wallet">
-        <h2 className="vx-eyebrow pf-eyebrow">Wallet</h2>
+      <section className="pf-panel" aria-label="Voice Units">
+        <h2 className="vx-eyebrow pf-eyebrow">Voice Units</h2>
         <p className="pf-big"><b>{unitsFigure(a.balanceMilli)}</b> <span>Voice Units</span></p>
         <FreePosts left={a.freePostsRemaining} />
-        {WALLET_LIVE ? <Link href="/wallet" className="vx-link pf-panel__link">Open wallet</Link> : null}
+        {WALLET_LIVE ? <Link href="/wallet" className="vx-link pf-panel__link">Open Voice Units</Link> : null}
       </section>
       <section className="pf-panel" aria-label="Your referral code">
         <h2 className="vx-eyebrow pf-eyebrow">Your referral code</h2>
@@ -89,10 +89,10 @@ export function MePage() {
       />
       <div className="pf-phone-only">
         <div className="pf-linkpanel">
-          {WALLET_LIVE ? <LinkRow href="/wallet" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} units · ${a.freePostsRemaining} free posts left`}>Wallet</LinkRow> : (
+          {WALLET_LIVE ? <LinkRow href="/wallet" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} units · ${a.freePostsRemaining} free posts left`}>Voice Units</LinkRow> : (
             <div className="pf-linkrow pf-linkrow--static">
               <Icon name="wallet" size={22} />
-              <span className="pf-linkrow__txt"><b>Wallet</b><span>{`${unitsFigure(a.balanceMilli)} units · ${a.freePostsRemaining} free posts left`}</span></span>
+              <span className="pf-linkrow__txt"><b>Voice Units</b><span>{`${unitsFigure(a.balanceMilli)} units · ${a.freePostsRemaining} free posts left`}</span></span>
             </div>
           )}
           <LinkRow href="/settings" icon="settings">Settings</LinkRow>

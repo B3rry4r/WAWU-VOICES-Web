@@ -34,7 +34,6 @@ export function RulesPage() {
       </header>
       <article className="pf-rules">
         <h2 className="pf-h1 pf-rules__h">Community rules</h2>
-        <p className="pf-hint">Last updated 16 Nov 2026</p>
         <p className="pf-body">VOICES is for strong opinions and real disagreement. We step in for harm, never for a point of view.</p>
         <ol className="pf-rulelist">
           {RULES.map((r, i) => (

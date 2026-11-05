@@ -25,7 +25,7 @@ describe("Me", () => {
     render(<MePage />);
     expect(await screen.findByText("Sign in to see this")).toBeTruthy();
   });
-  it("shows the figures from the API and no link to the wallet until it is built", async () => {
+  it("shows the figures from the API and no link to Voice Units until it is built", async () => {
     signIn(); mockApi(meRoutes);
     render(<MePage />);
     expect(await screen.findByText("@ada.okafor")).toBeTruthy();
@@ -131,7 +131,7 @@ describe("Settings", () => {
     await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ theme: "dark" }));
   });
   it("delete says the 14-day rule and the unit loss before confirm, needs the handle and the tick, then shows the pending screen", async () => {
-    signIn(); mockApi({ ...meRoutes, "DELETE /me": null });
+    signIn(); mockApi({ ...meRoutes, "DELETE /me": () => new Response(null, { status: 202 }) });
     render(<SettingsPage />);
     await userEvent.click(await screen.findByRole("button", { name: /Delete account/ }));
     const dlg = within(await screen.findByRole("dialog"));
@@ -176,6 +176,22 @@ describe("Settings", () => {
   });
 });
 
+describe("Edit profile, more", () => {
+  it("a pending deletion shows the pending screen, not the form", async () => {
+    signIn(); mockApi({ ...meRoutes, "GET /me": { ...me, status: "DELETION_PENDING" } });
+    render(<EditProfilePage />);
+    expect(await screen.findByTestId("deletion-pending")).toBeTruthy();
+    expect(screen.queryByLabelText("Handle")).toBeNull();
+  });
+  it("a reserved handle says it is not available, not taken", async () => {
+    signIn(); mockApi({ ...meRoutes, "GET /categories": cats, "GET /me/categories": { categories: [] }, "GET /me/handle-check": { handle: "admin", available: false, reason: "RESERVED" } });
+    render(<EditProfilePage />);
+    const f = await screen.findByLabelText("Handle");
+    await userEvent.clear(f); await userEvent.type(f, "admin");
+    expect(await screen.findByText("That handle is not available.")).toBeTruthy();
+  });
+});
+
 describe("Rules", () => {
   it("has the six rules and the four steps, no tab to a page that does not exist", () => {
     render(<RulesPage />);
@@ -183,6 +199,7 @@ describe("Rules", () => {
     expect(screen.getByText("1 Speak your mind, disagree hard")).toBeTruthy();
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.queryByText("Report a problem")).toBeNull();
+    expect(screen.queryByText(/Last updated/)).toBeNull();
   });
 });
 
