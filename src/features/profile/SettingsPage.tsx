@@ -11,7 +11,7 @@ import {
 import { DELETE_WORDS, DeletionPending } from "./DeletionPending";
 import { LoadError, LoadingBlock, NeedsProfileNotice, Section, SignedOutNotice, errorLine } from "./states";
 import { minuteLabel } from "./format";
-import { applyTheme, type ThemeChoice } from "./theme";
+import { applyAccountTheme, chooseTheme, deviceChoice, type ThemeChoice } from "./theme";
 import { useMe } from "./useMe";
 import "./profile.css";
 
@@ -147,15 +147,16 @@ function SettingsBody({ me }: { me: Me }) {
   const [blockedCount, setBlockedCount] = useState<number | null>(null);
   const [deleted, setDeleted] = useState(false);
 
-  useEffect(() => { applyTheme(me.settings.theme); }, [me.settings.theme]);
+  useEffect(() => { applyAccountTheme(me.settings.theme); }, [me.settings.theme]);
   useEffect(() => { listBlocks().then((p) => setBlockedCount(p.items.length + (p.nextCursor ? 1 : 0)), () => setBlockedCount(null)); }, []);
 
   async function patch(p: Partial<Settings>) {
     const before = s;
+    const prevDevice = deviceChoice();
     setS({ ...s, ...p });
-    if (p.theme) applyTheme(p.theme);
+    if (p.theme) chooseTheme(p.theme);
     setError(null);
-    try { setS(await updateSettings(p)); } catch (e) { setS(before); if (p.theme) applyTheme(before.theme); setError(errorLine(e, "Could not save that change. Try again.")); }
+    try { setS(await updateSettings(p)); } catch (e) { setS(before); if (p.theme) chooseTheme(prevDevice ?? before.theme); setError(errorLine(e, "Could not save that change. Try again.")); }
   }
 
   if (deleted) return <DeletionPending />;
@@ -186,7 +187,7 @@ function SettingsBody({ me }: { me: Me }) {
           <Switch label="Data saver" detail="Voices play only when you tap, in lighter quality" checked={s.dataSaver} onChange={(v) => patch({ dataSaver: v })} />
           <div className="pf-appearance">
             <span className="pf-appearance__t"><Icon name="moon" size={22} />Appearance</span>
-            <Tabs label="Appearance" variant="segmented" block value={s.theme} onChange={(v) => patch({ theme: v as ThemeChoice })}
+            <Tabs label="Appearance" variant="segmented" block value={deviceChoice() ?? s.theme} onChange={(v) => patch({ theme: v as ThemeChoice })}
               items={[{ id: "light", label: "Light", icon: "sun" }, { id: "dark", label: "Dark", icon: "moon" }, { id: "system", label: "System" }]} />
           </div>
         </div>

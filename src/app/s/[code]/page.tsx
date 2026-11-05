@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ShareUnavailable } from "@/features/share/ShareUnavailable";
 import { SharePageView } from "@/features/share/SharePageView";
 import { ApiError } from "@/lib/api/client";
 import { getSharePage } from "@/lib/api/reach";
@@ -7,24 +8,21 @@ import type { SharePage } from "@/lib/api/reach";
 
 export const dynamic = "force-dynamic";
 
-async function load(code: string): Promise<SharePage | null> {
+/** The page, null for a link that does not exist, "unreachable" when the API cannot be reached or fails (never a 500 for the visitor). */
+async function load(code: string): Promise<SharePage | null | "unreachable"> {
   try {
     return await getSharePage(code);
   } catch (e) {
     if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
-    throw e;
+    return "unreachable";
   }
 }
 
 /** The link preview WhatsApp and X read: the card (1200 x 630) as the image, the title and the description. */
 export async function generateMetadata({ params }: { params: { code: string } }): Promise<Metadata> {
   // A link that cannot be read (unknown code, API trouble) is never indexed and never throws from the metadata step.
-  let page: SharePage | null = null;
-  try {
-    page = await load(params.code);
-  } catch {
-    return { title: "Link not found", robots: { index: false, follow: false } };
-  }
+  const page = await load(params.code);
+  if (page === "unreachable") return { title: "Link not available", robots: { index: false, follow: false } };
   if (!page) return { title: "Link not found", robots: { index: false, follow: false } };
   const og = page.openGraph;
   return {
@@ -37,6 +35,7 @@ export async function generateMetadata({ params }: { params: { code: string } })
 
 export default async function Page({ params }: { params: { code: string } }) {
   const page = await load(params.code);
+  if (page === "unreachable") return <ShareUnavailable />;
   if (!page) notFound();
   return <SharePageView page={page} now={Date.now()} />;
 }

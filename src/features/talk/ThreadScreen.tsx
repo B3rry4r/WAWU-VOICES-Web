@@ -11,6 +11,8 @@ import { StageNav } from "@/features/stage/StageNav";
 import { AppBar, BarButton, Problem, failText, useClipPlayback, useSignedIn } from "./lib";
 import { ReplyComposer } from "./ReplyComposer";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
+import { TalkRail } from "./TalkRail";
+import "./talk.css";
 
 const STANCES: { id: ReplyStance; label: string }[] = [
   { id: "AGREE", label: "I agree" },
@@ -41,7 +43,7 @@ function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => voi
       </div>
       {r.kind === "VOICE" && r.clip ? <ClipPlayer clipId={r.clip.id} ms={r.clip.durationMs ?? 10000} push={push} /> : null}
       {r.body ? <p className="vx-answer__text">{r.body}</p> : null}
-      {r.kind === "VOICE" && r.clip?.transcript?.text ? <p className="vx-answer__transcript"><b>Transcript</b>{r.clip.transcript.text}</p> : null}
+      {r.kind === "VOICE" && r.clip?.transcript?.status === "READY" && r.clip.transcript.text ? <p className="vx-answer__transcript"><b>Transcript</b>{r.clip.transcript.text}</p> : null}
     </article>
     </>
   );
@@ -105,7 +107,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
         <span className="mt-1 block font-display text-[18px] leading-6 text-[var(--ink)]">{question?.text || ans.questionText || ""}</span>
       </Link>
       <div className="mt-3">
-        <TalkCard answer={ans} signedIn={!!signedIn} push={push} unfolded threadHref={`/q/${qid}/a/${aid}`} />
+        <TalkCard answer={ans} signedIn={!!signedIn} push={push} unfolded className="tk-flat" threadHref={`/q/${qid}/a/${aid}`} />
       </div>
       {!open ? <div className="mt-3"><Banner tone="info" title="This question has closed.">You can still read and listen to every reply. New replies are closed.</Banner></div> : null}
       {open && signedIn && allow ? (
@@ -119,7 +121,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
           <TopicChip key={c.label} label={c.label} count={c.n} selected={filter === c.id} onClick={() => setFilter(c.id)} />
         ))}
       </div>
-      <div className={`mt-3 grid gap-3 ${open ? "pb-40" : "pb-6"} dt:pb-6`}>
+      <div className={`tk-replies mt-3 grid gap-3 ${open ? "pb-48" : "pb-6"} dt:pb-6`}>
         {state === "loading" ? <><Skeleton variant="answer" /><Skeleton variant="answer" /></> : null}
         {state === "error" && !items.length ? <Problem error={err} onRetry={() => void load()} /> : null}
         {state === "ready" && !items.length ? <EmptyState icon="message-square" title="No replies yet" body={`Be the first to reply to ${who}.`} /> : null}
@@ -127,7 +129,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
         {next ? <Button variant="secondary" size="l" block loading={state === "more"} onClick={() => void load(next)}>Load more replies</Button> : null}
       </div>
       {open ? (
-        <div className="fixed inset-x-0 bottom-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] z-[var(--z-sticky)] border-t border-[var(--line)] bg-[var(--surface)] px-3 py-[10px] dt:hidden">
+        <div className="tk-dock fixed inset-x-0 bottom-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] z-[var(--z-sticky)] border-t border-[var(--line)] bg-[var(--surface)] px-3 py-[10px] dt:hidden">
           <div className="mb-2 flex gap-2 overflow-x-auto" role="group" aria-label="How are you replying?">
             {STANCES.map((s) => <TopicChip key={s.id} label={s.label} selected={pick === s.id} onClick={() => setPick(pick === s.id ? undefined : s.id)} />)}
           </div>
@@ -136,6 +138,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
           )}
         </div>
       ) : null}
+      <TalkRail questionId={qid} />
       {toast}
       {shareNode}
     </>

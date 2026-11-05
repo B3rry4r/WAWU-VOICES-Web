@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, FreePosts, Icon, Skeleton } from "@/components/vx";
+import { Button, FreePosts, Icon, Sheet, Skeleton } from "@/components/vx";
+import { recordShareEvent, type ShareTarget } from "@/lib/api/reach";
 import * as api from "@/lib/api/talk";
 import { API_BASE } from "@/lib/api/config";
 import type { Allowances, Answer, ShareLink } from "@/lib/api/talk";
@@ -18,6 +19,7 @@ export function PostedScreen({ qid }: { qid: string }) {
   const a = useLoad<Answer | null>(() => (aid ? api.getAnswer(aid) : Promise.resolve(null)), [aid, signedIn]);
   const [allow, setAllow] = useState<Allowances | null>(null);
   const [link, setLink] = useState<ShareLink | null>(null);
+  const [storyHelp, setStoryHelp] = useState(false);
   useEffect(() => {
     if (!signedIn) return;
     api.getAllowance().then(setAllow, () => undefined);
@@ -48,6 +50,29 @@ export function PostedScreen({ qid }: { qid: string }) {
     if (!url || !link) return;
     try { await navigator.clipboard.writeText(url); void api.shareEvent(link.code, "intent"); push("Link copied.", "success"); } catch (e) { push(failText(e), "danger"); }
   }
+  const intent = (t: ShareTarget) => { if (link) void recordShareEvent(link.code, "intent", t); };
+  /** WhatsApp Status cannot be posted from a web page: the link opens in WhatsApp, where the person picks Status or a chat. */
+  const statusHref = link ? `https://wa.me/?text=${encodeURIComponent(link.previewText || link.url)}` : undefined;
+  /** Instagram Stories cannot be posted from a web page either: the story-size card is saved to the phone and a short how-to shows. */
+  async function saveStoryCard() {
+    if (!link) return;
+    intent("INSTAGRAM_STORIES");
+    try {
+      const r = await fetch(`${API_BASE}/share/${encodeURIComponent(link.code)}/card?size=story`);
+      if (!r.ok || r.status === 202) throw new Error("card not ready");
+      const blob = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "voices-story-card.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      setStoryHelp(true);
+    } catch {
+      push("The card is still being made. Try again in a moment.", "danger");
+    }
+  }
   return (
     <>
       {header}
@@ -62,8 +87,10 @@ export function PostedScreen({ qid }: { qid: string }) {
         {allow ? <FreePosts left={allow.freePostsRemaining} /> : null}
         <section className="grid gap-3" aria-label="Share">
           <span className="hidden text-[16px] font-bold dt:block">Now let people hear you</span>
-          <Button size="l" block icon="share-2" disabled={!url} href={url ? `https://wa.me/?text=${encodeURIComponent(url)}` : undefined} target="_blank" rel="noopener noreferrer" onClick={() => link && void api.shareEvent(link.code, "intent")}>Share to WhatsApp</Button>
+          <Button size="l" block icon="share-2" disabled={!url} href={url ? `https://wa.me/?text=${encodeURIComponent(url)}` : undefined} target="_blank" rel="noopener noreferrer" onClick={() => intent("WHATSAPP")}>Share to WhatsApp</Button>
           <div className="grid grid-cols-2 gap-3">
+            <Button variant="secondary" disabled={!url} href={statusHref} target="_blank" rel="noopener noreferrer" onClick={() => intent("WHATSAPP_STATUS")}>WhatsApp Status</Button>
+            <Button variant="secondary" disabled={!url} onClick={() => void saveStoryCard()}>Instagram Stories</Button>
             <Button variant="secondary" icon="copy" disabled={!url} onClick={copy}>Copy link</Button>
             <Button variant="secondary" icon="ellipsis" disabled={!aid} onClick={() => aid && share("ANSWER", aid)}>More apps</Button>
           </div>
@@ -78,6 +105,15 @@ export function PostedScreen({ qid }: { qid: string }) {
         ) : null}
         <Link href={`/q/${qid}`} className="text-center text-[15px] font-semibold">Back to the conversation</Link>
       </div>
+      {storyHelp ? (
+        <Sheet title="Your card is saved" onClose={() => setStoryHelp(false)} footer={<Button size="l" block onClick={() => setStoryHelp(false)}>Done</Button>}>
+          <ol className="m-0 grid gap-2 pl-5 text-[16px] leading-6">
+            <li>Open Instagram and tap Your story.</li>
+            <li>Pick the VOICES card from your photos.</li>
+            <li>Add a link sticker with your link, then share.</li>
+          </ol>
+        </Sheet>
+      ) : null}
       {toast}
       {shareNode}
     </>

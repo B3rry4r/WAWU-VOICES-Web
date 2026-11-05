@@ -20,10 +20,14 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("photo and voice uploads", () => {
   it("avatar: presign, PUT the bytes with the signed headers, return the file id", async () => {
-    mockApi({ "POST /uploads": { fileId: "f1", putUrl: "https://spaces.example/f1", putHeaders: { "Content-Type": "image/png", "Content-Length": "3" }, expiresAt: "x" } });
+    mockApi({
+      "POST /uploads": { fileId: "f1", putUrl: "https://spaces.example/f1", putHeaders: { "Content-Type": "image/png", "Content-Length": "3" }, expiresAt: "x" },
+      "POST /uploads/f1/complete": { fileId: "f1", kind: "AVATAR", confirmedAt: "2026-11-05T10:00:00Z" },
+    });
     const id = await uploadAvatar(new File([new Uint8Array([1, 2, 3])], "a.png", { type: "image/png" }));
     expect(id).toBe("f1");
     expect(calls[0].body).toEqual({ kind: "AVATAR", mime: "image/png", sizeBytes: 3 });
+    expect(calls[1].path).toBe("/uploads/f1/complete"); // after the PUT, so PATCH /me/profile accepts the file
     expect(puts[0].url).toBe("https://spaces.example/f1");
     expect(puts[0].headers["Content-Type"]).toBe("image/png");
     expect(puts[0].headers["Content-Length"]).toBeUndefined(); // the browser sets it

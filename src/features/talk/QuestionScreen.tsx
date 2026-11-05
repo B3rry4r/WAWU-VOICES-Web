@@ -11,6 +11,8 @@ import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
 import { AppBar, BarButton, Problem, failText, useSignedIn } from "./lib";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
+import { TalkRail } from "./TalkRail";
+import "./talk.css";
 
 const short = (n: number) => (n >= 1e4 ? `${Math.round(n / 100) / 10}K` : n.toLocaleString("en-NG"));
 const SORTS = [{ id: "TOP", label: "Top" }, { id: "NEW", label: "New" }, { id: "DEBATED", label: "Debated" }];
@@ -177,16 +179,17 @@ export function QuestionScreen({ id }: { id: string }) {
       </div>
       {state === "error" && items.length ? <div className="mt-3"><Problem error={err} onRetry={() => void loadPage(next ?? undefined)} /></div> : null}
       {next ? <div className="mt-3"><Button variant="secondary" size="l" block loading={state === "more"} onClick={() => void loadPage(next)}>Load more voices</Button></div> : null}
-      {open ? <p className="mt-6 text-center dt:hidden"><Link href={writeHref} className="text-[15px] font-semibold">Add your voice in words</Link></p> : null}
+      {open ? <p className="mb-32 mt-6 text-center dt:hidden"><Link href={writeHref} className="text-[15px] font-semibold">Add your voice in words</Link></p> : null}
 
       {open ? (
-        <div className="fixed inset-x-0 bottom-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] z-[var(--z-sticky)] border-t border-[var(--line)] bg-[var(--surface)] px-3 py-[10px] dt:hidden">
+        <div className="tk-dock fixed inset-x-0 bottom-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] z-[var(--z-sticky)] border-t border-[var(--line)] bg-[var(--surface)] px-3 py-[10px] dt:hidden">
           <div className="flex items-center gap-[10px]">
             <Link href={writeHref} className="flex min-h-12 min-w-0 flex-1 items-center rounded-full bg-[var(--surface)] px-[18px] text-[16px] font-medium text-[var(--ink-2)] no-underline shadow-[inset_0_0_0_1px_var(--line-strong)]">Add your voice in words</Link>
             {left !== undefined ? <FreePosts left={left} pill /> : null}
           </div>
         </div>
       ) : null}
+      <TalkRail questionId={id} freeLeft={signedIn ? left : undefined} />
       {toast}
       {shareNode}
     </>

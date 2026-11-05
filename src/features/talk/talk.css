@@ -1,0 +1,15 @@
+/* Talk screens (POLISH-B). */
+
+/* A fixed bar that sits on the phone's bottom bar: the raised Speak button rises 26px into it, so the bar keeps that much clear below its content. */
+.tk-dock { padding-bottom: 34px; }
+
+/* Thread at 390: the voice being replied to is flat on the page, not a card (Thread board). */
+.tk-flat.vx-answer { background: transparent; box-shadow: none; border-radius: 0; padding: var(--space-3) 0 0; }
+@media (min-width: 1024px) {
+  .tk-flat.vx-answer { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); border-radius: var(--radius-l); padding: var(--space-4); }
+}
+
+/* Thread at 1440: replies sit under the voice on a rail, each under its stance label. */
+@media (min-width: 1024px) {
+  .tk-replies { margin-left: 14px; padding-left: 14px; border-left: 2px solid var(--line); gap: var(--space-2); }
+}

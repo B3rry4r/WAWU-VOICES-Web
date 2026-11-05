@@ -6,6 +6,7 @@ import * as api from "@/lib/api/talk";
 import type { Answer, ReportReason, ReportReceipt } from "@/lib/api/talk";
 import { AppBar, Problem, SignInNote, failText, useSignedIn } from "./lib";
 import { ApiError } from "@/lib/api/client";
+import { QuestionScreen } from "./QuestionScreen";
 
 const REASONS: { id: ReportReason; label: string }[] = [
   { id: "HATE_OR_HARASSMENT", label: "Hate or harassment" },
@@ -66,6 +67,33 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
     try { await api.unblockUser(ans.author.id); setBlocked(false); } catch (e) { setMsg(failText(e)); }
   }
 
+  const dialog = done ? (
+    <Sheet
+      variant="dialog"
+      title="Thanks. We got your report."
+      subtitle={`Report sent at ${clock(done.at)}`}
+      onClose={() => router.push(back)}
+      footer={<div className="vx-dialog__btns"><Button size="l" block onClick={() => router.push(back)}>Back to the conversation</Button></div>}
+    >
+      <div className="grid justify-items-center gap-4 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--mint)] text-[var(--green-text)]"><Icon name="shield-check" size={32} /></span>
+        <p className="m-0 text-[16px] leading-6">{`Our moderators will look at this ${noun}${handle ? ` from @${handle}` : ""} and act if it breaks the community rules.${handle ? ` @${handle} is not told who reported it.` : ""}`}</p>
+        {handle && (blocked || block) ? (
+          <div className="flex w-full items-center gap-3 rounded-[var(--radius-m)] bg-[var(--surface-2)] p-3 text-left">
+            <Icon name="user-check" size={24} />
+            <span className="min-w-0 flex-1">
+              <b className="block text-[15px]">{blocked ? `You blocked @${handle}` : `You unblocked @${handle}`}</b>
+              {blocked ? <span className="text-[13px] text-[var(--ink-2)]">You will not see their voices or replies.</span> : null}
+            </span>
+            {blocked ? <Button variant="ghost" size="s" onClick={undo}>Undo</Button> : null}
+          </div>
+        ) : null}
+      </div>
+    </Sheet>
+  ) : null;
+  // The board shows the question page behind the thanks dialog.
+  if (done && ans) return <><QuestionScreen id={ans.questionId} />{dialog}</>;
+
   return (
     <>
       {header}
@@ -102,25 +130,7 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
           <p className="m-0 text-center text-[13px] text-[var(--ink-2)]">The person is not told who reported them.</p>
         </div>
       </div>
-      {done ? (
-        <Sheet
-          variant="dialog"
-          title="Thanks. We got your report."
-          onClose={() => router.push(back)}
-          footer={<div className="vx-dialog__btns"><Button size="l" block onClick={() => router.push(back)}>Back to the conversation</Button></div>}
-        >
-          <div className="grid gap-3">
-            <span className="vx-eyebrow text-[var(--green-text)]">{`Report sent at ${clock(done.at)}`}</span>
-            <p className="m-0 text-[16px] leading-6">{`Our moderators will look at this ${noun}${handle ? ` from @${handle}` : ""} and act if it breaks the community rules.${handle ? ` @${handle} is not told who reported it.` : ""}`}</p>
-            {handle && (blocked || block) ? (
-              <div className="flex items-center justify-between gap-3 rounded-[var(--radius-m)] bg-[var(--surface-2)] p-3">
-                <span className="text-[15px] font-semibold">{blocked ? `You blocked @${handle}` : `You unblocked @${handle}`}</span>
-                {blocked ? <Button variant="secondary" size="s" onClick={undo}>Undo</Button> : null}
-              </div>
-            ) : null}
-          </div>
-        </Sheet>
-      ) : null}
+      {dialog}
     </>
   );
 }

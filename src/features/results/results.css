@@ -1,0 +1,2 @@
+/* A result post can be reported (POST /reports) but not replied to: the API has no reply route for result posts, so the Reply button is not shown. */
+.rs-comments .vx-result__foot button[aria-label="Reply"] { display: none; }

@@ -15,7 +15,12 @@ export interface VoicePlayerProps {
   seed?: number;
   bars?: number;
   tone?: 'mint' | 'surface' | 'forest';
+  /** With `progress`, the parent owns how far the voice has played (0 to 1): the bars follow it and a tap on the bars asks through `onSeek`. */
   progress?: number;
+  /** The clip's real waveform (the API's 48 peak values, 0 to 255). Without it the bars are drawn from `seed`. */
+  peaks?: number[];
+  onSeek?: (fraction: number) => void;
+  onSpeedChange?: (speed: number) => void;
   /** With `playing` the parent owns play and pause: the button only asks (onPlay, onPause). Without it the player keeps its own state. */
   playing?: boolean;
   speed?: boolean;
@@ -29,10 +34,13 @@ export interface VoicePlayerProps {
 
 export function VoicePlayer(p: VoicePlayerProps): ReactElement {
   const dur = p.duration || 10;
-  const bars = useRef(waveBars(p.seed || dur * 3, p.bars || 34)).current;
+  const seeded = useRef(waveBars(p.seed || dur * 3, p.bars || 34)).current;
+  const bars = p.peaks && p.peaks.length ? p.peaks.map((v) => Math.max(0.12, Math.min(1, v / 255))) : seeded;
+  const progCtl = p.progress !== undefined;
   const [innerPlaying, setInnerPlaying] = useState(!!p.playing);
   const playing = p.playing !== undefined ? p.playing : innerPlaying;
-  const [prog, setProg] = useState(p.progress || 0);
+  const [innerProg, setProg] = useState(p.progress || 0);
+  const prog = progCtl ? Math.max(0, Math.min(1, p.progress as number)) : innerProg;
   const [speed, setSpeed] = useState(1);
   const audio = useRef<HTMLAudioElement | null>(null);
   const set = (n: boolean) => {
@@ -41,7 +49,7 @@ export function VoicePlayer(p: VoicePlayerProps): ReactElement {
     if (!n && p.onPause) p.onPause();
     if (p.onPlayingChange) p.onPlayingChange(n);
   };
-  useTicker(playing && !p.src, 100, () => {
+  useTicker(playing && !p.src && !progCtl, 100, () => {
     setProg((v) => {
       const n = v + (0.1 * speed) / dur;
       if (n >= 1) {
@@ -83,12 +91,15 @@ export function VoicePlayer(p: VoicePlayerProps): ReactElement {
   function seek(e: MouseEvent<HTMLDivElement>) {
     const r = e.currentTarget.getBoundingClientRect();
     const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-    setProg(f);
+    if (p.onSeek) p.onSeek(f);
+    if (!progCtl) setProg(f);
     if (audio.current && audio.current.duration) audio.current.currentTime = f * audio.current.duration;
   }
   function keys(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === 'ArrowRight') setProg(Math.min(1, prog + 1 / dur));
-    if (e.key === 'ArrowLeft') setProg(Math.max(0, prog - 1 / dur));
+    const to = e.key === 'ArrowRight' ? Math.min(1, prog + 1 / dur) : e.key === 'ArrowLeft' ? Math.max(0, prog - 1 / dur) : null;
+    if (to === null) return;
+    if (p.onSeek) p.onSeek(to);
+    if (!progCtl) setProg(to);
   }
   const cut = Math.round(prog * bars.length);
   const left = playing || prog > 0 ? dur * (1 - prog) : dur;
@@ -115,7 +126,7 @@ export function VoicePlayer(p: VoicePlayerProps): ReactElement {
       </div>
       <span className="vx-player__time">{clock(left)}</span>
       {p.speed !== false ? (
-        <button type="button" className="vx-player__speed" aria-label={'Playback speed ' + speed + 'x'} onClick={() => setSpeed(speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1)}>
+        <button type="button" className="vx-player__speed" aria-label={'Playback speed ' + speed + 'x'} onClick={() => { const n = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1; setSpeed(n); if (p.onSpeedChange) p.onSpeedChange(n); }}>
           {speed + 'x'}
         </button>
       ) : null}

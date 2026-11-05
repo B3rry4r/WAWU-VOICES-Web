@@ -10,7 +10,7 @@ import { ProfileCard } from "./ProfileCard";
 import { Rail } from "@/components/shell/ShellSlots";
 import { DeletionPending } from "./DeletionPending";
 import { LoadError, LoadingBlock, NeedsProfileNotice, SignedOutNotice } from "./states";
-import { applyTheme } from "./theme";
+import { applyAccountTheme } from "./theme";
 import { useMe } from "./useMe";
 import { unitsFigure } from "./format";
 import { QuestionRow } from "./SavedRow";
@@ -63,7 +63,7 @@ export function MePage() {
   const { state, reload } = useMe();
   const [tab, setTab] = useState<"voices" | "saved">("voices");
   const theme = state.status === "ready" ? state.me.settings.theme : null;
-  useEffect(() => { if (theme) applyTheme(theme); }, [theme]);
+  useEffect(() => { if (theme) applyAccountTheme(theme); }, [theme]);
   const loadMine = useCallback((c?: string) => listMyAnswers(c).then((p) => ({ items: p.items.filter((i) => i.type === "answer" && i.answer).map((i) => i.answer!), nextCursor: p.nextCursor })), []);
   const loadSaved = useCallback((c?: string) => listSaved(c), []);
 

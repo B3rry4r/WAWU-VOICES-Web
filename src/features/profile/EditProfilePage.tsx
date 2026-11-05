@@ -4,11 +4,10 @@ import { useRouter } from "next/navigation";
 import { Avatar, Button, Icon, IconButton, Toast, TextField, TopicChip } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import {
-  checkHandle, createUpload, deleteVoiceClip, getFollowedCategories, listCategories, setFollowedCategories, updateProfile,
+  checkHandle, deleteVoiceClip, getFollowedCategories, listCategories, setFollowedCategories, updateProfile,
   type Category, type CategoryFollow, type Me, type UpdateProfileRequest,
 } from "@/lib/api/profile";
-import { putBytes } from "./voiceCardRecorder";
-import { AVATAR_UPLOAD_LIVE } from "./flags";
+import { PHOTO_MAX_BYTES, PHOTO_MIMES, uploadAvatar } from "@/lib/api/me";
 import { Rail } from "@/components/shell/ShellSlots";
 import { ClipPlayer } from "./ClipPlayer";
 import { DeletionPending } from "./DeletionPending";
@@ -21,12 +20,7 @@ import "./profile.css";
 
 type HandleState = { kind: "same" } | { kind: "checking" } | { kind: "ok" } | { kind: "bad"; text: string };
 
-/** Photo to Spaces: presign, PUT, and hand back the file id for PATCH /me/profile (avatarFileId). */
-export async function uploadAvatar(file: File): Promise<string> {
-  const up = await createUpload({ kind: "AVATAR", mime: file.type as "image/jpeg" | "image/png" | "image/webp", sizeBytes: file.size });
-  await putBytes(up.putUrl, (up.putHeaders ?? {}) as Record<string, string>, file);
-  return up.fileId;
-}
+export { uploadAvatar };
 
 function VoiceCardEditor({ clip, onChange }: { clip: VoiceClip | null; onChange: (c: VoiceClip | null) => void }) {
   const [state, setState] = useState<"idle" | "recording" | "sending">("idle");
@@ -55,7 +49,7 @@ function VoiceCardEditor({ clip, onChange }: { clip: VoiceClip | null; onChange:
     <section className="pf-form-sec pf-vcard" aria-labelledby="vc-h">
       <h2 id="vc-h" className="pf-label">Your Voice Card</h2>
       <p className="pf-hint">Your bio is your voice, up to 10 seconds. Say who you are and where you dey.</p>
-      {clip ? <ClipPlayer clip={clip} label="Voice Card" /> : null}
+      {clip ? <ClipPlayer clip={clip} label="Voice Card" tone="forest" /> : null}
       {state === "recording" ? (
         <div className="pf-rec" role="status">
           <span className="pf-rec__dot" aria-hidden="true" />
@@ -85,6 +79,7 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
   const [clip, setClip] = useState<VoiceClip | null>(profile.voiceCard ?? null);
   const [followed, setFollowed] = useState<Map<string, boolean>>(new Map(followed0.map((f) => [f.categoryId, f.alertsOn])));
   const [photo, setPhoto] = useState<{ file: File; url: string } | null>(null);
+  const [photoErr, setPhotoErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,19 +150,27 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
           <Button className="pf-only-desk" icon="check" loading={saving} disabled={blocked} onClick={save}>Save changes</Button>
         </header>
 
-        {AVATAR_UPLOAD_LIVE ? (
+        {(
           <section className="pf-form-sec pf-photo" aria-labelledby="ph-h">
             <Avatar name={name} src={photo?.url ?? profile.avatarUrl ?? undefined} size="l" />
             <div>
               <h2 id="ph-h" className="pf-label">Profile photo</h2>
               <label className="pf-filebtn">
-                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPhoto({ file: f, url: URL.createObjectURL(f) }); }} />
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  if (!(PHOTO_MIMES as readonly string[]).includes(f.type)) return setPhotoErr("Choose a JPEG, PNG or WebP photo.");
+                  if (f.size > PHOTO_MAX_BYTES) return setPhotoErr("That photo is over 5 MB. Choose a smaller one.");
+                  setPhotoErr(null);
+                  setPhoto({ file: f, url: URL.createObjectURL(f) });
+                }} />
                 <Icon name="plus" size={18} />Add photo
               </label>
-              <p className="pf-hint">Optional. Without one, your initials show. Never used on share cards.</p>
+              {photoErr ? <p className="pf-note pf-note--err" role="alert">{photoErr}</p> : <p className="pf-hint">Optional. Without one, your initials show. Never used on share cards.</p>}
             </div>
           </section>
-        ) : null}
+        )}
 
         <TextField label="Handle" prefix="@" value={handle} onChange={setHandle} error={handleError} hint={handleHint} autoComplete="off" />
         <VoiceCardEditor clip={clip} onChange={setClip} />

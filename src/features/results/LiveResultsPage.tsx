@@ -8,6 +8,8 @@ import { getResultThread, listResultPosts } from "@/lib/api/results";
 import type { ResultFilter, ResultPost, ResultThread } from "@/lib/api/results";
 import { ShareSheet } from "@/features/share";
 import { toComment } from "./map";
+import { ReportSheet } from "./ReportSheet";
+import "./results.css";
 import { AppBar, DesktopBack, LabelsPanel, longDate, shortDate, useSignedIn } from "./shared";
 
 export const POLL_MS = 20000;
@@ -27,6 +29,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
   const [more, setMore] = useState(false);
   const [posted, setPosted] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [reporting, setReporting] = useState<string | null>(null);
   const filterRef = useRef(filter);
   filterRef.current = filter;
   const newestRef = useRef<string | null>(null);
@@ -126,7 +129,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
           <Skeleton variant="answer" />
         </div>
       ) : (
-        <div className="flex flex-col gap-4 pt-2 pb-24 dt:pb-0">
+        <div className="flex flex-col gap-4 pt-2 pb-40 dt:pb-0">
           {posted ? <Toast>Posted. Until it is checked, your post shows Not verified.</Toast> : null}
           <header className="flex flex-col gap-1.5">
             <span className="text-[12px] font-bold uppercase leading-4 tracking-wide text-green-text">{thread.title}</span>
@@ -160,9 +163,9 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
               ) : null}
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="rs-comments flex flex-col gap-3">
               {posts.length ? (
-                posts.map((p) => <ResultComment key={p.id} {...toComment(p, fresh.has(p.id))} />)
+                posts.map((p) => <ResultComment key={p.id} {...toComment(p, fresh.has(p.id))} onReport={() => setReporting(p.id)} />)
               ) : filter === "verified" ? (
                 <EmptyState icon="badge-check" title="Nothing verified yet" body="The WAWU team checks numbers as they come in. Switch to All to see every post." />
               ) : (
@@ -175,13 +178,14 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
           </section>
 
           {canPost ? (
-            <div className="fixed inset-x-0 bottom-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] z-sticky bg-surface px-3 pb-3 pt-2.5 shadow-[0_-1px_0_var(--line)] dt:hidden">
+            <div className="fixed inset-x-0 bottom-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] z-sticky bg-surface px-3 pb-[34px] pt-2.5 shadow-[0_-1px_0_var(--line)] dt:hidden">
               <Button size="l" block icon="plus" href={postHref}>Post the numbers you see</Button>
             </div>
           ) : null}
         </div>
       )}
 
+      {reporting ? <ReportSheet postId={reporting} signedIn={signedIn} onClose={() => setReporting(null)} /> : null}
       {sharing ? <ShareSheet objectType="RESULT_THREAD" objectId={threadId} onClose={() => setSharing(false)} /> : null}
       <Rail>
         {canPost ? (

@@ -88,6 +88,7 @@ export function PostResultPage({ threadId }: { threadId: string }) {
       ]}
       status="unverified"
       checked="Not checked yet. The WAWU team is on it."
+      hideActions
     />
   );
 

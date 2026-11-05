@@ -53,13 +53,14 @@ interface Props {
   threadHref?: string;
   unfolded?: boolean;
   compact?: boolean;
+  className?: string;
   /** Called after a change the parent may want (reaction or like totals). */
   onChange?: (a: Answer) => void;
 }
 
 /** The design system card wired to the real API. The card is controlled (liked, likeCount, reaction, reactionCounts, trayOpen, playing):
  *  it shows what the server last said, a tap is sent through onLike / onReact / onReply / onShare / onMore, and a refusal puts the props back. */
-export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, onChange }: Props) {
+export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, className, onChange }: Props) {
   const router = useRouter();
   const [a, setA] = useState(answer);
   const [more, setMore] = useState(false);
@@ -132,6 +133,9 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   const props = answerCardProps(a);
   const { reactions: _drop, ...card } = props;
   void _drop;
+  // "Read transcript" appears only when the transcript is READY (the server may send text for a PENDING or FAILED one).
+  const tx = a.clip?.transcript;
+  const voice = card.voice ? { ...card.voice, transcript: tx && tx.status === "READY" && tx.text ? tx.text : undefined } : undefined;
   const counts: Record<string, number> = {};
   for (const r of a.reactionBreakdown) { const n = nameOf(r.kind); if (n) counts[n] = r.count; }
   const handle = a.author?.handle;
@@ -140,7 +144,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
       <AnswerCard
         key={clip.rev}
         {...card}
-        voice={card.voice}
+        voice={voice}
         liked={a.iLiked}
         likeCount={a.likeCount}
         onLike={(next) => void like(next)}
@@ -161,6 +165,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
         freeReactions={freeReactions}
         unfolded={unfolded}
         compact={compact}
+        className={className}
       />
       {shareNode}
       {more ? (

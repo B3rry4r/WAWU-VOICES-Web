@@ -404,10 +404,18 @@ describe("ProfileSetup", () => {
       if (m === "POST" && u.endsWith("/me")) return json({ ...ME_DONE, handle: "ada.okafor" }, 201);
       if (m === "PUT" && u.endsWith("/me/categories")) return json({ categories: [] });
       if (m === "POST" && u.endsWith("/uploads")) return json({ fileId: "f1", putUrl: "https://spaces.example/put", putHeaders: { "Content-Type": "image/png" }, expiresAt: new Date().toISOString() }, 201);
+      if (m === "POST" && u.endsWith("/uploads/f1/complete")) return json({ fileId: "f1", kind: "AVATAR", confirmedAt: new Date().toISOString() });
       if (m === "PATCH" && u.endsWith("/me/profile")) return json({});
-      if (u === "https://spaces.example/put") return new Response(null, { status: 200 });
       return null;
     };
+    // The photo bytes go to storage by XHR (as the voice card does), then the server is told it landed.
+    class FakeXhr {
+      status = 0; onload: (() => void) | null = null; onerror: (() => void) | null = null; private url = "";
+      open(_m: string, url: string) { this.url = url; }
+      setRequestHeader() { /* signed headers */ }
+      send() { calls.push({ url: this.url, method: "PUT", headers: new Headers(), body: undefined }); this.status = 200; queueMicrotask(() => this.onload?.()); }
+    }
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
     const user = userEvent.setup();
     render(<ProfileSetup />);
     expect((screen.getByLabelText("Handle") as HTMLInputElement).value).toBe("ada.okafor");
@@ -418,7 +426,7 @@ describe("ProfileSetup", () => {
     await user.click(screen.getAllByRole("button", { name: "Finish and post my voice" })[0]);
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/speak"));
     const sent = calls.filter((c) => !c.url.includes("handle-check") && !c.url.includes("config/public")).map((c) => `${c.method} ${c.url.replace("/api/v1", "")}`);
-    expect(sent).toEqual(["GET /me", "POST /me", "PUT /me/categories", "POST /uploads", "PUT https://spaces.example/put", "PATCH /me/profile"]);
+    expect(sent).toEqual(["GET /me", "POST /me", "PUT /me/categories", "POST /uploads", "PUT https://spaces.example/put", "POST /uploads/f1/complete", "PATCH /me/profile"]);
     expect(calls.find((c) => c.method === "POST" && c.url.endsWith("/me"))?.body).toEqual({ handle: "ada.okafor", ageConfirmed: true, termsAccepted: true, rulesAccepted: true, countryCode: "NG", languages: ["en", "pcm"], categoryIds: ["c0", "c1", "c2"] });
     expect(calls.find((c) => c.url.endsWith("/me/categories"))?.body).toEqual({ categories: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: false }, { categoryId: "c2", alertsOn: true }] });
     expect(calls.find((c) => c.url.endsWith("/uploads"))?.body).toEqual({ kind: "AVATAR", mime: "image/png", sizeBytes: 1200 });

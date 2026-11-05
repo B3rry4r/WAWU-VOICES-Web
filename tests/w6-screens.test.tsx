@@ -237,10 +237,10 @@ describe("EditProfile", () => {
     expect(calls.some((c) => c.path === "/me/categories" && c.method === "PUT")).toBe(false);
     expect(await screen.findByText("Profile saved")).toBeTruthy();
   });
-  it("shows no photo control while avatar confirmation does not exist in the API", async () => {
+  it("shows the photo control now that the API confirms uploads (POST /uploads/{fileId}/complete)", async () => {
     signIn(); mockApi(routes());
     render(<EditProfilePage />);
     await screen.findByLabelText("Handle");
-    expect(screen.queryByText("Add photo")).toBeNull();
+    expect(screen.getByText("Add photo")).toBeTruthy();
   });
 });
