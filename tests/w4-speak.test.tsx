@@ -81,6 +81,22 @@ describe("ExtraVoice sheet", () => {
     expect(onPay).toHaveBeenCalledWith(offers[0], "ussd");
     expect(screen.getByRole("button", { name: "No thanks, keep my 10 seconds" })).toBeTruthy();
   });
+  it("for an over-limit take it promises no send: real length, a covering token, record again", async () => {
+    const onRerecord = vi.fn();
+    const onPay = vi.fn();
+    render(<ExtraVoiceSheet offers={offers} freeSeconds={10} hasTake takeSeconds={12.4} paying={false} onPay={onPay} onRerecord={onRerecord} onClose={() => undefined} />);
+    expect(screen.getByText("Your recording is 12 seconds. A free post is 10.")).toBeTruthy();
+    expect(screen.getByText("This token covers your 12-second recording.")).toBeTruthy();
+    expect(screen.queryByText(/is kept/)).toBeNull();
+    expect(screen.queryByText(/keep my 10 seconds/)).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Record again" }));
+    expect(onRerecord).toHaveBeenCalled();
+  });
+  it("a 45 s take cannot be paid with the 30 s token", () => {
+    render(<ExtraVoiceSheet offers={offers} freeSeconds={10} hasTake takeSeconds={45} paying={false} onPay={() => undefined} onClose={() => undefined} />);
+    expect(screen.getByRole("radio", { name: /1 minute/ }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("button", { name: /Pay ₦200/ }).hasAttribute("disabled")).toBe(false);
+  });
   it("from the idle recorder it says nothing about a kept recording", () => {
     render(<ExtraVoiceSheet offers={offers} freeSeconds={10} hasTake={false} paying={false} onPay={() => undefined} onClose={() => undefined} />);
     expect(screen.queryByText(/is kept/)).toBeNull();

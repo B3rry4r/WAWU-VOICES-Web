@@ -67,6 +67,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const interrupted = useRef(false);
   const starting = useRef(false);
   const startedAt = useRef(0);
+  const payBusy = useRef(false);
+  const [nudge, setNudge] = useState(false);
   const alive = useRef(true);
   const trapped = useRef(false);
   const ignorePop = useRef(false);
@@ -255,7 +257,11 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   function stopRecording() {
     // a second tap of a double tap lands on the Stop button; it is not a request to stop
-    if (Date.now() - startedAt.current < 700) return;
+    if (Date.now() - startedAt.current < 700) {
+      setNudge(true);
+      setTimeout(() => setNudge(false), 1800);
+      return;
+    }
     rec.current?.stop();
   }
 
@@ -296,12 +302,15 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }, [phase]);
 
   // Leaving the page releases the microphone.
-  useEffect(() => () => {
+  useEffect(() => {
+    alive.current = true; // a StrictMode double mount runs the cleanup once before the real mount
+    return () => {
     alive.current = false;
     if (rec.current) {
       discard.current = true;
       rec.current.cancel();
     }
+    };
   }, []);
 
   function dropTake(removeClip: boolean) {
@@ -315,6 +324,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }
 
   function close() {
+    // release the history trap first, without navigating, so finishing the recording never calls history.back() after the push below
+    trapped.current = false;
     if (rec.current) {
       discard.current = true;
       rec.current.stop();
@@ -420,7 +431,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }
 
   async function pay(offer: api.ExtraVoiceOffer, method: api.PaymentMethod) {
-    if (!qid || paying) return;
+    if (!qid || paying || payBusy.current) return;
+    payBusy.current = true;
     if (take) await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
     if (!signedIn) {
       window.location.assign(joinHref());
@@ -435,6 +447,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       window.location.assign(init.checkoutUrl);
     } catch (e) {
       setSheetErr(refusalText(e));
+      payBusy.current = false;
       setPaying(false);
       payKey.current = uuidKey();
     }
@@ -491,6 +504,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     <p className="vx-rec__hint" aria-live="polite">
       <b>{`${Math.ceil(left)} seconds left`}</b>
       {`. It stops by itself at ${limit}.`}
+      {nudge ? <span className="sp-nudge" role="status">{" Keep talking, a little longer."}</span> : null}
     </p>
   );
   const feeNote = `Extra time is a one-off token for one message: ${[...offers].sort((a, b) => a.maxSeconds - b.maxSeconds).map((o) => `${naira(o.priceKobo)} for up to ${durationLabel(o.maxSeconds)}`).join(", ")}. Your first ${freeTotal} posts stay free.`;
@@ -574,7 +588,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       </div>
       {rail ? createPortal(<RecordingTimeCard freeLeft={freeLeft} total={freeTotal} freeSeconds={freeSeconds} offers={offers} />, rail) : null}
       {sheet && offers.length > 0 ? (
-        <ExtraVoiceSheet offers={offers} freeSeconds={freeSeconds} initial={sheet.kind} hasTake={sheet.hasTake} paying={paying} error={sheetErr} onPay={(o, m) => void pay(o, m)} onClose={() => { setSheet(null); setSheetErr(null); }} />
+        <ExtraVoiceSheet offers={offers} freeSeconds={freeSeconds} initial={sheet.kind} hasTake={sheet.hasTake} takeSeconds={take?.seconds} onRerecord={() => { setSheet(null); dropTake(true); }} paying={paying} error={sheetErr} onPay={(o, m) => void pay(o, m)} onClose={() => { setSheet(null); setSheetErr(null); }} />
       ) : null}
     </div>
   );

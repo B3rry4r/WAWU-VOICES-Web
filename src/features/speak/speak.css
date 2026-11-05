@@ -81,3 +81,5 @@
 
 .sp-dtonly { display: none; }
 @media (min-width: 1024px) { .sp-dtonly { display: inline; } }
+
+.sp-nudge { color: var(--on-forest-2); font-weight: 500; }

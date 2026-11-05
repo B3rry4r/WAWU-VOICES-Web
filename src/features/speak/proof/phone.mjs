@@ -295,6 +295,54 @@ try {
     await m.ctx.close();
   });
 
+  await t("L Close mid-take leaves for the question with no live microphone; Close when idle too; early Stop gives a hint", async () => {
+    for (const dev of [IPHONE, PIXEL]) {
+      const { ctx, page } = await mk(browser, dev, "sade");
+      await page.addInitScript(() => { window.__streams = []; const g = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices); navigator.mediaDevices.getUserMedia = async (c) => { const s = await g(c); window.__streams.push(s); return s; }; });
+      await page.goto(url()); await idle(page).waitFor();
+      await idle(page).tap(); await stop(page).waitFor();
+      await stop(page).tap(); // too early: quiet hint, still recording
+      await page.getByText("Keep talking, a little longer.").waitFor({ timeout: 3000 });
+      assert.ok(await stop(page).isVisible(), "still recording after the early tap");
+      await sleep(1200);
+      await page.getByRole("button", { name: "Close the recorder" }).tap();
+      await page.waitForURL(new RegExp(`/q/${ids.q}$`), { timeout: 10000 });
+      await sleep(1500);
+      assert.match(page.url(), new RegExp(`/q/${ids.q}$`), "stayed on the question");
+      const live = await page.evaluate(() => window.__streams.flatMap((s) => s.getTracks()).filter((t) => t.readyState === "live").length);
+      assert.equal(live, 0, "live tracks after close");
+      await ctx.close();
+    }
+    const { ctx, page } = await mk(browser, IPHONE, "sade");
+    await page.goto(url()); await idle(page).waitFor();
+    await page.getByRole("button", { name: "Close the recorder" }).tap();
+    await page.waitForURL(new RegExp(`/q/${ids.q}$`), { timeout: 10000 });
+    await ctx.close();
+  });
+
+  await t("M over-limit take: the sheet says the real length and offers a token or Record again", async () => {
+    const { ctx, page } = await mk(browser, PIXEL, "fresh");
+    await page.goto(url()); await idle(page).waitFor();
+    await idle(page).tap(); await stop(page).waitFor(); await sleep(2200); await stop(page).tap();
+    await page.getByText("Listen back. Nothing posts until you tap Send.").waitFor();
+    await page.evaluate(() => new Promise((res, rej) => {
+      const o = indexedDB.open("voices-speak", 1);
+      o.onsuccess = () => { const tx = o.result.transaction("drafts", "readwrite"); const s = tx.objectStore("drafts"); const g = s.get("current"); g.onsuccess = () => { const d = g.result; d.seconds = 12; s.put(d, "current"); }; tx.oncomplete = () => res(true); tx.onerror = () => rej(tx.error); };
+    }));
+    await page.reload();
+    await page.getByText("Listen back.").waitFor();
+    await page.getByRole("button", { name: "Send" }).tap();
+    await page.getByRole("dialog").waitFor(); await sleep(1000);
+    assert.ok(await page.getByText("Your recording is 12 seconds. A free post is 10.").isVisible());
+    assert.ok(await page.getByText("This token covers your 12-second recording.").isVisible());
+    assert.equal(await page.getByText(/is kept/).count(), 0);
+    assert.equal(await page.getByText(/keep my 10 seconds/).count(), 0);
+    await shot(page, "ExtraVoice-overlimit-390-light-pixel");
+    await page.getByRole("button", { name: "Record again" }).tap();
+    await idle(page).waitFor();
+    await ctx.close();
+  });
+
   await t("J error and closed states", async () => {
     const { ctx, page } = await mk(browser, IPHONE, "sade");
     await page.route("**/api/v1/questions/**", (r) => r.abort());
