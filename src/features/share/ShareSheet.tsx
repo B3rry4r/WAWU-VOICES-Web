@@ -26,17 +26,18 @@ interface Row {
   target: ShareTarget;
   abbr?: string;
   icon?: IconName;
-  href?: (url: string, text: string) => string;
+  /** `full` is the text with the link in it (for targets with no separate url); `body` is the text without the link. One link per message. */
+  href?: (url: string, full: string, body: string) => string;
 }
 
 const enc = encodeURIComponent;
 /** What a browser can really do. Status, Stories and TikTok only exist inside their own apps, so a web page cannot open them. */
 const ROWS: Row[] = [
-  { id: "whatsapp", label: "WhatsApp", target: "WHATSAPP", abbr: "WA", href: (u, t) => `https://wa.me/?text=${enc(t + " " + u)}` },
+  { id: "whatsapp", label: "WhatsApp", target: "WHATSAPP", abbr: "WA", href: (_u, full) => `https://wa.me/?text=${enc(full)}` },
   { id: "facebook", label: "Facebook", target: "FACEBOOK", abbr: "FB", href: (u) => `https://www.facebook.com/sharer/sharer.php?u=${enc(u)}` },
-  { id: "x", label: "X", target: "X", abbr: "X", href: (u, t) => `https://twitter.com/intent/tweet?text=${enc(t)}&url=${enc(u)}` },
-  { id: "telegram", label: "Telegram", target: "TELEGRAM", abbr: "TG", href: (u, t) => `https://t.me/share/url?url=${enc(u)}&text=${enc(t)}` },
-  { id: "sms", label: "SMS", target: "SMS", icon: "message-circle", href: (u, t) => `sms:?&body=${enc(t + " " + u)}` },
+  { id: "x", label: "X", target: "X", abbr: "X", href: (u, _f, body) => `https://twitter.com/intent/tweet?text=${enc(body)}&url=${enc(u)}` },
+  { id: "telegram", label: "Telegram", target: "TELEGRAM", abbr: "TG", href: (u, _f, body) => `https://t.me/share/url?url=${enc(u)}&text=${enc(body)}` },
+  { id: "sms", label: "SMS", target: "SMS", icon: "message-circle", href: (_u, full) => `sms:?&body=${enc(full)}` },
 ];
 
 type Card = { state: "making" } | { state: "ready"; url: string } | { state: "none" };
@@ -67,6 +68,11 @@ function Round({ children, label, onClick, href, tone, disabled }: { children: R
  * offers the targets a browser can reach: WhatsApp, Facebook, X, Telegram, SMS, Copy link and the phone's own share sheet.
  * Every tap records an intent (POST /share/{code}/events).
  */
+/** The preview text without the line that carries the link, for targets that take the link as a separate parameter. */
+export function textWithoutLink(previewText: string, url: string): string {
+  return previewText.split("\n").filter((l) => !l.includes(url)).join("\n").trim();
+}
+
 export function ShareSheet({ objectType, objectId, onClose }: { objectType: ShareObjectType; objectId: string; onClose: () => void }) {
   const desktop = useDesktop();
   const [link, setLink] = useState<ShareLink | null>(null);
@@ -103,6 +109,7 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
   }, [objectType, objectId]);
 
   const text = link?.previewText ?? "";
+  const body = link ? textWithoutLink(text, link.url) : "";
   const intent = (t: ShareTarget) => {
     if (link) void recordShareEvent(link.code, "intent", t);
   };
@@ -123,7 +130,7 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
     if (!link) return;
     intent("SYSTEM_SHEET");
     try {
-      await navigator.share({ title: "VOICES", text, url: link.url });
+      await navigator.share({ title: "VOICES", text: body, url: link.url });
     } catch {
       /* the person closed the phone's share sheet */
     }
@@ -144,7 +151,7 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
         )}
         <div className="flex flex-wrap justify-center gap-x-1 gap-y-4" role="group" aria-label="Share to">
           {ROWS.map((r) => (
-            <Round key={r.id} label={r.label} disabled={!link} href={link && r.href ? r.href(link.url, text) : undefined} onClick={link ? () => intent(r.target) : undefined}>
+            <Round key={r.id} label={r.label} disabled={!link} href={link && r.href ? r.href(link.url, text, body) : undefined} onClick={link ? () => intent(r.target) : undefined}>
               {r.icon ? <Icon name={r.icon} size={24} /> : r.abbr}
             </Round>
           ))}

@@ -1,1 +1,1 @@
-export { ShareSheet } from "./ShareSheet";
+export { ShareSheet, textWithoutLink } from "./ShareSheet";

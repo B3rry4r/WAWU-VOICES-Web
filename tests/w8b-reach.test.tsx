@@ -6,7 +6,8 @@ import { renderToString } from "react-dom/server";
 import { readPollSummary, readThemes, cardRows } from "@/features/reach/weekly-map";
 import { whenLabel, isToday } from "@/features/reach/shared";
 import { NotificationsPage, targetHref } from "@/features/notifications/NotificationsPage";
-import { ShareSheet } from "@/features/share";
+import { ShareSheet, textWithoutLink } from "@/features/share";
+import { isChromeless } from "@/components/shell/nav";
 import { SharePageView, agoShort } from "@/features/share/SharePageView";
 import { WeeklyPage } from "@/features/reach/WeeklyPage";
 import type { Notification, SharePage, WeeklyReport } from "@/lib/api/reach";
@@ -154,6 +155,28 @@ describe("ShareSheet", () => {
     routes = () => json({ error: { code: "INTERNAL", message: "x" } }, 500);
     render(<ShareSheet objectType="ANSWER" objectId="a1" onClose={() => undefined} />);
     expect(await screen.findByText("We could not make your link. Close this and try again.")).toBeTruthy();
+  });
+});
+
+describe("one link per message", () => {
+  const url = "https://v.test/s/abc1234";
+  const preview = `Are you fine?\nAdd your voice: ${url}`;
+  const count = (h: string) => (decodeURIComponent(h).match(/https:\/\/v\.test\/s\/abc1234/g) ?? []).length;
+  it("each target's built address carries the link exactly once", async () => {
+    routes = (u) => (u.endsWith("/share/links") ? json({ code: "abc1234", url, cardStatus: "READY", imageUrl: "https://v.test/c.png", storyImageUrl: null, squareImageUrl: null, previewText: preview }, 201) : null);
+    render(<ShareSheet objectType="QUESTION" objectId="q1" onClose={() => undefined} />);
+    await screen.findByAltText("The card that goes out with your link");
+    expect(textWithoutLink(preview, url)).toBe("Are you fine?");
+    const href = (n: string) => screen.getByRole("link", { name: n }).getAttribute("href")!;
+    for (const n of ["WhatsApp", "Facebook", "X", "Telegram", "SMS"]) expect(count(href(n)), n).toBe(1);
+    expect(href("X")).toContain("url=");
+    expect(decodeURIComponent(href("X"))).not.toContain("Add your voice:");
+    expect(decodeURIComponent(href("WhatsApp"))).toContain("Add your voice: " + url);
+  });
+  it("the share page has no app chrome", () => {
+    expect(isChromeless("/s/abc1234")).toBe(true);
+    expect(isChromeless("/speak")).toBe(false);
+    expect(isChromeless("/weekly")).toBe(false);
   });
 });
 

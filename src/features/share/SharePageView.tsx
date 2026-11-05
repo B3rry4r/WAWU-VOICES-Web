@@ -1,5 +1,5 @@
 import "@/features/reach/reach.css";
-import { Badge, Logo, NewsTag, Poll } from "@/components/vx";
+import { Avatar, Badge, Button, Logo, NewsTag, Poll } from "@/components/vx";
 import { fmt } from "@/components/vx/helpers";
 import type { SharePage } from "@/lib/api/reach";
 import { AddVoice, LinkOpened } from "./ShareActions";
@@ -46,10 +46,11 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
   );
 
   return (
-    <div className="rx-public" data-testid="share-page">
+    <div className="min-h-dvh bg-bg text-ink" data-testid="share-page">
       <LinkOpened code={page.code} />
-      <header className="mx-auto flex max-w-[1100px] items-center px-4 py-3 dt:px-8 dt:py-5">
+      <header className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-3 dt:px-8 dt:py-5">
         <Logo height={36} />
+        <span className="hidden dt:block"><Button variant="ghost" href="/welcome">What is VOICES?</Button></span>
       </header>
       <div className="mx-auto grid max-w-[1100px] gap-6 px-4 pb-40 dt:grid-cols-[1fr_340px] dt:px-8 dt:pb-16">
         <main className="flex min-w-0 flex-col gap-5">
@@ -81,6 +82,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
               <Eyebrow>Featured voice</Eyebrow>
               <article className="vx-answer" aria-label={"Voice from " + (voice.author ? "@" + voice.author.handle : "an anonymous poster")}>
                 <div className="vx-answer__head">
+                  <Avatar name={voice.author ? voice.author.displayName ?? voice.author.handle : "Anonymous"} src={voice.author?.avatarUrl ?? undefined} />
                   <div className="vx-answer__who">
                     <span className="vx-answer__name">{voice.author ? "@" + voice.author.handle : "Anonymous"}</span>
                     <span className="vx-answer__time">{agoShort(voice.createdAt, now) + (voice.author?.state ? " · " + voice.author.state : "")}</span>
@@ -117,9 +119,9 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
         </main>
 
         <aside className="hidden dt:block" aria-label="Add your voice">
-          <div className="sticky top-6 flex flex-col gap-3 rounded-l border border-line bg-surface p-5 shadow-1">
+          <div className="sticky top-6 flex flex-col gap-3 rounded-l bg-forest p-5 text-forest-on shadow-1">
             <h2 className="m-0 font-display text-[24px] font-normal leading-8">What do you think?</h2>
-            <p className="m-0 text-[16px] leading-6 text-ink-2">Say it in 10 seconds, right here in your browser. You only sign in when you publish.</p>
+            <p className="m-0 text-[16px] leading-6 text-[color:var(--on-forest-2)]">Say it in 10 seconds, right here in your browser. You only sign in when you publish.</p>
             <AddVoice code={page.code} label={page.ctaLabel} block />
           </div>
         </aside>

@@ -119,7 +119,7 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
         />
       </div>
 
-      <div className={"grid gap-5 dt:items-start " + (poll && report.quotes.length ? "dt:grid-cols-2" : "")}>
+      <div className={"grid gap-5 dt:items-start " + "dt:grid-cols-2"}>
         {poll ? (
           <section className="flex flex-col gap-2" aria-label="The poll in full">
             <h2 className="vx-eyebrow m-0 text-ink-2">The poll in full</h2>
