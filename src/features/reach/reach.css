@@ -1,0 +1,7 @@
+/* Reach screens (weekly report, archive, share page, notifications). Tokens only. */
+
+/* The design card draws Share and Download PDF. The PDF is after launch (V-10), so it is hidden here. */
+.rx-report .vx-report__btns .vx-btn:nth-child(2) { display: none; }
+
+/* The public share page carries no app chrome (the shell skips /s). On a phone its one call to action sits in a bar pinned to the bottom. */
+.rx-public__bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--bg); border-top: 1px solid var(--line); padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom)); }

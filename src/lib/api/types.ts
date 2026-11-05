@@ -3746,6 +3746,7 @@ export interface components {
             objectId: string;
             language?: string;
         };
+        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl and squareImageUrl are not drawn: null at launch. */
         ShareLink: {
             code: string;
             url: string;
@@ -3753,6 +3754,7 @@ export interface components {
             cardStatus: "PENDING" | "READY" | "FAILED" | "FALLBACK";
             storyImageUrl?: string | null;
             squareImageUrl?: string | null;
+            imageUrl?: string | null;
             previewText: string;
         };
         ShareEventRequest: {
