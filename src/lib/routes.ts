@@ -5,4 +5,6 @@
 export const BUILT = {
   /** W8a builds /news (the Newsroom). */
   news: false,
+  /** W6 builds /p/[handle] (a person's profile). */
+  profile: false,
 } as const;

@@ -2,16 +2,13 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Banner, Poll } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
-import { castVote, getVoteAllowance, type Allowances, type Poll as PollData } from "@/lib/api/polls";
+import { castVote, getPoll, getVoteAllowance, type Allowances, type Poll as PollData } from "@/lib/api/polls";
 import { closesIn, unitsLabel } from "@/lib/feed-format";
 
+/** The API's own words for a refusal; our own only when it said nothing (offline, or no explanation). */
 function message(e: unknown): string {
   if (e instanceof ApiError) {
     if (e.status === 0) return "You are offline. Check your connection and try again.";
-    if (e.code === "INSUFFICIENT_UNITS") return "You do not have enough Voice Units to vote on this poll.";
-    if (e.code === "POLL_CLOSED") return "This poll has closed.";
-    if (e.status === 401) return "Your session ended. Sign in again to vote.";
-    if (e.status === 429) return "Too many votes too fast. Wait a moment and try again.";
     if (e.explained) return e.message;
   }
   return "That vote did not go through. Try again.";
@@ -87,8 +84,13 @@ export function FlashPoll({ poll, signedIn }: { poll: PollData; signedIn: boolea
     } catch (err) {
       if (err instanceof ApiError && err.code === "ALREADY_VOTED") {
         key.current = null;
-        setLive({ ...live, myVote: [opt.id] });
-        setVersion((v) => v + 1);
+        const mine = await getPoll(live.id).catch(() => null);
+        if (mine) {
+          setLive(mine);
+          setVersion((v) => v + 1);
+        } else {
+          setError(message(err));
+        }
       } else {
         setError(message(err));
       }

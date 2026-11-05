@@ -79,7 +79,7 @@ export function DiscoverScreen() {
           title="Categories"
           aside={
             !all && rest.length ? (
-              <button type="button" className="min-h-[32px] border-0 bg-transparent p-0 text-[14px] font-semibold text-[var(--green-text)] dt:hidden" onClick={() => setAll(true)}>See all</button>
+              <button type="button" className="min-h-[32px] border-0 bg-transparent p-0 text-[14px] font-semibold text-[var(--green-text)]" onClick={() => setAll(true)}>See all</button>
             ) : undefined
           }
         >
@@ -89,7 +89,7 @@ export function DiscoverScreen() {
                 {shown.map((c) => <CategoryTile key={c.id} slug={c.slug} name={c.name} voices={c.voicesThisWeek} />)}
               </div>
               <div className="hidden gap-3 dt:grid dt:grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
-                {[...drawn, ...rest].map((c) => <CategoryTile key={c.id} slug={c.slug} name={c.name} voices={c.voicesThisWeek} wide />)}
+                {shown.map((c) => <CategoryTile key={c.id} slug={c.slug} name={c.name} voices={c.voicesThisWeek} wide />)}
               </div>
             </>
           ) : (
@@ -128,7 +128,7 @@ export function DiscoverScreen() {
         {flash.length ? (
           <Section className="order-6 dt:order-4" title={<><span className="dt:hidden">Flash poll</span><span className="hidden dt:inline">Flash polls</span> <Badge tone="live" /></>}>
             <div className="grid items-start gap-4 dt:grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))]">
-              {flash.map((p, i) => (
+              {flash.slice(0, 2).map((p, i) => (
                 <div key={p.id} className={i > 0 ? "hidden dt:block" : undefined}>
                   <FlashPoll poll={p} signedIn={signedIn} />
                 </div>

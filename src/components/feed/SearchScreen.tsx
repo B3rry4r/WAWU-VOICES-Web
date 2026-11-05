@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Avatar, Icon, Tabs, TrendingList } from "@/components/vx";
 import { PhoneBar, Rail } from "@/components/shell/ShellSlots";
 import { getCurrentTopic, getTodaysQuestion, getTrendingQuestions, search, type Question } from "@/lib/api/feed";
+import { BUILT } from "@/lib/routes";
 import { isOpen, voicesShort } from "@/lib/feed-format";
 import { Answers, Failed, Loading, NothingYet, SearchBox, Section, WeekCard } from "./parts";
 import { trendItems } from "./trend";
@@ -99,16 +100,23 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
       {show("people") && r.people.length ? (
         <Section title="People">
           <div className="vx-notes">
-            {r.people.map((p) => (
-              <Link key={p.id} href={`/p/${p.handle}`} className="vx-note vx-focus items-center">
-                <Avatar name={p.displayName ?? p.handle} />
-                <span className="flex flex-1 flex-col">
-                  <b className="text-[15px] font-bold leading-5">{`@${p.handle}`}</b>
-                  <span className="text-[13px] font-medium leading-[18px] text-[var(--ink-2)]">{[p.state, voicesShort(p.voiceCount)].filter(Boolean).join(" · ")}</span>
-                </span>
-                <Icon name="chevron-right" size={20} />
-              </Link>
-            ))}
+            {r.people.map((p) => {
+              const inner = (
+                <>
+                  <Avatar name={p.displayName ?? p.handle} />
+                  <span className="flex flex-1 flex-col">
+                    <b className="text-[15px] font-bold leading-5">{`@${p.handle}`}</b>
+                    <span className="text-[13px] font-medium leading-[18px] text-[var(--ink-2)]">{[p.state, voicesShort(p.voiceCount)].filter(Boolean).join(" · ")}</span>
+                  </span>
+                  {BUILT.profile ? <Icon name="chevron-right" size={20} /> : null}
+                </>
+              );
+              return BUILT.profile ? (
+                <Link key={p.id} href={`/p/${p.handle}`} className="vx-note vx-focus items-center">{inner}</Link>
+              ) : (
+                <div key={p.id} className="vx-note items-center cursor-default">{inner}</div>
+              );
+            })}
           </div>
         </Section>
       ) : null}

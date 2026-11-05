@@ -42,14 +42,32 @@ describe("FlashPoll", () => {
   });
 
   it("a refused vote stays on the confirm step and says why", async () => {
-    mockFetch((url) => (url.includes("/votes") ? json(402, { error: { code: "INSUFFICIENT_UNITS", message: "x" } }) : json(404, { error: { code: "NOT_FOUND", message: "no" } })));
+    mockFetch((url) => (url.includes("/votes") ? json(402, { error: { code: "INSUFFICIENT_UNITS", message: "You need 0.2 units to vote. Top up and try again." } }) : json(404, { error: { code: "NOT_FOUND", message: "no" } })));
     render(<FlashPoll poll={poll} signedIn />);
     const u = userEvent.setup();
     await u.click(screen.getByRole("radio", { name: "Yes, it is fine" }));
     await u.click(screen.getByRole("button", { name: "Vote" }));
     await u.click(screen.getByRole("button", { name: "Confirm vote" }));
-    await waitFor(() => expect(screen.getByText("You do not have enough Voice Units to vote on this poll.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("You need 0.2 units to vote. Top up and try again.")).toBeTruthy());
     expect(screen.getByRole("button", { name: "Confirm vote" })).toBeTruthy();
+  });
+
+  it("already voted: shows the vote the API holds, not the option just tapped", async () => {
+    mockFetch((url) =>
+      url.includes("/votes")
+        ? json(409, { error: { code: "ALREADY_VOTED", message: "You have already voted in this poll." } })
+        : url.endsWith("/polls/p1")
+          ? json(200, { ...poll, myVote: ["a"], totalVotes: 100 })
+          : json(404, { error: { code: "NOT_FOUND", message: "no" } }),
+    );
+    const { container } = render(<FlashPoll poll={poll} signedIn />);
+    const u = userEvent.setup();
+    await u.click(screen.getByRole("radio", { name: "Not at all" }));
+    await u.click(screen.getByRole("button", { name: "Vote" }));
+    await u.click(screen.getByRole("button", { name: "Confirm vote" }));
+    await waitFor(() => expect(container.querySelector(".vx-res")).toBeTruthy());
+    const you = container.querySelector(".vx-res__row .vx-badge--you, .vx-res__row [class*='you']")?.closest("li");
+    expect(you?.textContent).toContain("Yes, it is fine");
   });
 
   it("a guest sees the results, with no vote button", () => {

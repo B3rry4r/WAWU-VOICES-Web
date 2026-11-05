@@ -50,6 +50,9 @@ export const getCategories = () => apiFetch<S["CategoryList"]>("/categories", op
 export const getCategory = (slug: string, tab: string, cursor?: string) =>
   apiFetch<CategoryDetail>(`/categories/${encodeURIComponent(slug)}${qs({ tab, cursor, limit: 10 })}`, opts());
 export const search = (q: string, type?: string) => apiFetch<SearchResults>(`/search${qs({ q, type, limit: 20 })}`, opts());
+export type Me = S["Me"];
+/** The signed-in person: first name for the greeting, allowances for the vote cost. Signed in with a finished profile only. */
+export const getMe = () => apiFetch<Me>("/me", { authed: true });
 export const getMyCategories = () => apiFetch<S["CategoryFollowList"]>("/me/categories", { authed: true });
 export const setMyCategories = (categories: S["CategoryFollow"][]) =>
   apiFetch<S["SetCategoriesRequest"]>("/me/categories", { method: "PUT", authed: true, body: { categories } });

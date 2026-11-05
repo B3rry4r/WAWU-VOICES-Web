@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge, Banner, QuestionHero, TrendingList } from "@/components/vx";
 import { Rail } from "@/components/shell/ShellSlots";
-import { getHome, getTrendingQuestions, type Home } from "@/lib/api/feed";
+import { getHome, getMe, getTrendingQuestions, type Home } from "@/lib/api/feed";
 import { getAdPlacement, getFlashPolls, type AdPlacement, type Poll } from "@/lib/api/polls";
 import { isSignedIn } from "@/lib/api/auth";
 import { closesIn, shortCount } from "@/lib/feed-format";
@@ -18,6 +18,7 @@ interface Data {
   flash: Poll | null;
   trending: ReturnType<typeof trendItems>;
   ad: AdPlacement | null;
+  firstName: string | null;
 }
 
 /** Home: signed in greets by name and shows the flash poll; a guest reads the same feed with the "Listening is free" line (HomeGuest board). */
@@ -26,17 +27,18 @@ export function HomeScreen() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => setSignedIn(isSignedIn()), []);
   const load = useLoad<Data>(async () => {
-    const [home, flash, trending, ad] = await Promise.all([
+    const [home, flash, trending, ad, firstName] = await Promise.all([
       getHome(),
       signedIn ? getFlashPolls().then((r) => r.items[0] ?? null, () => null) : Promise.resolve(null),
       getTrendingQuestions(3).then((r) => trendItems(r.items), () => []),
       getAdPlacement().catch(() => null),
+      signedIn ? getMe().then((m) => m.profile?.displayName?.trim().split(/\s+/)[0] ?? null, () => null) : Promise.resolve(null),
     ]);
-    return { home, flash, trending, ad };
+    return { home, flash, trending, ad, firstName };
   }, [signedIn]);
   if (signedIn === null || load.state === "loading") return <Loading />;
   if (load.state === "error") return <Failed load={load} />;
-  const { home: h, flash, trending, ad } = load.data;
+  const { home: h, flash, trending, ad, firstName } = load.data;
   const q = h.dailyQuestion;
   const go = (path: string) => () => router.push(path);
   const talk = q ? go(`/q/${q.id}`) : undefined;
@@ -45,7 +47,7 @@ export function HomeScreen() {
     <>
       <div className="flex flex-col gap-4">
         <h1 className="order-1 m-0 mt-1 font-display text-[28px] font-normal leading-8 dt:text-[32px] dt:leading-9">
-          {!signedIn ? "What is Nigeria saying today?" : h.greetingName ? `Hi ${h.greetingName}, what is your take today?` : "What is your take today?"}
+          {!signedIn ? "What is Nigeria saying today?" : (firstName ?? h.greetingName) ? `Hi ${firstName ?? h.greetingName}, what is your take today?` : "What is your take today?"}
         </h1>
         {q ? (
           <div className="order-2">

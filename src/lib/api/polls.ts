@@ -20,8 +20,11 @@ export const getFlashPolls = () => apiFetch<S["PollList"]>("/polls/flash", { aut
 export const castVote = (pollId: string, optionId: string, idempotencyKey: string) =>
   apiFetch<VoteReceipt>(`/polls/${encodeURIComponent(pollId)}/votes`, { method: "POST", authed: true, idempotencyKey, body: { optionIds: [optionId] } });
 
+/** One poll with the signed-in person's own vote in `myVote`. */
+export const getPoll = (pollId: string) => apiFetch<Poll>(`/polls/${encodeURIComponent(pollId)}`, { authed: true });
+
 /** What a vote costs this person right now (free votes left today, the price after). Signed in with a finished profile only. */
-export const getVoteAllowance = () => apiFetch<Allowances>("/me/allowance?action=VOTE", { authed: true });
+export const getVoteAllowance = () => apiFetch<S["Me"]>("/me", { authed: true }).then((m) => m.allowances);
 
 /** The approved ad for a slot, or null where none may show. */
 export const getAdPlacement = async (kind = "FEED_CARD", categoryId?: string): Promise<AdPlacement | null> => {
