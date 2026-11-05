@@ -1,20 +1,20 @@
 /**
- * Routes this task's screens use that main does not serve yet (A1 ME, A3 TALK are unmerged on 5 Nov 2026). A control that needs one is
- * not drawn until the API serves it ("show only what is built"). Flip each to true when its route is live; the code and tests are ready.
+ * Routes this task's screens use. Checked live on 5 Nov 2026 (round 0): every one is served on main, so all are on.
+ * A control whose flag is turned off is not drawn, so a withdrawn route can be hidden in one place.
  */
 export const SERVED = {
   /** PUT and DELETE /answers/{id}/like */
-  likes: false,
+  likes: true,
   /** PUT and DELETE /answers/{id}/reaction */
-  reactions: false,
+  reactions: true,
   /** GET /answers/{id}/replies */
-  replies: false,
+  replies: true,
   /** GET /voice-clips/{id}/play */
-  clipPlay: false,
+  clipPlay: true,
   /** POST /uploads (RESULT_PHOTO) */
-  photoUpload: false,
+  photoUpload: true,
   /** PUT /me/tag-follows */
-  tagFollows: false,
+  tagFollows: true,
   /** GET /me (the poster's own handle for the preview) */
-  me: false,
+  me: true,
 };

@@ -10,6 +10,7 @@ import { RailPortal, ago, lagosClock, useSignedIn } from "@/features/results/sha
 import { NewsCard } from "./NewsCard";
 import { ClipPlayer } from "./ClipPlayer";
 import { kindOf } from "./tags";
+import { ShareSheet } from "@/features/share";
 import { SERVED } from "./served";
 
 type Load = "loading" | "missing" | "error" | "ready";
@@ -46,6 +47,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
   const [replies, setReplies] = useState<NewsReply[]>([]);
   const [nextReplies, setNextReplies] = useState<string | null>(null);
   const [more, setMore] = useState<NewsAnswer[]>([]);
+  const [sharing, setSharing] = useState(false);
   const [flagOpen, setFlagOpen] = useState(false);
   const [note, setNote] = useState("");
   const [flagState, setFlagState] = useState<"idle" | "busy" | "done">("idle");
@@ -114,7 +116,8 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
       <div className="flex items-center gap-2 pb-2 pt-1">
         <Link href="/news" aria-label="Back to the Newsroom" className="flex h-11 w-11 flex-none items-center justify-center rounded-pill bg-surface text-ink no-underline shadow-1 dt:hidden"><Icon name="arrow-left" size={24} /></Link>
         <Link href="/news" className="hidden items-center gap-1 text-[14px] font-semibold text-green-text no-underline hover:text-ink dt:inline-flex"><Icon name="arrow-left" size={18} />Newsroom</Link>
-        <span className="text-[16px] font-bold text-ink-2 dt:hidden">Newsroom</span>
+        <span className="mr-auto text-[16px] font-bold text-ink-2 dt:hidden">Newsroom</span>
+        <button type="button" aria-label="Share this post" onClick={() => setSharing(true)} className="ml-auto flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-pill border-0 bg-surface p-0 text-ink shadow-1 dt:hidden"><Icon name="share-2" size={24} /></button>
       </div>
 
       {load === "loading" || !post ? (
@@ -146,6 +149,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
         </div>
       )}
 
+      {sharing ? <ShareSheet objectType="ANSWER" objectId={answerId} onClose={() => setSharing(false)} /> : null}
       {flagOpen ? (
         <Sheet
           title="Flag as misleading"

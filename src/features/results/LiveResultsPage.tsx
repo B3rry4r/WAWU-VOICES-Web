@@ -5,6 +5,7 @@ import { Badge, Button, EmptyState, Icon, ResultComment, Skeleton, Tabs, Toast }
 import { ApiError } from "@/lib/api/client";
 import { getResultThread, listResultPosts } from "@/lib/api/results";
 import type { ResultFilter, ResultPost, ResultThread } from "@/lib/api/results";
+import { ShareSheet } from "@/features/share";
 import { toComment } from "./map";
 import { AppBar, DesktopBack, LabelsPanel, RailPortal, longDate, shortDate, useSignedIn } from "./shared";
 
@@ -24,6 +25,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
   const [newCount, setNewCount] = useState(0);
   const [more, setMore] = useState(false);
   const [posted, setPosted] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const filterRef = useRef(filter);
   filterRef.current = filter;
   const newestRef = useRef<string | null>(null);
@@ -113,7 +115,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
 
   return (
     <>
-      <AppBar href="/" backLabel="Back" title="Live results" subtitle={thread ? `Election day · ${shortDate(thread.heldOn)}` : undefined} />
+      <AppBar href="/" backLabel="Back" title="Live results" subtitle={thread ? `Election day · ${shortDate(thread.heldOn)}` : undefined} right={thread ? <button type="button" aria-label="Share this thread" onClick={() => setSharing(true)} className="flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-pill border-0 bg-transparent p-0 text-ink hover:bg-surface-2"><Icon name="share-2" size={24} /></button> : null} />
       <DesktopBack href="/" label="Back" />
       {load.kind === "loading" || !thread ? (
         <div className="flex flex-col gap-4 pt-2" aria-busy="true">
@@ -179,6 +181,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
         </div>
       )}
 
+      {sharing ? <ShareSheet objectType="RESULT_THREAD" objectId={threadId} onClose={() => setSharing(false)} /> : null}
       <RailPortal>
         {canPost ? (
           <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="Were you at a polling unit?">

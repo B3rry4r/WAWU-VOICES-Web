@@ -62,10 +62,18 @@ describe("NewsCard", () => {
     expect(r?.headers.get("Idempotency-Key")).toBeTruthy();
   });
 
-  it("links replies to the post and draws no share button until the share sheet exists", () => {
+  it("opens the share sheet for the post", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+    const user = userEvent.setup();
+    render(<NewsCard post={base} signedIn repliesHref="/news/a1" />);
+    await user.click(screen.getByRole("button", { name: "Share" }));
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("Share this voice")).toBeTruthy();
+  });
+
+  it("links replies to the post ", () => {
     render(<NewsCard post={base} signedIn repliesHref="/news/a1" />);
     expect(screen.getByRole("link", { name: "Replies, 58" }).getAttribute("href")).toBe("/news/a1");
-    expect(screen.queryByRole("button", { name: /share/i })).toBeNull();
     expect(screen.getByText("Money")).toBeTruthy();
   });
 });

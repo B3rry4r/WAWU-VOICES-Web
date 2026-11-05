@@ -108,6 +108,14 @@ describe("PostResultPage", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("hides the phone tab bar only while the form is on screen", async () => {
+    const { unmount } = render(<PostResultPage threadId="t1" />);
+    await screen.findByRole("button", { name: "Post these numbers" });
+    expect(document.querySelector("style")?.textContent).toContain(".sh-bottombar{display:none}");
+    unmount();
+    expect(Array.from(document.querySelectorAll("style")).some((e) => e.textContent?.includes("sh-bottombar"))).toBe(false);
+  });
+
   it("asks a guest to sign in and shows no form", async () => {
     window.localStorage.clear();
     render(<PostResultPage threadId="t1" />);

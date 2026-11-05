@@ -9,6 +9,7 @@ import type { NewsAnswer, ReactionKind } from "@/lib/api/news";
 import { ApiError } from "@/lib/api/client";
 import { ago } from "@/features/results/shared";
 import { ClipPlayer } from "./ClipPlayer";
+import { ShareSheet } from "@/features/share";
 import { SERVED } from "./served";
 import { kindOf } from "./tags";
 
@@ -30,6 +31,7 @@ export function NewsCard({ post, signedIn, repliesHref, open }: { post: NewsAnsw
   const [tray, setTray] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [tx, setTx] = useState(!!open);
+  const [sharing, setSharing] = useState(false);
   const a = post.author;
   const reacted = REACTIONS[KINDS.indexOf(mine as ReactionKind)];
   const emojis = [...top].sort((x, y) => y.count - x.count).slice(0, 3).map((b) => REACTIONS[KINDS.indexOf(b.kind)]?.e).filter(Boolean);
@@ -119,9 +121,14 @@ export function NewsCard({ post, signedIn, repliesHref, open }: { post: NewsAnsw
           ) : (
             <span className="vx-act" aria-label={post.replyCount + " replies"}><Icon name="message-circle" size={20} />{short(post.replyCount)}</span>
           )}
+          <button type="button" className="vx-act vx-act--end" aria-label="Share" onClick={() => setSharing(true)}>
+            <Icon name="share-2" size={20} />
+            Share
+          </button>
         </div>
         {note ? <p className="m-0 text-[13px] leading-4 text-danger" role="alert">{note}</p> : null}
       </article>
+      {sharing ? <ShareSheet objectType="ANSWER" objectId={post.id} onClose={() => setSharing(false)} /> : null}
       {post.news?.tag === "VERIFIED_NEWS" && post.news.sourceName ? (
         <a className="vx-link" href={post.news.sourceUrl ?? undefined} target="_blank" rel="noreferrer noopener">
           <Icon name="link" size={18} />

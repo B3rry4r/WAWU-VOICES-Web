@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/features/news/served", () => ({ SERVED: { likes: false, reactions: false, replies: false, clipPlay: false, photoUpload: false, tagFollows: false, me: false } }));
 import { cleanup, render, screen } from "@testing-library/react";
 import { NewsCard } from "@/features/news/NewsCard";
-import { SERVED } from "@/features/news/served";
 import type { NewsAnswer } from "@/lib/api/news";
 
 afterEach(cleanup);
@@ -14,13 +15,10 @@ const post = {
   reactionBreakdown: [], myReaction: null, iLiked: false, iSaved: false, isMine: false, labels: [], categoryName: null,
 } as NewsAnswer;
 
-describe("controls whose route main does not serve yet", () => {
-  it("are off by default", () => {
-    expect(Object.values(SERVED).every((v) => v === false)).toBe(true);
-  });
-  it("draw no like, react, reply or play control, only the counts and the transcript", () => {
+describe("a control whose route flag is off", () => {
+  it("is not drawn: no like, react, reply or play control, only the counts, the transcript and Share", () => {
     render(<NewsCard post={post} signedIn repliesHref="/news/a1" />);
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.queryAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Share"]);
     expect(screen.queryAllByRole("link")).toHaveLength(0);
     expect(screen.getByText("They said fuel would come down.")).toBeTruthy();
     expect(screen.getByLabelText("5 likes")).toBeTruthy();
