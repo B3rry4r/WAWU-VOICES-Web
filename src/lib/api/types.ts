@@ -2873,6 +2873,16 @@ export interface components {
             details?: unknown;
             retryAfterSeconds?: number;
         };
+        /** @description One quote: what this action costs this person now (0 while a free one is left). Returned by GET /me/allowance?action=. */
+        AllowanceQuote: {
+            /** @enum {string} */
+            action: "POST_TEXT" | "POST_VOICE" | "REACTION" | "VOTE";
+            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            costMilli: number;
+            freeLeft: number;
+            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number;
+        };
         /** @description What the person can do right now and what it costs. The screens show this before any tap. */
         Allowances: {
             freePostsRemaining: number;
@@ -4809,7 +4819,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Allowances"];
+                    "application/json": components["schemas"]["Allowances"] | components["schemas"]["AllowanceQuote"];
                 };
             };
             401: components["responses"]["E401"];
@@ -7858,7 +7868,7 @@ export interface operations {
     };
     adminListTopics: {
         parameters: {
-            query: {
+            query?: {
                 /** @description Opaque cursor from nextCursor */
                 cursor?: string;
                 /** @description 1 to 50, default 20 */
@@ -7867,7 +7877,7 @@ export interface operations {
                 /** @description Only sensitive weeks */
                 sensitive?: boolean;
                 /** @description Week number, topic title or question text */
-                q: string;
+                q?: string;
             };
             header?: never;
             path?: never;
