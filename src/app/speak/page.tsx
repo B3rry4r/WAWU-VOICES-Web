@@ -1,7 +1,12 @@
-import { PageTitle } from "@/components/shell/PageTitle";
+import { Suspense } from "react";
+import { SpeakScreen } from "@/features/speak/SpeakScreen";
 
 export const metadata = { title: "Speak" };
 
 export default function SpeakPage() {
-  return <PageTitle>Speak</PageTitle>;
+  return (
+    <Suspense fallback={null}>
+      <SpeakScreen />
+    </Suspense>
+  );
 }

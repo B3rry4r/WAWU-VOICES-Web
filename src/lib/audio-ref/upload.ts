@@ -1,4 +1,4 @@
-import { baseMime } from './mime.js';
+import { baseMime } from './mime';
 
 export interface PresignedPut { url: string; key: string; headers: Record<string, string> }
 
