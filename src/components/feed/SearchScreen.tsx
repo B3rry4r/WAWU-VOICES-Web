@@ -2,21 +2,50 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Tabs } from "@/components/vx";
-import { search } from "@/lib/api/feed";
-import { voicesLabel } from "@/lib/feed-format";
-import { Answers, Failed, Loading, NothingYet, SearchBox } from "./parts";
+import { Avatar, Icon, Tabs, TrendingList } from "@/components/vx";
+import { PhoneBar, Rail } from "@/components/shell/ShellSlots";
+import { getCurrentTopic, getTodaysQuestion, getTrendingQuestions, search, type Question } from "@/lib/api/feed";
+import { isOpen, voicesShort } from "@/lib/feed-format";
+import { Answers, Failed, Loading, NothingYet, SearchBox, Section, WeekCard } from "./parts";
+import { trendItems } from "./trend";
 import { useLoad } from "./useLoad";
 
 type Tab = "all" | "questions" | "voices" | "people";
 
+/** "Roads and travel · 3,100 voices · Open" or "What Next? · 840 voices · 22 proposals". */
+function questionMeta(x: Question): string {
+  const whatNext = x.proposalCount > 0 && !x.category;
+  const tail = whatNext ? `${x.proposalCount} ${x.proposalCount === 1 ? "proposal" : "proposals"}` : isOpen(x) ? "Open" : x.status === "CLOSED" || (x.endsAt && Date.parse(x.endsAt) <= Date.now()) ? "Closed" : "Opens soon";
+  return [whatNext ? "What Next?" : x.category?.name, voicesShort(x.voiceCount), tail].filter(Boolean).join(" · ");
+}
+
 export function SearchScreen() {
   const q = (useSearchParams().get("q") ?? "").trim();
   const [tab, setTab] = useState<Tab>("all");
-  const load = useLoad(() => (q.length >= 2 ? search(q) : Promise.resolve(null)), [q]);
+  const load = useLoad(async () => {
+    const [res, topic, today, trending] = await Promise.all([
+      q.length >= 2 ? search(q) : Promise.resolve(null),
+      getCurrentTopic().catch(() => null),
+      getTodaysQuestion().catch(() => null),
+      getTrendingQuestions(3).then((r) => trendItems(r.items), () => []),
+    ]);
+    return { res, topic, today, trending };
+  }, [q]);
+
+  const rail =
+    load.state === "ready" ? (
+      <Rail>
+        {load.data.topic ? <WeekCard topic={load.data.topic} questionId={load.data.today?.id} variant="rail" /> : null}
+        {load.data.trending.length ? <TrendingList items={load.data.trending} /> : null}
+      </Rail>
+    ) : null;
+
   return (
     <>
-      <div className="mt-1"><SearchBox defaultValue={q} placeholder="Search questions, voices and handles" /></div>
+      <PhoneBar>
+        <Link href="/discover" className="vx-iconbtn vx-iconbtn--s vx-iconbtn--ghost -ml-1 text-[var(--ink)]" aria-label="Back to Discover"><Icon name="arrow-left" size={24} /></Link>
+        <div className="min-w-0 flex-1"><SearchBox key={q} defaultValue={q} placeholder="Search questions, voices and handles" /></div>
+      </PhoneBar>
       {q.length < 2 ? (
         <div className="mt-6"><NothingYet title="Search VOICES" body="Type at least 2 letters to find questions, voices and people." /></div>
       ) : load.state === "loading" ? (
@@ -24,8 +53,9 @@ export function SearchScreen() {
       ) : load.state === "error" ? (
         <div className="mt-6"><Failed load={load} /></div>
       ) : (
-        <Results q={q} tab={tab} setTab={setTab} r={load.data!} />
+        <Results q={q} tab={tab} setTab={setTab} r={load.data.res!} />
       )}
+      {rail}
     </>
   );
 }
@@ -36,57 +66,52 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
   const show = (x: Tab) => tab === "all" || tab === x;
   if (total === 0) return <div className="mt-6"><NothingYet title={`Nothing found for "${q}"`} body="Check the spelling or try a shorter word." /></div>;
   return (
-    <>
-      <h1 className="m-0 mt-4 font-display text-[22px] font-normal dt:text-[28px]">{`Results for "${q}"`}</h1>
-      <div className="mt-3">
-        <Tabs
-          label="Result types"
-          value={tab}
-          onChange={(id) => setTab(id as Tab)}
-          items={[
-            { id: "all", label: "All", count: total },
-            { id: "questions", label: "Questions", count: t.questions },
-            { id: "voices", label: "Voices", count: t.voices },
-            { id: "people", label: "People", count: t.people },
-          ]}
-        />
-      </div>
+    <div className="flex flex-col gap-[18px]">
+      <h1 className="m-0 hidden font-display text-[32px] font-normal leading-9 dt:block">{`Results for "${q}"`}</h1>
+      <Tabs
+        label="Search results"
+        value={tab}
+        onChange={(id) => setTab(id as Tab)}
+        items={[
+          { id: "all", label: "All", count: total },
+          { id: "questions", label: "Questions", count: t.questions },
+          { id: "voices", label: "Voices", count: t.voices },
+          { id: "people", label: "People", count: t.people },
+        ]}
+      />
       {show("questions") && r.questions.length ? (
-        <section className="mt-5">
-          <h2 className="mb-2 font-display text-[18px] font-normal">Questions</h2>
-          <ul className="m-0 grid list-none gap-2 p-0">
+        <Section title="Questions">
+          <div className="vx-notes">
             {r.questions.map((x) => (
-              <li key={x.id}>
-                <Link href={`/q/${x.id}`} className="grid gap-1 rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-3 no-underline">
-                  <strong className="text-[15px] text-[var(--ink)]">{x.text}</strong>
-                  <span className="text-[13px] text-[var(--ink-2)]">
-                    {[x.category?.name, voicesLabel(x.voiceCount), x.status === "LIVE" ? "Open" : "Closed"].filter(Boolean).join(" · ")}
-                  </span>
-                </Link>
-              </li>
+              <Link key={x.id} href={`/q/${x.id}`} className="vx-note vx-focus flex-col gap-[6px] dt:px-5 dt:py-4">
+                <span className="font-display text-[18px] leading-[23px] dt:text-[20px] dt:leading-[25px]">{x.text}</span>
+                <span className="text-[13px] font-medium leading-[18px] text-[var(--ink-2)]">{questionMeta(x)}</span>
+              </Link>
             ))}
-          </ul>
-        </section>
+          </div>
+        </Section>
       ) : null}
       {show("voices") && r.answers.length ? (
-        <section className="mt-5">
-          <h2 className="mb-2 font-display text-[18px] font-normal">Voices</h2>
-          <Answers items={r.answers} />
-        </section>
+        <Section title="Voices · text and transcripts">
+          <Answers items={r.answers} unfolded />
+        </Section>
       ) : null}
       {show("people") && r.people.length ? (
-        <section className="mt-5">
-          <h2 className="mb-2 font-display text-[18px] font-normal">People</h2>
-          <ul className="m-0 grid list-none gap-2 p-0">
+        <Section title="People">
+          <div className="vx-notes">
             {r.people.map((p) => (
-              <li key={p.id} className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-3">
-                <strong className="text-[15px]">{`@${p.handle}`}</strong>
-                <div className="text-[13px] text-[var(--ink-2)]">{[p.state, voicesLabel(p.voiceCount)].filter(Boolean).join(" · ")}</div>
-              </li>
+              <Link key={p.id} href={`/p/${p.handle}`} className="vx-note vx-focus items-center">
+                <Avatar name={p.displayName ?? p.handle} />
+                <span className="flex flex-1 flex-col">
+                  <b className="text-[15px] font-bold leading-5">{`@${p.handle}`}</b>
+                  <span className="text-[13px] font-medium leading-[18px] text-[var(--ink-2)]">{[p.state, voicesShort(p.voiceCount)].filter(Boolean).join(" · ")}</span>
+                </span>
+                <Icon name="chevron-right" size={20} />
+              </Link>
             ))}
-          </ul>
-        </section>
+          </div>
+        </Section>
       ) : null}
-    </>
+    </div>
   );
 }
