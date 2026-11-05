@@ -1,11 +1,12 @@
-import { apiFetch } from "./client";
+import { apiFetch, ApiError } from "./client";
 import { WAWU_ID_BASE } from "./config";
 import { sessionStorage } from "@/lib/auth/session-storage";
 
 /*
- * WAWU ID owns sign-up, sign-in, OTP and password reset (same service the WAWU app uses).
- * This module calls it directly and never proxies auth through the VOICES API.
- * Pattern copied from WAWUAfrica src/lib/api/auth.ts.
+ * WAWU ID owns sign-up, sign-in, the email code and password reset (the same service the WAWU website uses).
+ * This module calls it directly and never proxies auth through the VOICES API (V-20).
+ * Pattern copied from WAWUAfrica src/lib/api/auth.ts. WAWU ID has no "me" route: the person comes from the
+ * login answer and the token; the VOICES profile comes from GET /me on the VOICES API.
  */
 
 export interface WawuIdUser {
@@ -22,6 +23,17 @@ interface WawuIdTokenResult {
   user: WawuIdUser;
 }
 
+export interface RegisterInput {
+  fullName: string;
+  email: string;
+  /** Digits after the +234, no leading zero. */
+  phoneNational: string;
+  password: string;
+  /** The country's name as WAWU ID stores it. */
+  country: string;
+  dialCode: string;
+}
+
 function unwrap<T>(v: unknown): T {
   return (v && typeof v === "object" && "data" in v ? (v as { data: T }).data : v) as T;
 }
@@ -30,27 +42,59 @@ async function idCall<T>(path: string, body: unknown): Promise<T> {
   return unwrap<T>(await apiFetch<unknown>(path, { method: "POST", baseUrl: WAWU_ID_BASE, body }));
 }
 
-/** `identifier` is email or phone. Stores the tokens and returns the WAWU ID user. */
+/** Tidy a typed phone into +234 form: drops spaces, dashes and one leading 0 (or a pasted +234 or 234). */
+export function nationalPhone(typed: string, dial = "+234"): string {
+  const digits = typed.replace(/\D/g, "");
+  const code = dial.replace(/\D/g, "");
+  const rest = digits.startsWith(code) && digits.length > 10 ? digits.slice(code.length) : digits;
+  return rest.replace(/^0+/, "");
+}
+
+/** `identifier` is email or phone. Stores the tokens and returns the WAWU ID user. A person whose email is not yet confirmed gets ApiError code EMAIL_NOT_VERIFIED. */
 export async function signIn(identifier: string, password: string): Promise<WawuIdUser> {
-  const r = await idCall<WawuIdTokenResult>("/auth/login", { identifier, password });
+  const r = await idCall<WawuIdTokenResult>("/auth/login", { identifier: identifier.trim(), password });
   sessionStorage.setTokens(r.accessToken, r.refreshToken);
   return r.user;
 }
 
+/**
+ * Creates the WAWU ID account. WAWU ID answers with tokens at once, but sign-in stays closed until the email
+ * code is confirmed, so those tokens are dropped here and the confirmed ones from the code step are the session.
+ */
+export async function register(input: RegisterInput): Promise<void> {
+  const [firstName, ...rest] = input.fullName.trim().split(/\s+/);
+  await idCall<WawuIdTokenResult>("/auth/register", {
+    fullName: input.fullName.trim(),
+    firstName,
+    lastName: rest.join(" ") || firstName,
+    email: input.email.trim().toLowerCase(),
+    phone: `${input.dialCode}${input.phoneNational}`,
+    dialCode: input.dialCode,
+    country: input.country,
+    password: input.password,
+  });
+}
+
+/** Sends (or re-sends) the 6 digit code by email. Returns how many seconds it lives (300). */
 export async function startEmailVerification(email: string): Promise<{ expiresIn: number }> {
-  return idCall<{ message: string; expiresIn: number }>("/auth/email/verify/start", { email });
+  return idCall<{ message: string; expiresIn: number }>("/auth/email/verify/start", { email: email.trim().toLowerCase() });
 }
 
 export async function confirmEmailVerification(email: string, code: string): Promise<WawuIdUser> {
-  const r = await idCall<WawuIdTokenResult>("/auth/email/verify/confirm", { email, code });
+  const r = await idCall<WawuIdTokenResult>("/auth/email/verify/confirm", { email: email.trim().toLowerCase(), code });
   sessionStorage.setTokens(r.accessToken, r.refreshToken);
   return r.user;
 }
 
+/** Ends the session here first, then tells WAWU ID to kill the refresh token (best effort). */
 export function signOut(): void {
+  const refreshToken = sessionStorage.getRefreshToken();
   sessionStorage.clear();
+  if (refreshToken) void idCall("/auth/logout", { refreshToken }).catch(() => undefined);
 }
 
 export function isSignedIn(): boolean {
   return sessionStorage.getToken() !== null;
 }
+
+export const isEmailNotVerified = (e: unknown): boolean => e instanceof ApiError && e.status === 403 && e.code === "EMAIL_NOT_VERIFIED";
