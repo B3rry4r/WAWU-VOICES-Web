@@ -1,0 +1,24 @@
+@import "./tokens.css";
+@import "../components/shell/shell.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* next/font supplies the real family names through these variables */
+  --font-display: var(--nf-bagel), "Bagel Fat One", Archivo, sans-serif;
+  --font-body: var(--nf-archivo), Archivo, "Helvetica Neue", Arial, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 24px;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid transparent; box-shadow: var(--shadow-focus); }
