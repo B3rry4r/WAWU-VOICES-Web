@@ -156,7 +156,7 @@ function Decide({ item, readOnly, onDone }: { item: AdminNewsItem; readOnly: boo
         <div className="flex items-center gap-3">
           <Avatar name={a.author?.displayName || a.author?.handle || "?"} size="m" />
           <div>
-            <div className="text-label">{`@${a.author?.handle ?? "removed"}`}</div>
+            <div className="text-body-strong">{`@${a.author?.handle ?? "removed"}`}</div>
             <div className="text-caption text-ink-2">{[ago(a.createdAt) + " ago", a.author?.state].filter(Boolean).join(" · ")}</div>
           </div>
         </div>

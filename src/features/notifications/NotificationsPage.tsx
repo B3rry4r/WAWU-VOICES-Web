@@ -158,7 +158,7 @@ export function NotificationsPage() {
           {rows.map((n) => (
             <div key={n.id} onClick={(e) => void open(n, e)}>
               <NotificationRow type={ROW_TYPE[n.type]} unread={!n.read} time={whenLabel(n.createdAt)} href={targetHref(n) ?? "#"}>
-                {n.body ? <><b>{n.title}</b>{" " + n.body}</> : <>{n.title}</>}
+                {n.body ? <><b>{/[.!?:]$/.test(n.title) ? n.title : n.title + "."}</b>{" " + n.body}</> : <>{n.title}</>}
               </NotificationRow>
             </div>
           ))}

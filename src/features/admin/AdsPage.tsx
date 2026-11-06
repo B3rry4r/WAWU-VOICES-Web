@@ -102,7 +102,7 @@ function AdsBody() {
                 <thead>
                   <tr className="text-ink-2">
                     {["Brand", "Type and placement", "Audience", "Dates", "Views · taps · listens", "Status"].map((h) => (
-                      <th key={h} className="vx-eyebrow px-4 py-4 font-bold">{h}</th>
+                      <th key={h} className="vx-eyebrow px-4 py-4">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -113,8 +113,8 @@ function AdsBody() {
                       onClick={() => { setSelected(a.id); setCreating(false); setSaved(null); }}
                       className={`cursor-pointer border-t border-line align-top ${selected === a.id && !creating ? "bg-mint" : "hover:bg-surface-2"}`}
                     >
-                      <td className="px-4 py-3 font-bold">
-                        <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-left font-bold text-ink" aria-label={`Open ${a.brand}`} aria-current={selected === a.id ? "true" : undefined}>{a.brand}</button>
+                      <td className="px-4 py-3 text-body-strong">
+                        <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-left text-body-strong text-ink" aria-label={`Open ${a.brand}`} aria-current={selected === a.id ? "true" : undefined}>{a.brand}</button>
                       </td>
                       <td className="px-4 py-3">{KIND_WORDS[a.kind]}</td>
                       <td className="px-4 py-3">{audience(a)}</td>

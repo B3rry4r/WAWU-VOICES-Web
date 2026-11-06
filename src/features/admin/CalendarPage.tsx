@@ -116,17 +116,17 @@ function CalendarBody() {
               <table className="w-full border-collapse text-left text-caption">
                 <thead>
                   <tr className="text-ink-2">
-                    <th className="vx-eyebrow px-4 py-4 font-bold">Week</th>
-                    <th className="vx-eyebrow px-4 py-4 font-bold">Topic of the week</th>
-                    <th className="vx-eyebrow px-4 py-4 font-bold">Status</th>
+                    <th className="vx-eyebrow px-4 py-4">Week</th>
+                    <th className="vx-eyebrow px-4 py-4">Topic of the week</th>
+                    <th className="vx-eyebrow px-4 py-4">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {weeks.map((w) => (
                     <tr key={w.topicId} onClick={() => { setSelected(w.topicId); setAdding(false); setSaved(null); }} className={`cursor-pointer border-t border-line ${selected === w.topicId && !adding ? "bg-mint" : "hover:bg-surface-2"}`}>
-                      <td className="whitespace-nowrap px-4 py-3 font-bold">{`${w.weekNumber} · ${dayStringShort(w.startsOn)}`}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-body-strong">{`${w.weekNumber} · ${dayStringShort(w.startsOn)}`}</td>
                       <td className="px-4 py-3">
-                        <button type="button" className={`cursor-pointer border-0 bg-transparent p-0 text-left text-ink ${w.status === "LIVE" ? "font-bold" : ""}`} aria-current={selected === w.topicId ? "true" : undefined}>{w.title}</button>
+                        <button type="button" className={`cursor-pointer border-0 bg-transparent p-0 text-left text-ink ${w.status === "LIVE" ? "text-body-strong" : ""}`} aria-current={selected === w.topicId ? "true" : undefined}>{w.title}</button>
                       </td>
                       <td className="px-4 py-3"><StatusPill s={w.status} /></td>
                     </tr>
@@ -202,7 +202,7 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
         ))}
         {d.spare.length ? (
           <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 border-t border-line py-3 text-body">
-            <span className="font-bold text-ink-2">Spare</span>
+            <span className="text-body-strong text-ink-2">Spare</span>
             <span className="text-ink-2">{`${d.spare.length} more ${d.spare.length === 1 ? "question" : "questions"} held for follow-ups and flash polls`}</span>
           </li>
         ) : null}

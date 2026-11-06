@@ -164,12 +164,12 @@ function OverrideBody() {
             {preview ? (
               <ul className="m-0 mt-2 list-none p-0">
                 <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-3 text-body">
-                  <span className="font-bold">{weekdayDay(request.startsAt)}</span>
+                  <span className="text-body-strong">{weekdayDay(request.startsAt)}</span>
                   <span className="font-semibold text-green-text">{`Your override, ${clock(request.startsAt)} to ${clock(request.endsAt)}${new Date(request.startsAt).toDateString() === new Date(request.endsAt).toDateString() ? "" : ` (${weekdayDay(request.endsAt)})`}`}</span>
                 </li>
                 {preview.schedule.slice(0, 2).map((s) => (
                   <li key={s.id} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 border-t border-line py-3 text-body">
-                    <span className="font-bold">{s.day ? dayStringWeekday(s.day) : ""}</span>
+                    <span className="text-body-strong">{s.day ? dayStringWeekday(s.day) : ""}</span>
                     <span>{s.text}</span>
                   </li>
                 ))}
@@ -201,7 +201,7 @@ function OverrideBody() {
               <thead>
                 <tr className="text-ink-2">
                   {["When", "What went up", "It replaced", "By", "Result"].map((h) => (
-                    <th key={h} className="vx-eyebrow px-4 py-3 font-bold">{h}</th>
+                    <th key={h} className="vx-eyebrow px-4 py-3">{h}</th>
                   ))}
                 </tr>
               </thead>

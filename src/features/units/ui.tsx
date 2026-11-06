@@ -27,9 +27,9 @@ export function Note({ children, className = "" }: { children: ReactNode; classN
 /** "Label ... value" row used by the cost lists and the payment details. */
 export function Line({ label, value, tone }: { label: ReactNode; value: ReactNode; tone?: "free" }) {
   return (
-    <div className="flex justify-between gap-3 border-b border-line py-[10px] text-body dt:text-label dt:font-medium last:border-b-0">
+    <div className="flex justify-between gap-3 border-b border-line py-[10px] text-body dt:text-label last:border-b-0">
       <span>{label}</span>
-      <span className={`whitespace-nowrap font-bold tabular-nums ${tone === "free" ? "text-green-text" : ""}`}>{value}</span>
+      <span className={`whitespace-nowrap text-body-strong tabular-nums ${tone === "free" ? "text-green-text" : ""}`}>{value}</span>
     </div>
   );
 }

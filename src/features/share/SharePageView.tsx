@@ -72,7 +72,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {page.arguments.map((a, i) => (
                   <li key={i} className="flex flex-col gap-1">
-                    <div className="flex items-baseline justify-between gap-3 text-body"><span>{a.text}</span><span className="font-bold text-ink-2">{fmt(a.voices)}</span></div>
+                    <div className="flex items-baseline justify-between gap-3 text-body"><span>{a.text}</span><span className="text-body-strong text-ink-2">{fmt(a.voices)}</span></div>
                     <span className="block h-2 overflow-hidden rounded-pill bg-surface-3" aria-hidden="true"><i className={"block h-full rounded-pill " + (i === 0 ? "bg-green" : "bg-mint")} style={bar(i)} /></span>
                   </li>
                 ))}

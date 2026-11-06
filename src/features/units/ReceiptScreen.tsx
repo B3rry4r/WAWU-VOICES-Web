@@ -50,7 +50,7 @@ export function ReceiptScreen({ paymentId }: { paymentId: string }) {
                 {rows.map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3 border-b border-line py-[10px] last:border-b-0">
                     <dt className="text-ink-2">{k}</dt>
-                    <dd className="m-0 break-all text-right font-bold tabular-nums">{v}</dd>
+                    <dd className="m-0 break-all text-right text-body-strong tabular-nums">{v}</dd>
                   </div>
                 ))}
               </dl>
