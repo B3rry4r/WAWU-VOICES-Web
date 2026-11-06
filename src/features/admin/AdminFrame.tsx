@@ -99,7 +99,7 @@ export function AdminFrame({ children }: { children: ReactNode }) {
           <div className="min-w-0 px-10 pb-16 pt-8">{children}</div>
         </div>
         <div className="flex min-h-screen items-center justify-center p-6 dt:hidden">
-          <p className="m-0 max-w-[320px] text-center text-[16px] leading-6 text-ink-2">Open the admin on a computer.</p>
+          <p className="m-0 mx-auto max-w-[320px] text-center text-body text-ink-2">Open the admin on a computer.</p>
         </div>
       </div>
     </Ctx.Provider>
@@ -140,7 +140,7 @@ function Sidebar() {
       <div className="mb-6 flex items-center gap-3 px-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/logo-wordmark-white.png" alt="VOICES" className="h-9 w-auto" />
-        <span className="rounded-xs bg-forest-2 px-2 py-1 text-[11px] font-extrabold uppercase leading-3 tracking-[0.12em] text-sun">Admin</span>
+        <span className="rounded-xs bg-forest-2 px-2 py-1 text-eyebrow uppercase text-sun">Admin</span>
       </div>
       <nav className="flex flex-col gap-1" aria-label="Admin pages">
         {items.map((p) => {
@@ -151,11 +151,11 @@ function Sidebar() {
               key={p.id}
               href={p.href}
               aria-current={on ? "page" : undefined}
-              className={`flex min-h-[48px] items-center gap-3 rounded-m px-3 text-[16px] font-semibold leading-5 text-forest-on no-underline ${on ? "bg-forest-2" : "hover:bg-forest-2"}`}
+              className={`flex min-h-[48px] items-center gap-3 rounded-m px-3 text-label text-forest-on no-underline a-plain ${on ? "bg-forest-2" : "hover:bg-forest-2"}`}
             >
               <Icon name={p.icon as IconName} size={22} />
               <span className="min-w-0 flex-1">{p.label}</span>
-              {c ? <span className="rounded-pill bg-green px-2 py-0.5 text-[12px] font-extrabold leading-4 text-green-on">{c}</span> : null}
+              {c ? <span className="rounded-pill bg-green px-2 py-0.5 text-count text-green-on">{c}</span> : null}
             </Link>
           );
         })}
@@ -163,8 +163,8 @@ function Sidebar() {
       <div className="mt-auto flex items-center gap-3 border-t border-forest-2 px-3 pt-4">
         <Avatar name={name} size="l" />
         <div className="min-w-0">
-          <div className="truncate text-[14px] font-bold leading-[18px]">{name}</div>
-          <div className="text-[13px] leading-4 text-[var(--on-forest-2)]">{roleLine(roles)}</div>
+          <div className="truncate text-count">{name}</div>
+          <div className="text-caption text-[var(--on-forest-2)]">{roleLine(roles)}</div>
         </div>
         <span className="sr-only">{initials}</span>
       </div>

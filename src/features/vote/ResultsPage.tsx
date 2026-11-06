@@ -165,7 +165,7 @@ function Explain({ pollId, label, questionId, signedIn }: { pollId: string; labe
       <p className="vt-lead">{`Say why you picked “${label}”. It joins the discussion under the question.`}</p>
       {state === "done" ? (
         <Banner tone="success" title="Posted">
-          Your reason is in the discussion. <Link href={`/q/${questionId}`}>Open the discussion</Link>
+          Your reason is in the discussion. <Link href={`/q/${questionId}`} className="link">Open the discussion</Link>
         </Banner>
       ) : writing ? (
         <div className="vt-explain">

@@ -126,8 +126,8 @@ function OverrideBody() {
           {q?.id ? (
             <Card tone="mint">
               <Eyebrow>Scheduled for today</Eyebrow>
-              <h2 className="m-0 mt-2 font-display text-[24px] font-normal leading-[30px]">{q.text}</h2>
-              <p className="m-0 mt-2 text-[14px] leading-5 text-ink-2">
+              <h2 className="m-0 mt-2 font-display text-display-m">{q.text}</h2>
+              <p className="m-0 mt-2 text-caption text-ink-2">
                 {`${q.startsAt ? `Live since ${clock(q.startsAt)} with ${q.voiceCount.toLocaleString("en-NG")} ${q.voiceCount === 1 ? "voice" : "voices"}. ` : ""}If you override, it is not lost: it moves to the next free slot.`}
               </p>
             </Card>
@@ -150,7 +150,7 @@ function OverrideBody() {
               <DateTimeField label="Starts" value={starts} onChange={setStarts} />
               <DateTimeField label="Ends" value={ends} onChange={setEnds} hint="Lagos time. You can change it." error={timesOk ? undefined : "The end has to be after the start."} />
             </div>
-            <div className="mb-2 mt-4 text-[15px] font-bold">The question it replaces</div>
+            <div className="mb-2 mt-4 text-label">The question it replaces</div>
             <Tabs variant="segmented" block label="The question it replaces" items={[{ id: "move", label: "Move to next slot" }, { id: "drop", label: "Drop it" }]} value={drop ? "drop" : "move"} onChange={(v) => setDrop(v === "drop")} />
             <div className="mt-3">
               <Switch checked={keepTheme} onChange={setKeepTheme} label="Keep the weekly theme and poll" hint={today?.topic?.title ? `${today.topic.title} and its poll stay as they are` : "The theme and its poll stay as they are"} />
@@ -163,21 +163,21 @@ function OverrideBody() {
             <Eyebrow>What happens next</Eyebrow>
             {preview ? (
               <ul className="m-0 mt-2 list-none p-0">
-                <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-3 text-[15px]">
+                <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-3 text-body">
                   <span className="font-bold">{weekdayDay(request.startsAt)}</span>
                   <span className="font-semibold text-green-text">{`Your override, ${clock(request.startsAt)} to ${clock(request.endsAt)}${new Date(request.startsAt).toDateString() === new Date(request.endsAt).toDateString() ? "" : ` (${weekdayDay(request.endsAt)})`}`}</span>
                 </li>
                 {preview.schedule.slice(0, 2).map((s) => (
-                  <li key={s.id} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 border-t border-line py-3 text-[15px] leading-6">
+                  <li key={s.id} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 border-t border-line py-3 text-body">
                     <span className="font-bold">{s.day ? dayStringWeekday(s.day) : ""}</span>
                     <span>{s.text}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="m-0 mt-2 text-[14px] leading-5 text-ink-2">{previewError ?? "Fill in the headline and times to see how the week moves."}</p>
+              <p className="m-0 mt-2 text-caption text-ink-2">{previewError ?? "Fill in the headline and times to see how the week moves."}</p>
             )}
-            <p className="m-0 mt-3 border-t border-line pt-3 text-[13px] leading-[18px] text-ink-2">The rest of the week moves forward one day. The flow resumes by itself when the override ends. Every override is logged with who, what, when and what it replaced.</p>
+            <p className="m-0 mt-3 border-t border-line pt-3 text-caption text-ink-2">The rest of the week moves forward one day. The flow resumes by itself when the override ends. Every override is logged with who, what, when and what it replaced.</p>
           </Card>
 
           <ErrorLine>{act.error}</ErrorLine>
@@ -194,10 +194,10 @@ function OverrideBody() {
         {log === null ? (
           <ListSkeleton rows={2} />
         ) : log.length === 0 ? (
-          <div className="rounded-xl border border-line bg-surface p-5 text-[14px] text-ink-2">No overrides yet. Every one will be listed here.</div>
+          <div className="rounded-xl border border-line bg-surface p-5 text-caption text-ink-2">No overrides yet. Every one will be listed here.</div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-line bg-surface">
-            <table className="w-full border-collapse text-left text-[14px] leading-5">
+            <table className="w-full border-collapse text-left text-caption">
               <thead>
                 <tr className="text-ink-2">
                   {["When", "What went up", "It replaced", "By", "Result"].map((h) => (

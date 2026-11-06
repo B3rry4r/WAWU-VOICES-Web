@@ -29,7 +29,7 @@ export function StepHeader({ step, back }: { step: 1 | 2; back?: string }) {
       <span className="block h-[6px] flex-1 rounded-full bg-surface-2" role="img" aria-label={`Step ${step} of 2`}>
         <i className="block h-[6px] rounded-full bg-green" style={{ width: `${step * 50}%` }} />
       </span>
-      <span className="text-[14px] font-semibold leading-[18px] text-ink-2">{step} of 2</span>
+      <span className="text-count text-ink-2">{step} of 2</span>
     </header>
   );
 }
@@ -44,7 +44,7 @@ export function DeskHeader({ step }: { step?: 1 | 2 }) {
           <span className="block h-[6px] w-[100px] rounded-full bg-surface-2" role="img" aria-label={`Step ${step} of 2`}>
             <i className="block h-[6px] rounded-full bg-green" style={{ width: `${step * 50}%` }} />
           </span>
-          <span className="text-[14px] font-semibold leading-[18px] text-ink-2">Step {step} of 2</span>
+          <span className="text-count text-ink-2">Step {step} of 2</span>
         </span>
       ) : null}
     </header>

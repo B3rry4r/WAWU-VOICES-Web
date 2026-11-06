@@ -173,12 +173,12 @@ function ModerationBody() {
               const what = it.postKind === "VOICE" ? "Voice reply" : it.postKind === "TEXT" ? "Text answer" : it.postKind === "REPLY_VOICE" ? "Voice reply to a voice" : it.postKind === "REPLY_TEXT" ? "Text reply" : null;
               return (
                 <button key={it.id} type="button" role="listitem" className={queueRow(selected === it.id)} onClick={() => setSelected(it.id)} aria-current={selected === it.id ? "true" : undefined}>
-                  <span className="flex flex-wrap items-center gap-2 text-[13px] leading-[18px] text-ink-2">
-                    <span className={`rounded-s px-2 py-0.5 text-[12px] font-bold ${tag.cls}`}>{tag.text}</span>
+                  <span className="flex flex-wrap items-center gap-2 text-caption text-ink-2">
+                    <span className={`rounded-s px-2 py-0.5 text-caption ${tag.cls}`}>{tag.text}</span>
                     {it.summary}{it.listenCount > 0 ? ` · ${it.listenCount} ${it.listenCount === 1 ? "listen" : "listens"}` : ""}
                   </span>
                   {what ? (
-                    <span className="mt-2 block text-[15px] font-semibold leading-[22px]">
+                    <span className="mt-2 block text-label">
                       {it.questionText ? `${what} on "${it.questionText}"` : what}
                     </span>
                   ) : null}
@@ -243,15 +243,15 @@ function Panel(p: {
         <div className="flex min-w-0 items-center gap-3">
           <Avatar name={d.author?.handle ?? "?"} size="m" />
           <div className="min-w-0">
-            <div className="text-[16px] font-bold leading-5">{d.author ? `@${d.author.handle}` : "Account removed"}</div>
+            <div className="text-body-strong">{d.author ? `@${d.author.handle}` : "Account removed"}</div>
             {d.author ? (
-              <div className="text-[13px] leading-[18px] text-ink-2">
+              <div className="text-caption text-ink-2">
                 {`Joined ${dayMonth(d.author.joinedAt)} · ${d.author.postCount} ${d.author.postCount === 1 ? "post" : "posts"} · ${d.author.strikeCount === 0 ? "no past strikes" : `${d.author.strikeCount} past ${d.author.strikeCount === 1 ? "strike" : "strikes"}`}`}
               </div>
             ) : null}
           </div>
         </div>
-        {c.createdAt ? <span className="flex-none text-[13px] text-ink-2">{`Posted ${ago(c.createdAt)} ago`}</span> : null}
+        {c.createdAt ? <span className="flex-none text-caption text-ink-2">{`Posted ${ago(c.createdAt)} ago`}</span> : null}
       </div>
 
       {d.playUrl ? <AdminPlayer url={d.playUrl} label="the voice reply" /> : null}
@@ -259,20 +259,20 @@ function Panel(p: {
       {d.transcript || c.body ? (
         <div className="rounded-l bg-surface-2 p-4">
           <Eyebrow className="mb-2">{d.transcript ? "Transcript" : "The post"}</Eyebrow>
-          <p className="m-0 text-[16px] leading-6 text-ink">{d.transcript ?? c.body}</p>
+          <p className="m-0 text-body text-ink">{d.transcript ?? c.body}</p>
         </div>
       ) : null}
 
       {d.screening.length ? (
         <div className="flex flex-wrap gap-2">
           {d.screening.map((s, i) => (
-            <span key={i} className={`rounded-pill px-3 py-1.5 text-[13px] font-bold leading-4 ${screenCls(s)}`}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
+            <span key={i} className={`rounded-pill px-3 py-1.5 text-count ${screenCls(s)}`}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
           ))}
         </div>
       ) : null}
 
       <div>
-        <div className="mb-2 text-[15px] font-bold">Action</div>
+        <div className="mb-2 text-label">Action</div>
         <Tabs variant="segmented" block label="Moderation action" items={p.choices.map((x) => ({ id: x.id, label: x.label }))} value={p.choice} onChange={p.setChoice} />
       </div>
 

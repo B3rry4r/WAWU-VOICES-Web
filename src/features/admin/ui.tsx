@@ -30,8 +30,8 @@ export function PageHead({ eyebrow, title, sub, right }: { eyebrow?: string; tit
     <header className="mb-5 flex items-start justify-between gap-4">
       <div className="min-w-0">
         {eyebrow ? <div className="vx-eyebrow text-ink-2">{eyebrow}</div> : null}
-        <h1 className="m-0 mt-1 font-display text-[40px] font-normal leading-[44px] text-ink">{title}</h1>
-        {sub ? <p className="m-0 mt-1 text-[15px] leading-6 text-ink-2">{sub}</p> : null}
+        <h1 className="m-0 mt-1 font-display text-display-xl text-ink">{title}</h1>
+        {sub ? <p className="m-0 mt-1 text-body text-ink-2">{sub}</p> : null}
       </div>
       {right ? <div className="flex flex-none items-center gap-3 pt-2">{right}</div> : null}
     </header>
@@ -44,7 +44,7 @@ export function Card({ children, className = "", tone }: { children: ReactNode; 
 }
 
 export function CardTitle({ children }: { children: ReactNode }) {
-  return <h2 className="m-0 mb-3 font-display text-[22px] font-normal leading-7 text-ink">{children}</h2>;
+  return <h2 className="m-0 mb-3 font-display text-display-m text-ink">{children}</h2>;
 }
 
 export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -64,7 +64,7 @@ const TONES: Record<Tone, string> = {
 /** A small uppercase status pill: SCHEDULED, LIVE, CLOSED. */
 export function Pill({ tone = "neutral", children, dot }: { tone?: Tone; children: ReactNode; dot?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-s px-2 py-1 text-[11px] font-extrabold uppercase leading-4 tracking-[0.06em] ${TONES[tone]}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-s px-2 py-1 text-eyebrow uppercase ${TONES[tone]}`}>
       {dot ? <span className="h-1.5 w-1.5 rounded-pill bg-current" aria-hidden="true" /> : null}
       {children}
     </span>
@@ -75,7 +75,7 @@ export function Pill({ tone = "neutral", children, dot }: { tone?: Tone; childre
 export function StatePill({ tone, icon, children }: { tone: "green" | "sun" | "red"; icon: IconName; children: ReactNode }) {
   const c = tone === "green" ? "bg-success-bg text-success" : tone === "sun" ? "bg-warning-bg text-warning" : "bg-danger-bg text-danger";
   return (
-    <span className={`inline-flex items-center gap-2 rounded-pill px-4 py-2 text-[15px] font-bold leading-5 ${c}`}>
+    <span className={`inline-flex items-center gap-2 rounded-pill px-4 py-2 text-label ${c}`}>
       <Icon name={icon} size={20} />
       {children}
     </span>
@@ -86,8 +86,8 @@ export function Switch({ checked, onChange, label, hint, disabled }: { checked: 
   return (
     <div className="flex items-center justify-between gap-4 border-t border-line py-3">
       <div className="min-w-0">
-        <div className="text-[15px] font-bold leading-5 text-ink">{label}</div>
-        {hint ? <div className="text-[13px] leading-[18px] text-ink-2">{hint}</div> : null}
+        <div className="text-label text-ink">{label}</div>
+        {hint ? <div className="text-caption text-ink-2">{hint}</div> : null}
       </div>
       <button
         type="button"
@@ -134,7 +134,7 @@ export function useAction() {
 export function ErrorLine({ children }: { children: ReactNode }) {
   if (!children) return null;
   return (
-    <div role="alert" className="flex items-start gap-2 rounded-m bg-danger-bg px-3 py-2 text-[14px] font-semibold leading-5 text-danger">
+    <div role="alert" className="flex items-start gap-2 rounded-m bg-danger-bg px-3 py-2 text-count text-danger">
       <Icon name="circle-x" size={18} className="mt-0.5 flex-none" />
       <span>{children}</span>
     </div>
@@ -144,7 +144,7 @@ export function ErrorLine({ children }: { children: ReactNode }) {
 export function SavedLine({ children }: { children: ReactNode }) {
   if (!children) return null;
   return (
-    <div role="status" className="flex items-start gap-2 rounded-m bg-success-bg px-3 py-2 text-[14px] font-semibold leading-5 text-success">
+    <div role="status" className="flex items-start gap-2 rounded-m bg-success-bg px-3 py-2 text-count text-success">
       <Icon name="circle-check" size={18} className="mt-0.5 flex-none" />
       <span>{children}</span>
     </div>
@@ -174,7 +174,7 @@ export function AuditList({ lines, title }: { lines: { at: string; text: string;
   return (
     <div className="border-t border-line pt-4">
       <Eyebrow className="mb-2">{title}</Eyebrow>
-      <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px] leading-[18px] text-ink-2">
+      <ul className="m-0 flex list-none flex-col gap-1 p-0 text-caption text-ink-2">
         {lines.map((l, i) => (
           <li key={i}>{l.text}</li>
         ))}
@@ -210,7 +210,7 @@ export function DateTimeField({ label, value, onChange, hint, error }: { label: 
         <button
           id={id}
           type="button"
-          className="vx-field__box w-full cursor-pointer border-0 bg-transparent px-4 text-left text-[16px] text-ink"
+          className="vx-field__box w-full cursor-pointer border-0 bg-transparent px-4 text-left text-body text-ink"
           onClick={() => {
             try {
               input.current?.showPicker();

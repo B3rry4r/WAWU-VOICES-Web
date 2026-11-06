@@ -147,7 +147,7 @@ export function Verify() {
       <AuthSheet title="Email verified" subtitle="Taking you in.">
         <div className="flex flex-col items-center gap-3 py-6 text-green-text" role="status">
           <Icon name="circle-check" size={56} />
-          <p className="m-0 text-[15px] font-medium leading-[22px] text-ink-2">{email}</p>
+          <p className="m-0 text-body text-ink-2">{email}</p>
           {failure ? <div className="w-full text-ink"><ErrorBanner error={failure} onRetry={goOn} fallback="Something went wrong on our side. Try again in a moment." /></div> : null}
         </div>
       </AuthSheet>
@@ -178,19 +178,19 @@ export function Verify() {
                 onKeyDown={(e) => keys(i, e)}
                 onPaste={(e) => paste(e, i)}
                 onFocus={(e) => e.currentTarget.select()}
-                className={`box-border h-[60px] w-full rounded-[14px] border-0 bg-surface text-center font-display text-[28px] leading-8 text-ink outline-none focus:shadow-[inset_0_0_0_2px_var(--focus),var(--shadow-focus)] ${problem ? "shadow-[inset_0_0_0_2px_var(--danger)]" : "shadow-[inset_0_0_0_1.5px_var(--line-strong)]"}`}
+                className={`box-border h-[60px] w-full rounded-[14px] border-0 bg-surface text-center font-display text-display-l text-ink outline-none focus:shadow-[inset_0_0_0_2px_var(--focus),var(--shadow-focus)] ${problem ? "shadow-[inset_0_0_0_2px_var(--danger)]" : "shadow-[inset_0_0_0_1.5px_var(--line-strong)]"}`}
               />
             ))}
           </div>
-          {problem ? <p role="alert" className="m-0 flex items-start gap-[6px] text-[14px] font-medium leading-5 text-danger"><Icon name="circle-x" size={16} className="mt-[2px] flex-none" />{problem}</p> : null}
-          {note && !problem ? <p role="status" className="m-0 text-[14px] font-medium leading-5 text-ink-2">{note}</p> : null}
-          <div className="flex items-center justify-between text-[14px] font-medium leading-5 text-ink-2">
+          {problem ? <p role="alert" className="m-0 flex items-start gap-[6px] text-caption text-danger"><Icon name="circle-x" size={16} className="mt-[2px] flex-none" />{problem}</p> : null}
+          {note && !problem ? <p role="status" className="m-0 text-caption text-ink-2">{note}</p> : null}
+          <div className="flex items-center justify-between text-caption text-ink-2">
             {wait > 0 ? (
               <span className="inline-flex items-center gap-[6px]"><Icon name="clock" size={16} />{`Resend code in ${clock(wait)}`}</span>
             ) : (
-              <button type="button" onClick={resend} className="inline-flex min-h-[44px] items-center gap-[6px] border-0 bg-transparent p-0 font-semibold text-green-text underline"><Icon name="clock" size={16} />Resend code</button>
+              <button type="button" onClick={resend} className="inline-flex min-h-[44px] items-center gap-[6px] border-0 bg-transparent p-0 link"><Icon name="clock" size={16} />Resend code</button>
             )}
-            <Link href="/sign-in?mode=join" className="inline-flex min-h-[44px] items-center font-semibold text-green-text no-underline">Change email</Link>
+            <Link href="/sign-in?mode=join" className="inline-flex min-h-[44px] items-center link">Change email</Link>
           </div>
         </fieldset>
         <Button size="l" block disabled={code.length !== 6} loading={phase === "checking"} onClick={verify}>{posting ? "Verify and post" : "Verify"}</Button>

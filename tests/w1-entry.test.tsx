@@ -714,7 +714,7 @@ describe("round 1: refused sign-ins, redirects, two tabs, reloads", () => {
     cleanup();
     render(<Onboarding />);
     await screen.findByText("Nigeria is talking");
-    expect(screen.getAllByRole("link", { name: "Skip" })[0].className).toMatch(/text-green-text/);
+    expect(screen.getAllByRole("link", { name: "Skip" })[0].className).toMatch(/link-more/);
   });
   it("the photo cap is the API's 5,000,000 bytes", async () => {
     window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));

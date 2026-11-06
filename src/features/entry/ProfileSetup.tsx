@@ -132,14 +132,14 @@ export function ProfileSetup() {
   const submit = (
     <Button size="l" block icon="send" loading={busy} disabled={check.state !== "free" || !name.trim()} onClick={finish}>{cta}</Button>
   );
-  const note = posting && free ? <p className="m-0 text-center text-[13px] font-medium leading-[18px] text-ink-2">{`This is your 1st of ${free} free posts.`}</p> : null;
+  const note = posting && free ? <p className="m-0 mx-auto text-center text-caption text-ink-2">{`This is your 1st of ${free} free posts.`}</p> : null;
   return (
     <EntryFrame>
       <StepHeader step={2} back="/join/topics" />
       <DeskHeader step={2} />
       <EntryScroll className="flex flex-col">
         <DeskCard wide="dt:max-w-[640px]">
-          <h1 className="m-0 font-display text-[28px] font-normal leading-8">How should people know you?</h1>
+          <h1 className="m-0 font-display text-display-l">How should people know you?</h1>
           {failure ? <ErrorBanner error={failure} onRetry={() => setFailure(null)} fallback={refusalWords(failure, "We could not save your profile. Try again.")} /> : null}
           <div className="flex items-center gap-4">
             {preview ? (
@@ -151,7 +151,7 @@ export function ProfileSetup() {
             <div className="flex flex-col items-start gap-2">
               <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" className="vx-sr" tabIndex={-1} aria-hidden="true" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
               <Button variant="secondary" icon="plus" onClick={() => file.current?.click()}>{photo ? "Change photo" : "Add a photo"}</Button>
-              <p className={`m-0 text-[13px] font-medium leading-[18px] ${photoErr ? "text-danger" : "text-ink-2"}`} role={photoErr ? "alert" : undefined}>{photoErr ?? "Optional. Photos never go on share cards."}</p>
+              <p className={`m-0 text-caption ${photoErr ? "text-danger" : "text-ink-2"}`} role={photoErr ? "alert" : undefined}>{photoErr ?? "Optional. Photos never go on share cards."}</p>
             </div>
           </div>
           <TextField label="Your name" value={name} onChange={setName} autoComplete="name" />

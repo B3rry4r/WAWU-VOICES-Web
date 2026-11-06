@@ -21,12 +21,12 @@ export function useSignedIn(): boolean | null {
 export function AppBar({ href, backLabel, title, sub, right, close }: { href: string; backLabel: string; title: string; sub?: string; right?: ReactNode; close?: boolean }) {
   return (
     <div className="flex items-center gap-2 pb-3 pt-1 dt:hidden">
-      <Link href={href} aria-label={backLabel} className="flex h-11 w-11 flex-none items-center justify-center rounded-pill text-ink no-underline hover:bg-surface-2">
+      <Link href={href} aria-label={backLabel} className="flex h-11 w-11 flex-none items-center justify-center rounded-pill text-ink no-underline a-plain hover:bg-surface-2">
         <Icon name={close ? "x" : "arrow-left"} size={22} />
       </Link>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[16px] font-bold leading-5 text-ink">{title}</div>
-        {sub ? <div className="truncate text-[13px] leading-4 text-ink-2">{sub}</div> : null}
+        <div className="t-bar-title truncate text-ink">{title}</div>
+        {sub ? <div className="truncate text-caption text-ink-2">{sub}</div> : null}
       </div>
       {right}
     </div>
@@ -37,7 +37,7 @@ export function AppBar({ href, backLabel, title, sub, right, close }: { href: st
 export function DeskBack({ href, label, right }: { href: string; label: string; right?: ReactNode }) {
   return (
     <div className="hidden items-center justify-between gap-3 pb-3 pt-1 dt:flex">
-      <Link href={href} className="inline-flex items-center gap-2 text-[16px] font-bold leading-5 text-ink no-underline hover:text-green-text">
+      <Link href={href} className="inline-flex items-center gap-2 text-label text-ink no-underline a-plain hover:text-green-text">
         <Icon name="arrow-left" size={20} />
         {label}
       </Link>
@@ -49,7 +49,7 @@ export function DeskBack({ href, label, right }: { href: string; label: string; 
 export function ShareButton({ label, onClick, variant = "icon" }: { label: string; onClick: () => void; variant?: "icon" | "text" }) {
   if (variant === "text") {
     return (
-      <button type="button" onClick={onClick} className="inline-flex items-center gap-2 border-0 bg-transparent p-0 text-[16px] font-bold leading-5 text-green-text hover:text-ink">
+      <button type="button" onClick={onClick} className="inline-flex items-center gap-2 border-0 bg-transparent p-0 text-label text-green-text hover:text-ink">
         <Icon name="share-2" size={20} />
         {label}
       </button>
@@ -128,7 +128,7 @@ export function PageHead({ eyebrow, title, lead }: { eyebrow?: string; title: st
   return (
     <div className="hidden flex-col gap-1 dt:flex">
       {eyebrow ? <span className="vx-eyebrow text-green-text">{eyebrow}</span> : null}
-      <h1 className="m-0 font-display text-[32px] font-normal leading-9">{title}</h1>
+      <h1 className="m-0 font-display text-display-l">{title}</h1>
       {lead ? <p className="vt-lead">{lead}</p> : null}
     </div>
   );

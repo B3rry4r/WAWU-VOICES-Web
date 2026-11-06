@@ -16,7 +16,7 @@ export function ReceiptScreen({ paymentId }: { paymentId: string }) {
     <div className="flex flex-col gap-4 pb-6">
       <header className="-ml-2 flex items-center gap-1">
         <IconButton icon="arrow-left" label="Back to Voice Units" variant="ghost" onClick={() => router.push("/units")} />
-        <h1 className="m-0 flex-1 font-display text-[24px] font-normal leading-7 dt:text-[32px] dt:leading-9">Receipt</h1>
+        <h1 className="m-0 flex-1 font-display text-display-m dt:text-display-l">Receipt</h1>
       </header>
       {signedIn === null ? (
         <LoadingBlock rows={1} />
@@ -46,7 +46,7 @@ export function ReceiptScreen({ paymentId }: { paymentId: string }) {
           ];
           return (
             <>
-              <dl className="m-0 flex flex-col rounded-l bg-surface px-4 py-1 text-[15px] font-medium leading-[21px] shadow-[inset_0_0_0_1px_var(--line)]">
+              <dl className="m-0 flex flex-col rounded-l bg-surface px-4 py-1 text-body shadow-[inset_0_0_0_1px_var(--line)]">
                 {rows.map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3 border-b border-line py-[10px] last:border-b-0">
                     <dt className="text-ink-2">{k}</dt>

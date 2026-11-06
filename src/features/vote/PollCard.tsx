@@ -138,13 +138,13 @@ export function PollCard({
           {note.buy && BUY_UNITS_HREF ? (
             <>
               {" "}
-              <Link href={BUY_UNITS_HREF}>Buy Voice Units</Link>
+              <Link href={BUY_UNITS_HREF} className="link">Buy Voice Units</Link>
             </>
           ) : null}
           {!signedIn && SIGN_IN_HREF ? (
             <>
               {" "}
-              <Link href={SIGN_IN_HREF}>Sign in</Link>
+              <Link href={SIGN_IN_HREF} className="link">Sign in</Link>
             </>
           ) : null}
         </Banner>

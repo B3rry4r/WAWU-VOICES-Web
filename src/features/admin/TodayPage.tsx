@@ -29,8 +29,8 @@ function Tile({ label, value, sub, warn }: { label: string; value: string; sub: 
   return (
     <div className="rounded-xl border border-line bg-surface px-5 py-4">
       <Eyebrow>{label}</Eyebrow>
-      <div className="mt-2 font-display text-[34px] leading-[38px] text-ink">{value}</div>
-      <div className={`mt-1 text-[14px] leading-5 ${warn ? "font-semibold text-warning" : "text-ink-2"}`}>{sub}</div>
+      <div className="mt-2 font-display text-num-l text-ink">{value}</div>
+      <div className={`mt-1 ${warn ? "text-count text-warning" : "text-caption text-ink-2"}`}>{sub}</div>
     </div>
   );
 }
@@ -135,11 +135,11 @@ export function AdminTodayPage() {
           {hasQuestion ? (
             <section className="rounded-xl bg-green p-6 text-green-on">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-xs bg-forest px-2.5 py-1 text-[12px] font-extrabold uppercase leading-4 tracking-[0.08em] text-forest-on">Today&apos;s question</span>
-                {q.startsAt && q.endsAt ? <span className="text-[14px] font-semibold">{`Live since ${clock(q.startsAt)} · closes ${clock(q.endsAt)}`}</span> : null}
+                <span className="rounded-xs bg-forest px-2.5 py-1 text-eyebrow uppercase text-forest-on">Today&apos;s question</span>
+                {q.startsAt && q.endsAt ? <span className="text-count">{`Live since ${clock(q.startsAt)} · closes ${clock(q.endsAt)}`}</span> : null}
               </div>
-              <h2 className="m-0 mt-4 font-display text-[30px] font-normal leading-[36px]">{q.text}</h2>
-              <p className="m-0 mt-4 text-[14px] font-semibold leading-5">
+              <h2 className="m-0 mt-4 font-display text-display-l">{q.text}</h2>
+              <p className="m-0 mt-4 text-count">
                 {[`${q.voiceCount.toLocaleString("en-NG")} ${q.voiceCount === 1 ? "voice" : "voices"}`, q.category?.name, q.sensitive ? "Sensitive topic: ads are kept away" : null].filter(Boolean).join("  ·  ")}
               </p>
             </section>
@@ -150,9 +150,9 @@ export function AdminTodayPage() {
           {t.topic?.id ? (
             <Card>
               <Eyebrow>Topic of the week</Eyebrow>
-              <h2 className="m-0 mt-2 font-display text-[22px] font-normal leading-7">{t.topic.title}</h2>
+              <h2 className="m-0 mt-2 font-display text-display-m">{t.topic.title}</h2>
               {poll ? (
-                <p className="m-0 mt-2 text-[15px] leading-6 text-ink-2">{`Poll: ${poll.title} Closes ${slot(poll.endsAt)}. The weekly report drafts itself after.`}</p>
+                <p className="m-0 mt-2 text-body text-ink-2">{`Poll: ${poll.title} Closes ${slot(poll.endsAt)}. The weekly report drafts itself after.`}</p>
               ) : null}
             </Card>
           ) : null}
@@ -163,15 +163,15 @@ export function AdminTodayPage() {
               <ul className="m-0 mt-2 list-none p-0">
                 {t.schedule.map((s, i) => (
                   <li key={i} className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3 border-t border-line py-3 first:border-t-0">
-                    <span className="text-[15px] font-bold">{clock(s.at)}</span>
-                    <span className="text-[15px] leading-6">{s.title}</span>
+                    <span className="text-label">{clock(s.at)}</span>
+                    <span className="text-body">{s.title}</span>
                     {s.state === "DONE" ? <Icon name="circle-check" size={20} label="Done" /> : s.state === "NEEDS_YOU" ? <Pill tone="sun">Needs you</Pill> : <Pill>Scheduled</Pill>}
                   </li>
                 ))}
                 {t.nextQuestion ? (
                   <li className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-3 border-t border-line py-3">
-                    <span className="text-[15px] font-bold">{t.nextQuestion.scheduledFor ? dayMonth(t.nextQuestion.scheduledFor + "T12:00:00+01:00") : "Next"}</span>
-                    <span className="text-[15px] leading-6">{t.nextQuestion.text}</span>
+                    <span className="text-label">{t.nextQuestion.scheduledFor ? dayMonth(t.nextQuestion.scheduledFor + "T12:00:00+01:00") : "Next"}</span>
+                    <span className="text-body">{t.nextQuestion.text}</span>
                   </li>
                 ) : null}
               </ul>
@@ -184,20 +184,20 @@ export function AdminTodayPage() {
             <Eyebrow>Needs your attention</Eyebrow>
           </div>
           {rows.length === 0 ? (
-            <div className="px-5 pb-6 pt-2 text-[15px] leading-6 text-ink-2">Nothing is waiting for you.</div>
+            <div className="px-5 pb-6 pt-2 text-body text-ink-2">Nothing is waiting for you.</div>
           ) : (
             <ul className="m-0 list-none p-0">
               {rows.map((r, i) => (
                 <li key={i} className="border-t border-line">
-                  <Link href={r.href} className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-4 text-ink no-underline hover:bg-surface-2">
+                  <Link href={r.href} className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-4 text-ink no-underline a-plain hover:bg-surface-2">
                     <span className={`flex h-10 w-10 items-center justify-center rounded-pill ${r.tone}`}>
                       <Icon name={r.icon} size={20} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-[15px] font-bold leading-5">{r.title}</span>
-                      <span className="block text-[13px] leading-[18px] text-ink-2">{r.sub}</span>
+                      <span className="block text-label">{r.title}</span>
+                      <span className="block text-caption text-ink-2">{r.sub}</span>
                     </span>
-                    <span className="font-display text-[24px] leading-7">{r.count}</span>
+                    <span className="font-display text-num-m">{r.count}</span>
                   </Link>
                 </li>
               ))}

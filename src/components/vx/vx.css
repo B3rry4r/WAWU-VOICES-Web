@@ -48,6 +48,7 @@ button.vx-reset, .vx-reset { appearance: none; background: none; border: 0; padd
 .vx-btn--dark:hover:not(:disabled) { filter: brightness(1.25); }
 .vx-btn--onforest { background: transparent; color: var(--on-forest); box-shadow: inset 0 0 0 1.5px var(--on-forest-2); }
 .vx-btn--onforest:hover:not(:disabled) { background: var(--forest-2); }
+.vx-btn--onforest:focus-visible { box-shadow: var(--shadow-focus); }
 .vx-btn:disabled { cursor: not-allowed; background: var(--surface-2); color: var(--ink-3); box-shadow: none; transform: none; }
 .vx-btn.is-loading:disabled { background: var(--green); color: var(--on-green); }
 .vx-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: vx-spin 0.8s linear infinite; }

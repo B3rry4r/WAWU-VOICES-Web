@@ -152,17 +152,17 @@ export function SignIn() {
         <TextField label="Password" type="password" value={password} onChange={setPassword} autoComplete={join ? "new-password" : "current-password"} error={errs.password} hint={join ? "At least 8 characters." : undefined} />
         {join ? (
           <div>
-            <label className="flex cursor-pointer items-start gap-3 text-[16px] leading-6">
+            <label className="flex cursor-pointer items-start gap-3 text-body">
               <input type="checkbox" className="mt-[2px] h-6 w-6 flex-none accent-[var(--green)]" checked={consent} onChange={(e) => setConsent(e.target.checked)} aria-describedby={errs.consent ? "consent-err" : undefined} />
-              <span>I am 18 or older and I accept the <Link href="/settings/legal/rules" target="_blank" className="text-green-text">Community rules</Link>, <Link href="/settings/legal/terms" target="_blank" className="text-green-text">Terms</Link> and <Link href="/settings/legal/privacy" target="_blank" className="text-green-text">Privacy notice</Link>.</span>
+              <span>I am 18 or older and I accept the <Link href="/settings/legal/rules" target="_blank" className="link">Community rules</Link>, <Link href="/settings/legal/terms" target="_blank" className="link">Terms</Link> and <Link href="/settings/legal/privacy" target="_blank" className="link">Privacy notice</Link>.</span>
             </label>
-            {errs.consent ? <p id="consent-err" role="alert" className="m-0 mt-1 text-[13px] font-medium leading-[18px] text-danger">{errs.consent}</p> : null}
+            {errs.consent ? <p id="consent-err" role="alert" className="m-0 mt-1 text-caption text-danger">{errs.consent}</p> : null}
           </div>
         ) : null}
         <Button size="l" block type="submit" loading={busy}>{join || needEmail ? "Send code" : "Sign in"}</Button>
-        <p className="m-0 text-center text-[15px] leading-[22px]">
+        <p className="m-0 mx-auto text-center text-body">
           {join ? "Have an account? " : "New to VOICES? "}
-          <button type="button" className="inline-flex min-h-[44px] items-center border-0 bg-transparent p-0 font-semibold text-green-text underline" onClick={() => switchTo(!join)}>{join ? "Sign in" : "Join VOICES"}</button>
+          <button type="button" className="inline-flex min-h-[44px] items-center border-0 bg-transparent p-0 link" onClick={() => switchTo(!join)}>{join ? "Sign in" : "Join VOICES"}</button>
         </p>
         <p className="vx-sheet__fine pb-3">Reading, listening, liking and sharing stay free without an account.</p>
       </form>

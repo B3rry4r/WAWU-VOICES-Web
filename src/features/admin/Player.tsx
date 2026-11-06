@@ -72,7 +72,7 @@ export function AdminPlayer({ url, label, tone = "mint" }: { url: string; label:
           <span key={i} className="w-[3px] flex-none rounded-pill" style={{ height: `${h}%`, background: i / BARS.length < frac ? "var(--wave)" : "var(--wave-rest)" }} />
         ))}
       </div>
-      <span className="text-[14px] font-bold tabular-nums text-ink">{failed ? "Could not play" : mmss(dur > 0 && playing ? dur - pos : dur)}</span>
+      <span className="text-count tabular-nums text-ink">{failed ? "Could not play" : mmss(dur > 0 && playing ? dur - pos : dur)}</span>
     </div>
   );
 }

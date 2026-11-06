@@ -35,7 +35,7 @@ const KIND_ICON: Record<LedgerItem["kind"], IconName> = {
 export function CostCard({ costs, title = "What things cost", className = "", eyebrow = false }: { costs: ActionCosts; title?: string; className?: string; eyebrow?: boolean }) {
   return (
     <Card label={title} className={`!pb-[6px] ${className}`}>
-      {eyebrow ? <h2 className="vx-eyebrow m-0 mb-1 text-ink-2">{title}</h2> : <h2 className="m-0 mb-[6px] text-[16px] font-bold leading-[22px]">{title}</h2>}
+      {eyebrow ? <h2 className="vx-eyebrow m-0 mb-1 text-ink-2">{title}</h2> : <h2 className="m-0 mb-[6px] text-body-strong">{title}</h2>}
       {costRows(costs).map((r) => (
         <Line key={r.label} label={r.label} value={r.value} />
       ))}
@@ -60,7 +60,7 @@ export function ExtraVoiceCards({
       {offers.map((o) => (
         <article key={o.kind} className="flex flex-col gap-[6px] rounded-l bg-surface p-4 shadow-[inset_0_0_0_1px_var(--line)]">
           <span className="vx-eyebrow text-ink-2">{extraVoiceTitle(o.maxSeconds)}</span>
-          <span className="font-display text-[26px] font-normal leading-[28px]">{naira(o.priceKobo)}</span>
+          <span className="font-display text-num-l">{naira(o.priceKobo)}</span>
           <Note>{`One message, up to ${o.maxSeconds >= 60 ? `${o.maxSeconds / 60} ${o.maxSeconds === 60 ? "minute" : "minutes"}` : `${o.maxSeconds} seconds`}`}</Note>
           <div>
             <Button variant="secondary" size="s" loading={busy === o.kind} disabled={disabled || (busy !== null && busy !== o.kind)} onClick={() => onBuy(o)}>
@@ -87,24 +87,24 @@ function HistoryRow({ item, desktop }: { item: LedgerItem; desktop: boolean }) {
           <Icon name={KIND_ICON[item.kind]} size={20} />
         </span>
         <span className="flex min-w-0 flex-col">
-          <span className="text-[15px] font-semibold leading-[21px]">
+          <span className="text-label">
             {item.title}
             {receipt && desktop && segs.length === 0 ? (
               <span className="font-medium text-ink-2">
                 {" \u00b7 "}
-                <a className="font-semibold text-green-text underline" href={receipt}>
+                <a className="link" href={receipt}>
                   Receipt
                 </a>
               </span>
             ) : null}
           </span>
           {segs.length > 0 || (receipt && !(desktop && segs.length === 0)) ? (
-            <span className="text-[13px] font-medium leading-[18px] text-ink-2">
+            <span className="text-caption text-ink-2">
               {segs.join(" \u00b7 ")}
               {receipt ? (
                 <>
                   {segs.length > 0 ? " \u00b7 " : ""}
-                  <a className="font-semibold text-green-text underline" href={receipt}>
+                  <a className="link" href={receipt}>
                     Receipt
                   </a>
                 </>
@@ -113,8 +113,8 @@ function HistoryRow({ item, desktop }: { item: LedgerItem; desktop: boolean }) {
           ) : null}
         </span>
       </div>
-      <span className="hidden text-[14px] font-medium leading-5 text-ink-2 dt:block">{whenLong(item.createdAt)}</span>
-      <span className={`text-[15px] font-bold tabular-nums dt:text-right ${fig.tone === "free" || fig.tone === "plus" ? "text-green-text" : ""}`}>{fig.text}</span>
+      <span className="hidden text-caption text-ink-2 dt:block">{whenLong(item.createdAt)}</span>
+      <span className={`text-label tabular-nums dt:text-right ${fig.tone === "free" || fig.tone === "plus" ? "text-green-text" : ""}`}>{fig.text}</span>
     </li>
   );
 }
@@ -181,7 +181,7 @@ function History() {
           type="button"
           onClick={download}
           disabled={saving}
-          className="hidden min-h-[44px] items-center gap-2 border-0 bg-transparent p-0 text-[14px] font-semibold text-green-text dt:inline-flex"
+          className="hidden min-h-[44px] items-center gap-2 border-0 bg-transparent p-0 text-count text-green-text dt:inline-flex"
         >
           <Icon name="file-down" size={18} />
           {saving ? "Preparing" : "Download statement"}
@@ -267,8 +267,8 @@ function SignedIn() {
             <div className="flex flex-col gap-[2px]">
               <span className="vx-eyebrow text-[color:var(--on-forest-2)]">Your balance</span>
               <span className="flex items-baseline gap-2">
-                <span className="font-display text-[44px] font-normal leading-[46px] tabular-nums" data-testid="balance">{units(wallet.balanceMilli)}</span>
-                <span className="text-[16px] font-semibold leading-[22px]">Voice Units</span>
+                <span className="font-display text-num-l tabular-nums" data-testid="balance">{units(wallet.balanceMilli)}</span>
+                <span className="text-body-strong">Voice Units</span>
               </span>
             </div>
           </div>
@@ -276,7 +276,7 @@ function SignedIn() {
             Get Voice Units
           </Button>
         </div>
-        <p className="m-0 text-[13px] font-medium leading-[18px] text-[color:var(--on-forest-2)]">
+        <p className="m-0 text-caption text-[color:var(--on-forest-2)]">
           {min ? `From ${naira(min.priceKobo)} for ${units(min.unitsMilli)} units. ` : ""}Units cannot be cashed out or sent to others.
         </p>
       </section>
@@ -284,7 +284,7 @@ function SignedIn() {
       <Card label="Free posts" className="flex flex-col gap-[10px]">
         <H2>Free posts</H2>
         <FreePosts left={wallet.freePostsRemaining} total={total} />
-        <Note className="text-[13px]">Text and voice both count. Deleting a post does not give one back. After these, each post shows its unit cost first.</Note>
+        <Note className="text-caption">Text and voice both count. Deleting a post does not give one back. After these, each post shows its unit cost first.</Note>
       </Card>
 
       <CostCard costs={wallet.costs} className="dt:hidden" />
@@ -294,10 +294,10 @@ function SignedIn() {
 
       <section aria-labelledby="tok-h" className="flex flex-col gap-3">
         <div className="flex flex-col gap-[2px]">
-          <h2 id="tok-h" className="m-0 font-display text-[22px] font-normal leading-[27px]">
+          <h2 id="tok-h" className="m-0 font-display text-display-m">
             Extra voice
           </h2>
-          <p className="m-0 text-[14px] font-medium leading-5 text-ink-2">
+          <p className="m-0 text-caption text-ink-2">
             Talk past {wallet.costs.freeVoiceSeconds} seconds. One token covers one message and does not renew.
           </p>
         </div>
@@ -325,7 +325,7 @@ export function WalletScreen() {
         <span className="dt:hidden">
           <IconButton icon="arrow-left" label="Back to profile" variant="ghost" onClick={() => router.push("/profile")} />
         </span>
-        <h1 className="m-0 flex-1 font-display text-[24px] font-normal leading-7 dt:text-[32px] dt:leading-9 dt:ml-2">Voice Units</h1>
+        <h1 className="m-0 flex-1 font-display text-display-m dt:text-display-l dt:ml-2">Voice Units</h1>
       </header>
       {signedIn === null ? <LoadingBlock rows={2} /> : signedIn ? <SignedIn /> : <SignedOut />}
     </div>

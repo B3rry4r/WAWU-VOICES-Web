@@ -11,7 +11,7 @@ import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, SavedLi
 function Mark({ post }: { post: AdminResultPost["post"] }) {
   const ok = post.status === "VERIFIED";
   return (
-    <span className={`inline-flex flex-none items-center gap-1.5 text-[13px] font-bold ${ok ? "text-verified" : "text-warning"}`}>
+    <span className={`inline-flex flex-none items-center gap-1.5 text-count ${ok ? "text-verified" : "text-warning"}`}>
       <Icon name={ok ? "circle-check" : "circle-dashed"} size={18} />
       {ok ? "Verified" : "Not verified"}
     </span>
@@ -128,8 +128,8 @@ function ResultsBody() {
                       <span className="flex items-center gap-3">
                         <Icon name="map-pin" size={22} />
                         <span className="min-w-0 flex-1">
-                          <span className="block text-[15px] font-bold leading-5">{`PU ${p.pollingUnit}, Ward ${p.ward}, ${p.lga}, ${p.state}`}</span>
-                          <span className="block text-[13px] leading-[18px] text-ink-2">{`@${p.author.handle} · ${clock(p.createdAt)} · ${i.hasPhoto ? "photo attached" : "no photo"}${i.checkedBy ? ` · checked by ${i.checkedBy}` : ""}`}</span>
+                          <span className="block text-label">{`PU ${p.pollingUnit}, Ward ${p.ward}, ${p.lga}, ${p.state}`}</span>
+                          <span className="block text-caption text-ink-2">{`@${p.author.handle} · ${clock(p.createdAt)} · ${i.hasPhoto ? "photo attached" : "no photo"}${i.checkedBy ? ` · checked by ${i.checkedBy}` : ""}`}</span>
                         </span>
                         <Mark post={p} />
                       </span>
@@ -177,13 +177,13 @@ function Check({ row, onDone }: { row: AdminResultPost; onDone: (row: AdminResul
           <div className="flex items-center gap-3">
             <Avatar name={p.author.displayName || p.author.handle} size="s" />
             <div>
-              <div className="text-[15px] font-bold leading-5">{`@${p.author.handle}`}</div>
-              <div className="text-[13px] leading-4 text-ink-2">{clock(p.createdAt)}</div>
+              <div className="text-label">{`@${p.author.handle}`}</div>
+              <div className="text-caption text-ink-2">{clock(p.createdAt)}</div>
             </div>
           </div>
           <span className={`rounded-pill px-3 py-1 ${p.status === "VERIFIED" ? "bg-verified-bg" : "bg-unverified-bg"}`}><Mark post={p} /></span>
         </div>
-        <div className="mt-3 flex items-center gap-2 text-[16px] font-bold"><Icon name="map-pin" size={20} />{`PU ${p.pollingUnit}, Ward ${p.ward}, ${p.lga}, ${p.state}`}</div>
+        <div className="mt-3 flex items-center gap-2 text-body-strong"><Icon name="map-pin" size={20} />{`PU ${p.pollingUnit}, Ward ${p.ward}, ${p.lga}, ${p.state}`}</div>
         <div className="mt-3 grid grid-cols-3 gap-3">
           {[
             ["Accredited", p.accredited],
@@ -191,34 +191,34 @@ function Check({ row, onDone }: { row: AdminResultPost; onDone: (row: AdminResul
             ["Rejected", p.rejected],
           ].map(([l, v]) => (
             <div key={String(l)} className="rounded-m bg-surface-2 px-3 py-2">
-              <div className="text-[13px] leading-4 text-ink-2">{l}</div>
-              <div className="font-display text-[26px] leading-8">{Number(v).toLocaleString("en-NG")}</div>
+              <div className="text-caption text-ink-2">{l}</div>
+              <div className="font-display text-num-l">{Number(v).toLocaleString("en-NG")}</div>
             </div>
           ))}
         </div>
-        <p className="m-0 mt-3 text-[13px] leading-[18px] text-ink-2">{p.checkedLine ?? "Not checked yet. Treat with care."}</p>
+        <p className="m-0 mt-3 text-caption text-ink-2">{p.checkedLine ?? "Not checked yet. Treat with care."}</p>
       </div>
 
       {row.hasPhoto && row.photoUrl ? (
-        <a href={row.photoUrl} target="_blank" rel="noopener noreferrer" className="mt-4 flex min-h-[96px] items-center justify-center gap-2 rounded-l bg-surface-2 p-6 text-[14px] font-semibold text-ink no-underline hover:bg-surface-3">
+        <a href={row.photoUrl} target="_blank" rel="noopener noreferrer" className="mt-4 flex min-h-[96px] items-center justify-center gap-2 rounded-l bg-surface-2 p-6 text-count text-ink no-underline a-plain hover:bg-surface-3">
           <Icon name="eye" size={20} />
           {`Photo of the result sheet, from @${p.author.handle}`}
         </a>
       ) : (
-        <div className="mt-4 flex min-h-[64px] items-center justify-center rounded-l bg-surface-2 p-4 text-[14px] text-ink-2">No photo with this result</div>
+        <div className="mt-4 flex min-h-[64px] items-center justify-center rounded-l bg-surface-2 p-4 text-caption text-ink-2">No photo with this result</div>
       )}
 
       {checked ? (
-        <p className="m-0 mt-4 text-[14px] text-ink-2">{row.checkedBy ? `Checked by ${row.checkedBy}.` : "Checked."}</p>
+        <p className="m-0 mt-4 text-caption text-ink-2">{row.checkedBy ? `Checked by ${row.checkedBy}.` : "Checked."}</p>
       ) : (
         <div className="mt-4 flex flex-col gap-4">
           <div>
-            <div className="mb-2 text-[15px] font-bold">Your decision</div>
+            <div className="mb-2 text-label">Your decision</div>
             <Tabs variant="segmented" block label="Mark this result" items={[{ id: "VERIFIED", label: "Verified", icon: "circle-check" }, { id: "NOT_VERIFIED", label: "Not verified", icon: "circle-dashed" }]} value={mark ?? ""} onChange={(v) => setMark(v as "VERIFIED" | "NOT_VERIFIED")} />
           </div>
           <TextField label="Reason" value={note} onChange={setNote} hint="Kept in the log. Not shown to the public." />
           {mark ? (
-            <div className="flex items-center gap-2 rounded-m bg-verified-bg px-4 py-3 text-[14px] font-bold text-verified">
+            <div className="flex items-center gap-2 rounded-m bg-verified-bg px-4 py-3 text-count text-verified">
               <Icon name="circle-check" size={18} />
               {mark === "VERIFIED" ? `People will see: Checked by the WAWU team at ${clock(new Date())}` : "People will see: Not verified. Treat with care."}
             </div>

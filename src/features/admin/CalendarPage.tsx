@@ -113,7 +113,7 @@ function CalendarBody() {
                 <EmptyState icon="search" title={q ? "Nothing matches that" : "No weeks here"} body={q ? "Try a week number, a topic word or part of a question." : "Add a week to start the calendar."} />
               </div>
             ) : (
-              <table className="w-full border-collapse text-left text-[14px] leading-5">
+              <table className="w-full border-collapse text-left text-caption">
                 <thead>
                   <tr className="text-ink-2">
                     <th className="vx-eyebrow px-4 py-4 font-bold">Week</th>
@@ -187,13 +187,13 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="vx-eyebrow text-ink-2">{`Week ${t.weekNumber} · ${weekRange(t.startsOn)}`}</div>
-          <h2 className="m-0 mt-2 font-display text-[26px] font-normal leading-8">{t.title}</h2>
+          <h2 className="m-0 mt-2 font-display text-display-m">{t.title}</h2>
         </div>
         <Button variant="secondary" size="s" onClick={() => setEditing(true)}>Edit week</Button>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <StatusPill s={t.status} />
-        {t.sensitive ? <span className="rounded-s bg-warning-bg px-2 py-1 text-[12px] font-bold leading-4 text-warning">Sensitive. No ads beside it.</span> : null}
+        {t.sensitive ? <span className="rounded-s bg-warning-bg px-2 py-1 text-caption text-warning">Sensitive. No ads beside it.</span> : null}
       </div>
 
       <ul className="m-0 mt-4 list-none p-0">
@@ -201,7 +201,7 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
           <QuestionRow key={q.id} q={q} onSaved={() => { setN((x) => x + 1); onChanged("Question saved."); }} />
         ))}
         {d.spare.length ? (
-          <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 border-t border-line py-3 text-[15px]">
+          <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 border-t border-line py-3 text-body">
             <span className="font-bold text-ink-2">Spare</span>
             <span className="text-ink-2">{`${d.spare.length} more ${d.spare.length === 1 ? "question" : "questions"} held for follow-ups and flash polls`}</span>
           </li>
@@ -211,11 +211,11 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
       {d.poll ? (
         <div className="mt-4 rounded-l bg-surface-2 p-4">
           <div className="vx-eyebrow mb-1 text-ink-2">{`Poll, closes ${slot(d.poll.endsAt)}`}</div>
-          <div className="text-[16px] font-bold leading-6">{d.poll.title}</div>
-          <p className="m-0 mt-1 text-[14px] leading-5 text-ink-2">{d.poll.options.map((o) => o.label).join(" · ")}</p>
+          <div className="text-body-strong">{d.poll.title}</div>
+          <p className="m-0 mt-1 text-caption text-ink-2">{d.poll.options.map((o) => o.label).join(" · ")}</p>
         </div>
       ) : null}
-      {t.whatNextPrompt ? <p className="m-0 mt-4 text-[14px] leading-5 text-ink-2">{`What Next? prompt: ${t.whatNextPrompt}`}</p> : null}
+      {t.whatNextPrompt ? <p className="m-0 mt-4 text-caption text-ink-2">{`What Next? prompt: ${t.whatNextPrompt}`}</p> : null}
     </Card>
   );
 }
@@ -236,7 +236,7 @@ function QuestionRow({ q, onSaved }: { q: AdminQuestion; onSaved: () => void }) 
   }
   return (
     <li className="grid grid-cols-[72px_minmax(0,1fr)_auto] items-start gap-3 border-t border-line py-3 first:border-t-0">
-      <span className={`text-[14px] font-bold ${q.status === "LIVE" ? "text-green-text" : "text-ink-2"}`}>{q.day ? dayStringWeekday(q.day) : "Open"}</span>
+      <span className={`text-count ${q.status === "LIVE" ? "text-green-text" : "text-ink-2"}`}>{q.day ? dayStringWeekday(q.day) : "Open"}</span>
       {editing ? (
         <div className="col-span-2 flex flex-col gap-2">
           <TextField label="Question" multiline value={text} onChange={setText} />
@@ -248,7 +248,7 @@ function QuestionRow({ q, onSaved }: { q: AdminQuestion; onSaved: () => void }) 
         </div>
       ) : (
         <>
-          <button type="button" onClick={() => setEditing(true)} aria-label={`Edit question: ${q.text}`} className="cursor-pointer border-0 bg-transparent p-0 text-left text-[15px] leading-[22px] text-ink">{q.text}</button>
+          <button type="button" onClick={() => setEditing(true)} aria-label={`Edit question: ${q.text}`} className="cursor-pointer border-0 bg-transparent p-0 text-left text-body text-ink">{q.text}</button>
           <span className="flex gap-1">
             {q.status === "LIVE" ? <Pill tone="red" dot>Live</Pill> : null}
             {q.pinned ? <Pill tone="green">Pinned</Pill> : null}
@@ -281,8 +281,8 @@ function WeekForm(p: { mode: "new"; suggestedWeek: number; onClose: () => void; 
 
   return (
     <Card>
-      <h2 className="m-0 mb-1 font-display text-[22px] font-normal leading-7">{p.mode === "edit" ? "Edit week" : "Add a week"}</h2>
-      {p.mode === "edit" ? <p className="m-0 mb-4 text-[13px] leading-[18px] text-ink-2">{`Changing the start date moves this week only (${dayMonth(f.startsOn ? f.startsOn + "T12:00:00+01:00" : new Date())} onward). Other weeks stay where they are.`}</p> : <div className="mb-4" />}
+      <h2 className="m-0 mb-1 font-display text-display-m">{p.mode === "edit" ? "Edit week" : "Add a week"}</h2>
+      {p.mode === "edit" ? <p className="m-0 mb-4 text-caption text-ink-2">{`Changing the start date moves this week only (${dayMonth(f.startsOn ? f.startsOn + "T12:00:00+01:00" : new Date())} onward). Other weeks stay where they are.`}</p> : <div className="mb-4" />}
       <div className="grid grid-cols-2 gap-4">
         <TextField label="Week number" inputMode="numeric" value={f.weekNumber} onChange={set("weekNumber")} />
         <TextField label="Starts on (a Thursday)" type="date" value={f.startsOn} onChange={set("startsOn")} />
@@ -299,7 +299,7 @@ function WeekForm(p: { mode: "new"; suggestedWeek: number; onClose: () => void; 
             </select>
           </div>
         </div>
-        <label className="flex items-center gap-3 pt-6 text-[15px] font-semibold">
+        <label className="flex items-center gap-3 pt-6 text-label">
           <input type="checkbox" checked={sensitive} onChange={(e) => setSensitive(e.target.checked)} className="h-5 w-5" />
           Sensitive topic: no ads beside it
         </label>

@@ -107,12 +107,12 @@ function NewsBody() {
               <button key={i.answer.id} type="button" role="listitem" className={queueRow(selected === i.answer.id)} onClick={() => setSelected(i.answer.id)} aria-current={selected === i.answer.id ? "true" : undefined}>
                 <span className="flex flex-wrap items-center gap-2">
                   <NewsTag kind={KIND[tagOf(i)]} />
-                  <span className={`text-[13px] font-bold leading-[18px] ${i.verifiedRequested ? "text-verified" : "text-danger"}`}>
+                  <span className={`text-count ${i.verifiedRequested ? "text-verified" : "text-danger"}`}>
                     {i.verifiedRequested ? "Source sent for Verified News" : `Flagged ${i.flagCount} ${i.flagCount === 1 ? "time" : "times"}`}
                   </span>
                 </span>
-                <span className="mt-2 block text-[15px] leading-[22px]">{i.answer.body}</span>
-                <span className="mt-1 block text-[13px] leading-[18px] text-ink-2">{`@${i.answer.author?.handle ?? "removed"} · ${ago(i.answer.createdAt)} · ${i.answer.likeCount} likes${i.evidenceUrl ? " · source photo attached" : ""}`}</span>
+                <span className="mt-2 block text-body">{i.answer.body}</span>
+                <span className="mt-1 block text-caption text-ink-2">{`@${i.answer.author?.handle ?? "removed"} · ${ago(i.answer.createdAt)} · ${i.answer.likeCount} likes${i.evidenceUrl ? " · source photo attached" : ""}`}</span>
               </button>
             ))}
             {next ? (
@@ -156,13 +156,13 @@ function Decide({ item, readOnly, onDone }: { item: AdminNewsItem; readOnly: boo
         <div className="flex items-center gap-3">
           <Avatar name={a.author?.displayName || a.author?.handle || "?"} size="m" />
           <div>
-            <div className="text-[15px] font-bold leading-5">{`@${a.author?.handle ?? "removed"}`}</div>
-            <div className="text-[13px] leading-[18px] text-ink-2">{[ago(a.createdAt) + " ago", a.author?.state].filter(Boolean).join(" · ")}</div>
+            <div className="text-label">{`@${a.author?.handle ?? "removed"}`}</div>
+            <div className="text-caption text-ink-2">{[ago(a.createdAt) + " ago", a.author?.state].filter(Boolean).join(" · ")}</div>
           </div>
         </div>
         <div className="mt-3"><NewsTag kind={KIND[cur]} /></div>
-        <p className="m-0 mt-3 text-[17px] leading-[26px]">{a.body}</p>
-        <div className="mt-3 flex gap-5 text-[14px] text-ink-2">
+        <p className="m-0 mt-3 text-body-l">{a.body}</p>
+        <div className="mt-3 flex gap-5 text-caption text-ink-2">
           <span className="inline-flex items-center gap-1.5"><Icon name="heart" size={18} />{a.likeCount}</span>
           <span className="inline-flex items-center gap-1.5"><Icon name="message-circle" size={18} />{a.replyCount}</span>
         </div>
@@ -171,19 +171,19 @@ function Decide({ item, readOnly, onDone }: { item: AdminNewsItem; readOnly: boo
       {item.flagReasons.length ? (
         <div className="mt-4 rounded-l bg-surface-2 p-4">
           <Eyebrow className="mb-1">What the flags say</Eyebrow>
-          <p className="m-0 text-[14px] leading-5">{item.flagReasons.join("  ·  ")}</p>
+          <p className="m-0 text-caption">{item.flagReasons.join("  ·  ")}</p>
         </div>
       ) : null}
       {item.verifiedRequested && item.evidenceUrl ? (
-        <p className="m-0 mt-3 text-[14px]">
-          <a href={item.evidenceUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-green-text">Open the source photo</a>
+        <p className="m-0 mt-3 text-caption">
+          <a href={item.evidenceUrl} target="_blank" rel="noopener noreferrer" className="link">Open the source photo</a>
         </p>
       ) : null}
 
       {readOnly ? null : (
         <div className="mt-4 flex flex-col gap-4">
           <div>
-            <div className="mb-2 text-[15px] font-bold">Tag</div>
+            <div className="mb-2 text-label">Tag</div>
             <Tabs variant="segmented" block label="Choose the tag" items={(Object.keys(WORDS) as NewsTagId[]).map((k) => ({ id: k, label: WORDS[k] }))} value={tag} onChange={(v) => setTag(v as NewsTagId)} />
           </div>
           {needSource || item.verifiedRequested ? (

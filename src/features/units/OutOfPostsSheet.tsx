@@ -71,10 +71,10 @@ export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { quest
       {draft ? (
         <div className="flex flex-col gap-1 rounded-m bg-surface-2 p-4">
           <span className="vx-eyebrow text-green-text">Your draft is saved</span>
-          <p className="m-0 whitespace-pre-wrap break-words text-[16px] leading-6">{draft}</p>
+          <p className="m-0 whitespace-pre-wrap break-words text-body">{draft}</p>
         </div>
       ) : null}
-      <p className="m-0 text-[16px] leading-6 text-ink-2">
+      <p className="m-0 text-body text-ink-2">
         To post it, get Voice Units. A text post uses {unitsLabel(c.textPostMilli)} ({nairaOfUnits(c.textPostMilli, c.baseKoboPerUnit)}).
         {min ? ` The smallest pack is ${units(min.unitsMilli)} units for ${naira(min.priceKobo)}.` : ""}
       </p>

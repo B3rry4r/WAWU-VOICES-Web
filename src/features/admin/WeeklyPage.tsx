@@ -164,7 +164,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
             />
           )}
         </div>
-        {r.summary && !editing ? <p className="m-0 mt-4 text-[15px] leading-6 text-ink-2">{r.summary}</p> : null}
+        {r.summary && !editing ? <p className="m-0 mt-4 text-body text-ink-2">{r.summary}</p> : null}
       </div>
 
       <div className="flex flex-col gap-5">
@@ -172,14 +172,14 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
           <CardTitle>Checks</CardTitle>
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {r.checks.map((c, i) => (
-              <li key={i} className="flex items-start gap-3 text-[15px] leading-6">
+              <li key={i} className="flex items-start gap-3 text-body">
                 <Icon name={c.ok ? "circle-check" : "triangle-alert"} size={22} className={`mt-0.5 flex-none ${c.ok ? "text-success" : "text-warning"}`} label={c.ok ? "Passed" : "Needs a look"} />
                 {c.text}
               </li>
             ))}
             {r.checks.length === 0 ? <li className="text-ink-2">No checks have run yet.</li> : null}
           </ul>
-          <dl className="m-0 mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t border-line pt-4 text-[14px] leading-5">
+          <dl className="m-0 mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t border-line pt-4 text-caption">
             <dt className="text-ink-2">Based on</dt>
             <dd className="m-0">{`${r.basedOnVoices.toLocaleString("en-NG")} voices and ${r.basedOnVotes.toLocaleString("en-NG")} votes`}</dd>
             {r.pollClosedAt ? (
@@ -220,7 +220,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
             )}
           </>
         ) : r.editorNote ? (
-          <div className="rounded-l bg-surface-2 p-4 text-[14px] leading-5">
+          <div className="rounded-l bg-surface-2 p-4 text-caption">
             <div className="vx-eyebrow mb-1 text-ink-2">Editor notes</div>
             {r.editorNote}
           </div>

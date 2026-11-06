@@ -59,7 +59,9 @@ export function WeekCard({ topic, questionId, variant }: { topic: Topic; questio
   return variant === "rail" ? (
     <TopicOfWeek title={topic.title} meta={meta} variant="rail" onClick={() => router.push(href)} />
   ) : (
-    <TopicOfWeek title={topic.title} meta={meta} href={href} />
+    <div className="contents [&_a:focus-visible]:[box-shadow:var(--shadow-focus)]">
+      <TopicOfWeek title={topic.title} meta={meta} href={href} />
+    </div>
   );
 }
 

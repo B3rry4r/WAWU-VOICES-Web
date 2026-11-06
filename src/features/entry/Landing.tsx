@@ -35,9 +35,9 @@ export function Landing() {
       </header>
       <header className="mx-auto hidden w-full max-w-[1176px] items-center gap-8 px-8 py-5 dt:flex">
         <Link href="/" className="mr-6 flex" aria-label="VOICES home"><Logo height={40} alt="VOICES home" /></Link>
-        <a href="#how" className="text-[15px] font-semibold text-ink no-underline">How it works</a>
-        <Link href="/weekly" className="text-[15px] font-semibold text-ink no-underline">Weekly report</Link>
-        <Link href="/settings/legal/rules" className="text-[15px] font-semibold text-ink no-underline">Rules</Link>
+        <a href="#how" className="text-label text-ink no-underline a-plain">How it works</a>
+        <Link href="/weekly" className="text-label text-ink no-underline a-plain">Weekly report</Link>
+        <Link href="/settings/legal/rules" className="text-label text-ink no-underline a-plain">Rules</Link>
         <span className="ml-auto flex gap-3">
           <Button variant="secondary" href="/sign-in">Sign in</Button>
           <Button icon="mic" href="/">Add your voice</Button>
@@ -55,15 +55,15 @@ export function Landing() {
     const hero = (
       <section className="flex flex-col gap-[14px] pt-1">
         <span className="vx-eyebrow text-green-text">Nigeria&apos;s national conversation</span>
-        <h1 className="m-0 font-display text-[40px] font-normal leading-[44px] tracking-[-0.01em] dt:text-[64px] dt:leading-[68px]">Nigeria is talking. Add your voice.</h1>
-        <p className="m-0 text-[17px] leading-[25px] text-ink-2 dt:max-w-[420px] dt:text-[20px] dt:leading-[30px]">
+        <h1 className="m-0 font-display text-display-xl dt:text-display-2xl">Nigeria is talking. Add your voice.</h1>
+        <p className="m-0 text-body-l text-ink-2 dt:max-w-[420px]">
           Every day our editors ask one question. Answer with a 10 second voice or a few lines of text, hear what others said, and vote in open polls.
         </p>
         <div className="flex flex-col gap-[14px] dt:flex-row">
           <span className="hidden dt:block"><Button size="l" icon="mic" href="/">Add your voice</Button></span>
           <Button size="l" variant="secondary" icon="headphones" href="/" className="max-dt:w-full">Listen as a guest</Button>
         </div>
-        <p className="m-0 flex items-center gap-2 text-[14px] font-medium leading-5 text-ink-2"><Icon name="lock" size={16} />Free to read, listen, like and share. Adults only (18+).</p>
+        <p className="m-0 flex items-center gap-2 text-caption text-ink-2"><Icon name="lock" size={16} />Free to read, listen, like and share. Adults only (18+).</p>
       </section>
     );
     const today = (
@@ -89,15 +89,15 @@ export function Landing() {
         </div>
         <section id="how" aria-labelledby="h-how" className="dt:border-y dt:border-line dt:bg-surface">
           <div className="mx-auto flex max-w-[1176px] flex-col gap-3 px-4 pb-6 dt:gap-8 dt:px-8 dt:py-16">
-            <h2 id="h-how" className="m-0 font-display text-[24px] font-normal leading-7 dt:text-[40px] dt:leading-[48px]">Every topic, four steps. Join at any one.</h2>
+            <h2 id="h-how" className="m-0 font-display text-display-m dt:text-display-xl">Every topic, four steps. Join at any one.</h2>
             <ol className="m-0 grid list-none gap-0 p-0 dt:grid-cols-4 dt:gap-4">
               {STEPS.map((s, i) => (
                 <li key={s.title} className="flex items-start gap-3 px-4 py-[14px] dt:flex-col dt:gap-4 dt:rounded-l dt:border dt:border-line dt:bg-bg dt:p-6">
                   <span className={`flex h-11 w-11 flex-none items-center justify-center rounded-[14px] dt:h-[52px] dt:w-[52px] ${i === 0 ? "bg-green text-green-on" : "bg-mint text-green-text"}`}><Icon name={s.icon} size={22} /></span>
                   <span className="flex flex-col gap-[2px]">
-                    <b className="font-display text-[20px] font-normal leading-6">{s.title}</b>
-                    <span className="text-[15px] leading-[22px] text-ink-2 dt:hidden">{s.phone}</span>
-                    <span className="hidden text-[15px] leading-[22px] text-ink-2 dt:block">{s.desk}</span>
+                    <b className="font-display text-display-s">{s.title}</b>
+                    <span className="text-body text-ink-2 dt:hidden">{s.phone}</span>
+                    <span className="hidden text-body text-ink-2 dt:block">{s.desk}</span>
                   </span>
                 </li>
               ))}
@@ -108,13 +108,13 @@ export function Landing() {
           <section aria-labelledby="h-free" className="relative flex flex-col gap-[14px] overflow-hidden rounded-[28px] bg-forest px-6 py-7 text-forest-on dt:grid dt:grid-cols-2 dt:items-center dt:gap-12 dt:px-12 dt:py-12">
             <div className="relative flex flex-col gap-[14px]">
               <span className="vx-eyebrow text-sun">Fair from the first tap</span>
-              <h2 id="h-free" className="m-0 font-display text-[30px] font-normal leading-[34px] dt:text-[44px] dt:leading-[48px]">{`Your first ${cfg.freePosts} posts are free.`}</h2>
-              <p className="m-0 text-[16px] leading-6 text-[var(--on-forest-2)] dt:hidden">{`After that, posting uses Voice Units from ₦${from}. Every price shows before you tap. Ads are always labelled, and your raw audio is never downloadable.`}</p>
-              <p className="m-0 hidden text-[16px] leading-6 text-[var(--on-forest-2)] dt:block">{`After that, posting uses Voice Units from ₦${from}. Every price shows before you tap.`}</p>
+              <h2 id="h-free" className="m-0 font-display text-display-l dt:text-display-xl">{`Your first ${cfg.freePosts} posts are free.`}</h2>
+              <p className="m-0 text-body text-[var(--on-forest-2)] dt:hidden">{`After that, posting uses Voice Units from ₦${from}. Every price shows before you tap. Ads are always labelled, and your raw audio is never downloadable.`}</p>
+              <p className="m-0 hidden text-body text-[var(--on-forest-2)] dt:block">{`After that, posting uses Voice Units from ₦${from}. Every price shows before you tap.`}</p>
             </div>
             <ul className="relative m-0 hidden list-none flex-col gap-3 p-0 dt:flex">
               {TRUST.map((t) => (
-                <li key={t.text} className="flex items-center gap-4 rounded-m bg-[var(--forest-2)] px-5 py-4 text-[16px] font-semibold"><Icon name={t.icon} size={22} />{t.text}</li>
+                <li key={t.text} className="flex items-center gap-4 rounded-m bg-[var(--forest-2)] px-5 py-4 text-body-strong"><Icon name={t.icon} size={22} />{t.text}</li>
               ))}
             </ul>
           </section>
@@ -122,12 +122,12 @@ export function Landing() {
         <footer className="hidden border-t border-line dt:block">
           <div className="mx-auto flex max-w-[1176px] items-center gap-4 px-8 py-6">
             <Logo height={28} alt="VOICES" />
-            <span className="text-[14px] text-ink-2">VOICES by WAWU · © 2026</span>
-            <span className="ml-auto flex gap-5">
-              <Link href="/settings/legal/rules" className="text-[14px] text-ink-2 underline">Community rules</Link>
-              <Link href="/settings/legal/terms" className="text-[14px] text-ink-2 underline">Terms</Link>
-              <Link href="/settings/legal/privacy" className="text-[14px] text-ink-2 underline">Privacy</Link>
-              <Link href="/settings/legal/refunds" className="text-[14px] text-ink-2 underline">Refunds</Link>
+            <span className="text-caption text-ink-2">VOICES by WAWU · © 2026</span>
+            <span className="ml-auto flex gap-5 text-caption">
+              <Link href="/settings/legal/rules" className="link">Community rules</Link>
+              <Link href="/settings/legal/terms" className="link">Terms</Link>
+              <Link href="/settings/legal/privacy" className="link">Privacy</Link>
+              <Link href="/settings/legal/refunds" className="link">Refunds</Link>
             </span>
           </div>
         </footer>
@@ -144,7 +144,7 @@ export function Landing() {
             <Button size="l" variant="secondary" block href="/sign-in">Sign in</Button>
             <Button size="l" icon="mic" block href="/join">Join VOICES</Button>
           </div>
-          <p className="m-0 text-center text-[12px] font-medium leading-4 text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="text-green-text">Community rules</Link>, <Link href="/settings/legal/terms" className="text-green-text">Terms</Link> and <Link href="/settings/legal/privacy" className="text-green-text">Privacy</Link>.</p>
+          <p className="m-0 mx-auto text-center text-caption text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="link">Community rules</Link>, <Link href="/settings/legal/terms" className="link">Terms</Link> and <Link href="/settings/legal/privacy" className="link">Privacy</Link>.</p>
         </BottomBar>
       </div>
     </EntryFrame>

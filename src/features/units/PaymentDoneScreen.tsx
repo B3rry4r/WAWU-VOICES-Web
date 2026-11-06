@@ -43,7 +43,7 @@ function CopyRef({ full }: { full: string }) {
     }
   }
   return (
-    <button type="button" className="inline-flex items-center gap-1 border-0 bg-transparent p-0 font-bold text-green-text underline" title={full} aria-label={`Copy the full reference ${full}`} onClick={() => void copy()}>
+    <button type="button" className="inline-flex items-center gap-1 border-0 bg-transparent p-0 link" title={full} aria-label={`Copy the full reference ${full}`} onClick={() => void copy()}>
       <span className="tabular-nums">{shortRef(full)}</span>
       <Icon name={copied ? "check" : "copy"} size={14} />
       <span className="sr-only" role="status">{copied ? "Copied" : ""}</span>
@@ -53,7 +53,7 @@ function CopyRef({ full }: { full: string }) {
 
 function Details({ rows }: { rows: Array<[string, ReactNode]> }) {
   return (
-    <dl className="m-0 flex flex-col rounded-l bg-surface px-4 py-1 text-[15px] font-medium leading-[21px] shadow-[inset_0_0_0_1px_var(--line)] dt:bg-surface-2">
+    <dl className="m-0 flex flex-col rounded-l bg-surface px-4 py-1 text-body shadow-[inset_0_0_0_1px_var(--line)] dt:bg-surface-2">
       {rows.map(([k, v]) => (
         <div key={k} className="flex justify-between gap-3 border-b border-line py-[10px] last:border-b-0">
           <dt className="text-ink-2">{k}</dt>
@@ -71,8 +71,8 @@ function Hero({ tone, title, body, big }: { tone: "ok" | "bad" | "wait"; title: 
       <span className={`flex items-center justify-center rounded-full ${circle} ${big ? "h-[88px] w-[88px]" : "h-[72px] w-[72px]"} dt:h-24 dt:w-24`} aria-hidden="true">
         <Icon name={tone === "ok" ? "circle-check" : tone === "bad" ? "circle-x" : "clock"} size={big ? 44 : 36} />
       </span>
-      <h1 className={`m-[4px_0_0] font-display font-normal tracking-[-0.01em] ${big ? "text-[34px] leading-[38px]" : "text-[30px] leading-[34px]"} dt:text-[36px] dt:leading-10`}>{title}</h1>
-      {body ? <p className="m-0 text-[16px] leading-6 text-ink-2">{body}</p> : null}
+      <h1 className={`m-[4px_0_0] font-display ${big ? "text-display-xl" : "text-display-l"} dt:text-display-xl`}>{title}</h1>
+      {body ? <p className="m-0 text-body text-ink-2">{body}</p> : null}
     </div>
   );
 }

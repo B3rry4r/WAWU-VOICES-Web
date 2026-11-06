@@ -98,7 +98,7 @@ function AdsBody() {
         <>
           {items.length ? (
             <div className="mb-5 overflow-hidden rounded-xl border border-line bg-surface">
-              <table className="w-full border-collapse text-left text-[14px] leading-5">
+              <table className="w-full border-collapse text-left text-caption">
                 <thead>
                   <tr className="text-ink-2">
                     {["Brand", "Type and placement", "Audience", "Dates", "Views · taps · listens", "Status"].map((h) => (
@@ -147,7 +147,7 @@ function Preview({ ad }: { ad: AdminAd }) {
     <div>
       <div className="vx-eyebrow mb-2 text-ink-2">Preview, as people will see it</div>
       <AdSlot variant={ad.kind === "AUDIO_SLOT" && !ad.audioClipId ? "card" : KIND_VARIANT[ad.kind]} brand={ad.brand} headline={ad.headline} body={ad.body ?? undefined} cta={ad.ctaLabel ?? "Visit page"} href={ad.linkUrl ?? "#"} />
-      <p className="m-0 mt-3 text-[13px] leading-[18px] text-ink-2">Always labelled Ad. Plays only when tapped. Never inside a post, never in the first three items, never beside a sensitive topic.</p>
+      <p className="m-0 mt-3 text-caption text-ink-2">Always labelled Ad. Plays only when tapped. Never inside a post, never in the first three items, never beside a sensitive topic.</p>
     </div>
   );
 }
@@ -169,13 +169,13 @@ function Review({ ad, cats, onDone }: { ad: AdminAd; cats: Record<string, string
       <CardTitle>Approval checks</CardTitle>
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {ad.checks.map((c, i) => (
-          <li key={i} className="flex items-start gap-3 text-[15px] leading-6">
+          <li key={i} className="flex items-start gap-3 text-body">
             <Icon name={c.ok ? "circle-check" : "triangle-alert"} size={22} className={`mt-0.5 flex-none ${c.ok ? "text-success" : "text-warning"}`} label={c.ok ? "Passed" : "Needs a look"} />
             {c.text}
           </li>
         ))}
       </ul>
-      <dl className="m-0 mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[14px] leading-5">
+      <dl className="m-0 mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-caption">
         <dt className="text-ink-2">Targeting</dt>
         <dd className="m-0">{[names, ad.states.length ? ad.states.join(", ") : "Nigeria", ad.ageBands.length ? `${ad.ageBands.join(", ")} (consented age bands only)` : "consented age bands only"].join(" · ")}</dd>
         <dt className="text-ink-2">Kept away from</dt>
@@ -185,7 +185,7 @@ function Review({ ad, cats, onDone }: { ad: AdminAd; cats: Record<string, string
         <dt className="text-ink-2">Pricing</dt>
         <dd className="m-0">{ad.priceKobo != null ? `₦${(ad.priceKobo / 100).toLocaleString("en-NG")}` : "From the admin price list"}</dd>
       </dl>
-      {ad.changeRequest ? <p className="m-0 mt-4 rounded-m bg-surface-2 p-3 text-[14px] leading-5">{`Changes asked: ${ad.changeRequest}`}</p> : null}
+      {ad.changeRequest ? <p className="m-0 mt-4 rounded-m bg-surface-2 p-3 text-caption">{`Changes asked: ${ad.changeRequest}`}</p> : null}
 
       {waiting ? (
         <div className="mt-4 flex flex-col gap-4">
@@ -266,7 +266,7 @@ function NewAd({ cats, onClose, onCreated }: { cats: Record<string, string>; onC
         <TextField label="Price in naira (flat fee)" inputMode="numeric" value={f.price} onChange={set("price")} hint="Leave empty to use the admin price list." />
       </div>
       <div className="mt-4">
-        <div className="mb-2 text-[14px] font-semibold">Topics it can show beside</div>
+        <div className="mb-2 text-count">Topics it can show beside</div>
         <div className="flex flex-wrap gap-2">
           {Object.entries(cats).map(([id, name]) => (
             <TopicChip key={id} label={name} selected={picked.includes(id)} onClick={() => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))} />

@@ -53,8 +53,8 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
     <div className="flex flex-col gap-5 dt:gap-6">
       <div className="flex flex-col gap-4 dt:rounded-xl dt:bg-surface dt:p-6 dt:shadow-[inset_0_0_0_1px_var(--line)]">
         <div className="hidden dt:block">
-          <h2 className="m-0 font-display text-[28px] font-normal leading-8">Get Voice Units</h2>
-          <p className="m-0 text-[15px] leading-[22px] text-ink-2">Balance: {unitsLabel(wallet.balanceMilli)}</p>
+          <h2 className="m-0 font-display text-display-l">Get Voice Units</h2>
+          <p className="m-0 text-body text-ink-2">Balance: {unitsLabel(wallet.balanceMilli)}</p>
         </div>
         {holdsDraft && wallet.freePostsRemaining === 0 && min ? (
           <div className="vx-paywall" role="status">
@@ -100,7 +100,7 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
           >
             {`Pay ${naira(tier.priceKobo)} for ${units(tier.unitsMilli)} units`}
           </Button>
-          <p className="m-0 text-center text-[13px] font-medium leading-[18px] text-ink-2">
+          <p className="m-0 mx-auto text-center text-caption text-ink-2">
             You see the full price before you pay. Units cannot be cashed out or sent to others. Reading, listening, liking and sharing stay free.
           </p>
         </div>
@@ -108,17 +108,17 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
 
       <section aria-labelledby="xv-h" className="flex flex-col gap-3">
         <div className="flex flex-col gap-[2px] dt:flex-row dt:items-baseline dt:gap-3">
-          <h2 id="xv-h" className="m-0 font-display text-[22px] font-normal leading-[27px]">
+          <h2 id="xv-h" className="m-0 font-display text-display-m">
             Extra voice
           </h2>
-          <p className="m-0 text-[14px] font-medium leading-5 text-ink-2">A one-off token for one longer message. The price is shown before you pay.</p>
+          <p className="m-0 text-caption text-ink-2">A one-off token for one longer message. The price is shown before you pay.</p>
         </div>
         <div className="grid gap-3 dt:grid-cols-2">
           {tiers.extraVoice.map((o) => (
             <div key={o.kind} className="flex items-center gap-3 rounded-l bg-surface p-4 shadow-[inset_0_0_0_1px_var(--line)]">
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[16px] font-bold leading-[22px]">{extraVoiceTitle(o.maxSeconds)}</span>
-                <span className="text-[13px] font-medium leading-[18px] text-ink-2">{`One message, up to ${seconds(o.maxSeconds)}`}</span>
+                <span className="text-body-strong">{extraVoiceTitle(o.maxSeconds)}</span>
+                <span className="text-caption text-ink-2">{`One message, up to ${seconds(o.maxSeconds)}`}</span>
               </div>
               <Button
                 variant="secondary"
@@ -163,10 +163,10 @@ export function BuyUnitsScreen() {
         <span className="dt:hidden">
           <IconButton icon="arrow-left" label="Back to Voice Units" variant="ghost" onClick={() => router.push(back)} />
         </span>
-        <h1 className="m-0 flex-1 font-display text-[24px] font-normal leading-7 dt:hidden">Get Voice Units</h1>
+        <h1 className="m-0 flex-1 font-display text-display-m dt:hidden">Get Voice Units</h1>
         {signedIn && result.state === "ready" ? (
           <span className="dt:hidden">
-            <a className="vx-units" href="/units" aria-label={`${units(result.data[0].balanceMilli)} Voice Units. Open Voice Units`}>
+            <a className="vx-units a-plain" href="/units" aria-label={`${units(result.data[0].balanceMilli)} Voice Units. Open Voice Units`}>
               <span className="vx-units__coin" aria-hidden="true">
                 <Icon name="coins" size={18} strokeWidth={2.25} />
               </span>

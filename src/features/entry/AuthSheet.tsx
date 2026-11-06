@@ -65,12 +65,12 @@ function Backdrop() {
     <div aria-hidden="true" className="flex min-h-0 flex-1 flex-col dt:hidden" ref={(el) => el?.setAttribute("inert", "")}>
       <header className="flex flex-none items-center gap-2 px-4 h-[107px] pt-[47px]">
         <IconButton icon="arrow-left" label="Back" variant="ghost" size="s" />
-        <span className="flex-1 text-[16px] font-semibold leading-5">Today&apos;s question</span>
+        <span className="flex-1 text-body-strong">Today&apos;s question</span>
         <IconButton icon="share-2" label="Share" variant="ghost" size="s" />
       </header>
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4 px-4 pt-4">
         <StageBar current="speak" />
-        {load.state === "ready" ? <p className="m-0 font-display text-[26px] font-normal leading-[30px]">{load.data.text}</p> : null}
+        {load.state === "ready" ? <p className="m-0 font-display text-display-l">{load.data.text}</p> : null}
       </div>
     </div>
   );

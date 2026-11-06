@@ -40,8 +40,8 @@ export function Topics() {
       <EntryScroll className="flex flex-col">
         <DeskCard wide="dt:max-w-[760px]">
           <section aria-labelledby="h-topics" className="flex flex-col gap-3">
-            <h1 id="h-topics" className="m-0 font-display text-[28px] font-normal leading-8">What do you want to talk about?</h1>
-            <p className="m-0 text-[16px] leading-6 text-ink-2">Pick at least 3. We use them to fill your Home. Today&apos;s question shows for everyone.</p>
+            <h1 id="h-topics" className="m-0 font-display text-display-l">What do you want to talk about?</h1>
+            <p className="m-0 text-body text-ink-2">Pick at least 3. We use them to fill your Home. Today&apos;s question shows for everyone.</p>
             {load.state === "error" ? <ErrorBanner error={load.error} onRetry={load.retry} fallback="Something went wrong on our side. Try again in a moment." title="This did not load" /> : null}
             {load.state === "loading" ? <div className="h-[200px] animate-pulse rounded-l bg-surface-2" aria-busy="true" /> : null}
             <div className="flex flex-wrap gap-2" role="group" aria-label="Topics">
@@ -51,24 +51,24 @@ export function Topics() {
           {have.length ? (
             <section aria-labelledby="h-alerts" className="mt-2 flex flex-col gap-[10px]">
               <div className="flex flex-col gap-[2px]">
-                <h2 id="h-alerts" className="m-0 font-display text-[22px] font-normal leading-[27px]">Category alerts</h2>
-                <p className="m-0 text-[15px] leading-[22px] text-ink-2">Get told when a new question lands in a topic you picked.</p>
+                <h2 id="h-alerts" className="m-0 font-display text-display-m">Category alerts</h2>
+                <p className="m-0 text-body text-ink-2">Get told when a new question lands in a topic you picked.</p>
               </div>
               <div className="vx-notes dt:grid dt:grid-cols-2">
                 {cats.filter((c) => have.includes(c.id)).map((c, n) => (
                   <label key={c.id} className={`flex min-h-[56px] cursor-pointer items-center gap-3 px-4 ${n ? "shadow-[0_-1px_0_var(--line)] dt:shadow-none" : ""} border-line dt:[&:nth-child(even)]:border-l dt:[&:nth-child(n+3)]:border-t`}>
                     <Icon name={ICONS[c.slug] ?? "message-square"} size={20} />
-                    <span className="flex-1 text-[16px] font-semibold leading-[22px]">{c.name}</span>
+                    <span className="flex-1 text-body-strong">{c.name}</span>
                     <Switch checked={alerts[c.id] ?? true} label={`Alerts for ${c.name}`} onChange={(on) => setAlerts({ ...alerts, [c.id]: on })} />
                   </label>
                 ))}
               </div>
-              <p className="m-0 text-[13px] font-medium leading-[18px] text-ink-2 dt:hidden">Change or turn off alerts any time in Settings.</p>
+              <p className="m-0 text-caption text-ink-2 dt:hidden">Change or turn off alerts any time in Settings.</p>
             </section>
           ) : null}
           <div className="hidden items-center gap-4 dt:flex">
             <Button size="l" disabled={!enough} onClick={next}>{label}</Button>
-            {have.length ? <p className="m-0 text-[13px] font-medium leading-[18px] text-ink-2">Change or turn off alerts any time in Settings.</p> : null}
+            {have.length ? <p className="m-0 text-caption text-ink-2">Change or turn off alerts any time in Settings.</p> : null}
           </div>
         </DeskCard>
       </EntryScroll>
