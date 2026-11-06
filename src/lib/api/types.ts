@@ -3846,7 +3846,7 @@ export interface components {
             people: number;
             topics: number;
         };
-        /** @description RW7: replies and reactions are worded from who did them, "@kemi.b replied to your voice" with the quote in body, "@tunde.a and 41 others reacted to your voice"; a person blocked either way is never named and their notice is not served; every notice has a body and a target. questionId is the question to open when the target is an answer or a question. */
+        /** @description RW7: replies and reactions are worded from who did them, "@kemi.b replied to your voice" with the quote in body, "@tunde.a and 41 others reacted to your voice"; a person blocked either way is never named and their notice is not served; every notice has a body and a target. questionId is the question to open when the target is an answer or a question. resolved (RX2) is true on a removal, warning, suspension or ban notice whose appeal has been decided since: it has no Appeal action and is shown as resolved. */
         Notification: {
             /** Format: uuid */
             id: string;
@@ -3863,6 +3863,7 @@ export interface components {
             /** Format: uuid */
             questionId?: string | null;
             appeal?: components["schemas"]["NoticeAppeal"] | null;
+            resolved?: boolean;
         };
         /** @description RW2: present on a removal, warning, suspension or ban notice. Send POST /appeals with this target while state is AVAILABLE; SENT means the appeal is waiting for another moderator. */
         NoticeAppeal: {

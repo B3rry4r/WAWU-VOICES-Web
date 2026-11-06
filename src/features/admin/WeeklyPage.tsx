@@ -156,6 +156,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
               week={`Week ${r.weekNumber}${r.publishAt ? ` · publishes ${dayMonth(r.publishAt)}` : ""}`}
               title={r.cardTitle ?? "What Nigerians said this week"}
               moodLine={r.mood ?? r.headline ?? ""}
+              summary={r.summary ?? undefined}
               mood={r.emotions.map((e) => ({ label: e.name, pct: Math.round(e.share), delta: Math.round(e.change) }))}
               themes={themes}
               poll={summary ? { pct: summary.pct, text: summary.text } : undefined}
@@ -165,7 +166,6 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
             />
           )}
         </div>
-        {r.summary && !editing ? <p className="m-0 mt-4 text-body text-ink-2">{r.summary}</p> : null}
       </div>
 
       <div className="flex flex-col gap-5">

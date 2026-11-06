@@ -22,7 +22,13 @@ function statusPill(a: AdminAd) {
   if (a.status === "APPROVED") return a.live ? <Pill tone="red" dot>Live</Pill> : <Pill tone="green">Approved</Pill>;
   if (a.status === "PAUSED") return <Pill>Paused</Pill>;
   if (a.status === "DRAFT") return <Pill tone="blue">Changes asked</Pill>;
-  return <Pill tone="red">{a.rejectReason ? `Rejected: ${a.rejectReason}` : "Rejected"}</Pill>;
+  // The pill stays one short word; the team's note wraps under it, inside the cell (WF-6, C-N3).
+  return (
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      <Pill tone="red">Rejected</Pill>
+      {a.rejectReason ? <span className="max-w-[28ch] break-words text-caption text-ink-2">{a.rejectReason}</span> : null}
+    </div>
+  );
 }
 
 function dates(a: AdminAd): string {
