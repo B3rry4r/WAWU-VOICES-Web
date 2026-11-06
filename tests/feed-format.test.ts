@@ -6,7 +6,7 @@ const NOW = Date.parse("2026-11-12T12:00:00Z");
 describe("feed-format", () => {
   it("closesIn counts down in minutes, hours and days, and is empty once past", () => {
     expect(closesIn("2026-11-12T12:45:00Z", NOW)).toBe("45 min");
-    expect(closesIn("2026-11-12T21:00:00Z", NOW)).toBe("9 h");
+    expect(closesIn("2026-11-12T21:00:00Z", NOW)).toBe("9h");
     expect(closesIn("2026-11-14T13:00:00Z", NOW)).toBe("2 days");
     expect(closesIn("2026-11-12T11:00:00Z", NOW)).toBeUndefined();
     expect(closesIn(null, NOW)).toBeUndefined();

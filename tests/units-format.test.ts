@@ -59,7 +59,7 @@ describe("history rows", () => {
     expect(dayLabel("2026-11-05T08:14:00Z", now)).toBe("Today");
     expect(dayLabel("2026-11-04T17:40:00Z", now)).toBe("Yesterday");
     expect(dayLabel("2026-10-28T18:05:00Z", now)).toBe("28 Oct");
-    expect(whenShort("2026-11-05T08:14:00Z", now)).toBe("Today, 9:14 am");
+    expect(whenShort("2026-11-05T08:14:00Z", now)).toBe("Today, 9:14am");
     // 11:30pm UTC on the 5th is already the 6th in Lagos
     expect(dayLabel("2026-11-05T23:30:00Z", new Date("2026-11-06T09:00:00Z"))).toBe("Today");
   });

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Icon } from "@/components/vx";
 import { sessionStorage } from "@/lib/auth/session-storage";
-import { clock, dayKey, dayMonth, monthYear, weekday } from "@/lib/format/date";
+import { clock, clock24, dayKey, dayMonth, monthYear, weekday } from "@/lib/format/date";
 import "./reach.css";
 
 /** True once the browser holds a WAWU ID access token. Null before the first browser read (server render). */
@@ -46,12 +46,12 @@ export function AppBar({ href, backLabel, title, right, big }: { href: string; b
   );
 }
 
-/** "30 Nov, 6 pm" in Lagos time. */
+/** "30 Nov, 6pm" in Lagos time. */
 export function lagosPublished(iso: string): string {
   return `${dayMonth(iso)}, ${clock(iso, { short: true })}`;
 }
 
-/** "Sunday 3 Jan, 6 pm" in Lagos time. */
+/** "Sunday 3 Jan, 6pm" in Lagos time. */
 export function lagosSlot(iso: string): string {
   return `${weekday(iso, "long")} ${lagosPublished(iso)}`;
 }
@@ -66,7 +66,7 @@ export function lagosDay(iso: string): string {
   return dayMonth(iso);
 }
 
-/** "8:00 am", "12 min", "1 h", "3 h", "Yesterday", "Mon", then a date: the time label under a notification (Lagos time). */
+/** "8:00", "12 min", "1 h", "3 h", "Yesterday", "Mon", then a date: the time label under a notification (Lagos time). */
 export function whenLabel(iso: string, now = new Date()): string {
   const t = new Date(iso);
   const mins = Math.floor((now.getTime() - t.getTime()) / 60000);
@@ -75,7 +75,7 @@ export function whenLabel(iso: string, now = new Date()): string {
     if (mins < 60) return `${mins} min`;
     const hrs = Math.floor(mins / 60);
     if (hrs < 6) return `${hrs} h`;
-    return clock(t);
+    return clock24(t);
   }
   const yest = new Date(now.getTime() - 86400000);
   if (dayKey(t) === dayKey(yest)) return "Yesterday";

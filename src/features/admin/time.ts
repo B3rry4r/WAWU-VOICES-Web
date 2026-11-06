@@ -10,13 +10,13 @@ function parts(d: Date, o: Intl.DateTimeFormatOptions): Record<string, string> {
 
 const D = (iso: string | Date) => (iso instanceof Date ? iso : new Date(iso));
 
-/** "8:00 am" */
+/** "8:00am" */
 export const clock = (iso: string | Date): string => fmtClock(iso);
 
 /** "30 Nov" */
 export const dayMonth = (iso: string | Date): string => fmtDayMonth(iso);
 
-/** "Mon 30 Nov, 10:30 am" */
+/** "Mon 30 Nov, 10:30am" */
 export const slot = (iso: string | Date): string => fmtSlot(iso);
 
 /** "Mon 30" */
@@ -31,7 +31,7 @@ export function longDate(iso: string | Date): string {
   return `${p.weekday} ${p.day} ${p.month} ${p.year}`;
 }
 
-/** "25 Nov, 9:00 am" */
+/** "25 Nov, 9:00am" */
 export function dayClock(iso: string | Date): string {
   return `${dayMonth(iso)}, ${clock(iso)}`;
 }

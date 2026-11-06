@@ -37,12 +37,12 @@ export function signedUnits(milli: number): string {
   return units(0);
 }
 
-/** "6:14 pm" in Lagos time. */
+/** "6:14pm" in Lagos time. */
 export function clockLagos(d: Date): string {
   return clock(d);
 }
 
-/** "2 Dec 2026, 6:14 pm" in Lagos time. */
+/** "2 Dec 2026, 6:14pm" in Lagos time. */
 export function dateTimeLagos(iso: string): string {
   return dateTime(iso);
 }
@@ -55,7 +55,7 @@ export function dayLabel(iso: string, now: Date = new Date()): string {
   return dayKey(d).slice(0, 4) === dayKey(now).slice(0, 4) ? dayMonth(d) : date(d);
 }
 
-/** Phone form: "Today, 9:14 am" for today, otherwise the day alone. Desktop shows the time on every row (`whenLong`). */
+/** Phone form: "Today, 9:14am" for today, otherwise the day alone. Desktop shows the time on every row (`whenLong`). */
 export function whenShort(iso: string, now: Date = new Date()): string {
   const day = dayLabel(iso, now);
   return day === "Today" ? `Today, ${clockLagos(new Date(iso))}` : day;

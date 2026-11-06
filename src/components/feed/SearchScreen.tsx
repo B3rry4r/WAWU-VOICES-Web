@@ -64,7 +64,7 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
   const t = r.totals;
   const total = t.questions + t.voices + t.people;
   const show = (x: Tab) => tab === "all" || tab === x;
-  if (total === 0) return <div className="mt-6"><NothingYet title={`Nothing found for "${q}"`} body="Check the spelling or try a shorter word." /></div>;
+  if (total === 0) return <div className="mt-6"><NothingYet title={`Nothing found for “${q}”`} body="Check the spelling or try a shorter word." /></div>;
   return (
     <div className="flex flex-col gap-[18px]">
       <h1 className="m-0 hidden font-display text-display-xl dt:block">{`Results for “${q}”`}</h1>

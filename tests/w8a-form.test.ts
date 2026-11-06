@@ -36,7 +36,7 @@ describe("result post as a design comment", () => {
       accredited: 412, votesCast: 398, rejected: 6, status: "VERIFIED", label: "Verified", checkedAt: "2027-01-16T17:45:00Z", checkedLine: "Checked by the WAWU team, 6:45pm", createdAt: "2027-01-16T17:42:00Z", isMine: false,
     };
     const c = toComment(p);
-    expect(c.time).toBe("6:42 pm");
+    expect(c.time).toBe("6:42pm");
     expect(c.place).toBe("PU 014, Ward 3, Surulere, Lagos");
     expect(c.status).toBe("verified");
     expect(c.figures.map((f) => f.value)).toEqual(["412", "398", "6"]);

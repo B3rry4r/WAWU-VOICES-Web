@@ -28,12 +28,12 @@ export function unitsFigure(milli: number): string {
   return String(v);
 }
 
-/** The words the screen uses for a clock given as minutes after midnight, e.g. 480 -> "8 am", 510 -> "8:30 am". */
+/** The words the screen uses for a clock given as minutes after midnight, e.g. 480 -> "8am", 510 -> "8:30am". */
 export function minuteLabel(minute: number): string {
   const h = Math.floor(minute / 60) % 24;
   const m = minute % 60;
   const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}${m ? ":" + String(m).padStart(2, "0") : ""}${h < 12 ? " am" : " pm"}`;
+  return `${h12}${m ? ":" + String(m).padStart(2, "0") : ""}${h < 12 ? "am" : "pm"}`;
 }
 
 export function isUuid(s: string): boolean {

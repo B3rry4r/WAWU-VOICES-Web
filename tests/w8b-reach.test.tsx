@@ -200,7 +200,7 @@ describe("WeeklyPage", () => {
     const user = userEvent.setup();
     render(<WeeklyPage />);
     expect(await screen.findByText("Week 2 · 23 to 29 Nov 2026")).toBeTruthy();
-    expect(screen.getByText("Published 30 Nov, 6 pm. People are split on some points; this is a summary, not a consensus.", { exact: false })).toBeTruthy();
+    expect(screen.getByText("Published 30 Nov, 6pm. People are split on some points; this is a summary, not a consensus.", { exact: false })).toBeTruthy();
     expect(screen.getByText("Noodles.", { exact: false })).toBeTruthy();
     expect(screen.queryByText("The poll in full")).toBeNull();
     const share = screen.getAllByRole("button", { name: "Share" })[0];

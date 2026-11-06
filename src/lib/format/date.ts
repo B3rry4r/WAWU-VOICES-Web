@@ -1,6 +1,6 @@
 /**
  * The one place dates, clock times and countdowns are written. Every screen reaches the clock through here, so the
- * app says "5 Nov 2026", "12:39 am" and "23 h" the same way everywhere. All times are Lagos time (Africa/Lagos,
+ * app says "5 Nov 2026", "12:39am" and "23 h" the same way everywhere. All times are Lagos time (Africa/Lagos,
  * UTC+1, no daylight saving), whatever the viewer's device says.
  */
 export const LAGOS = "Africa/Lagos";
@@ -17,11 +17,11 @@ function parts(w: When, o: Intl.DateTimeFormatOptions): Parts {
   return out;
 }
 
-/** "12:39 am", "6:00 pm": 12 hour clock, a space, lower case. `short` drops :00 ("6 pm"). */
+/** "12:39am", "6:00pm": 12 hour clock as the boards draw it, no space, lower case. `short` drops :00 ("6pm"). */
 export function clock(w: When, o: { short?: boolean } = {}): string {
   const p = parts(w, { hour: "numeric", minute: "2-digit", hour12: true });
   const mer = (p.dayPeriod ?? "").toLowerCase();
-  return o.short && p.minute === "00" ? `${p.hour} ${mer}` : `${p.hour}:${p.minute} ${mer}`;
+  return o.short && p.minute === "00" ? `${p.hour}${mer}` : `${p.hour}:${p.minute}${mer}`;
 }
 
 /** "5 Nov". */
@@ -36,7 +36,7 @@ export function date(w: When): string {
   return `${p.day} ${p.month} ${p.year}`;
 }
 
-/** "5 Nov 2026, 12:39 am". */
+/** "5 Nov 2026, 12:39am". */
 export function dateTime(w: When): string {
   return `${date(w)}, ${clock(w)}`;
 }
@@ -52,9 +52,15 @@ export function weekday(w: When, style: "short" | "long" = "short"): string {
   return parts(w, { weekday: style }).weekday;
 }
 
-/** "Mon 30 Nov, 10:30 am": the admin board's slot. */
+/** "Mon 30 Nov, 10:30am": the admin board's slot. */
 export function slot(w: When): string {
   return `${weekday(w)} ${dayMonth(w)}, ${clock(w)}`;
+}
+
+/** "8:00": the 24 hour clock the notification list draws. */
+export function clock24(w: When): string {
+  const p = parts(w, { hour: "numeric", minute: "2-digit", hour12: false });
+  return `${p.hour}:${p.minute}`;
 }
 
 /** The Lagos calendar day as "2026-11-05", for comparing days. */
@@ -63,13 +69,13 @@ export function dayKey(w: When): string {
   return `${p.year}-${p.month}-${p.day}`;
 }
 
-/** Time left, written once: "45 min", "23 h", "1 day", "4 days". Nothing when the time has passed. */
+/** Time left, written once: "45 min", "23h", "1 day", "4 days" (the boards: hours have no space, minutes do). Nothing when the time has passed. */
 export function countdown(ms: number): string | undefined {
   if (!(ms > 0)) return undefined;
   const min = Math.ceil(ms / 60000);
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h} h`;
+  if (h < 24) return `${h}h`;
   const d = Math.floor(h / 24);
   return d === 1 ? "1 day" : `${d} days`;
 }

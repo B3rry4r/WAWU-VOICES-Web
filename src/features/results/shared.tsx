@@ -60,7 +60,7 @@ export function LabelsPanel() {
   );
 }
 
-/** "6:42 pm", in Lagos time. */
+/** "6:42pm", in Lagos time. */
 export function lagosClock(iso: string): string {
   return clock(iso);
 }

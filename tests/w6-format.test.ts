@@ -24,9 +24,9 @@ describe("profile formats", () => {
     expect(ago("2026-11-03T12:00:00Z", now)).toBe("2d");
   });
   it("clock words", () => {
-    expect(minuteLabel(480)).toBe("8 am");
-    expect(minuteLabel(0)).toBe("12 am");
-    expect(minuteLabel(13 * 60 + 30)).toBe("1:30 pm");
+    expect(minuteLabel(480)).toBe("8am");
+    expect(minuteLabel(0)).toBe("12am");
+    expect(minuteLabel(13 * 60 + 30)).toBe("1:30pm");
   });
   it("handle rules mirror the API (3 to 20 of a-z 0-9 . _)", () => {
     expect(handleProblem("ada.okafor")).toBeNull();
