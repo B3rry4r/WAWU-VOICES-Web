@@ -59,7 +59,7 @@ export function PostRow({ a }: { a: Answer }) {
             {label ? <Badge tone="rank" icon="trending-up">{label}</Badge> : null}
           </div>
         ) : null}
-        {a.clip ? <ClipPlayer clip={a.clip} /> : null}
+        {a.clip ? <ClipPlayer clip={a.clip} answerId={a.id} /> : null}
         {a.body ? <p className="vx-answer__text">{a.body}</p> : null}
         {transcript ? <Transcript text={transcript} /> : null}
         {a.reactionCount > 0 ? (

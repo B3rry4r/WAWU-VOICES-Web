@@ -4,26 +4,30 @@ import { VoicePlayer } from "@/components/vx";
 import { makePlayer, playWithResign } from "./playback";
 import { getPlayUrl, type VoiceClip } from "@/lib/api/profile";
 import { isSignedIn } from "@/lib/api/auth";
+import { trackListen } from "@/features/talk/listen-track";
 
 const seedOf = (id: string) => id.split("").reduce((s, c) => (s * 31 + c.charCodeAt(0)) % 997, 7);
 
 /** The design's voice player on a real clip: bars from the clip's peaks, progress from the audio element, a short-lived URL asked for on first play. */
-export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, tone }: {
+export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, tone, answerId }: {
   clipId: string;
   durationMs: number | null;
   peaks: number[] | null;
   getUrl: (clipId: string) => Promise<string>;
   failMessage: string;
   tone?: "mint" | "surface" | "forest";
+  /** Set only when the clip is an ANSWER's: the player then counts a start and reports listen progress (LISTEN-1). */
+  answerId?: string;
 }) {
   const audio = useRef<HTMLAudioElement | null>(null);
+  const untrack = useRef<(() => void) | null>(null);
   const speed = useRef(1);
   const [playing, setPlaying] = useState(false);
   const [prog, setProg] = useState(0);
   const [failed, setFailed] = useState(false);
   const dur = Math.max(1, Math.round((durationMs ?? 0) / 1000));
 
-  useEffect(() => () => { audio.current?.pause(); audio.current = null; }, []);
+  useEffect(() => () => { audio.current?.pause(); untrack.current?.(); untrack.current = null; audio.current = null; }, []);
 
   async function play() {
     setFailed(false);
@@ -35,11 +39,14 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
         a.onpause = () => setPlaying(false);
         a.onplay = () => setPlaying(true);
         audio.current = a;
+        if (answerId) untrack.current = trackListen(answerId, a);
       }
       audio.current.playbackRate = speed.current;
       setPlaying(true);
       await playWithResign(audio.current, () => getUrl(clipId));
     } catch {
+      untrack.current?.();
+      untrack.current = null;
       audio.current = null;
       setFailed(true);
       setPlaying(false);
@@ -71,7 +78,8 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
 }
 
 /** Voice Card player (Me, Person, Edit profile). */
-export function ClipPlayer({ clip, tone }: { clip: VoiceClip; label?: string; tone?: "mint" | "surface" | "forest" }) {
+/** `answerId` only when this clip is an answer's (a profile post); a Voice Card is not an answer and reports nothing. */
+export function ClipPlayer({ clip, tone, answerId }: { clip: VoiceClip; label?: string; tone?: "mint" | "surface" | "forest"; answerId?: string }) {
   return (
     <LivePlayer
       clipId={clip.id}
@@ -80,6 +88,7 @@ export function ClipPlayer({ clip, tone }: { clip: VoiceClip; label?: string; to
       getUrl={async (id) => (await getPlayUrl(id, isSignedIn())).url}
       failMessage="Could not play this recording. Try again."
       tone={tone}
+      answerId={answerId}
     />
   );
 }

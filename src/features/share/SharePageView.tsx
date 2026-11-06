@@ -120,7 +120,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
                   </div>
                 </div>
                 {voice.labels?.length ? <div className="vx-answer__labels"><Badge tone="green">{LABEL_TEXT[voice.labels[0]] ?? voice.labels[0]}</Badge></div> : null}
-                {voice.clip ? <ClipPlayer clipId={voice.clip.id} durationMs={voice.clip.durationMs} peaks={voice.clip.peaks} /> : null}
+                {voice.clip ? <ClipPlayer answerId={voice.id} clipId={voice.clip.id} durationMs={voice.clip.durationMs} peaks={voice.clip.peaks} /> : null}
                 {voice.body ? <p className="vx-answer__text">{voice.body}</p> : null}
                 {transcript ? <p className="vx-answer__transcript"><b>Transcript</b>{transcript}</p> : null}
               </article>

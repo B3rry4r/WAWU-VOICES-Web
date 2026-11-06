@@ -78,7 +78,7 @@ export function NewsCard({ post, signedIn, repliesHref, open }: { post: NewsAnsw
           </div>
         </div>
         {post.news ? <div className="vx-answer__labels"><NewsTag kind={kindOf(post.news.tag)} /></div> : null}
-        {post.clip && SERVED.clipPlay ? <ClipPlayer clipId={post.clip.id} durationMs={post.clip.durationMs} peaks={post.clip.peaks} /> : null}
+        {post.clip && SERVED.clipPlay ? <ClipPlayer answerId={post.id} clipId={post.clip.id} durationMs={post.clip.durationMs} peaks={post.clip.peaks} /> : null}
         {post.body ? <p className="vx-answer__text">{post.body}</p> : null}
         {transcript && !SERVED.clipPlay ? <p className="vx-answer__transcript"><b>Transcript</b>{transcript}</p> : null}
         {transcript && SERVED.clipPlay ? (
