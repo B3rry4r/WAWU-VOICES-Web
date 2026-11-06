@@ -834,8 +834,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Count a listen or a listen-through
-         * @description Auth: guest or signed in. Rate limit: 300 per minute per IP or account.
+         * Count a listen, and keep how much of the clip a person played
+         * @description An old body (completed, positionMs) or an empty one counts as a start. A progress report adds secondsPlayed (the most reached) and finished (played to at least 90%). One record per person per answer; it is never shown to anyone and only counts feed the ranking. At most 120 reports a minute per visitor. Auth: guest or signed in. Rate limit: 120 reports per minute per visitor or account.
          */
         post: operations["recordListen"];
         delete?: never;
@@ -4728,8 +4728,10 @@ export interface components {
             items: components["schemas"]["ExtraVoiceToken"][];
         };
         ListenRequest: {
-            completed: boolean;
+            completed?: boolean;
             positionMs?: number;
+            secondsPlayed?: number;
+            finished?: boolean;
         };
         MarkReadRequest: {
             ids?: string[];
@@ -4845,6 +4847,8 @@ export interface components {
     parameters: {
         /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
         IdempotencyKey: string;
+        /** @description Random id a browser keeps in a first-party cookie. A visitor who is not signed in sends it with listen reports; the server stores only a keyed hash of it (never the id, never an IP). */
+        VisitorId: string;
         /** @description Client-made id for a guest, so a guest's likes and ad caps work before sign-in. */
         GuestId: string;
     };
@@ -6152,6 +6156,8 @@ export interface operations {
             header?: {
                 /** @description Client-made id for a guest, so a guest's likes and ad caps work before sign-in. */
                 "X-Guest-Id"?: components["parameters"]["GuestId"];
+                /** @description Random id a browser keeps in a first-party cookie. A visitor who is not signed in sends it with listen reports; the server stores only a keyed hash of it (never the id, never an IP). */
+                "X-Visitor-Id"?: components["parameters"]["VisitorId"];
             };
             path: {
                 answerId: string;

@@ -1,6 +1,7 @@
 import type { components } from "./types";
 import { apiFetch } from "./client";
 import { guestId } from "./feed";
+import { visitorId } from "./visitor";
 
 type S = components["schemas"];
 export type Question = S["Question"];
@@ -28,6 +29,11 @@ const guestHeaders = () => {
   return g ? { "X-Guest-Id": g } : undefined;
 };
 const read = () => ({ authed: true, headers: guestHeaders() }) as const;
+/** A listen report also carries the browser's visitor id (cookie), so a guest counts once per voice. The server ignores it for a signed-in person. */
+const listenHeaders = () => {
+  const v = visitorId();
+  return { ...guestHeaders(), ...(v ? { "X-Visitor-Id": v } : {}) };
+};
 
 function qs(p: Record<string, string | number | undefined>): string {
   const u = new URLSearchParams();
@@ -84,4 +90,7 @@ export const shareEvent = (code: string, kind: string) =>
 
 export const getPlayUrl = (clipId: string) => apiFetch<{ url: string; expiresAt: string; mime: string }>(`/voice-clips/${id(clipId)}/play`, read());
 export const countListen = (aid: string) =>
-  apiFetch<void>(`/answers/${id(aid)}/listen`, { method: "POST", body: { completed: false, positionMs: 0 }, ...read() }).catch(() => undefined);
+  apiFetch<void>(`/answers/${id(aid)}/listen`, { method: "POST", body: { completed: false, positionMs: 0 }, authed: true, headers: listenHeaders() }).catch(() => undefined);
+/** LISTEN-1: how much of the clip this person has played. Fire and forget: a failure is silent and nothing waits for it. */
+export const reportListen = (aid: string, p: { secondsPlayed: number; finished: boolean }, leaving = false) =>
+  apiFetch<void>(`/answers/${id(aid)}/listen`, { method: "POST", body: p, authed: true, headers: listenHeaders(), keepalive: leaving }).catch(() => undefined);
