@@ -197,6 +197,8 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
   if (error) return <LoadFailed error={error} retry={() => setN((x) => x + 1)} />;
   if (!d) return <ListSkeleton rows={3} />;
   const t = d.topic;
+  // A held flash question has its own row below, so it is not counted in the spare line too (WF-6, C-N6).
+  const spareCount = d.spare.filter((q) => !isHeldFlash(q)).length;
 
   if (editing)
     return <WeekForm mode="edit" topic={d} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setN((x) => x + 1); onChanged("Week saved."); }} />;
@@ -219,10 +221,10 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
         {d.questions.filter((q) => !isHeldFlash(q)).map((q) => (
           <QuestionRow key={q.id} q={q} days={weekDays(t.startsOn)} week={d.questions} onSaved={(msg) => { setN((x) => x + 1); onChanged(msg ?? "Question saved."); }} />
         ))}
-        {d.spare.length ? (
+        {spareCount ? (
           <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 border-t border-line py-3 text-body">
             <span className="text-body-strong text-ink-2">Spare</span>
-            <span className="text-ink-2">{`${d.spare.length} more ${d.spare.length === 1 ? "question" : "questions"} held for follow-ups and flash polls`}</span>
+            <span className="text-ink-2">{`${spareCount} more ${spareCount === 1 ? "question" : "questions"} held for follow-ups and flash polls`}</span>
           </li>
         ) : null}
         {[...d.questions, ...d.spare].filter(isHeldFlash).map((q) => (

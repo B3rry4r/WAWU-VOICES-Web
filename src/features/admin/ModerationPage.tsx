@@ -286,7 +286,11 @@ function Panel(p: {
             ) : null}
           </div>
         </div>
-        {c.createdAt ? <span className="flex-none text-caption text-ink-2">{`Posted ${ago(c.createdAt)} ago`}</span> : null}
+        {d.item.targetType === "USER" ? (
+          <span className="flex-none text-caption text-ink-2">{`Reported ${ago(d.item.createdAt)} ago`}</span>
+        ) : c.createdAt ? (
+          <span className="flex-none text-caption text-ink-2">{`Posted ${ago(c.createdAt)} ago`}</span>
+        ) : null}
       </div>
 
       {d.playUrl ? <AdminPlayer url={d.playUrl} label="the voice reply" /> : null}
