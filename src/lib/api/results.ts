@@ -59,6 +59,8 @@ export async function uploadResultPhoto(file: Blob, mime: ResultPhotoMime): Prom
     x.onerror = () => reject(new ApiError(0, "UPLOAD_FAILED", "The photo did not upload.", true));
     x.send(file);
   });
+  // Confirm the upload (as the avatar upload does): the server checks the object arrived, so the photo is never swept as abandoned.
+  await apiFetch<components["schemas"]["UploadedFile"]>(`/uploads/${up.fileId}/complete`, { method: "POST", authed: true });
   return up.fileId;
 }
 

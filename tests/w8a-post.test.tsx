@@ -31,6 +31,7 @@ beforeEach(() => {
     if (url.endsWith("/me")) return json(200, { handle: "ada.okafor" });
     if (url.includes("/result-threads/t1") && !url.includes("/posts")) return json(200, { id: "t1", title: "T", subtitle: null, heldOn: "2027-01-16", status: "OPEN", postCount: 0, verifiedCount: 0, toCheck: 0 });
     if (url.endsWith("/uploads")) return json(201, { fileId: "11111111-1111-4111-8111-111111111111", putUrl: "https://spaces.test/put", putHeaders: { "x-amz-acl": "private" }, expiresAt: "2027-01-01T00:00:00Z" });
+    if (url.endsWith("/complete")) return json(200, { fileId: "11111111-1111-4111-8111-111111111111", kind: "RESULT_PHOTO", confirmedAt: "2027-01-01T00:00:00Z" });
     if (url.endsWith("/posts")) return postStatus === 201 ? json(201, { id: "p" }) : json(409, { error: { code: "CONFLICT", message: "This results thread is closed. You can no longer post numbers.", details: { reason: "THREAD_CLOSED" } } });
     return json(404, {});
   }));
@@ -95,6 +96,7 @@ describe("PostResultPage", () => {
     const upload = calls.find((c) => c.url.endsWith("/uploads"));
     expect(upload?.body).toEqual({ kind: "RESULT_PHOTO", mime: "image/jpeg", sizeBytes: 3 });
     expect(puts).toEqual([{ url: "https://spaces.test/put", type: "image/jpeg", size: 3 }]);
+    expect(calls.some((c) => c.url.endsWith("/uploads/11111111-1111-4111-8111-111111111111/complete"))).toBe(true);
     const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/posts"));
     expect((post?.body as { photoFileId?: string }).photoFileId).toBe("11111111-1111-4111-8111-111111111111");
   });
