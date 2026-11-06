@@ -26,6 +26,12 @@ describe("WF-7b", () => {
     render(<Poll question="Q" state="results" onExplain={false} options={[{ id: "a", label: "A", votes: 3 }, { id: "b", label: "B", votes: 2 }]} />);
     expect(screen.getAllByText("Leading")).toHaveLength(1);
   });
+  it("A-F5: a tied poll /s page says Tied so far and names no leader", () => {
+    const tie = { ...poll, options: [{ id: "o1", label: "Stable power", votes: 1, percent: 50 }, { id: "o2", label: "A job", votes: 1, percent: 50 }] };
+    const html = renderToString(<SharePageView page={sp({ poll: tie, leanLine: "So far, Stable power is ahead." })} now={Date.now()} />);
+    expect(html).toContain("Tied so far.");
+    expect(html).not.toContain("is ahead");
+  });
   it("M-1: a poll share card preview says votes", () => {
     render(<ShareCard kind="poll" question="Q" topic="T" voices={3} poll={[{ label: "A", pct: 50 }, { label: "B", pct: 50 }]} open />);
     expect(screen.getByText(/Based on 3 votes/)).toBeTruthy();

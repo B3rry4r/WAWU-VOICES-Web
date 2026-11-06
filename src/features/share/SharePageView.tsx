@@ -60,7 +60,11 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
   ).filter(Boolean).join(" · ");
   // A poll page lists its options once, in the poll card below (WF-7b, A-F2): the heading block keeps only the summary line.
   const shownArgs = isPoll ? [] : page.arguments;
-  const hasLean = !!page.leanLine || shownArgs.length > 0;
+  // A tie has no leader (WF-7b, A-F5): a summary line that names one is swapped for "Tied so far."
+  const tops = page.poll ? [...page.poll.options].map((o) => o.votes ?? 0).sort((a, b) => b - a) : [];
+  const tied = tops.length > 1 && tops[0] > 0 && tops[0] === tops[1];
+  const leanLine = isPoll && tied ? "Tied so far." : page.leanLine;
+  const hasLean = !!leanLine || shownArgs.length > 0;
 
   const cta = (
     <>
@@ -91,7 +95,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
           {hasLean ? (
             <section className="flex flex-col gap-3 rounded-l border border-line bg-surface p-4 shadow-1" aria-label="Where it is heading">
               <Eyebrow>Where it is heading</Eyebrow>
-              {page.leanLine ? <p className="m-0 text-title">{page.leanLine}</p> : null}
+              {leanLine ? <p className="m-0 text-title">{leanLine}</p> : null}
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {shownArgs.map((a, i) => (
                   <li key={i} className="flex flex-col gap-1">
