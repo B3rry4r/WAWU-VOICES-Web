@@ -123,7 +123,12 @@ export function Landing() {
           <div className="mx-auto flex max-w-[1176px] items-center gap-4 px-8 py-6">
             <Logo height={28} alt="VOICES" />
             <span className="text-[14px] text-ink-2">VOICES by WAWU · © 2026</span>
-            <Link href="/settings/legal/rules" className="ml-auto text-[14px] text-ink-2 underline">Community rules</Link>
+            <span className="ml-auto flex gap-5">
+              <Link href="/settings/legal/rules" className="text-[14px] text-ink-2 underline">Community rules</Link>
+              <Link href="/settings/legal/terms" className="text-[14px] text-ink-2 underline">Terms</Link>
+              <Link href="/settings/legal/privacy" className="text-[14px] text-ink-2 underline">Privacy</Link>
+              <Link href="/settings/legal/refunds" className="text-[14px] text-ink-2 underline">Refunds</Link>
+            </span>
           </div>
         </footer>
       </>
@@ -139,7 +144,7 @@ export function Landing() {
             <Button size="l" variant="secondary" block href="/sign-in">Sign in</Button>
             <Button size="l" icon="mic" block href="/join">Join VOICES</Button>
           </div>
-          <p className="m-0 text-center text-[12px] font-medium leading-4 text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="text-green-text">Community rules</Link> and Terms.</p>
+          <p className="m-0 text-center text-[12px] font-medium leading-4 text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="text-green-text">Community rules</Link>, <Link href="/settings/legal/terms" className="text-green-text">Terms</Link> and <Link href="/settings/legal/privacy" className="text-green-text">Privacy</Link>.</p>
         </BottomBar>
       </div>
     </EntryFrame>

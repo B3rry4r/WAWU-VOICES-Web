@@ -116,12 +116,12 @@ describe("Settings", () => {
     expect(await screen.findByText("Could not save that change. Try again.")).toBeTruthy();
     expect((screen.getByRole("switch", { name: /Poll results/ }) as HTMLInputElement).checked).toBe(true);
   });
-  it("shows only built rows: no ad-free pass, no language, no legal pages that do not exist", async () => {
+  it("shows only built rows: no ad-free pass, no language, and the legal rows only for pages that exist", async () => {
     signIn(); mockApi(meRoutes);
     render(<SettingsPage />);
     await screen.findByText("Community rules");
-    for (const t of ["Ad-free pass", "Language", "Country", "Terms of use", "Privacy notice", "Help and contact", "Quiet hours"]) expect(screen.queryByText(t)).toBeNull();
-    expect(document.querySelector('a[href="/settings/legal/rules"]')).toBeTruthy();
+    for (const t of ["Ad-free pass", "Language", "Country", "Help and contact", "Quiet hours"]) expect(screen.queryByText(t)).toBeNull();
+    for (const h of ["rules", "terms", "privacy", "refunds"]) expect(document.querySelector(`a[href="/settings/legal/${h}"]`)).toBeTruthy();
   });
   it("appearance saves the theme and applies it at once", async () => {
     signIn(); mockApi({ ...meRoutes, "PATCH /me/settings": ({ body }: { body: unknown }) => ({ ...me.settings, ...(body as object) }) });
@@ -193,13 +193,13 @@ describe("Edit profile, more", () => {
 });
 
 describe("Rules", () => {
-  it("has the six rules and the four steps, no tab to a page that does not exist", () => {
+  it("has the six rules and the four steps, the four legal tabs (all built) and the date", () => {
     render(<RulesPage />);
     expect(screen.getAllByRole("listitem").length).toBe(10);
     expect(screen.getByText("1 Speak your mind, disagree hard")).toBeTruthy();
-    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Rules", "Terms", "Privacy", "Refunds"]);
     expect(screen.queryByText("Report a problem")).toBeNull();
-    expect(screen.queryByText(/Last updated/)).toBeNull();
+    expect(screen.getByText("Last updated 16 Nov 2026")).toBeTruthy();
   });
 });
 
