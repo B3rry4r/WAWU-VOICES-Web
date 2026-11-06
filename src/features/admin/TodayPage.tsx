@@ -9,8 +9,8 @@ import type { AdminToday, Role } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
 import { canOpen } from "./roles";
 import type { AdminPageId } from "./roles";
-import { longSlot, weekday, weekdayClock } from "@/lib/format/date";
-import { clock, dayMonth, longDate, minutesWords, slot } from "./time";
+import { dayKey, longSlot, weekday } from "@/lib/format/date";
+import { clock, dayClock, longDate, minutesWords, slot } from "./time";
 import { Card, Eyebrow, LoadFailed, PageHead, Pill, StatePill } from "./ui";
 
 const TARGET_WORDS: Record<string, string> = {
@@ -25,6 +25,11 @@ const TARGET_WORDS: Record<string, string> = {
   COPY_LINK: "Copied links",
   SYSTEM_SHEET: "The share sheet",
 };
+
+/** "8:48am" when it closes today, "20 Nov, 8:48am" when the window runs on (C-L1). */
+function closesAt(iso: string): string {
+  return dayKey(iso) === dayKey(new Date()) ? clock(iso) : dayClock(iso);
+}
 
 function Tile({ label, value, sub, warn }: { label: string; value: string; sub: string; warn?: boolean }) {
   return (
@@ -49,7 +54,7 @@ interface Row {
 function attentionRows(t: AdminToday, roles: Role[]): Row[] {
   const a = t.needsAttention;
   const rows: Row[] = [
-    { page: "news", href: "/admin/news", icon: "shield-check", tone: "bg-verified-bg text-verified", title: "News tags to review", sub: `${a.newsFlagged} flagged as misleading, ${a.newsAskingVerified} asking for Verified News`, count: a.newsTags },
+    { page: "news", href: "/admin/news", icon: "shield-check", tone: "bg-verified-bg text-verified", title: "News tags to review", sub: `${a.newsFlagged} flagged as misleading`, count: a.newsTags },
     { page: "results", href: "/admin/results", icon: "circle-check", tone: "bg-verified-bg text-verified", title: "Posted results to check", sub: "Mark each Verified or Not verified", count: a.resultPosts },
     { page: "ads", href: "/admin/ads", icon: "megaphone", tone: "bg-sponsor-bg text-sponsor", title: "Adverts to approve", sub: `${a.adsAwaiting} ${a.adsAwaiting === 1 ? "advert" : "adverts"} waiting`, count: a.ads },
     { page: "weekly", href: "/admin/weekly", icon: "chart-column", tone: "bg-success-bg text-success", title: "Weekly report draft", sub: "Ready to review before it goes out", count: a.weeklyReports },
@@ -125,7 +130,7 @@ export function AdminTodayPage() {
         <Tile label="Shares" value={t.stats.shares.toLocaleString("en-NG")} sub={top && top.count > 0 ? `${TARGET_WORDS[top.target] ?? top.target} leads` : "None yet"} />
         <Tile
           label="Open reports"
-          value={String(t.stats.openReports)}
+          value={String(t.needsAttention.moderationOpen)}
           sub={t.stats.oldestReportMinutes != null ? `Oldest waiting ${minutesWords(t.stats.oldestReportMinutes)}` : "None waiting"}
           warn={t.stats.oldestReportMinutes != null}
         />
@@ -137,7 +142,7 @@ export function AdminTodayPage() {
             <section className="rounded-xl bg-green p-6 text-green-on">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-xs bg-forest px-2.5 py-1 text-eyebrow uppercase text-forest-on">Today’s question</span>
-                {q.startsAt && q.endsAt ? <span className="text-count">{`Live since ${clock(q.startsAt)} · closes ${clock(q.endsAt)}`}</span> : null}
+                {q.startsAt && q.endsAt ? <span className="text-count">{`Live since ${clock(q.startsAt)} · closes ${closesAt(q.endsAt)}`}</span> : null}
               </div>
               <h2 className="m-0 mt-4 font-display text-display-l">{q.text}</h2>
               <p className="m-0 mt-4 text-count">
@@ -171,7 +176,7 @@ export function AdminTodayPage() {
                 ))}
                 {t.nextQuestion ? (
                   <li className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-3 border-t border-line py-3">
-                    <span className="text-label">{t.nextQuestion.startsAt ? weekdayClock(t.nextQuestion.startsAt) : t.nextQuestion.scheduledFor ? weekday(t.nextQuestion.scheduledFor + "T12:00:00+01:00") : "Next"}</span>
+                    <span className="text-label">{t.nextQuestion.startsAt ? slot(t.nextQuestion.startsAt) : t.nextQuestion.scheduledFor ? weekday(t.nextQuestion.scheduledFor + "T12:00:00+01:00") : "Next"}</span>
                     <span className="text-body">{t.nextQuestion.text}</span>
                   </li>
                 ) : null}

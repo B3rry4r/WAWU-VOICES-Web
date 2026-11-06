@@ -1,5 +1,6 @@
 "use client";
 
+import { countText } from "@/lib/format/plural";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar, Button, EmptyState, Tabs, TextField } from "@/components/vx";
 import { getModerationItem, listModeration, moderationAction } from "@/lib/api/admin";
@@ -12,9 +13,8 @@ import { AuditList, Card, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead
 type Counts = Record<string, number | string | null>;
 
 const TABS: { id: string; label: string; queue: string }[] = [
-  { id: "new", label: "New", queue: "SCREENED" },
+  // lead ruling WF (RW3), 6 Nov: "New" (SCREENED) and "Sensitive topics" (SENSITIVE) stay hidden until something feeds them.
   { id: "reported", label: "Reported", queue: "REPORTED" },
-  { id: "sensitive", label: "Sensitive topics", queue: "SENSITIVE" },
   { id: "about", label: "This is about me", queue: "PRIORITY" },
   { id: "appeals", label: "Appeals", queue: "APPEAL" },
 ];
@@ -38,6 +38,16 @@ function reasonTag(i: ModerationItem): { text: string; cls: string } {
   const text = r ? r.charAt(0).toUpperCase() + r.slice(1) : i.queue === "APPEAL" ? "Appeal" : i.queue === "SENSITIVE" ? "Sensitive topic" : "Screening";
   const cls = /threat|harass|hate/i.test(text) ? "bg-danger-bg text-danger" : /private|about me|scam/i.test(text) ? "bg-warning-bg text-warning" : "bg-surface-2 text-ink";
   return { text, cls };
+}
+
+/** The row's second line: the API's summary unless it only repeats the tag; a bare item falls back to its report count (C-L3). */
+function rowSummary(i: ModerationItem, tagText: string): string {
+  let s = (i.summary ?? "").trim();
+  const lead = `${tagText} · `;
+  if (s.toLowerCase().startsWith(lead.toLowerCase())) s = s.slice(lead.length);
+  if (s && s.toLowerCase() !== tagText.toLowerCase()) return s;
+  if (i.queue === "APPEAL") return "Asking for a second look";
+  return i.reportCount > 0 ? `Reported ${countText(i.reportCount, "time")}` : "";
 }
 
 function screenCls(s: string): string {
@@ -119,7 +129,8 @@ function ModerationBody() {
       return true;
     });
     if (!done) return;
-    setSaved(c.action === "KEEP" ? "Kept up. The reason is saved." : "Done. The poster sees your reason and can appeal.");
+    // lead ruling WF, 6 Nov (C-M10): a decided appeal is not appealed again, so its banner never says "can appeal".
+    setSaved(c.action === "KEEP" ? "Kept up. The reason is saved." : queue === "APPEAL" ? "Done. The poster sees your reason." : "Done. The poster sees your reason and can appeal.");
     setItems((x) => {
       const rest = (x ?? []).filter((i) => i.id !== id);
       const at = (x ?? []).findIndex((i) => i.id === id);
@@ -170,12 +181,13 @@ function ModerationBody() {
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">
             {items.map((it) => {
               const tag = reasonTag(it);
-              const what = it.postKind === "VOICE" ? "Voice reply" : it.postKind === "TEXT" ? "Text answer" : it.postKind === "REPLY_VOICE" ? "Voice reply to a voice" : it.postKind === "REPLY_TEXT" ? "Text reply" : null;
+              const accountItem = !it.postKind && it.targetType === "USER";
+              const what = accountItem ? (it.queue === "APPEAL" ? "Appeal about an account" : "Report about an account") : it.postKind === "VOICE" ? "Voice reply" : it.postKind === "TEXT" ? "Text answer" : it.postKind === "REPLY_VOICE" ? "Voice reply to a voice" : it.postKind === "REPLY_TEXT" ? "Text reply" : null;
               return (
                 <button key={it.id} type="button" role="listitem" className={queueRow(selected === it.id)} onClick={() => setSelected(it.id)} aria-current={selected === it.id ? "true" : undefined}>
                   <span className="flex flex-wrap items-center gap-2 text-caption text-ink-2">
                     <span className={`rounded-s px-2 py-0.5 text-caption ${tag.cls}`}>{tag.text}</span>
-                    {it.summary}{it.listenCount > 0 ? ` · ${it.listenCount} ${it.listenCount === 1 ? "listen" : "listens"}` : ""}
+                    {rowSummary(it, tag.text)}{it.listenCount > 0 ? ` · ${it.listenCount} ${it.listenCount === 1 ? "listen" : "listens"}` : ""}
                   </span>
                   {what ? (
                     <span className="mt-2 block text-label">
@@ -211,6 +223,7 @@ function ModerationBody() {
                 error={act.error}
                 disabled={!reasonOk}
                 cur={cur}
+                appeal={queue === "APPEAL"}
                 onDecide={decide}
               />
             )}
@@ -232,6 +245,7 @@ function Panel(p: {
   error: string | null;
   disabled: boolean;
   cur: Choice;
+  appeal: boolean;
   onDecide: (c: Choice) => void;
 }) {
   const { d } = p;
@@ -276,7 +290,7 @@ function Panel(p: {
         <Tabs variant="segmented" block label="Moderation action" items={p.choices.map((x) => ({ id: x.id, label: x.label }))} value={p.choice} onChange={p.setChoice} />
       </div>
 
-      <TextField label="Reason (the poster sees this and can appeal)" multiline value={p.reason} onChange={p.setReason} hint="Required. Say what was wrong and what is fine." />
+      <TextField label={p.appeal ? "Reason (the poster sees this)" : "Reason (the poster sees this and can appeal)"} multiline value={p.reason} onChange={p.setReason} hint="Required. Say what was wrong and what is fine." />
       <ErrorLine>{p.error}</ErrorLine>
 
       <div className="flex flex-wrap items-center gap-3">

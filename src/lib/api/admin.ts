@@ -89,4 +89,5 @@ export const holdWeekly = (id: string, reason: string) => apiFetch<AdminWeeklyRe
 // Ads
 export const listAds = (status?: string) => apiFetch<AdminAdPage>(`/admin/ads${qs({ status })}`, A);
 export const createAd = (body: UpsertAdRequest) => apiFetch<AdminAd>("/admin/ads", { ...A, method: "POST", body });
+export const updateAd = (id: string, body: UpsertAdRequest) => apiFetch<AdminAd>(`/admin/ads/${enc(id)}`, { ...A, method: "PATCH", body });
 export const decideAd = (id: string, body: AdDecision) => apiFetch<AdminAd>(`/admin/ads/${enc(id)}/decision`, { ...A, method: "POST", body });

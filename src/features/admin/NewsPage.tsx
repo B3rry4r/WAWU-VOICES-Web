@@ -80,7 +80,7 @@ function NewsBody() {
           label="News queues"
           items={[
             { id: "flagged", label: "Flagged as misleading", count: counts.flagged },
-            { id: "asking", label: "Asking for Verified News", count: counts.askingVerified },
+            // lead ruling WF (RW3), 6 Nov: "Asking for Verified News" stays hidden until a route creates those requests.
             { id: "changes", label: "All changes", count: counts.allChanges },
           ]}
           value={tab}
@@ -100,7 +100,7 @@ function NewsBody() {
       ) : items === null ? (
         <ListSkeleton />
       ) : items.length === 0 ? (
-        <EmptyState icon="shield-check" title={tab === "changes" ? "No changes yet" : "Nothing is waiting here"} body={tab === "changes" ? "Every tag change will be listed here." : "Flagged posts and Verified News requests land here."} />
+        <EmptyState icon="shield-check" title={tab === "changes" ? "No changes yet" : "Nothing is waiting here"} body={tab === "changes" ? "Every tag change will be listed here." : "Posts people flag as misleading land here."} />
       ) : (
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">

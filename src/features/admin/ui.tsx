@@ -13,6 +13,8 @@ import { ApiError } from "@/lib/api/client";
 /** The words the API refused with, or a plain line when it never answered. Never an internal code. */
 export function refusalWords(e: unknown): string {
   if (e instanceof ApiError) {
+    // lead ruling WF, 6 Nov (C-L6): a suspended admin person is told so plainly, not "cannot post".
+    if (e.code === "ACCOUNT_SUSPENDED") return "This account is suspended, so changes are paused. Ask an admin for help.";
     if (e.explained) {
       // A 422 carries the useful words in details.fields[].message; the top message is only "Some details need fixing."
       const f = (e.details as { fields?: { message?: unknown }[] } | undefined)?.fields;
