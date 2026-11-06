@@ -32,7 +32,7 @@ function Row({ q, today, tab }: { q: Question; today?: boolean; tab: Tab }) {
   return (
     <Link href={`/q/${q.id}`} className="flex items-center gap-3 border-b border-[var(--line)] p-4 text-[var(--ink)] no-underline last:border-b-0">
       <span className="flex flex-1 flex-col gap-[6px]">
-        {today ? <span className="flex gap-[6px]"><Badge tone="green" icon="mic">Today&apos;s question</Badge></span> : null}
+        {today ? <span className="flex gap-[6px]"><Badge tone="green" icon="mic">Today’s question</Badge></span> : null}
         <span className="font-display text-display-s">{q.text}</span>
         <span className="text-caption text-[var(--ink-2)]">{meta}</span>
       </span>
@@ -137,7 +137,7 @@ export function CategoryScreen({ slug }: { slug: string }) {
             <div className="hidden gap-3 dt:grid dt:grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))]">
               {list.map((q) => {
                 const close = tab === "closed" ? undefined : closesIn(q.endsAt);
-                const eyebrow = q.id === today?.id ? "Today's question" : q.hasOpenPoll && tab !== "closed" ? "Poll open" : close ? `Closes in ${close}` : undefined;
+                const eyebrow = q.id === today?.id ? "Today’s question" : q.hasOpenPoll && tab !== "closed" ? "Poll open" : close ? `Closes in ${close}` : undefined;
                 return <TopicTile key={q.id} question={q.text} category={eyebrow} voices={q.voiceCount} tone={q.id === today?.id ? "forest" : "sun"} href={`/q/${q.id}`} />;
               })}
             </div>

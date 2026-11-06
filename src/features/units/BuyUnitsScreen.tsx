@@ -98,7 +98,7 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
             disabled={checkout.busy !== null && checkout.busy !== "pay"}
             onClick={() => void checkout.start("pay", { kind: "UNITS", tierId: tier.id, method })}
           >
-            {`Pay ${naira(tier.priceKobo)} for ${units(tier.unitsMilli)} units`}
+            {`Pay ${naira(tier.priceKobo)} for ${unitsLabel(tier.unitsMilli)}`}
           </Button>
           <p className="m-0 mx-auto text-center text-caption text-ink-2">
             You see the full price before you pay. Units cannot be cashed out or sent to others. Reading, listening, liking and sharing stay free.
@@ -170,7 +170,7 @@ export function BuyUnitsScreen() {
               <span className="vx-units__coin" aria-hidden="true">
                 <Icon name="coins" size={18} strokeWidth={2.25} />
               </span>
-              {`${units(result.data[0].balanceMilli)} units`}
+              {unitsLabel(result.data[0].balanceMilli)}
             </a>
           </span>
         ) : null}

@@ -104,7 +104,7 @@ export function isOutOfPosts(e: unknown): boolean {
 
 export function unitsText(milli: number): string {
   const u = milli / 1000;
-  return `${Number.isInteger(u) ? u : u.toFixed(1)} ${u > 0 && u <= 1 ? "unit" : "units"}`;
+  return `${Number.isInteger(u) ? u : u.toFixed(1)} ${u === 1 ? "unit" : "units"}`;
 }
 export function nairaOfMilli(milli: number, baseKoboPerUnit: number): string {
   const kobo = (milli * baseKoboPerUnit) / 1000;

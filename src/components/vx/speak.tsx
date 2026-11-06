@@ -133,7 +133,7 @@ export function Composer(p: ComposerProps): ReactElement {
         <div className="vx-compose__cost">
           <Icon name="coins" size={18} />
           <span>
-            This post uses <b>{p.cost || '0.5 unit (₦6.90)'}</b>
+            This post uses <b>{p.cost || '0.5 units (₦6.90)'}</b>
             {'. Balance: ' + (p.balance || '12.5 units') + '.'}
           </span>
         </div>

@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { Icon, VerifyMark } from "@/components/vx";
 import type { IconName } from "@/components/vx";
 import { sessionStorage } from "@/lib/auth/session-storage";
+import { clock, date, dayMonth, weekday } from "@/lib/format/date";
 
 /** True once the browser has a WAWU ID access token. Null while the first read has not happened (server render). */
 export function useSignedIn(): boolean | null {
@@ -59,25 +60,23 @@ export function LabelsPanel() {
   );
 }
 
-const LAGOS = "Africa/Lagos";
-
-/** "6:42pm", in Lagos time. */
+/** "6:42 pm", in Lagos time. */
 export function lagosClock(iso: string): string {
-  const parts = new Intl.DateTimeFormat("en-NG", { timeZone: LAGOS, hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
-  return parts.replace(/\s?am\b/i, "am").replace(/\s?pm\b/i, "pm");
+  return clock(iso);
 }
 
-/** "Saturday 16 January 2027" from a date-only value. */
+/** "Saturday 16 Jan 2027" from a date-only value. */
 export function longDate(day: string): string {
-  const d = new Date(day + "T12:00:00Z");
-  const wd = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "long" }).format(d);
-  return `${wd} ${shortDate(day)}`;
+  return `${weekday(dayNoon(day), "long")} ${shortDate(day)}`;
 }
 
-/** "16 January 2027". */
+/** "16 Jan 2027". */
 export function shortDate(day: string): string {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" }).format(new Date(day + "T12:00:00Z"));
+  return date(dayNoon(day));
 }
+
+/** A date-only value as midday UTC, which is the same calendar day in Lagos. */
+const dayNoon = (day: string): Date => new Date(day + "T12:00:00Z");
 
 /** "Just now", "40 min", "2h", or a Lagos date. */
 export function ago(iso: string, now: number = Date.now()): string {
@@ -85,6 +84,6 @@ export function ago(iso: string, now: number = Date.now()): string {
   if (s < 60) return "Just now";
   if (s < 3600) return `${Math.floor(s / 60)} min`;
   if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  return new Intl.DateTimeFormat("en-GB", { timeZone: LAGOS, day: "numeric", month: "short" }).format(new Date(iso));
+  return dayMonth(iso);
 }
 

@@ -76,7 +76,7 @@ export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { quest
       ) : null}
       <p className="m-0 text-body text-ink-2">
         To post it, get Voice Units. A text post uses {unitsLabel(c.textPostMilli)} ({nairaOfUnits(c.textPostMilli, c.baseKoboPerUnit)}).
-        {min ? ` The smallest pack is ${units(min.unitsMilli)} units for ${naira(min.priceKobo)}.` : ""}
+        {min ? ` The smallest pack is ${unitsLabel(min.unitsMilli)} for ${naira(min.priceKobo)}.` : ""}
       </p>
     </Sheet>
   );

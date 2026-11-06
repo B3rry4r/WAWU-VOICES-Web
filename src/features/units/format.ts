@@ -1,3 +1,4 @@
+import { clock, date, dateTime, dayKey, dayMonth } from "@/lib/format/date";
 import type { ActionCosts, LedgerItem, Payment, UnitTier } from "@/lib/api/units";
 
 /* Display helpers for money and units. Money is kobo, units are milli-units (1 unit = 1000), never floats on the wire. */
@@ -20,9 +21,9 @@ export function units(milli: number): string {
   return (milli / 1000).toLocaleString("en-NG", { maximumFractionDigits: 3 });
 }
 
-/** "1 unit", "0.5 unit", "12.5 units", "0 units": more than none and up to one unit is singular, as the board writes it. */
+/** "1 unit", "0.5 units", "12.5 units", "0 units": plural for every value except exactly 1. */
 export function unitsLabel(milli: number): string {
-  return `${units(milli)} ${milli !== 0 && Math.abs(milli) <= 1000 ? "unit" : "units"}`;
+  return `${units(milli)} ${Math.abs(milli) === 1000 ? "unit" : "units"}`;
 }
 
 /** What an amount of units is worth in naira at the base rate, for display only: 500 milli at 1380 kobo -> "₦6.90". */
@@ -36,30 +37,14 @@ export function signedUnits(milli: number): string {
   return units(0);
 }
 
-const LAGOS = "Africa/Lagos";
-
-function parts(d: Date, o: Intl.DateTimeFormatOptions): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const p of new Intl.DateTimeFormat("en-GB", { timeZone: LAGOS, ...o }).formatToParts(d)) out[p.type] = p.value;
-  return out;
-}
-
-function dayKey(d: Date): string {
-  const p = parts(d, { year: "numeric", month: "2-digit", day: "2-digit" });
-  return `${p.year}-${p.month}-${p.day}`;
-}
-
-/** "6:14pm" in Lagos time. */
+/** "6:14 pm" in Lagos time. */
 export function clockLagos(d: Date): string {
-  const p = parts(d, { hour: "numeric", minute: "2-digit", hour12: true });
-  return `${p.hour}:${p.minute}${(p.dayPeriod ?? "").toLowerCase()}`;
+  return clock(d);
 }
 
-/** "2 Dec 2026, 6:14pm" in Lagos time. */
+/** "2 Dec 2026, 6:14 pm" in Lagos time. */
 export function dateTimeLagos(iso: string): string {
-  const d = new Date(iso);
-  const p = parts(d, { day: "numeric", month: "short", year: "numeric" });
-  return `${p.day} ${p.month} ${p.year}, ${clockLagos(d)}`;
+  return dateTime(iso);
 }
 
 /** The day label for a history row: "Today", "Yesterday" or "28 Nov" (with the year when it is not this year). `now` is injectable for tests. */
@@ -67,12 +52,10 @@ export function dayLabel(iso: string, now: Date = new Date()): string {
   const d = new Date(iso);
   if (dayKey(d) === dayKey(now)) return "Today";
   if (dayKey(d) === dayKey(new Date(now.getTime() - 86_400_000))) return "Yesterday";
-  const p = parts(d, { day: "numeric", month: "short", year: "numeric" });
-  const thisYear = parts(now, { year: "numeric" }).year;
-  return p.year === thisYear ? `${p.day} ${p.month}` : `${p.day} ${p.month} ${p.year}`;
+  return dayKey(d).slice(0, 4) === dayKey(now).slice(0, 4) ? dayMonth(d) : date(d);
 }
 
-/** Phone form: "Today, 9:14am" for today, otherwise the day alone. Desktop shows the time on every row (`whenLong`). */
+/** Phone form: "Today, 9:14 am" for today, otherwise the day alone. Desktop shows the time on every row (`whenLong`). */
 export function whenShort(iso: string, now: Date = new Date()): string {
   const day = dayLabel(iso, now);
   return day === "Today" ? `Today, ${clockLagos(new Date(iso))}` : day;
@@ -112,7 +95,7 @@ export function packLine(p: Payment): string {
   if (p.kind !== "UNITS" || p.unitsMilli === null) return p.title;
   const name = p.title.replace(/ pack$/i, "");
   const bonus = p.bonusMilli ? ` (${units(p.bonusMilli)} bonus)` : "";
-  return `${name}, ${units(p.unitsMilli)} units${bonus}`;
+  return `${name}, ${unitsLabel(p.unitsMilli)}${bonus}`;
 }
 
 /** A failure reason is shown only when it reads as a sentence; internal codes become a plain line. */

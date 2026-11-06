@@ -67,7 +67,7 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
   if (total === 0) return <div className="mt-6"><NothingYet title={`Nothing found for "${q}"`} body="Check the spelling or try a shorter word." /></div>;
   return (
     <div className="flex flex-col gap-[18px]">
-      <h1 className="m-0 hidden font-display text-display-xl dt:block">{`Results for "${q}"`}</h1>
+      <h1 className="m-0 hidden font-display text-display-xl dt:block">{`Results for “${q}”`}</h1>
       <Tabs
         label="Search results"
         value={tab}

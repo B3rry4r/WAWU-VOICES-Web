@@ -54,7 +54,7 @@ export function Landing() {
     const voice = trending.items[0]?.answer;
     const hero = (
       <section className="flex flex-col gap-[14px] pt-1">
-        <span className="vx-eyebrow text-green-text">Nigeria&apos;s national conversation</span>
+        <span className="vx-eyebrow text-green-text">Nigeria’s national conversation</span>
         <h1 className="m-0 font-display text-display-xl dt:text-display-2xl">Nigeria is talking. Add your voice.</h1>
         <p className="m-0 text-body-l text-ink-2 dt:max-w-[420px]">
           Every day our editors ask one question. Answer with a 10 second voice or a few lines of text, hear what others said, and vote in open polls.
@@ -67,7 +67,7 @@ export function Landing() {
       </section>
     );
     const today = (
-      <section aria-label="Today's question" className="mt-2 flex flex-col gap-3 dt:mt-0">
+      <section aria-label="Today’s question" className="mt-2 flex flex-col gap-3 dt:mt-0">
         <QuestionHero
           question={q.text}
           voices={q.voiceCount}

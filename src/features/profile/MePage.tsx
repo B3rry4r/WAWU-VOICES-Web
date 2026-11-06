@@ -88,7 +88,7 @@ export function MePage() {
       />
       <div className="pf-phone-only">
         <div className="pf-linkpanel">
-          <LinkRow href="/units" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} units · ${a.freePostsRemaining} free posts left`}>Voice Units</LinkRow>
+          <LinkRow href="/units" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} ${a.balanceMilli === 1000 ? "unit" : "units"} · ${a.freePostsRemaining} free posts left`}>Voice Units</LinkRow>
           <LinkRow href="/settings" icon="settings">Settings</LinkRow>
           <LinkRow href="/settings/legal/rules" icon="shield-check">Community rules</LinkRow>
         </div>
@@ -102,7 +102,7 @@ export function MePage() {
       />
       <div role="tabpanel" className="pf-panelbody">
         {tab === "voices" ? (
-          <PagedList load={loadMine} row={(x) => <PostRow a={x} />} empty={{ title: "No voices yet", body: "Answer today's question and your voice shows up here.", icon: "mic" }} />
+          <PagedList load={loadMine} row={(x) => <PostRow a={x} />} empty={{ title: "No voices yet", body: "Answer today’s question and your voice shows up here.", icon: "mic" }} />
         ) : (
           <PagedList
             load={loadSaved}

@@ -1,5 +1,6 @@
-/** Admin times are shown in Africa/Lagos (WAT, no daylight saving). */
-const TZ = "Africa/Lagos";
+import { LAGOS as TZ, clock as fmtClock, dayMonth as fmtDayMonth, slot as fmtSlot } from "@/lib/format/date";
+
+/** Admin times are shown in Africa/Lagos (WAT, no daylight saving), written by the shared date helper. */
 
 function parts(d: Date, o: Intl.DateTimeFormatOptions): Record<string, string> {
   const out: Record<string, string> = {};
@@ -9,23 +10,14 @@ function parts(d: Date, o: Intl.DateTimeFormatOptions): Record<string, string> {
 
 const D = (iso: string | Date) => (iso instanceof Date ? iso : new Date(iso));
 
-/** "8:00am" */
-export function clock(iso: string | Date): string {
-  const p = parts(D(iso), { hour: "numeric", minute: "2-digit", hour12: true });
-  return `${p.hour}:${p.minute}${(p.dayPeriod ?? "").toLowerCase()}`;
-}
+/** "8:00 am" */
+export const clock = (iso: string | Date): string => fmtClock(iso);
 
 /** "30 Nov" */
-export function dayMonth(iso: string | Date): string {
-  const p = parts(D(iso), { day: "numeric", month: "short" });
-  return `${p.day} ${p.month}`;
-}
+export const dayMonth = (iso: string | Date): string => fmtDayMonth(iso);
 
-/** "Mon 30 Nov, 10:30am" */
-export function slot(iso: string | Date): string {
-  const p = parts(D(iso), { weekday: "short" });
-  return `${p.weekday} ${dayMonth(iso)}, ${clock(iso)}`;
-}
+/** "Mon 30 Nov, 10:30 am" */
+export const slot = (iso: string | Date): string => fmtSlot(iso);
 
 /** "Mon 30" */
 export function weekdayDay(iso: string | Date): string {
@@ -39,7 +31,7 @@ export function longDate(iso: string | Date): string {
   return `${p.weekday} ${p.day} ${p.month} ${p.year}`;
 }
 
-/** "25 Nov, 9:00am" */
+/** "25 Nov, 9:00 am" */
 export function dayClock(iso: string | Date): string {
   return `${dayMonth(iso)}, ${clock(iso)}`;
 }

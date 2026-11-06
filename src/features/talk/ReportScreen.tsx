@@ -1,4 +1,5 @@
 "use client";
+import { clock } from "@/lib/format/date";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, Icon, Sheet, Skeleton, TextField } from "@/components/vx";
@@ -17,7 +18,6 @@ const REASONS: { id: ReportReason; label: string }[] = [
   { id: "OTHER", label: "Something else" },
 ];
 
-const clock = (d: Date) => d.toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" }).replace(/\s/g, "").toLowerCase();
 
 export function ReportScreen({ type, id }: { type: string; id: string }) {
   const router = useRouter();

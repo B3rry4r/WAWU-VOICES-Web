@@ -29,7 +29,7 @@ export function Badge(p: BadgeProps): ReactElement {
 }
 
 const NEWS: Record<NewsKind, { label: string; icon: IconName; note: string }> = {
-  verified: { label: 'Verified News', icon: 'shield-check', note: "Confirmed by WAWU's editors against a named source. The source is linked." },
+  verified: { label: 'Verified News', icon: 'shield-check', note: "Confirmed by WAWU’s editors against a named source. The source is linked." },
   unverified: { label: 'Unverified News', icon: 'shield-alert', note: 'A news claim WAWU has not confirmed. Treat it with care.' },
   gossip: { label: 'Gossip', icon: 'messages-square', note: 'Talk, rumour or opinion. Not presented as fact.' },
 };

@@ -83,11 +83,11 @@ export function LoadFailed({ error, retry, what }: { error: unknown; retry: () =
   );
 }
 
-/** Units as the screens say them: 0.2 unit, 1 unit, 12.5 units. Milli-units in, never naira (V-9). */
+/** Units as the screens say them: 0.2 units, 1 unit, 12.5 units. Milli-units in, never naira (V-9). */
 export function unitsText(milli: number): string {
   const u = milli / 1000;
   const s = Number.isInteger(u) ? String(u) : String(Math.round(u * 100) / 100);
-  return `${s} ${u === 1 || (u > 0 && u < 1) ? "unit" : "units"}`;
+  return `${s} ${u === 1 ? "unit" : "units"}`;
 }
 
 /** The question's page title line the boards print under the app bar title, e.g. "Week 4 poll". */

@@ -1,6 +1,6 @@
 import type { Profile } from "@/lib/api/profile";
 
-const LAGOS = "Africa/Lagos";
+import { dayMonth, monthYear } from "@/lib/format/date";
 
 /** "Enugu": a city if there is one, else the state. */
 export function placeLabel(p: Pick<Profile, "city" | "state">): string | undefined {
@@ -9,10 +9,7 @@ export function placeLabel(p: Pick<Profile, "city" | "state">): string | undefin
 
 /** "Joined Nov 2026" in the Lagos calendar. */
 export function joinedLabel(iso: string): string {
-  const d = new Date(iso);
-  const month = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: LAGOS }).format(d);
-  const year = new Intl.DateTimeFormat("en-GB", { year: "numeric", timeZone: LAGOS }).format(d);
-  return `Joined ${month} ${year}`;
+  return `Joined ${monthYear(iso)}`;
 }
 
 /** "5m", "4h", "2d", then "12 Oct" (Lagos). */
@@ -22,7 +19,7 @@ export function ago(iso: string, now: number = Date.now()): string {
   if (s < 3600) return `${Math.floor(s / 60)}m`;
   if (s < 86400) return `${Math.floor(s / 3600)}h`;
   if (s < 86400 * 7) return `${Math.floor(s / 86400)}d`;
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: LAGOS }).format(new Date(iso));
+  return dayMonth(iso);
 }
 
 /** Milli-units to the figure shown: 12500 -> "12.5", 12000 -> "12", 100 -> "0.1". */
@@ -31,12 +28,12 @@ export function unitsFigure(milli: number): string {
   return String(v);
 }
 
-/** The words the screen uses for a clock given as minutes after midnight, e.g. 480 -> "8am". */
+/** The words the screen uses for a clock given as minutes after midnight, e.g. 480 -> "8 am", 510 -> "8:30 am". */
 export function minuteLabel(minute: number): string {
   const h = Math.floor(minute / 60) % 24;
   const m = minute % 60;
   const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}${m ? ":" + String(m).padStart(2, "0") : ""}${h < 12 ? "am" : "pm"}`;
+  return `${h12}${m ? ":" + String(m).padStart(2, "0") : ""}${h < 12 ? " am" : " pm"}`;
 }
 
 export function isUuid(s: string): boolean {

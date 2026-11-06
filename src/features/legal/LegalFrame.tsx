@@ -29,7 +29,7 @@ export function LegalFrame({ tab, children }: { tab: LegalTab; children: ReactNo
       <Rail>
         <section className="pf-panel" aria-label="Help">
           <h2 className="vx-eyebrow pf-eyebrow">Help</h2>
-          <Banner tone="info" title="Named in a post?">Use Report on the post and choose &quot;This is about me&quot;. It goes to the front of the queue.</Banner>
+          <Banner tone="info" title="Named in a post?">Use Report on the post and choose “This is about me”. It goes to the front of the queue.</Banner>
           <div className="pf-always"><b>Always free</b><span>Reading, listening, liking and sharing never cost anything. Paid posts always show their price first.</span></div>
         </section>
       </Rail>

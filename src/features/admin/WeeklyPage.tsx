@@ -66,7 +66,7 @@ function WeeklyBody() {
       ) : !report ? (
         <>
           <PageHead title="Weekly report approval" />
-          <EmptyState icon="chart-column" title="No draft yet" body="The report drafts itself after the week's poll closes." />
+          <EmptyState icon="chart-column" title="No draft yet" body="The report drafts itself after the week’s poll closes." />
         </>
       ) : (
         <>

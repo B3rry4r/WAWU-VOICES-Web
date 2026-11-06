@@ -88,7 +88,7 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
     return (
       <div>
         {header}
-        <EmptyState icon="chart-column" title="No weekly report yet" body="The first report goes out after the first week's poll closes." />
+        <EmptyState icon="chart-column" title="No weekly report yet" body="The first report goes out after the first week’s poll closes." />
       </div>
     );
   }
@@ -132,7 +132,7 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
                 <figcaption className="text-caption text-ink-2">{q.placeLabel + " · shared with consent"}</figcaption>
               </figure>
             ))}
-            <p className="m-0 hidden text-caption text-ink-2 dt:block">Quotes are shared only with the speaker&apos;s consent. No names, no handles, and no group too small to stay anonymous.</p>
+            <p className="m-0 hidden text-caption text-ink-2 dt:block">Quotes are shared only with the speaker’s consent. No names, no handles, and no group too small to stay anonymous.</p>
           </section>
         ) : null}
       </div>

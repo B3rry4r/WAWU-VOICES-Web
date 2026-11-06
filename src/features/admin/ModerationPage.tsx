@@ -6,7 +6,7 @@ import { getModerationItem, listModeration, moderationAction } from "@/lib/api/a
 import type { ModerationActionKind, ModerationItem, ModerationItemDetail } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
 import { AdminPlayer } from "./Player";
-import { ago, dayMonth, minutesWords } from "./time";
+import { ago, clock, dayMonth, minutesWords } from "./time";
 import { AuditList, Card, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction, Gated } from "./ui";
 
 type Counts = Record<string, number | string | null>;
@@ -179,7 +179,7 @@ function ModerationBody() {
                   </span>
                   {what ? (
                     <span className="mt-2 block text-label">
-                      {it.questionText ? `${what} on "${it.questionText}"` : what}
+                      {it.questionText ? `${what} on “${it.questionText}”` : what}
                     </span>
                   ) : null}
                 </button>
@@ -290,7 +290,7 @@ function Panel(p: {
         ) : null}
       </div>
 
-      <AuditList title="Audit trail" lines={d.audit.map((a) => ({ ...a, text: `${new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(a.at)).replace(" ", "")} · ${a.text}` }))} />
+      <AuditList title="Audit trail" lines={d.audit.map((a) => ({ ...a, text: `${clock(a.at)} · ${a.text}` }))} />
     </div>
   );
 }

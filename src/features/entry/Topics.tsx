@@ -41,7 +41,7 @@ export function Topics() {
         <DeskCard wide="dt:max-w-[760px]">
           <section aria-labelledby="h-topics" className="flex flex-col gap-3">
             <h1 id="h-topics" className="m-0 font-display text-display-l">What do you want to talk about?</h1>
-            <p className="m-0 text-body text-ink-2">Pick at least 3. We use them to fill your Home. Today&apos;s question shows for everyone.</p>
+            <p className="m-0 text-body text-ink-2">Pick at least 3. We use them to fill your Home. Today’s question shows for everyone.</p>
             {load.state === "error" ? <ErrorBanner error={load.error} onRetry={load.retry} fallback="Something went wrong on our side. Try again in a moment." title="This did not load" /> : null}
             {load.state === "loading" ? <div className="h-[200px] animate-pulse rounded-l bg-surface-2" aria-busy="true" /> : null}
             <div className="flex flex-wrap gap-2" role="group" aria-label="Topics">

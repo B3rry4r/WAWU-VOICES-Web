@@ -55,7 +55,7 @@ export function Onboarding() {
       body: "One question from our editors every day. Speak for 10 seconds or write a few lines.",
       art: (
         <>
-          <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">Today&apos;s question</span>
+          <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">Today’s question</span>
           <p className="relative m-0 font-display text-display-l">{q.text}</p>
           <Still><VoicePlayer duration={9} seed={4} tone="forest" progress={0.35} /></Still>
         </>
@@ -91,7 +91,7 @@ export function Onboarding() {
           </div>
           <div className="relative flex items-center gap-3">
             <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-sun text-[var(--on-sun)]"><Icon name="coins" size={20} /></span>
-            <span className="text-label">{`Then Voice Units from ₦${from}. A text post uses ${text.units} unit (₦${text.naira}).`}</span>
+            <span className="text-label">{`Then Voice Units from ₦${from}. A text post uses ${text.units} ${text.units === "1" ? "unit" : "units"} (₦${text.naira}).`}</span>
           </div>
         </>
       ),
@@ -132,14 +132,14 @@ export function Onboarding() {
         <header className="mx-auto flex w-full max-w-[1120px] items-center justify-between px-0 py-6">{logo}{skip}</header>
         <div className="mx-auto my-auto grid w-full max-w-[1120px] grid-cols-2 overflow-hidden rounded-[32px] border border-line bg-surface">
           <div className="relative flex flex-col justify-end gap-5 overflow-hidden bg-forest p-10 text-forest-on">
-            <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">Today&apos;s question</span>
+            <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">Today’s question</span>
             <p className="relative m-0 font-display text-display-xl">{q.text}</p>
             <Still><VoicePlayer duration={9} seed={4} tone="forest" progress={0.35} /></Still>
             <span className="relative text-caption text-[var(--on-forest-2)]">{`${voicesLabel(q.voiceCount)} so far · Closes in ${closesIn(q.endsAt)}`}</span>
           </div>
           <div className="flex flex-col justify-center gap-5 p-10">
             <span className="vx-eyebrow text-green-text">Welcome</span>
-            <h1 className="m-0 font-display text-display-xl">Nigeria&apos;s national conversation</h1>
+            <h1 className="m-0 font-display text-display-xl">Nigeria’s national conversation</h1>
             <ul className="m-0 flex list-none flex-col gap-4 p-0">
               {[
                 ["mic", "One question a day", "Speak for 10 seconds or write a few lines."],

@@ -56,7 +56,7 @@ async function pickAndConfirm() {
 
 describe("helpers", () => {
   it("says units and stages", () => {
-    expect(unitsText(200)).toBe("0.2 unit");
+    expect(unitsText(200)).toBe("0.2 units");
     expect(unitsText(0)).toBe("0 units");
     expect(unitsText(1000)).toBe("1 unit");
     expect(unitsText(12500)).toBe("12.5 units");
@@ -70,8 +70,8 @@ describe("helpers", () => {
     expect(pickPoll([closed])?.id).toBe("c1");
   });
   it("reads the cost line from the allowance and config, never from the page", () => {
-    expect(costLines(poll(), allowance(), null).confirm).toBe("Free: you have 3 free votes left today. After that a vote uses 0.2 unit.");
-    expect(costLines(poll({ costToVoteMilli: 200 }), allowance({ freeVotesLeftToday: 0, balanceMilli: 0 }), null).confirm).toBe("This vote uses 0.2 unit. You have 0 units.");
+    expect(costLines(poll(), allowance(), null).confirm).toBe("Free: you have 3 free votes left today. After that a vote uses 0.2 units.");
+    expect(costLines(poll({ costToVoteMilli: 200 }), allowance({ freeVotesLeftToday: 0, balanceMilli: 0 }), null).confirm).toBe("This vote uses 0.2 units. You have 0 units.");
     expect(costLines(poll({ publicInterest: true }), allowance(), null).confirm).toContain("always free");
   });
 });

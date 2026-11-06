@@ -1,16 +1,10 @@
 import type { Answer } from "@/lib/api/feed";
+import { countdown } from "@/lib/format/date";
 
-/** "9h", "2 days", "45 min": time left until an ISO instant. */
+/** "9 h", "2 days", "45 min": time left until an ISO instant (the shared countdown). */
 export function closesIn(endsAt: string | null | undefined, now = Date.now()): string | undefined {
   if (!endsAt) return undefined;
-  const ms = Date.parse(endsAt) - now;
-  if (!(ms > 0)) return undefined;
-  const min = Math.ceil(ms / 60000);
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return d === 1 ? "1 day" : `${d} days`;
+  return countdown(Date.parse(endsAt) - now);
 }
 
 /** "2h", "3d", "just now": time since an ISO instant. */

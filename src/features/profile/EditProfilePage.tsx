@@ -57,7 +57,7 @@ function VoiceCardEditor({ clip, onChange }: { clip: VoiceClip | null; onChange:
           <Button size="s" variant="primary" icon="square" onClick={() => rec.current?.stop()}>Stop</Button>
         </div>
       ) : state === "sending" ? (
-        <p className="pf-note" role="status">Saving your Voice Card...</p>
+        <p className="pf-note" role="status">Saving your Voice Card…</p>
       ) : (
         <div className="pf-row">
           <Button variant="onforest" size="s" icon="mic" onClick={start}>{clip ? "Re-record" : "Record Voice Card"}</Button>

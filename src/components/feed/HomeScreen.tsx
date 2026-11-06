@@ -49,7 +49,7 @@ export function HomeScreen() {
     <>
       <div className="flex flex-col gap-4">
         <h1 className="order-1 m-0 mt-1 font-display text-display-l dt:text-display-xl">
-          {!signedIn ? "What is Nigeria saying today?" : (firstName ?? h.greetingName) ? `Hi ${firstName ?? h.greetingName}, what is your take today?` : "What is your take today?"}
+          {!signedIn ? "What is Nigeria saying today?" : firstName ? `Hi ${firstName}, what is your take today?` : "What is your take today?"}
         </h1>
         {q ? (
           <div className="order-2">
@@ -66,7 +66,7 @@ export function HomeScreen() {
             />
           </div>
         ) : (
-          <div className="order-2"><NothingYet title="No question yet" body="Today's question shows up here as soon as it opens." /></div>
+          <div className="order-2"><NothingYet title="No question yet" body="Today’s question shows up here as soon as it opens." /></div>
         )}
         {signedIn ? null : (
           <div className="order-3">
@@ -85,17 +85,17 @@ export function HomeScreen() {
 
         <Section
           className="order-6 dt:order-6"
-          title={<><span className="dt:hidden">Trending answers</span><span className="hidden dt:inline">Top voices on today&apos;s question</span></>}
+          title={<><span className="dt:hidden">Trending answers</span><span className="hidden dt:inline">Top voices on today’s question</span></>}
           aside={
             q ? (
               <TextLink href={`/q/${q.id}`}>
-                <span className="dt:hidden">See all</span>
-                <span className="hidden dt:inline">{`See all ${shortCount(q.voiceCount)}`}</span>
+                <span className={q.voiceCount > 0 ? "dt:hidden" : undefined}>See all</span>
+                {q.voiceCount > 0 ? <span className="hidden dt:inline">{`See all ${shortCount(q.voiceCount)}`}</span> : null}
               </TextLink>
             ) : undefined
           }
         >
-          {h.trending.length ? <Answers items={h.trending.slice(0, 2)} /> : <NothingYet title="No voices yet" body="Be the first to answer today's question." />}
+          {h.trending.length ? <Answers items={h.trending.slice(0, 2)} /> : <NothingYet title="No voices yet" body="Be the first to answer today’s question." />}
         </Section>
 
         <Section className="order-7 dt:order-4 dt:[&>div:first-child]:hidden" title="New conversations">

@@ -29,7 +29,7 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
     <section className={cx('vx-hero', p.className)} aria-labelledby="vx-hero-q">
       <div className="vx-hero__card">
         <img className="vx-hero__motif" src={ASSETS.markWhite} alt="" aria-hidden="true" />
-        <span className="vx-hero__sticker">{p.eyebrow || "Today's question"}</span>
+        <span className="vx-hero__sticker">{p.eyebrow || "Today’s question"}</span>
         <h2 className="vx-hero__q" id="vx-hero-q">{p.question}</h2>
         <div className="vx-hero__meta">
           {p.avatars ? <AvatarStack names={p.avatars} /> : null}

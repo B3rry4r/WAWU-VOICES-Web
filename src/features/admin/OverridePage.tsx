@@ -5,6 +5,7 @@ import { Button, Dialog, EmptyState, Tabs, TextField } from "@/components/vx";
 import { cancelOverride, createOverride, listOverrides, previewOverride } from "@/lib/api/admin";
 import type { AdminOverride, CreateOverrideRequest, OverridePreview } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
+import { dayKey } from "@/lib/format/date";
 import { clock, dayClock, dayStringWeekday, fromLocalInput, longDate, toLocalInput, weekdayDay } from "./time";
 import { Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, PageHead, SavedLine, StatePill, Switch, useAction, Gated, DateTimeField } from "./ui";
 
@@ -165,7 +166,7 @@ function OverrideBody() {
               <ul className="m-0 mt-2 list-none p-0">
                 <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 py-3 text-body">
                   <span className="text-body-strong">{weekdayDay(request.startsAt)}</span>
-                  <span className="font-semibold text-green-text">{`Your override, ${clock(request.startsAt)} to ${clock(request.endsAt)}${new Date(request.startsAt).toDateString() === new Date(request.endsAt).toDateString() ? "" : ` (${weekdayDay(request.endsAt)})`}`}</span>
+                  <span className="font-semibold text-green-text">{`Your override, ${clock(request.startsAt)} to ${clock(request.endsAt)}${dayKey(request.startsAt) === dayKey(request.endsAt) ? "" : ` (${weekdayDay(request.endsAt)})`}`}</span>
                 </li>
                 {preview.schedule.slice(0, 2).map((s) => (
                   <li key={s.id} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 border-t border-line py-3 text-body">
@@ -216,7 +217,7 @@ function OverrideBody() {
       </div>
 
       <Dialog open={confirm} title="Go live now?" confirmLabel="Go live now" destructive confirmIcon="radio" onClose={() => setConfirm(false)} onConfirm={() => submit(true)}>
-        This replaces today&apos;s question for everyone straight away. The replaced question is not lost. You can cancel the override from the log.
+        This replaces today’s question for everyone straight away. The replaced question is not lost. You can cancel the override from the log.
       </Dialog>
     </div>
   );

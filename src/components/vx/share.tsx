@@ -99,7 +99,7 @@ export function ShareCard(p: ShareCardProps): ReactElement {
             <br />
             {'Based on ' + short(p.voices) + ' voices · updated ' + (p.updated || 'just now')}
             <br />
-            {p.link || 'wawuafrica.com/voices'}
+            {p.link || 'voices.wawuafrica.com'}
           </span>
           <span className="vx-share__cta">
             <Icon name="mic" size={32} strokeWidth={2.5} />

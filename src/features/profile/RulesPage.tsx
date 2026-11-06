@@ -6,8 +6,8 @@ import "./profile.css";
 type IconName = Parameters<typeof Icon>[0]["name"];
 export const RULES: { icon: IconName; title: string; line: string }[] = [
   { icon: "message-circle", title: "Speak your mind, disagree hard", line: "Go after the idea, not the person." },
-  { icon: "shield-alert", title: "No threats, harassment or hate", line: "That includes attacks on someone's tribe, faith, gender or disability." },
-  { icon: "lock", title: "Keep private details private", line: "No phone numbers, home addresses or account numbers, yours or anyone's." },
+  { icon: "shield-alert", title: "No threats, harassment or hate", line: "That includes attacks on someone’s tribe, faith, gender or disability." },
+  { icon: "lock", title: "Keep private details private", line: "No phone numbers, home addresses or account numbers, yours or anyone’s." },
   { icon: "badge-check", title: "News carries a tag", line: "Sharing news? Pick Unverified News or Gossip. Only WAWU editors mark Verified News." },
   { icon: "vote", title: "One person, one vote", line: "Nobody can buy votes. We remove coordinated voting and scams." },
   { icon: "user-check", title: "Adults only", line: "You must be 18 or older to use VOICES." },
@@ -20,7 +20,7 @@ export const STEPS = [
 ];
 
 const named = (
-  <Banner tone="info" title="Named in a post?">Use Report on the post and choose &quot;This is about me&quot;. It goes to the front of the queue.</Banner>
+  <Banner tone="info" title="Named in a post?">Use Report on the post and choose “This is about me”. It goes to the front of the queue.</Banner>
 );
 
 export function RulesPage() {

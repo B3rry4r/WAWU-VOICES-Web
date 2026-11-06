@@ -200,7 +200,7 @@ describe("Voice Units screen", () => {
     expect(screen.getByTestId("balance").textContent).toBe("12.5");
     expect(screen.getByText("7 free posts left")).toBeTruthy();
     expect(screen.getByText("From ₦138 for 10 units. Units cannot be cashed out or sent to others.")).toBeTruthy();
-    expect(screen.getByText("0.5 unit (₦6.90)")).toBeTruthy();
+    expect(screen.getByText("0.5 units (₦6.90)")).toBeTruthy();
     expect(await screen.findByText("Chat pack")).toBeTruthy();
     expect(screen.getByText("+26")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Receipt" }).getAttribute("href")).toBe(`/units/receipt/${PID}`);
@@ -293,7 +293,7 @@ describe("Out of free posts", () => {
     expect(await screen.findByText("You have used your 10 free posts")).toBeTruthy();
     expect(screen.getByText("Balance: 0 units")).toBeTruthy();
     expect(screen.getByText("Salary lands on the 25th.")).toBeTruthy();
-    expect(screen.getByText(/A text post uses 0\.5 unit \(₦6\.90\)\. The smallest pack is 10 units for ₦138\./)).toBeTruthy();
+    expect(screen.getByText(/A text post uses 0\.5 units \(₦6\.90\)\. The smallest pack is 10 units for ₦138\./)).toBeTruthy();
     const link = screen.getByRole("link", { name: "Get Voice Units from ₦138" });
     expect(link.getAttribute("href")).toBe("/units/buy?from=%2Fq%2Fq-9");
     await userEvent.click(screen.getByRole("button", { name: "Keep my draft for later" }));

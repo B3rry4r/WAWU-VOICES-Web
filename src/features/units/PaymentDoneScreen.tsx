@@ -7,7 +7,7 @@ import { getPayment, getTiers, verifyPayment, type Payment, type PayMethod } fro
 import { clearByPayment, findByPayment, safePath, type Attempt } from "./attempt";
 import { startCheckout, startErrorText } from "./checkout";
 import { findPostedFor, getDraft } from "./draft";
-import { dateTimeLagos, extraVoiceTitle, failureText, methodLabel, naira, packLine, units } from "./format";
+import { dateTimeLagos, extraVoiceTitle, failureText, methodLabel, naira, packLine, units, unitsLabel } from "./format";
 import { useDesktop, useSignedIn } from "./hooks";
 import { postDraftForPurchase, type DraftOutcome } from "./post-draft";
 import { isFinal, runReturn, type ReturnState } from "./payment-return";
@@ -258,7 +258,7 @@ export function PaymentDoneScreen() {
         <Hero
           tone="ok"
           big
-          title={isUnits ? `${units(p.unitsMilli as number)} units added` : "Extra voice token added"}
+          title={isUnits ? `${unitsLabel(p.unitsMilli as number)} added` : "Extra voice token added"}
           body={
             isUnits ? (
               <>Payment received.{p.balanceMilli !== null ? <> Your balance is now <b className="text-ink">{units(p.balanceMilli)} Voice Units</b>.</> : null}</>

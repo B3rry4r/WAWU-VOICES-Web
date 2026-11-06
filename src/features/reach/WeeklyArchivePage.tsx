@@ -59,7 +59,7 @@ export function WeeklyArchivePage() {
   const head = (
     <div className="flex flex-col gap-2 pb-4">
       <h1 className="m-0 font-display text-display-l dt:text-display-xl">Past reports</h1>
-      <p className="m-0 text-body text-ink-2">One report a week, from the week&apos;s poll and voices. Each is AI-assisted and checked by a WAWU editor before it goes out.</p>
+      <p className="m-0 text-body text-ink-2">One report a week, from the week’s poll and voices. Each is AI-assisted and checked by a WAWU editor before it goes out.</p>
     </div>
   );
 
@@ -93,7 +93,7 @@ export function WeeklyArchivePage() {
         </p>
       ) : null}
       {!latest && items.length === 0 ? (
-        <EmptyState icon="chart-column" title="No reports yet" body="The first report goes out after the first week's poll closes." />
+        <EmptyState icon="chart-column" title="No reports yet" body="The first report goes out after the first week’s poll closes." />
       ) : null}
       {latest ? (
         <article className="flex flex-col gap-3 rounded-xl bg-forest p-5 text-forest-on" aria-label="Latest report">

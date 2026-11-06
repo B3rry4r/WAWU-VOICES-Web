@@ -136,7 +136,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
             <p className="m-0 flex items-center gap-2 text-caption text-ink-2"><Icon name="clock" size={18} />{chosenLine(post)}</p>
           ) : null}
           {post.news ? (
-            <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1 dt:hidden" aria-label="This post's tag">
+            <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1 dt:hidden" aria-label="This post’s tag">
               <NewsTag kind={kindOf(post.news.tag)} withNote />
               {flagBlock(false)}
             </section>
@@ -170,7 +170,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
           <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="About this post">
             <h2 className="m-0 font-display text-display-s">About this post</h2>
             <div className="flex flex-col gap-1">
-              <span className="text-eyebrow uppercase text-ink-2">This post&apos;s tag</span>
+              <span className="text-eyebrow uppercase text-ink-2">This post’s tag</span>
               <NewsTag kind={kindOf(post.news.tag)} size="m" withNote />
             </div>
             {flagBlock(true)}

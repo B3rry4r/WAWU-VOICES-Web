@@ -18,7 +18,7 @@ import {
 } from "@/lib/api/units";
 import { Rail } from "@/components/shell/ShellSlots";
 import { startErrorText, useCheckout } from "./checkout";
-import { costRows, extraVoiceTitle, ledgerFigure, ledgerNote, naira, smallestPack, units, whenLong, whenShort } from "./format";
+import { costRows, extraVoiceTitle, ledgerFigure, ledgerNote, naira, smallestPack, units, unitsLabel, whenLong, whenShort } from "./format";
 import { readErrorText, useDesktop, useLoad, useSignedIn } from "./hooks";
 import { Card, ErrorBlock, H2, Line, LoadingBlock, Note, SignInNeeded } from "./ui";
 
@@ -277,7 +277,7 @@ function SignedIn() {
           </Button>
         </div>
         <p className="m-0 text-caption text-[color:var(--on-forest-2)]">
-          {min ? `From ${naira(min.priceKobo)} for ${units(min.unitsMilli)} units. ` : ""}Units cannot be cashed out or sent to others.
+          {min ? `From ${naira(min.priceKobo)} for ${unitsLabel(min.unitsMilli)}. ` : ""}Units cannot be cashed out or sent to others.
         </p>
       </section>
 

@@ -245,7 +245,7 @@ describe("TalkCard: like and voices", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Funny/ }));
     await waitFor(() => expect(push2).toHaveBeenCalled());
     const t = String(push2.mock.calls[0][0]);
-    expect(t).toMatch(/0\.[23] unit/);
+    expect(t).toMatch(/0\.[23] units/);
     expect(t).not.toMatch(/0\.1/);
   });
 });
@@ -356,9 +356,9 @@ describe("TalkCard: reactions under latency end equal to the database", () => {
 
 import { unitsText } from "@/features/talk/lib";
 describe("unitsText", () => {
-  it("says 0 units, 0.5 unit, 1 unit, 12.5 units", () => {
+  it("says 0 units, 0.5 units, 1 unit, 12.5 units", () => {
     expect(unitsText(0)).toBe("0 units");
-    expect(unitsText(500)).toBe("0.5 unit");
+    expect(unitsText(500)).toBe("0.5 units");
     expect(unitsText(1000)).toBe("1 unit");
     expect(unitsText(12500)).toBe("12.5 units");
   });

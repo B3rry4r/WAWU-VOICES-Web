@@ -127,7 +127,7 @@ describe("Onboarding and Country", () => {
     expect(screen.getAllByText("Hear the country").length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: /Next/ }));
     expect(screen.getByText("Your first 10 posts are free")).toBeTruthy();
-    expect(screen.getByText("Then Voice Units from ₦138. A text post uses 0.5 unit (₦6.90).")).toBeTruthy();
+    expect(screen.getByText("Then Voice Units from ₦138. A text post uses 0.5 units (₦6.90).")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Start" }).getAttribute("href")).toBe("/join/country");
     expect(screen.getAllByRole("link", { name: "Skip" })[0].getAttribute("href")).toBe("/join/country");
   });

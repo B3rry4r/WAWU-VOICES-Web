@@ -114,7 +114,7 @@ export function AdminTodayPage() {
       />
       {live ? (
         <Banner tone="warning" title="An override is live" className="mb-4">
-          Today&apos;s question is paused. The normal flow comes back by itself when the override ends.
+          Today’s question is paused. The normal flow comes back by itself when the override ends.
         </Banner>
       ) : null}
 
@@ -135,7 +135,7 @@ export function AdminTodayPage() {
           {hasQuestion ? (
             <section className="rounded-xl bg-green p-6 text-green-on">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-xs bg-forest px-2.5 py-1 text-eyebrow uppercase text-forest-on">Today&apos;s question</span>
+                <span className="rounded-xs bg-forest px-2.5 py-1 text-eyebrow uppercase text-forest-on">Today’s question</span>
                 {q.startsAt && q.endsAt ? <span className="text-count">{`Live since ${clock(q.startsAt)} · closes ${clock(q.endsAt)}`}</span> : null}
               </div>
               <h2 className="m-0 mt-4 font-display text-display-l">{q.text}</h2>
@@ -159,7 +159,7 @@ export function AdminTodayPage() {
 
           {t.schedule.length || t.nextQuestion ? (
             <Card>
-              <Eyebrow>Today&apos;s schedule</Eyebrow>
+              <Eyebrow>Today’s schedule</Eyebrow>
               <ul className="m-0 mt-2 list-none p-0">
                 {t.schedule.map((s, i) => (
                   <li key={i} className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3 border-t border-line py-3 first:border-t-0">

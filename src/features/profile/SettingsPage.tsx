@@ -105,7 +105,7 @@ function ExportRow() {
   const ready = exp?.status === "READY" && exp.downloadUrl;
   return (
     <>
-      <RowButton icon="file-down" label="Export my data" detail={busy ? "Getting your data ready..." : "Your posts, transcripts and Voice Units history"} onClick={start} trailing={<span />} />
+      <RowButton icon="file-down" label="Export my data" detail={busy ? "Getting your data ready…" : "Your posts, transcripts and Voice Units history"} onClick={start} trailing={<span />} />
       {ready ? <a className="pf-row-item pf-dl" href={exp.downloadUrl!} download>Download my data</a> : null}
       {error ? <p className="pf-note pf-note--err pf-pad" role="alert">{error}</p> : null}
     </>
@@ -173,7 +173,7 @@ function SettingsBody({ me }: { me: Me }) {
 
       <Section id="n-h" title="Notifications">
         <div className="pf-card">
-          <Switch label="Today's question" detail={`Every morning at ${minuteLabel(s.dailyQuestionMinute)}`} checked={s.notifyDailyQuestion} onChange={(v) => patch({ notifyDailyQuestion: v })} />
+          <Switch label="Today’s question" detail={`Every morning at ${minuteLabel(s.dailyQuestionMinute)}`} checked={s.notifyDailyQuestion} onChange={(v) => patch({ notifyDailyQuestion: v })} />
           <Switch label="Replies to you" checked={s.notifyReplies} onChange={(v) => patch({ notifyReplies: v })} />
           <Switch label="Reactions on your voices" detail="Grouped, never one by one" checked={s.notifyReactions} onChange={(v) => patch({ notifyReactions: v })} />
           <Switch label="Poll results" checked={s.notifyPollResults} onChange={(v) => patch({ notifyPollResults: v })} />
