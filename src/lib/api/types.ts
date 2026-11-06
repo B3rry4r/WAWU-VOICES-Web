@@ -1039,7 +1039,7 @@ export interface paths {
         put?: never;
         /**
          * Appeal a moderation decision
-         * @description Opens an item in the APPEAL queue; a different moderator looks again. Auth: signed in with a finished profile.
+         * @description Opens an item in the APPEAL queue; a different moderator looks again. Reachable by a suspended or banned person. The note is up to 500 characters. 409 when a decision is not there to appeal, or an appeal on this target already exists (lead ruling WF, 6 Nov, RW2). Auth: signed in with a finished profile.
          */
         post: operations["createAppeal"];
         delete?: never;
@@ -1097,7 +1097,7 @@ export interface paths {
         };
         /**
          * The open flash poll for Home
-         * @description Auth: guest or signed in.
+         * @description 200 with a null body when no flash poll is open (lead ruling WF, 6 Nov, A-L1). Auth: guest or signed in.
          */
         get: operations["getFlashPoll"];
         put?: never;
@@ -1509,7 +1509,7 @@ export interface paths {
         };
         /**
          * The latest published report
-         * @description Auth: guest or signed in.
+         * @description 200 with a null body when none is published yet (lead ruling WF, 6 Nov, A-L1). Auth: guest or signed in.
          */
         get: operations["getLatestWeeklyReport"];
         put?: never;
@@ -2188,6 +2188,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/questions/{questionId}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a scheduled question to another day of its week; a taken day swaps the two
+         * @description Lead ruling WF, 6 Nov (RW6). Outside the week is 422 'That day is outside the week.'; a question that has started cannot move (409). Held FLASH questions are opened as flash polls with POST /admin/polls (kind FLASH, questionId). Auth: signed in with role EDITOR or ADMIN.
+         */
+        post: operations["adminMoveQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/questions/{questionId}": {
         parameters: {
             query?: never;
@@ -2655,7 +2675,7 @@ export interface paths {
         put?: never;
         /**
          * Approve, reject, ask for changes, pause, resume
-         * @description Auth: signed in with role AD_MANAGER or ADMIN.
+         * @description APPROVE is 422 while any of the advert's checks fails; the message names the failing check (lead ruling WF, 6 Nov, C-M8). Auth: signed in with role AD_MANAGER or ADMIN.
          */
         post: operations["adminAdDecision"];
         delete?: never;
@@ -2994,7 +3014,7 @@ export interface components {
             referralCode: string;
             status: components["schemas"]["AccountStatus"];
         };
-        /** @description voiceCount, replyCount and reactionsReceived are stored counters kept in step by the service, never counted per request. */
+        /** @description voiceCount, replyCount and reactionsReceived are stored counters kept in step by the service, never counted per request. voicesCount (lead ruling WF, 6 Nov, RW1) is the one count of this person's published top-level answers, voice or text (anonymous ones only on their own page): "My voices N" and the Person tab use it. */
         Profile: {
             /** Format: uuid */
             id: string;
@@ -3010,6 +3030,7 @@ export interface components {
             /** Format: date-time */
             joinedAt: string;
             voiceCount: number;
+            voicesCount?: number;
             replyCount: number;
             reactionsReceived: number;
         };
@@ -3115,6 +3136,7 @@ export interface components {
             voicesThisWeek: number;
             questionCount: number;
         };
+        /** @description voicesCount (RW1) is the sum of its questions' voicesCount: the number every "N voices so far" shows. */
         Topic: {
             questionCount: number;
             /** Format: uuid */
@@ -3131,6 +3153,7 @@ export interface components {
             sensitive: boolean;
             whatNextPrompt?: string | null;
             voiceCount: number;
+            voicesCount?: number;
             /** Format: uuid */
             weeklyPollId?: string | null;
             /** Format: uuid */
@@ -3145,6 +3168,7 @@ export interface components {
             startsOn: string;
             status: components["schemas"]["TopicStatus"];
         };
+        /** @description voicesCount (lead ruling WF, 6 Nov, RW1) is the one voices count for every screen and card: top-level answers, voice or text, not removed or deleted. It equals answerCount. voiceCount stays the number of voice clips. */
         Question: {
             iSaved: boolean;
             recentVoices: components["schemas"]["AvatarRef"][];
@@ -3169,6 +3193,7 @@ export interface components {
             sensitive: boolean;
             voiceCount: number;
             answerCount: number;
+            voicesCount?: number;
             hasOpenPoll: boolean;
             proposalCount: number;
             override?: components["schemas"]["OverrideContent"] | null;
@@ -3798,6 +3823,7 @@ export interface components {
             people: number;
             topics: number;
         };
+        /** @description RW7: replies and reactions are worded from who did them, "@kemi.b replied to your voice" with the quote in body, "@tunde.a and 41 others reacted to your voice"; a person blocked either way is never named and their notice is not served; every notice has a body and a target. questionId is the question to open when the target is an answer or a question. */
         Notification: {
             /** Format: uuid */
             id: string;
@@ -3811,6 +3837,17 @@ export interface components {
             read: boolean;
             /** Format: date-time */
             createdAt: string;
+            /** Format: uuid */
+            questionId?: string | null;
+            appeal?: components["schemas"]["NoticeAppeal"] | null;
+        };
+        /** @description RW2: present on a removal, warning, suspension or ban notice. Send POST /appeals with this target while state is AVAILABLE; SENT means the appeal is waiting for another moderator. */
+        NoticeAppeal: {
+            /** @enum {string} */
+            state: "AVAILABLE" | "SENT";
+            targetType: components["schemas"]["ReportTargetType"];
+            /** Format: uuid */
+            targetId: string;
         };
         NotificationPage: {
             items: components["schemas"]["Notification"][];
@@ -3960,6 +3997,7 @@ export interface components {
             /** Format: uuid */
             paymentId: string;
             txRef: string;
+            reference?: string;
             /** @description Naira in kobo (32-bit integer). */
             amountKobo: number;
             /** @enum {string} */
@@ -3978,6 +4016,7 @@ export interface components {
             /** @description Naira in kobo (32-bit integer). */
             amountKobo: number;
             txRef: string;
+            reference?: string;
             title: string;
             /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             unitsMilli: number | null;
@@ -4001,6 +4040,7 @@ export interface components {
         };
         Receipt: {
             receiptNo: string;
+            reference?: string;
             txRef: string;
             title: string;
             /** @description Naira in kobo (32-bit integer). */
@@ -4230,6 +4270,7 @@ export interface components {
             /** Format: uuid */
             questionId: string;
             by: string;
+            byName?: string | null;
             /** Format: date-time */
             createdAt: string;
             result: string | null;
@@ -4252,6 +4293,16 @@ export interface components {
             keepWeeklyTheme?: boolean;
             dropReplaced?: boolean;
             reason?: string;
+        };
+        /** @description RW6: the day (inside the question's own week) to put it on. */
+        MoveQuestionRequest: {
+            /** Format: date */
+            day: string;
+        };
+        /** @description swappedWith is the question that was on that day and now sits on the first one's old day (one transaction); null when the day was free. */
+        MoveQuestionResult: {
+            question: components["schemas"]["AdminQuestion"];
+            swappedWith: components["schemas"]["AdminQuestion"] | null;
         };
         /** @description What the week looks like after the override: the replaced question moves to the next free slot, the rest shift one day. */
         OverridePreview: {
@@ -4288,9 +4339,20 @@ export interface components {
             content: unknown;
             transcript: string | null;
             playUrl: string | null;
+            appeals?: components["schemas"]["ModAppeal"][];
             screening: string[];
             context: components["schemas"]["Question"] | null;
             audit: components["schemas"]["AuditLine"][];
+        };
+        /** @description RW2: the poster's own words, shown to the moderator in the item detail. */
+        ModAppeal: {
+            /** Format: uuid */
+            id: string;
+            note: string;
+            /** @enum {string} */
+            status: "OPEN" | "DECIDED";
+            /** Format: date-time */
+            createdAt: string;
         };
         ModAuthor: {
             /** Format: uuid */
@@ -6560,11 +6622,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Poll"];
+                    "application/json": components["schemas"]["Poll"] | null;
                 };
             };
             401: components["responses"]["E401"];
-            404: components["responses"]["E404"];
             429: components["responses"]["E429"];
         };
     };
@@ -7211,11 +7272,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WeeklyReport"];
+                    "application/json": components["schemas"]["WeeklyReport"] | null;
                 };
             };
             401: components["responses"]["E401"];
-            404: components["responses"]["E404"];
             429: components["responses"]["E429"];
         };
     };
@@ -8185,6 +8245,38 @@ export interface operations {
             };
             401: components["responses"]["E401"];
             403: components["responses"]["E403"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminMoveQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                questionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveQuestionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MoveQuestionResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
             422: components["responses"]["E422"];
             429: components["responses"]["E429"];
         };
