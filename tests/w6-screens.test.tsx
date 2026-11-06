@@ -116,11 +116,11 @@ describe("Settings", () => {
     expect(await screen.findByText("Could not save that change. Try again.")).toBeTruthy();
     expect((screen.getByRole("switch", { name: /Poll results/ }) as HTMLInputElement).checked).toBe(true);
   });
-  it("shows only built rows: no ad-free pass, and the legal rows only for pages that exist", async () => {
+  it("shows only built rows: no ad-free pass, no language, and the legal rows only for pages that exist", async () => {
     signIn(); mockApi(meRoutes);
     render(<SettingsPage />);
     await screen.findByText("Community rules");
-    for (const t of ["Ad-free pass", "Help and contact"]) expect(screen.queryByText(t)).toBeNull();
+    for (const t of ["Ad-free pass", "Language", "Country", "Help and contact", "Quiet hours"]) expect(screen.queryByText(t)).toBeNull();
     for (const h of ["rules", "terms", "privacy", "refunds"]) expect(document.querySelector(`a[href="/settings/legal/${h}"]`)).toBeTruthy();
   });
   it("appearance saves the theme and applies it at once", async () => {
