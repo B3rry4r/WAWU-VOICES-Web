@@ -1,7 +1,7 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Banner, Button, Composer, EmptyState, FreePosts, Skeleton } from "@/components/vx";
+import { Banner, Button, Composer, FreePosts, NotFoundState, Skeleton } from "@/components/vx";
 import type { ComposerTag, IntentKind } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
@@ -50,7 +50,7 @@ export function WriteScreen({ qid }: { qid: string }) {
   }
   if (loadErr) {
     const gone = loadErr instanceof ApiError && loadErr.status === 404;
-    return <>{header}<div className="mt-4">{gone ? <EmptyState icon="message-square" title="We could not find this question" body="It may have been removed, or the link is wrong." /> : <Problem error={loadErr} onRetry={() => setTries((n) => n + 1)} />}</div></>;
+    return <>{header}<div className="mt-4">{gone ? <NotFoundState /> : <Problem error={loadErr} onRetry={() => setTries((n) => n + 1)} />}</div></>;
   }
   if (!q || initial === null || (signedIn && !allow)) return <>{header}<div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="tile" /><Skeleton variant="answer" /></div></>;
   if (q.status !== "LIVE") return <>{header}<div className="mt-4"><Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner></div></>;

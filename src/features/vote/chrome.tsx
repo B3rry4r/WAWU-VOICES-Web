@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Banner, EmptyState, Icon, Skeleton } from "@/components/vx";
+import { Banner, Icon, NotFoundState, Skeleton } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import "./vote.css";
@@ -73,7 +73,7 @@ export function Loading() {
 
 export function LoadFailed({ error, retry, what }: { error: unknown; retry: () => void; what: string }) {
   if (error instanceof ApiError && error.status === 404) {
-    return <EmptyState icon="info" title={`We could not find ${what}`} body="It may have been removed." />;
+    return <NotFoundState />;
   }
   const offline = error instanceof ApiError && error.status === 0;
   return (

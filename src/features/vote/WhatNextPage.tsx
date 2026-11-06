@@ -94,7 +94,8 @@ export function ProposalItem({ p, groups, signedIn, questionId, onNeedSignIn, on
   return (
     <div className="flex flex-col gap-2">
       <ProposalCard
-        author={cur.author.displayName ?? cur.author.handle}
+        author={`@${cur.author.handle}`}
+        avatarName={cur.author.displayName ?? cur.author.handle}
         time={ago(cur.createdAt)}
         text={cur.body ?? ""}
         supports={cur.supportCount}

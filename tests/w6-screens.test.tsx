@@ -91,7 +91,7 @@ describe("Person", () => {
   it("an unknown handle says so", async () => {
     signIn(); mockApi({ "GET /search": { people: [], questions: [], answers: [], topics: [], totals: {}, nextCursor: null } });
     render(<PersonPage segment="nobody.here" />);
-    expect(await screen.findByText("We could not find this person")).toBeTruthy();
+    expect(await screen.findByText("We could not find that.")).toBeTruthy();
   });
   it("a handle in the URL is resolved to the id through search, exact match only", async () => {
     signIn(); mockApi({ "GET /search": { people: [{ ...tunde, handle: "tunde.ab", id: "x" }, tunde], questions: [], answers: [], topics: [], totals: {}, nextCursor: null }, "GET /people/u2": page() });

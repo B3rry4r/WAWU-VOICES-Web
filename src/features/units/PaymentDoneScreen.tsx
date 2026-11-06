@@ -48,8 +48,8 @@ function CopyRef({ full }: { full: string }) {
     }
   }
   return (
-    <button type="button" className="inline-flex items-center gap-1 border-0 bg-transparent p-0 link" title={full} aria-label={`Copy the full reference ${full}`} onClick={() => void copy()}>
-      <span className="tabular-nums">{shortRef(full)}</span>
+    <button type="button" className="inline-flex items-center gap-1 whitespace-nowrap border-0 bg-transparent p-0 text-label link" title={full} aria-label={`Copy the full reference ${full}`} onClick={() => void copy()}>
+      <span className="whitespace-nowrap tabular-nums">{shortRef(full)}</span>
       <Icon name={copied ? "check" : "copy"} size={14} />
       <span className="sr-only" role="status">{copied ? "Copied" : ""}</span>
     </button>
@@ -61,8 +61,8 @@ function Details({ rows }: { rows: Array<[string, ReactNode]> }) {
     <dl className="m-0 flex flex-col rounded-l bg-surface px-4 py-1 text-body shadow-[inset_0_0_0_1px_var(--line)] dt:bg-surface-2">
       {rows.map(([k, v]) => (
         <div key={k} className="flex justify-between gap-3 border-b border-line py-[10px] last:border-b-0">
-          <dt className="text-ink-2">{k}</dt>
-          <dd className="m-0 break-all text-right text-body-strong tabular-nums">{v}</dd>
+          <dt className="flex-none text-ink-2">{k}</dt>
+          <dd className="m-0 min-w-0 break-words text-right text-body-strong tabular-nums">{v}</dd>
         </div>
       ))}
     </dl>

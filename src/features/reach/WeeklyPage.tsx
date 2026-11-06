@@ -36,6 +36,8 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
     (reportId ? getWeeklyReport(reportId) : getLatestWeeklyReport())
       .then(async (r) => {
         if (stop) return;
+        // lead ruling WF-6, 6 Nov (A-N2): GET /weekly-reports/latest answers 200 with null when nothing is published: the empty state, not an error.
+        if (!r) { setReport(null); setPoll(null); setLoad("none"); return; }
         setReport(r);
         setLoad("ready");
         const id = readPollSummary(r.pollSummary)?.pollId;

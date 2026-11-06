@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Banner, Icon, IconButton } from "@/components/vx";
+import { Banner, Icon, IconButton, NotFoundState } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { isSignedIn } from "@/lib/api/auth";
 import { getPlayUrl } from "@/lib/api/talk";
@@ -53,7 +53,7 @@ export function failText(e: unknown): string {
   switch (e.code) {
     case "RATE_LIMITED": return "You are going fast. Wait a moment and try again.";
     case "QUESTION_CLOSED": return "This question has closed.";
-    case "ACCOUNT_SUSPENDED": return "Your account is paused, so you cannot post right now.";
+    case "ACCOUNT_SUSPENDED": return "Your account is suspended, so you cannot post right now.";
     case "BLOCKED_BY_USER": return "You cannot reply to this person.";
     case "CONTENT_REMOVED": return "This voice was removed.";
     case "VALIDATION_FAILED": return "Check what you wrote and try again.";
@@ -63,7 +63,9 @@ export function failText(e: unknown): string {
   }
 }
 
+/** Lead ruling WF-6 RX1, 6 Nov: a 404 (missing, removed, hidden) is "We could not find that." with a way back, never an error and never Try again. A real 5xx or a lost connection keeps the error words and Try again. */
 export function Problem({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  if (error instanceof ApiError && error.status === 404) return <NotFoundState />;
   const off = offline(error);
   return (
     <Banner tone={off ? "offline" : "danger"} title={off ? "You are offline" : "This did not load"} action={onRetry ? "Try again" : undefined} onAction={onRetry}>

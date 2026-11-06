@@ -339,6 +339,8 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
 
 export interface ProposalCardProps {
   author: string;
+  /** What the avatar draws its initials from, when that differs from the shown name (the name is a "@handle"). */
+  avatarName?: string;
   time: string;
   text: string;
   supports?: number;
@@ -364,7 +366,7 @@ export function ProposalCard(p: ProposalCardProps): ReactElement {
   return (
     <article className={cx('vx-prop', p.className)}>
       <div className="vx-answer__head">
-        <Avatar name={p.author} size="s" />
+        <Avatar name={p.avatarName ?? p.author} size="s" />
         <div className="vx-answer__who">
           <span className="vx-answer__name">{p.author}</span>
           <span className="vx-answer__time">{p.time}</span>

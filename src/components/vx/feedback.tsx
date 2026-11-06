@@ -78,6 +78,25 @@ export function EmptyState(p: EmptyStateProps): ReactElement {
   );
 }
 
+/** Lead ruling WF-6 RX1, 6 Nov: a missing, removed or hidden thing always says this, with a way back. Never an error, never Try again. */
+export function NotFoundState(p: { body?: string; className?: string }): ReactElement {
+  const back = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) window.history.back();
+    else if (typeof window !== 'undefined') window.location.assign('/');
+  };
+  return (
+    <div className={cx('vx-empty', p.className)} data-testid="not-found-state">
+      <span className="vx-empty__art" aria-hidden="true"><Icon name="search" size={40} strokeWidth={2} /></span>
+      <h3 className="vx-empty__title">We could not find that.</h3>
+      <p className="vx-empty__body">{p.body || 'It may have been removed, or the link is wrong.'}</p>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <Button onClick={back}>Back</Button>
+        <Button variant="secondary" href="/">Home</Button>
+      </div>
+    </div>
+  );
+}
+
 export interface SkeletonProps {
   variant?: 'answer' | 'tile' | 'line';
   width?: string | number;

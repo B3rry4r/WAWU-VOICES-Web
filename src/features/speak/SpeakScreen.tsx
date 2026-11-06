@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Rail } from "@/components/shell/ShellSlots";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Banner, Button, Icon, Skeleton, StageBar } from "@/components/vx";
+import { Banner, Button, Icon, NotFoundState, Skeleton, StageBar } from "@/components/vx";
 import { short } from "@/components/vx/helpers";
 import { isSignedIn } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
@@ -128,6 +128,17 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     });
     return () => { live = false; };
   }, [qid]);
+
+  // WF-6b (A-L6): "Finish and post my voice" returns here with autopost=1 and the held recording: send it once, without a second tap.
+  const autoPosted = useRef(false);
+  useEffect(() => {
+    if (autoPosted.current || params.get("autopost") !== "1") return;
+    if (!signedIn || phase !== "preview" || !take || !info || !qid) return;
+    autoPosted.current = true;
+    window.history.replaceState(window.history.state, "", pathname + (qParam && !questionId ? `?q=${qParam}` : ""));
+    void send();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedIn, phase, take, info, qid]);
 
   // Back from checkout: verify the payment (the server checks it with Flutterwave itself).
   useEffect(() => {
@@ -319,6 +330,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   function close() {
     // release the history trap first, without navigating, so finishing the recording never calls history.back() after the push below
+    const wasTrapped = trapped.current;
     trapped.current = false;
     if (rec.current) {
       discard.current = true;
@@ -326,7 +338,15 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     }
     void clearDraft();
     // lead ruling WF, 6 Nov (A-L6): Close replaces the recorder in history, so Back never returns to it.
-    router.replace(qid ? `/q/${qid}` : "/");
+    // WF-6b: while recording, the page pushed one extra entry (the trap). Step back over it first, then replace the recorder's own entry.
+    const dest = qid ? `/q/${qid}` : "/";
+    if (wasTrapped) {
+      ignorePop.current = true;
+      window.addEventListener("popstate", () => router.replace(dest), { once: true });
+      window.history.back();
+    } else {
+      router.replace(dest);
+    }
   }
 
   // held=1: a recording is held in the browser, so the join steps say "Finish and post my voice" and return here (A-M4).
@@ -455,10 +475,14 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     return (
       <div className="sp-page sp-page--plain">
         <div className="sp-plain">
-          <Banner tone={loadErr instanceof ApiError && loadErr.status === 0 ? "offline" : "danger"} title={gone ? "We could not find this question" : "This did not load"} action={gone ? undefined : "Try again"} onAction={() => setReload((n) => n + 1)}>
-            {gone ? "It may have been removed." : loadErr instanceof ApiError && loadErr.status === 0 ? "Check your connection and try again." : "Something went wrong on our side. Try again in a moment."}
-          </Banner>
-          <Button variant="secondary" href="/">Back to Home</Button>
+          {gone ? <NotFoundState /> : (
+            <>
+              <Banner tone={loadErr instanceof ApiError && loadErr.status === 0 ? "offline" : "danger"} title="This did not load" action="Try again" onAction={() => setReload((n) => n + 1)}>
+                {loadErr instanceof ApiError && loadErr.status === 0 ? "Check your connection and try again." : "Something went wrong on our side. Try again in a moment."}
+              </Banner>
+              <Button variant="secondary" href="/">Back to Home</Button>
+            </>
+          )}
         </div>
       </div>
     );

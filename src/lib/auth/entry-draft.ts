@@ -123,6 +123,11 @@ export function peekHeldPost(): boolean {
   }
 }
 
+/** lead ruling WF-6, 6 Nov (A-L6): the return of "Finish and post my voice" carries autopost=1, so the recorder sends the held voice by itself (one tap, not two). */
+export function withAutopost(path: string): string {
+  return path + (path.includes("?") ? "&" : "?") + "autopost=1";
+}
+
 export function takeReturn(): string | null {
   const p = peekReturn();
   try {

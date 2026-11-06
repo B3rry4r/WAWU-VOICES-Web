@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Rail } from "@/components/shell/ShellSlots";
-import { Avatar, Banner, Button, EmptyState, Icon, NewsTag, Sheet, Skeleton } from "@/components/vx";
+import { Avatar, Banner, Button, EmptyState, Icon, NewsTag, NotFoundState, Sheet, Skeleton } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { flagNewsTag, getNewsPost, listNews, listReplies } from "@/lib/api/news";
 import type { NewsAnswer, NewsReply } from "@/lib/api/news";
@@ -107,7 +107,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
     return (
       <>
         <Link href="/news" className="mb-3 inline-flex items-center gap-1 text-label text-green-text no-underline"><Icon name="arrow-left" size={18} />Back to the Newsroom</Link>
-        <EmptyState icon={load === "missing" ? "radio" : "wifi-off"} title={load === "missing" ? "This post is not available" : "Could not load this post"} action={load === "error" ? "Try again" : undefined} actionIcon="refresh-cw" onAction={fetchAll} />
+        {load === "missing" ? <NotFoundState /> : <EmptyState icon="wifi-off" title="Could not load this post" action="Try again" actionIcon="refresh-cw" onAction={fetchAll} />}
       </>
     );
   }

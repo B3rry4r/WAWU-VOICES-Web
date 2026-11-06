@@ -30,7 +30,7 @@ export { ProfileHeader, UnitsChip, NotificationRow } from './profile';
 export type { ProfileHeaderProps, UnitsChipProps, NotificationRowProps } from './profile';
 export { BuyUnitsSheet, PackPicker, TIERS } from './wallet';
 export type { BuyUnitsSheetProps, PackPickerProps, PackOption, PayMethodOption, UnitTier } from './wallet';
-export { Banner, Toast, EmptyState, Skeleton } from './feedback';
+export { Banner, Toast, EmptyState, NotFoundState, Skeleton } from './feedback';
 export type { BannerProps, ToastProps, EmptyStateProps, SkeletonProps } from './feedback';
 export { Sheet, Dialog } from './overlays';
 export type { SheetProps, DialogProps } from './overlays';

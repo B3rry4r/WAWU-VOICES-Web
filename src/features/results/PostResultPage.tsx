@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Rail } from "@/components/shell/ShellSlots";
 import { useRouter } from "next/navigation";
-import { Banner, Button, EmptyState, Icon, ResultComment, TextField } from "@/components/vx";
+import { Banner, Button, EmptyState, Icon, NotFoundState, ResultComment, TextField } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { createResultPost, getMyHandle, getResultThread, isResultPhotoMime, uploadResultPhoto } from "@/lib/api/results";
 import { EMPTY_FORM, MAX_PHOTO_BYTES, postErrorMessage, serverFieldErrors, toRequest, validate } from "./form";
@@ -27,11 +27,12 @@ export function PostResultPage({ threadId }: { threadId: string }) {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [closed, setClosed] = useState(false);
+  const [missing, setMissing] = useState(false);
   const key = useRef<{ sig: string; id: string } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    getResultThread(threadId).then((t) => setClosed(t.status !== "OPEN")).catch(() => undefined);
+    getResultThread(threadId).then((t) => setClosed(t.status !== "OPEN")).catch((e: unknown) => { if (e instanceof ApiError && e.status === 404) setMissing(true); });
   }, [threadId]);
   useEffect(() => {
     if (signedIn && SERVED.me) getMyHandle().then((m) => m.handle && setHandle(m.handle)).catch(() => undefined);
@@ -98,6 +99,15 @@ export function PostResultPage({ threadId }: { threadId: string }) {
         <AppBar href={back} back="close" backLabel="Close" title="Post the numbers you see" subtitle="Polling unit results" />
         <DesktopBack href={back} label="Back to live results" />
         <EmptyState icon="lock" title="Sign in to post the numbers you see" />
+      </>
+    );
+  }
+  if (missing) {
+    return (
+      <>
+        <AppBar href={back} back="close" backLabel="Close" title="Post the numbers you see" subtitle="Polling unit results" />
+        <DesktopBack href={back} label="Back to live results" />
+        <NotFoundState />
       </>
     );
   }

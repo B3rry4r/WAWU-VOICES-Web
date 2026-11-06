@@ -155,6 +155,6 @@ describe("SpeakScreen", () => {
   it("shows the not-found words for a missing question", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => json({ error: { code: "NOT_FOUND", message: "no" } }, 404)));
     render(<SpeakScreen questionId="nope" />);
-    await waitFor(() => expect(screen.getByText("We could not find this question")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("We could not find that.")).toBeTruthy());
   });
 });

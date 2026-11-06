@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Rail } from "@/components/shell/ShellSlots";
-import { Badge, Button, EmptyState, Icon, ResultComment, Skeleton, Tabs, Toast } from "@/components/vx";
+import { Badge, Button, EmptyState, Icon, NotFoundState, ResultComment, Skeleton, Tabs, Toast } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { getResultThread, listResultPosts } from "@/lib/api/results";
 import type { ResultFilter, ResultPost, ResultThread } from "@/lib/api/results";
@@ -112,7 +112,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
       <>
         <AppBar href="/" backLabel="Back" title="Live results" />
         <DesktopBack href="/" label="Back" />
-        <EmptyState icon={load.missing ? "radio" : "wifi-off"} title={load.missing ? "This thread is not open" : "Could not load the results"} body={load.missing ? undefined : "Check your connection and try again."} action={load.missing ? undefined : "Try again"} actionIcon="refresh-cw" onAction={() => { setLoad({ kind: "loading" }); fetchFirst(filter, false).catch(() => setLoad({ kind: "error", missing: false })); }} />
+        {load.missing ? <NotFoundState /> : <EmptyState icon="wifi-off" title="Could not load the results" body="Check your connection and try again." action="Try again" actionIcon="refresh-cw" onAction={() => { setLoad({ kind: "loading" }); fetchFirst(filter, false).catch(() => setLoad({ kind: "error", missing: false })); }} />}
       </>
     );
   }

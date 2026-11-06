@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShareUnavailable } from "@/features/share/ShareUnavailable";
 import { SharePageView } from "@/features/share/SharePageView";
+import type { ShareExtras } from "@/features/share/SharePageView";
 import { ApiError } from "@/lib/api/client";
-import { getSharePage } from "@/lib/api/reach";
+import { getPollTitle, getProfileVoices, getSharePage } from "@/lib/api/reach";
 import type { SharePage } from "@/lib/api/reach";
 
 export const dynamic = "force-dynamic";
@@ -37,5 +38,12 @@ export default async function Page({ params }: { params: { code: string } }) {
   const page = await load(params.code);
   if (page === "unreachable") return <ShareUnavailable />;
   if (!page) notFound();
-  return <SharePageView page={page} now={Date.now()} />;
+  // lead ruling WF-6, 6 Nov (RX5): the poll's own title on a question page, the person's voicesCount on a profile page.
+  const extras: ShareExtras = {};
+  if (page.poll && page.objectType !== "POLL_RESULT") extras.pollTitle = await getPollTitle(page.poll.pollId);
+  if (page.objectType === "PROFILE") {
+    const handle = /^@(\S+) on VOICES$/.exec(page.topicLine)?.[1];
+    extras.profileVoices = handle ? await getProfileVoices(handle) : null;
+  }
+  return <SharePageView page={page} now={Date.now()} extras={extras} />;
 }

@@ -424,7 +424,7 @@ describe("ProfileSetup", () => {
     await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, png);
     expect(await screen.findByRole("button", { name: "Change photo" })).toBeTruthy();
     await user.click(screen.getAllByRole("button", { name: "Finish and post my voice" })[0]);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/speak"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/speak?autopost=1"));
     const sent = calls.filter((c) => !c.url.includes("handle-check") && !c.url.includes("config/public")).map((c) => `${c.method} ${c.url.replace("/api/v1", "")}`);
     expect(sent).toEqual(["GET /me", "POST /me", "PUT /me/categories", "POST /uploads", "PUT https://spaces.example/put", "POST /uploads/f1/complete", "PATCH /me/profile"]);
     expect(calls.find((c) => c.method === "POST" && c.url.endsWith("/me"))?.body).toEqual({ handle: "ada.okafor", ageConfirmed: true, termsAccepted: true, rulesAccepted: true, countryCode: "NG", languages: ["en", "pcm"], categoryIds: ["c0", "c1", "c2"] });

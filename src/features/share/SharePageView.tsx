@@ -31,12 +31,33 @@ function Eyebrow({ children }: { children: string }) {
 }
 
 /** The no-account page behind a share link (GET /share/{code}). Server rendered; only the player and the two events are client code. */
-export function SharePageView({ page, now }: { page: SharePage; now: number }) {
+/** What the page needs beyond GET /share/{code} (lead ruling WF-6, 6 Nov, RX5): the poll's own title on a question page, and the person's voicesCount on a profile page. null when it could not be read. */
+export interface ShareExtras {
+  pollTitle?: string | null;
+  profileVoices?: number | null;
+}
+
+/** "updated just now" / "updated 5 min ago": the time reads as one phrase (WF-6, B-N1). */
+export function updatedAgo(iso: string, now = Date.now()): string {
+  const a = agoShort(iso, now);
+  return a === "now" ? "updated just now" : `updated ${a} ago`;
+}
+
+export function SharePageView({ page, now, extras }: { page: SharePage; now: number; extras?: ShareExtras }) {
+  const isPoll = page.objectType === "POLL_RESULT";
+  const isProfile = page.objectType === "PROFILE";
+  // A poll's voters are votes, not voices (RX5): the poll page counts votes only; a question page counts its voicesCount; a profile page its person's voicesCount.
+  const voicesN = page.question?.voicesCount ?? page.basedOnVoices;
   const maxArg = Math.max(1, ...page.arguments.map((a) => a.voices));
   const voice = page.featuredVoice;
   const transcript = voice?.clip?.transcript?.status === "READY" ? voice.clip.transcript.text : null;
   const bar = (i: number) => ({ width: `${Math.max(4, Math.round((page.arguments[i].voices * 100) / maxArg))}%` });
-  const stats = [`${fmt(page.basedOnVoices)} ${page.basedOnVoices === 1 ? "voice" : "voices"}`, page.poll ? `${countText(page.poll.totalVotes, "vote")} so far` : null].filter(Boolean).join(" · ");
+  const stats = (isPoll
+    ? [page.poll ? `${countText(page.poll.totalVotes, "vote")} so far` : null]
+    : isProfile
+      ? [extras?.profileVoices != null ? countText(extras.profileVoices, "voice") : null]
+      : [countText(voicesN, "voice"), page.poll ? `${countText(page.poll.totalVotes, "vote")} so far` : null]
+  ).filter(Boolean).join(" · ");
   const hasLean = !!page.leanLine || page.arguments.length > 0;
 
   const cta = (
@@ -62,7 +83,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
             <span className="vx-eyebrow text-green-text">{page.countryAndTheme}</span>
             {page.news ? <div><NewsTag kind={NEWS_KIND[page.news.tag]} /></div> : null}
             <h1 className="m-0 font-display text-display-l dt:text-display-2xl">{page.topicLine}</h1>
-            <p className="m-0 text-body text-ink-2">{stats}</p>
+            {stats ? <p className="m-0 text-body text-ink-2">{stats}</p> : null}
           </div>
 
           {hasLean ? (
@@ -77,7 +98,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
                   </li>
                 ))}
               </ul>
-              <p className="m-0 text-caption text-ink-2">{`Based on ${fmt(page.basedOnVoices)} ${page.basedOnVoices === 1 ? "voice" : "voices"} · updated ${agoShort(page.summaryUpdatedAt, now)} ago · ${page.summaryLabel}`}</p>
+              <p className="m-0 text-caption text-ink-2">{`Based on ${isPoll ? countText(page.basedOnVoices, "vote") : countText(page.basedOnVoices, "voice")} · ${updatedAgo(page.summaryUpdatedAt, now)} · ${page.summaryLabel}`}</p>
             </section>
           ) : null}
 
@@ -103,7 +124,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
           {page.poll ? (
             <section className="flex flex-col gap-2" aria-label="The poll so far">
               <Eyebrow>The poll so far</Eyebrow>
-              <Poll question={page.question?.text ?? page.topicLine} options={leaderFirst(page.poll.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes ?? 0 })))} total={page.poll.totalVotes} state="results" live={false} onExplain={false} />
+              <Poll question={isPoll ? page.topicLine : extras?.pollTitle || "Poll results"} options={leaderFirst(page.poll.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes ?? 0 })))} total={page.poll.totalVotes} state="results" live={false} onExplain={false} />
             </section>
           ) : null}
 

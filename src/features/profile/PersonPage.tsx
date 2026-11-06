@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Banner, Button, EmptyState, Icon, IconButton, Sheet, Tabs } from "@/components/vx";
+import { Banner, Button, EmptyState, Icon, IconButton, NotFoundState, Sheet, Tabs } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { isSignedIn } from "@/lib/api/auth";
 import { blockUser, createReport, getPerson, listPersonReplies, searchPeople, unblockUser, type PublicProfile, type ReportReason } from "@/lib/api/profile";
@@ -130,7 +130,7 @@ export function PersonPage({ segment }: { segment: string }) {
     </header>
   );
 
-  if (who.status === "missing") return <div className="pf-page">{back}<EmptyState icon="user" title="We could not find this person" body="The handle may have changed, or the account is gone." /></div>;
+  if (who.status === "missing") return <div className="pf-page">{back}<NotFoundState body="The handle may have changed, or the account is gone." /></div>;
   if (who.status === "error") return <div className="pf-page">{back}<LoadError error={who.error} onRetry={load} /></div>;
   if (error) return <div className="pf-page">{back}<LoadError error={error} onRetry={load} /></div>;
   if (who.status === "loading" || !data) return <div className="pf-page">{back}<LoadingBlock /></div>;

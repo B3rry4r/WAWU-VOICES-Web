@@ -2,20 +2,29 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Avatar, Banner, Button, EmptyState, FreePosts, Icon, Sheet, Skeleton, Tabs } from "@/components/vx";
+import { Avatar, Banner, Button, EmptyState, FreePosts, NotFoundState, Icon, Sheet, Skeleton, Tabs } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, AnswerSort, Question } from "@/lib/api/talk";
 import { closesIn, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
-import { AppBar, BarButton, Problem, failText, useSignedIn } from "./lib";
+import { AppBar, BarButton, Problem, failText, unitsText, useSignedIn } from "./lib";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 import { TalkRail } from "./TalkRail";
 import "./talk.css";
 
 const short = (n: number) => (n >= 1e4 ? `${Math.round(n / 100) / 10}K` : n.toLocaleString("en-NG"));
 const SORTS = [{ id: "TOP", label: "Top" }, { id: "NEW", label: "New" }, { id: "DEBATED", label: "Debated" }];
+
+/** What the person has to post with (lead ruling WF-6, 6 Nov, B-N4): free posts while there are any; with none left, their units (or "Out of free posts"). Never "a free post" when there is none. */
+export function postingLine(seconds: number, allow: Allowances | null): string {
+  const tail = "Reading and listening are always free.";
+  if (!allow || allow.freePostsRemaining > 0) return `You have ${seconds} seconds on a free post. ${tail}`;
+  const cost = allow.costs.voicePostMilli;
+  if (allow.balanceMilli >= cost) return `You have ${unitsText(allow.balanceMilli)}. A voice post of up to ${seconds} seconds uses ${unitsText(cost)}. ${tail}`;
+  return `Out of free posts. Get Voice Units to post. ${tail}`;
+}
 
 export function QuestionScreen({ id }: { id: string }) {
   const router = useRouter();
@@ -62,7 +71,7 @@ export function QuestionScreen({ id }: { id: string }) {
         
         <AppBar title="Question" back="/" />
         <div className="mt-4">
-          {gone ? <EmptyState icon="message-square" title="We could not find this question" body="It may have been removed, or the link is wrong." action="Back to Home" onAction={() => router.push("/")} /> : <Problem error={q.error} onRetry={q.retry} />}
+          {gone ? <NotFoundState /> : <Problem error={q.error} onRetry={q.retry} />}
         </div>
       </>
     );
@@ -122,7 +131,7 @@ export function QuestionScreen({ id }: { id: string }) {
               <Button size="l" icon="mic" block href="/speak">Speak</Button>
               <Button size="l" variant="secondary" block href={writeHref}>Write instead</Button>
             </div>
-            {seconds ? <p className="m-0 text-caption dt:hidden text-[var(--ink-2)]">{`You have ${seconds} seconds on a free post. Reading and listening are always free.`}</p> : null}
+            {seconds ? <p className="m-0 text-caption dt:hidden text-[var(--ink-2)]">{postingLine(seconds, allow)}</p> : null}
           </>
         ) : (
           <Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner>

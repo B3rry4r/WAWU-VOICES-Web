@@ -20,17 +20,23 @@ const kindOf = (name: string): ReactionKind => name.toUpperCase().replace(/[ -]/
 const nameOf = (kind: string | null): string | undefined => REACTIONS.find((r) => kindOf(r.name) === kind)?.name;
 
 /** A small message at the bottom of the screen, gone after a few seconds. */
-export function useToast(): [ReactNode, (text: string, tone?: "success" | "info" | "danger") => void] {
-  const [t, setT] = useState<{ text: string; tone: "success" | "info" | "danger"; n: number } | null>(null);
-  const push = useCallback((text: string, tone: "success" | "info" | "danger" = "info") => setT({ text, tone, n: Date.now() }), []);
+/** A toast may carry one action (lead ruling WF-6, 6 Nov, A-L6: block shows "Undo" for a few seconds). */
+export interface ToastAction { label: string; run: () => void }
+export type PushToast = (text: string, tone?: "success" | "info" | "danger", action?: ToastAction) => void;
+
+export function useToast(): [ReactNode, PushToast] {
+  const [t, setT] = useState<{ text: string; tone: "success" | "info" | "danger"; n: number; action?: ToastAction } | null>(null);
+  const push = useCallback<PushToast>((text, tone = "info", action) => setT({ text, tone, n: Date.now(), action }), []);
   useEffect(() => {
     if (!t) return undefined;
-    const h = setTimeout(() => setT(null), 4500);
+    const h = setTimeout(() => setT(null), t.action ? 6000 : 4500);
     return () => clearTimeout(h);
   }, [t]);
   const node = t ? (
     <div className="pointer-events-none fixed inset-x-4 bottom-24 z-[var(--z-toast)] mx-auto flex max-w-[420px] justify-center">
-      <Toast tone={t.tone}>{t.text}</Toast>
+      <span className={t.action ? "pointer-events-auto" : undefined}>
+        <Toast tone={t.tone} action={t.action?.label} onAction={t.action ? () => { const a = t.action!; setT(null); a.run(); } : undefined}>{t.text}</Toast>
+      </span>
     </div>
   ) : null;
   return [node, push];
@@ -48,7 +54,7 @@ interface Props {
   signedIn: boolean;
   freeReactions?: number;
   onAllowance?: (a: Partial<Allowances>) => void;
-  push: (t: string, tone?: "success" | "info" | "danger") => void;
+  push: PushToast;
   /** Where the replies live. Omit on the thread page itself. */
   threadHref?: string;
   unfolded?: boolean;
@@ -189,7 +195,11 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
                 onClick={async () => {
                   setMore(false);
                   if (!signedIn) return push("Sign in to block someone.", "info");
-                  try { await api.blockUser(a.author!.id); push(`You blocked @${handle}.`, "success"); } catch (e) { push(failText(e), "danger"); }
+                  try {
+                    const uid = a.author!.id;
+                    await api.blockUser(uid);
+                    push(`You blocked @${handle}.`, "success", { label: "Undo", run: () => { api.unblockUser(uid).then(() => push(`@${handle} is unblocked.`, "info"), (e) => push(failText(e), "danger")); } });
+                  } catch (e) { push(failText(e), "danger"); }
                 }}
               >
                 {`Block @${handle}`}

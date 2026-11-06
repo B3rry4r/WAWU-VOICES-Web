@@ -11,6 +11,7 @@ import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
 import { Answers, Failed, Loading, NothingYet, Section, TextLink, Tiles, WeekCard } from "./parts";
 import { useFinishProfile } from "@/features/entry/ui";
+import { SuspendedBanner } from "@/features/profile/SuspendedBanner";
 import { trendItems } from "./trend";
 import { useLoad } from "./useLoad";
 
@@ -20,6 +21,7 @@ interface Data {
   trending: ReturnType<typeof trendItems>;
   ad: AdPlacement | null;
   firstName: string | null;
+  suspended: { status: string; until: string | null } | null;
 }
 
 /** Home: signed in greets by name and shows the flash poll; a guest reads the same feed with the "Listening is free" line (HomeGuest board). */
@@ -29,18 +31,24 @@ export function HomeScreen() {
   useEffect(() => setSignedIn(isSignedIn()), []);
   useFinishProfile();
   const load = useLoad<Data>(async () => {
-    const [home, flash, trending, ad, firstName] = await Promise.all([
+    const [home, flash, trending, ad, who] = await Promise.all([
       getHome(),
       signedIn ? getFlashPolls().then((r) => r.items[0] ?? null, () => null) : Promise.resolve(null),
       getTrendingQuestions(3).then((r) => trendItems(r.items), () => []),
       getAdPlacement().catch(() => null),
-      signedIn ? getMe().then((m) => m.profile?.displayName?.trim().split(/\s+/)[0] ?? null, () => null) : Promise.resolve(null),
+      signedIn
+        ? getMe().then(
+            // TODO(WF-6a): Me.suspendedUntil is added by WF-6a; the banner reads the notice's own end day until then.
+            (m) => ({ firstName: m.profile?.displayName?.trim().split(/\s+/)[0] ?? null, suspended: m.status === "SUSPENDED" ? { status: m.status, until: (m as { suspendedUntil?: string | null }).suspendedUntil ?? null } : null }),
+            () => ({ firstName: null, suspended: null }),
+          )
+        : Promise.resolve({ firstName: null, suspended: null }),
     ]);
-    return { home, flash, trending, ad, firstName };
+    return { home, flash, trending, ad, firstName: who.firstName, suspended: who.suspended };
   }, [signedIn]);
   if (signedIn === null || load.state === "loading") return <Loading />;
   if (load.state === "error") return <Failed load={load} />;
-  const { home: h, flash, trending, ad, firstName } = load.data;
+  const { home: h, flash, trending, ad, firstName, suspended } = load.data;
   const q = h.dailyQuestion;
   const go = (path: string) => () => router.push(path);
   const talk = q ? go(`/q/${q.id}`) : undefined;
@@ -51,6 +59,7 @@ export function HomeScreen() {
         <h1 className="order-1 m-0 mt-1 font-display text-display-l dt:text-display-xl">
           {!signedIn ? "What is Nigeria saying today?" : firstName ? `Hi ${firstName}, what is your take today?` : "What is your take today?"}
         </h1>
+        {suspended ? <div className="order-1"><SuspendedBanner status={suspended.status} until={suspended.until} /></div> : null}
         {q ? (
           <div className="order-2">
             <QuestionHero

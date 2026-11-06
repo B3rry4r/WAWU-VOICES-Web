@@ -49,8 +49,9 @@ function page(path: string, o: { cursor?: string | null; limit?: number; extra?:
 
 // ---- weekly report
 
-export function getLatestWeeklyReport(): Promise<WeeklyReport> {
-  return apiFetch<WeeklyReport>("/weekly-reports/latest", { authed: true });
+/** null when no report is published yet (the API answers 200 with null). */
+export function getLatestWeeklyReport(): Promise<WeeklyReport | null> {
+  return apiFetch<WeeklyReport | null>("/weekly-reports/latest", { authed: true });
 }
 
 export function getWeeklyReport(reportId: string): Promise<WeeklyReport> {
@@ -112,4 +113,24 @@ export type PlayUrl = components["schemas"]["PlayUrl"];
 /** A short-lived signed URL for one clip. Guests may listen. */
 export function getPlayUrl(clipId: string): Promise<PlayUrl> {
   return apiFetch<PlayUrl>(`/voice-clips/${encodeURIComponent(clipId)}/play`, { authed: true });
+}
+
+/** Server side only: the poll's own title (a question's share page shows the week's poll under it). null when it cannot be read. */
+export async function getPollTitle(pollId: string): Promise<string | null> {
+  try {
+    const p = await apiFetch<{ title?: string }>(`/polls/${encodeURIComponent(pollId)}`, { baseUrl: serverApiOrigin(), cache: "no-store" });
+    return p?.title?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Server side only: a person's voicesCount for their profile share page. null when it cannot be read. */
+export async function getProfileVoices(handle: string): Promise<number | null> {
+  try {
+    const p = await apiFetch<{ profile?: { voicesCount?: number } }>(`/people/by-handle/${encodeURIComponent(handle)}`, { baseUrl: serverApiOrigin(), cache: "no-store" });
+    return typeof p?.profile?.voicesCount === "number" ? p.profile.voicesCount : null;
+  } catch {
+    return null;
+  }
 }

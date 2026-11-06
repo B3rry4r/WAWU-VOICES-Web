@@ -98,8 +98,8 @@ describe("RW2: Appeal on a notice", () => {
     await user.click(await screen.findByRole("button", { name: "Appeal" }));
     const box = await screen.findByLabelText("Tell us why we got it wrong");
     expect((box as HTMLTextAreaElement).maxLength).toBe(500);
-    await user.click(screen.getByRole("button", { name: "Send" }));
-    expect(await screen.findByText("Tell us why you are appealing.")).toBeTruthy();
+    // WF-6b (A-L6): Send is disabled while the box is empty, so there is nothing to send and no error to show
+    expect((screen.getByRole("button", { name: "Send" }) as HTMLButtonElement).disabled).toBe(true);
     expect(calls.some((c) => c.url.endsWith("/appeals"))).toBe(false);
     await user.type(box, "I was angry about prices, not about people.");
     await user.click(screen.getByRole("button", { name: "Send" }));

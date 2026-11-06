@@ -21,10 +21,7 @@ export function AppealSheet({ target, onSent, onClose }: { target: { targetType:
 
   async function send() {
     if (sending.current) return;
-    if (!note.trim()) {
-      setMsg("Tell us why you are appealing.");
-      return;
-    }
+    if (!note.trim()) return; // Send is disabled while the box is empty (lead ruling WF-6, 6 Nov, A-L6)
     sending.current = true;
     setBusy(true);
     setMsg(null);
@@ -55,8 +52,8 @@ export function AppealSheet({ target, onSent, onClose }: { target: { targetType:
         </div>
       ) : (
         <div className="grid gap-3 pb-2">
-          <TextField label="Tell us why we got it wrong" multiline maxLength={APPEAL_MAX} placeholder="What did we miss?" value={note} onChange={setNote} error={msg ?? undefined} />
-          <Button size="l" block loading={busy} onClick={() => void send()}>Send</Button>
+          <TextField label="Tell us why we got it wrong" multiline maxLength={APPEAL_MAX} placeholder="What did we miss?" value={note} onChange={(v) => { setNote(v); setMsg(null); }} error={msg ?? undefined} />
+          <Button size="l" block loading={busy} disabled={!note.trim()} onClick={() => void send()}>Send</Button>
         </div>
       )}
     </Sheet>

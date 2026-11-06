@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { signInHref } from "@/lib/auth/entry-draft";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import { Button, EmptyState, NotificationRow, Skeleton, Tabs } from "@/components/vx";
 import type { NotificationRowProps } from "@/components/vx";
@@ -100,6 +100,8 @@ export function NotificationsPage() {
   const [tick, setTick] = useState(0);
   const [appealing, setAppealing] = useState<Notification | null>(null);
   const [sent, setSent] = useState<string[]>([]);
+  // The sheet says "Appeal sent" itself; the notice row behind it updates only once the sheet has closed (WF-6b), so the words show once.
+  const justSent = useRef<string | null>(null);
 
   useEffect(() => {
     if (signedIn !== true) return;
@@ -200,9 +202,9 @@ export function NotificationsPage() {
                 <div className={`px-4 pb-3 pl-[calc(var(--space-4)+40px+var(--space-3))] ${n.read ? "" : "bg-[var(--mint)]"}`}>
                   {n.appeal.state === "SENT" || sent.includes(n.id) ? (
                     <p className="m-0 text-caption text-[var(--ink-2)]" role="status">{APPEAL_SENT}</p>
-                  ) : (
+                  ) : n.appeal.state === "AVAILABLE" ? (
                     <button type="button" className="vx-link" onClick={() => setAppealing(n)}>Appeal</button>
-                  )}
+                  ) : null /* lead ruling WF-6, 6 Nov (RX2): any other state (the earlier notice of an accepted appeal) offers no Appeal. TODO(WF-6a): confirm the field WF-6a sends for "resolved". */}
                 </div>
               ) : null}
             </div>
@@ -230,7 +232,7 @@ export function NotificationsPage() {
       )}
       {note ? <p className="m-0 text-caption text-danger" role="alert">{note}</p> : null}
       {appealing && appealing.appeal ? (
-        <AppealSheet target={{ targetType: appealing.appeal.targetType, targetId: appealing.appeal.targetId }} onSent={() => setSent((old) => old.concat(appealing.id))} onClose={() => setAppealing(null)} />
+        <AppealSheet target={{ targetType: appealing.appeal.targetType, targetId: appealing.appeal.targetId }} onSent={() => { justSent.current = appealing.id; }} onClose={() => { const id = justSent.current; justSent.current = null; if (id) setSent((old) => old.concat(id)); setAppealing(null); }} />
       ) : null}
       {next && load === "ready" ? (
         <div className="flex justify-center"><Button variant="secondary" loading={more} onClick={() => void loadMore()}>Show older</Button></div>

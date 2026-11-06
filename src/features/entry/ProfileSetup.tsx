@@ -7,7 +7,7 @@ import { isAccountBlocked } from "@/lib/api/auth";
 import { getPublicConfig } from "@/lib/api/feed";
 import { checkHandle, createMe, getMe, PHOTO_MAX_BYTES, PHOTO_MIMES, photoUploadWords, setCategories, updateProfile, uploadAvatar } from "@/lib/api/me";
 import { handleFromName, tokenName } from "@/lib/auth/claims";
-import { clearDraft, peekHeldPost, readDraft, takeReturn, type JoinDraft } from "@/lib/auth/entry-draft";
+import { clearDraft, peekHeldPost, readDraft, takeReturn, withAutopost, type JoinDraft } from "@/lib/auth/entry-draft";
 import { BottomBar, DeskCard, DeskHeader, EntryFrame, EntryScroll, ErrorBanner, StepHeader, refusalWords, useNeedSession } from "./ui";
 
 const HANDLE_RE = /^[a-z0-9._]{3,20}$/;
@@ -131,7 +131,9 @@ export function ProfileSetup() {
       return;
     }
     clearDraft();
-    router.replace(takeReturn() ?? "/");
+    const back = takeReturn();
+    // "Finish and post my voice" posts the held voice when the recorder opens (WF-6b, A-L6)
+    router.replace(back ? (posting && back.split("?")[0].endsWith("/speak") ? withAutopost(back) : back) : "/");
   };
 
   const hint =
