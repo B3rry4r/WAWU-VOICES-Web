@@ -6,6 +6,7 @@
 
 :root {
   /* next/font supplies the real family names through these variables */
+  --nf-archivo: var(--nf-archivo-a), var(--nf-archivo-b); /* layout.tsx: latin file first, latin-ext (naira sign) second */
   --font-display: var(--nf-bagel), "Bagel Fat One", Archivo, sans-serif;
   --font-body: var(--nf-archivo), Archivo, "Helvetica Neue", Arial, sans-serif;
 }
@@ -16,9 +17,33 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 24px;
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-line);
+  font-weight: var(--t-body-weight);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
-a { color: inherit; }
+
+/* Wrap: no one-word last lines (type audit B2) */
+h1, h2, h3 { text-wrap: balance; }
+p, li { text-wrap: pretty; }
+/* Measure: running paragraphs stop at 62 characters (audit B1). Zero specificity, so any component rule or max-w class wins. */
+:where(p) { max-width: 62ch; }
+
+/* Links (audit L1 to L6). Zero specificity: a component that sets its own colour keeps it. Anchors that are nav items,
+   tabs, cards or buttons add .a-plain and keep their own look. */
+:where(a:not(.a-plain)) { color: var(--green-text); }
+:where(a:not(.a-plain):hover) { color: var(--ink); }
+.a-plain, .a-plain:hover { color: inherit; text-decoration: none; }
+/* .link: inline link inside a sentence. .link-more: standalone link ("See all") with a trailing chevron. */
+@layer components {
+.link { color: var(--green-text); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link:hover { color: var(--ink); }
+.link-more { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--touch-min); color: var(--green-text); font-weight: 600; text-decoration: none; cursor: pointer; }
+.link-more::after { content: ""; flex: none; width: 1.1em; height: 1.1em; background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat; }
+.link-more:hover { color: var(--ink); }
+}
+/* One focus ring everywhere: the token shadow, never an inset variant */
 :focus-visible { outline: 2px solid transparent; box-shadow: var(--shadow-focus); }

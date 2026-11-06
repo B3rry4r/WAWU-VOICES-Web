@@ -67,7 +67,7 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
   if (total === 0) return <div className="mt-6"><NothingYet title={`Nothing found for "${q}"`} body="Check the spelling or try a shorter word." /></div>;
   return (
     <div className="flex flex-col gap-[18px]">
-      <h1 className="m-0 hidden font-display text-[32px] font-normal leading-9 dt:block">{`Results for "${q}"`}</h1>
+      <h1 className="m-0 hidden font-display text-display-xl dt:block">{`Results for "${q}"`}</h1>
       <Tabs
         label="Search results"
         value={tab}
@@ -84,8 +84,8 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
           <div className="vx-notes">
             {r.questions.map((x) => (
               <Link key={x.id} href={`/q/${x.id}`} className="vx-note vx-focus flex-col gap-[6px] dt:px-5 dt:py-4">
-                <span className="font-display text-[18px] leading-[23px] dt:text-[20px] dt:leading-[25px]">{x.text}</span>
-                <span className="text-[13px] font-medium leading-[18px] text-[var(--ink-2)]">{questionMeta(x)}</span>
+                <span className="font-display text-display-s">{x.text}</span>
+                <span className="text-caption text-[var(--ink-2)]">{questionMeta(x)}</span>
               </Link>
             ))}
           </div>
@@ -104,8 +104,8 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
                 <>
                   <Avatar name={p.displayName ?? p.handle} />
                   <span className="flex flex-1 flex-col">
-                    <b className="text-[15px] font-bold leading-5">{`@${p.handle}`}</b>
-                    <span className="text-[13px] font-medium leading-[18px] text-[var(--ink-2)]">{[p.state, voicesShort(p.voiceCount)].filter(Boolean).join(" · ")}</span>
+                    <b className="text-title">{`@${p.handle}`}</b>
+                    <span className="text-caption text-[var(--ink-2)]">{[p.state, voicesShort(p.voiceCount)].filter(Boolean).join(" · ")}</span>
                   </span>
                   <Icon name="chevron-right" size={20} />
                 </>

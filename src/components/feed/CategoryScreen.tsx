@@ -33,8 +33,8 @@ function Row({ q, today, tab }: { q: Question; today?: boolean; tab: Tab }) {
     <Link href={`/q/${q.id}`} className="flex items-center gap-3 border-b border-[var(--line)] p-4 text-[var(--ink)] no-underline last:border-b-0">
       <span className="flex flex-1 flex-col gap-[6px]">
         {today ? <span className="flex gap-[6px]"><Badge tone="green" icon="mic">Today&apos;s question</Badge></span> : null}
-        <span className="font-display text-[18px] leading-[23px]">{q.text}</span>
-        <span className="text-[13px] font-medium leading-[18px] text-[var(--ink-2)]">{meta}</span>
+        <span className="font-display text-display-s">{q.text}</span>
+        <span className="text-caption text-[var(--ink-2)]">{meta}</span>
       </span>
       <Icon name="chevron-right" size={20} />
     </Link>
@@ -99,9 +99,9 @@ export function CategoryScreen({ slug }: { slug: string }) {
     <>
       <PhoneBar>
         <IconButton icon="arrow-left" label="Back to Discover" onClick={() => router.push("/discover")} />
-        <span className="flex-1 text-[16px] font-bold leading-5 text-[var(--ink-2)]">Discover</span>
+        <span className="flex-1 text-bar text-[var(--ink-2)]">Discover</span>
       </PhoneBar>
-      <Link href="/discover" className="hidden min-h-[44px] items-center gap-[6px] self-start text-[15px] font-semibold text-[var(--ink-2)] no-underline dt:inline-flex" aria-label="Back to Discover">
+      <Link href="/discover" className="hidden min-h-[44px] items-center gap-[6px] self-start text-label text-[var(--ink-2)] no-underline dt:inline-flex" aria-label="Back to Discover">
         <Icon name="arrow-left" size={18} />Discover
       </Link>
       <div className="mt-1 flex flex-col gap-5 dt:gap-6">
@@ -112,9 +112,9 @@ export function CategoryScreen({ slug }: { slug: string }) {
           </div>
           <span className="hidden h-16 w-16 flex-none items-center justify-center rounded-full bg-[var(--forest)] text-[var(--sun)] dt:order-1 dt:flex"><Icon name={look.icon} size={28} /></span>
           <div className="flex flex-col gap-2 dt:order-2 dt:flex-1 dt:basis-[280px]">
-            <h1 className="m-0 font-display text-[28px] font-normal leading-8 dt:text-[36px] dt:leading-10 dt:tracking-[-0.01em]">{label}</h1>
-            {d.category.blurb ? <p className="m-0 text-[16px] font-medium leading-6">{d.category.blurb}</p> : null}
-            <p className="m-0 text-[13px] font-bold leading-[18px]">{`${d.category.questionCount} ${d.category.questionCount === 1 ? "question" : "questions"} · ${voices(d.category.voicesThisWeek)} this week`}</p>
+            <h1 className="m-0 font-display text-display-l dt:text-display-xl">{label}</h1>
+            {d.category.blurb ? <p className="m-0 text-body">{d.category.blurb}</p> : null}
+            <p className="m-0 text-caption">{`${d.category.questionCount} ${d.category.questionCount === 1 ? "question" : "questions"} · ${voices(d.category.voicesThisWeek)} this week`}</p>
           </div>
         </section>
 

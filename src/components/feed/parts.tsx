@@ -77,7 +77,7 @@ export function Section({ title, aside, className = "", children }: { title: Rea
 }
 
 export function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return <Link href={href} className="inline-flex min-h-[44px] items-center text-[14px] font-semibold no-underline">{children}</Link>;
+  return <Link href={href} className="link-more text-label">{children}</Link>;
 }
 
 export function NothingYet({ title, body }: { title: string; body: string }) {

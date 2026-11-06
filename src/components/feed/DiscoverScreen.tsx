@@ -29,8 +29,8 @@ function CategoryTile({ slug, name, voices, wide }: { slug: string; name: string
     >
       <Icon name={look.icon} />
       <span className="flex flex-col gap-[2px]">
-        <span className="font-display text-[18px] leading-[22px]">{look.label}</span>
-        <span className="text-[13px] font-semibold leading-[18px]">{`${shortCount(voices)} ${voices === 1 ? "voice" : "voices"}`}</span>
+        <span className="font-display text-display-s">{look.label}</span>
+        <span className="text-caption">{`${shortCount(voices)} ${voices === 1 ? "voice" : "voices"}`}</span>
       </span>
     </Link>
   );
@@ -66,11 +66,11 @@ export function DiscoverScreen() {
   return (
     <>
       <PhoneBar>
-        <h1 className="m-0 mt-1 flex-1 pl-2 font-display text-[30px] font-normal leading-[34px]">Discover</h1>
+        <h1 className="m-0 mt-1 flex-1 pl-2 font-display text-display-l">Discover</h1>
       </PhoneBar>
       <div className="mt-1 hidden flex-col gap-1 dt:flex">
-        <h1 className="m-0 font-display text-[36px] font-normal leading-10 tracking-[-0.01em]">Discover</h1>
-        <p className="m-0 text-[16px] leading-6 text-[var(--ink-2)]">Every conversation on VOICES, by topic, by tag and by what is moving now.</p>
+        <h1 className="m-0 font-display text-display-xl">Discover</h1>
+        <p className="m-0 text-body text-[var(--ink-2)]">Every conversation on VOICES, by topic, by tag and by what is moving now.</p>
       </div>
       <div className="flex flex-col gap-5 dt:gap-6 dt:pt-6">
         <div className="dt:hidden"><SearchBox /></div>
@@ -80,7 +80,7 @@ export function DiscoverScreen() {
           title="Categories"
           aside={
             !all && rest.length ? (
-              <button type="button" className="min-h-[32px] border-0 bg-transparent p-0 text-[14px] font-semibold text-[var(--green-text)]" onClick={() => setAll(true)}>See all</button>
+              <button type="button" className="link-more border-0 bg-transparent p-0 text-label" onClick={() => setAll(true)}>See all</button>
             ) : undefined
           }
         >
@@ -101,19 +101,19 @@ export function DiscoverScreen() {
         <section aria-labelledby="news-h" className="order-4 flex flex-col gap-3 rounded-[var(--radius-l)] bg-[var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--line)] dt:order-5 dt:flex-row dt:flex-wrap dt:items-center dt:gap-4 dt:p-5">
           <div className="flex items-center gap-3 dt:flex-1 dt:basis-[220px]">
             <div className="flex flex-1 flex-col gap-[2px]">
-              <h2 id="news-h" className="m-0 font-display text-[22px] font-normal leading-[27px]">Newsroom</h2>
-              <p className="m-0 text-[14px] font-medium leading-5 text-[var(--ink-2)]">
+              <h2 id="news-h" className="m-0 font-display text-display-m">Newsroom</h2>
+              <p className="m-0 text-caption text-[var(--ink-2)]">
                 News posts, sorted by their tag.<span className="hidden dt:inline"> Follow the ones you trust.</span>
               </p>
             </div>
-            <Link href="/news" className="inline-flex min-h-[44px] items-center gap-1 text-[15px] font-semibold text-[var(--green-text)] no-underline dt:hidden">Open<Icon name="chevron-right" size={18} /></Link>
+            <Link href="/news" className="link-more text-label dt:hidden">Open</Link>
           </div>
           <div className="flex flex-wrap gap-2">
             {tags.map((t) => (
               <Link key={t.tag} href={`/news?tag=${t.tag}`} className="vx-chip no-underline"><Icon name={TAG_ICON[t.tag]} size={16} strokeWidth={2.25} />{t.label}<span className="vx-chip__count">{shortCount(t.count)}</span></Link>
             ))}
           </div>
-          <Link href="/news" className="hidden min-h-[44px] items-center gap-1 text-[15px] font-semibold text-[var(--green-text)] no-underline dt:inline-flex">Open the Newsroom<Icon name="chevron-right" size={18} /></Link>
+          <Link href="/news" className="link-more hidden text-label dt:inline-flex">Open the Newsroom</Link>
         </section>
 
         <div className="order-5 dt:order-3">{week}</div>

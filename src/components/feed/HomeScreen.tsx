@@ -48,7 +48,7 @@ export function HomeScreen() {
   return (
     <>
       <div className="flex flex-col gap-4">
-        <h1 className="order-1 m-0 mt-1 font-display text-[28px] font-normal leading-8 dt:text-[32px] dt:leading-9">
+        <h1 className="order-1 m-0 mt-1 font-display text-display-l dt:text-display-xl">
           {!signedIn ? "What is Nigeria saying today?" : (firstName ?? h.greetingName) ? `Hi ${firstName ?? h.greetingName}, what is your take today?` : "What is your take today?"}
         </h1>
         {q ? (

@@ -1,0 +1,49 @@
+/* VOICES type scale: the design system's 16 text styles plus one named addition, `bar` (the phone app-bar title).
+   One custom property set and one class per style. Source of truth: the design system tokens (type.groups).
+   Kept out of tokens.css on purpose (the colour pass edits that file).
+   Display and numeral styles (display-*, num-*) set the display face; every other style sets the body face.
+   In Tailwind the same names are fontSize keys (text-label, text-caption, ...): they set size, line height, weight
+   and tracking, not the family, so pair text-display-* and text-num-* with font-display. */
+:root {
+  --t-display-2xl-size: 48px; --t-display-2xl-line: 52px; --t-display-2xl-weight: 400; --t-display-2xl-tracking: -0.01em;
+  --t-display-xl-size: 36px; --t-display-xl-line: 40px; --t-display-xl-weight: 400; --t-display-xl-tracking: -0.01em;
+  --t-display-l-size: 28px; --t-display-l-line: 32px; --t-display-l-weight: 400; --t-display-l-tracking: 0em;
+  --t-display-m-size: 22px; --t-display-m-line: 27px; --t-display-m-weight: 400; --t-display-m-tracking: 0em;
+  --t-display-s-size: 18px; --t-display-s-line: 23px; --t-display-s-weight: 400; --t-display-s-tracking: 0em;
+  --t-num-xl-size: 64px; --t-num-xl-line: 64px; --t-num-xl-weight: 400; --t-num-xl-tracking: -0.02em;
+  --t-num-l-size: 32px; --t-num-l-line: 34px; --t-num-l-weight: 400; --t-num-l-tracking: 0em;
+  --t-num-m-size: 22px; --t-num-m-line: 24px; --t-num-m-weight: 400; --t-num-m-tracking: 0em;
+  --t-title-size: 18px; --t-title-line: 24px; --t-title-weight: 700; --t-title-tracking: 0em;
+  --t-body-l-size: 18px; --t-body-l-line: 27px; --t-body-l-weight: 400; --t-body-l-tracking: 0em;
+  --t-body-size: 16px; --t-body-line: 24px; --t-body-weight: 400; --t-body-tracking: 0em;
+  --t-body-strong-size: 16px; --t-body-strong-line: 24px; --t-body-strong-weight: 600; --t-body-strong-tracking: 0em;
+  --t-label-size: 15px; --t-label-line: 20px; --t-label-weight: 600; --t-label-tracking: 0em;
+  --t-caption-size: 13px; --t-caption-line: 18px; --t-caption-weight: 500; --t-caption-tracking: 0em;
+  --t-eyebrow-size: 12px; --t-eyebrow-line: 16px; --t-eyebrow-weight: 700; --t-eyebrow-tracking: 0.08em;
+  --t-count-size: 14px; --t-count-line: 18px; --t-count-weight: 600; --t-count-tracking: 0em;
+  --t-bar-size: 16px; --t-bar-line: 20px; --t-bar-weight: 700; --t-bar-tracking: 0em;
+}
+
+.t-display-2xl { font-family: var(--font-display); font-size: var(--t-display-2xl-size); line-height: var(--t-display-2xl-line); font-weight: var(--t-display-2xl-weight); letter-spacing: var(--t-display-2xl-tracking); }
+.t-display-xl { font-family: var(--font-display); font-size: var(--t-display-xl-size); line-height: var(--t-display-xl-line); font-weight: var(--t-display-xl-weight); letter-spacing: var(--t-display-xl-tracking); }
+.t-display-l { font-family: var(--font-display); font-size: var(--t-display-l-size); line-height: var(--t-display-l-line); font-weight: var(--t-display-l-weight); letter-spacing: var(--t-display-l-tracking); }
+.t-display-m { font-family: var(--font-display); font-size: var(--t-display-m-size); line-height: var(--t-display-m-line); font-weight: var(--t-display-m-weight); letter-spacing: var(--t-display-m-tracking); }
+.t-display-s { font-family: var(--font-display); font-size: var(--t-display-s-size); line-height: var(--t-display-s-line); font-weight: var(--t-display-s-weight); letter-spacing: var(--t-display-s-tracking); }
+.t-num-xl { font-family: var(--font-display); font-size: var(--t-num-xl-size); line-height: var(--t-num-xl-line); font-weight: var(--t-num-xl-weight); letter-spacing: var(--t-num-xl-tracking); font-variant-numeric: tabular-nums; }
+.t-num-l { font-family: var(--font-display); font-size: var(--t-num-l-size); line-height: var(--t-num-l-line); font-weight: var(--t-num-l-weight); letter-spacing: var(--t-num-l-tracking); font-variant-numeric: tabular-nums; }
+.t-num-m { font-family: var(--font-display); font-size: var(--t-num-m-size); line-height: var(--t-num-m-line); font-weight: var(--t-num-m-weight); letter-spacing: var(--t-num-m-tracking); font-variant-numeric: tabular-nums; }
+.t-title { font-family: var(--font-body); font-size: var(--t-title-size); line-height: var(--t-title-line); font-weight: var(--t-title-weight); letter-spacing: var(--t-title-tracking); }
+.t-body-l { font-family: var(--font-body); font-size: var(--t-body-l-size); line-height: var(--t-body-l-line); font-weight: var(--t-body-l-weight); letter-spacing: var(--t-body-l-tracking); }
+.t-body { font-family: var(--font-body); font-size: var(--t-body-size); line-height: var(--t-body-line); font-weight: var(--t-body-weight); letter-spacing: var(--t-body-tracking); }
+.t-body-strong { font-family: var(--font-body); font-size: var(--t-body-strong-size); line-height: var(--t-body-strong-line); font-weight: var(--t-body-strong-weight); letter-spacing: var(--t-body-strong-tracking); }
+.t-label { font-family: var(--font-body); font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--t-label-weight); letter-spacing: var(--t-label-tracking); }
+.t-caption { font-family: var(--font-body); font-size: var(--t-caption-size); line-height: var(--t-caption-line); font-weight: var(--t-caption-weight); letter-spacing: var(--t-caption-tracking); }
+.t-eyebrow { font-family: var(--font-body); font-size: var(--t-eyebrow-size); line-height: var(--t-eyebrow-line); font-weight: var(--t-eyebrow-weight); letter-spacing: var(--t-eyebrow-tracking); text-transform: uppercase; }
+.t-count { font-family: var(--font-body); font-size: var(--t-count-size); line-height: var(--t-count-line); font-weight: var(--t-count-weight); letter-spacing: var(--t-count-tracking); font-variant-numeric: tabular-nums; }
+.t-bar { font-family: var(--font-body); font-size: var(--t-bar-size); line-height: var(--t-bar-line); font-weight: var(--t-bar-weight); letter-spacing: var(--t-bar-tracking); }
+
+/* The app-bar title: `bar` on the phone, `title` from 1024 px. One class for every bar. */
+.t-bar-title { font-family: var(--font-body); font-size: var(--t-bar-size); line-height: var(--t-bar-line); font-weight: var(--t-bar-weight); letter-spacing: var(--t-bar-tracking); }
+@media (min-width: 1024px) {
+  .t-bar-title { font-size: var(--t-title-size); line-height: var(--t-title-line); font-weight: var(--t-title-weight); letter-spacing: var(--t-title-tracking); }
+}
