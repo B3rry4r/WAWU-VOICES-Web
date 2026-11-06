@@ -16,7 +16,7 @@ export interface ListenReporter {
 }
 
 export function createListenReporter(
-  send: (p: ListenProgress) => Promise<unknown> | void,
+  send: (p: ListenProgress) => unknown,
   opts: { gapMs?: number; now?: () => number } = {},
 ): ListenReporter {
   const gap = opts.gapMs ?? REPORT_GAP_MS;
