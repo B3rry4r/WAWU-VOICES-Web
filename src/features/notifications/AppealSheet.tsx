@@ -47,7 +47,7 @@ export function AppealSheet({ target, onSent, onClose }: { target: { targetType:
   }
 
   return (
-    <Sheet title="Appeal this decision" subtitle="Another moderator will look again." onClose={onClose}>
+    <Sheet title="Appeal this decision" subtitle={done ? undefined : "Another moderator will look again."} onClose={onClose}>
       {done ? (
         <div className="grid gap-3 pb-2">
           <p className="m-0 text-body" role="status">{APPEAL_SENT}</p>

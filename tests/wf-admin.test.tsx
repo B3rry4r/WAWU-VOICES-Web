@@ -69,7 +69,7 @@ describe("C-M10 and C-L3: moderation words", () => {
     vi.stubGlobal("fetch", vi.fn(async (u: string, init?: RequestInit) => {
       if (u.endsWith("/me")) return json(200, me(["MODERATOR"]));
       if (u.includes("/action")) return json(200, {});
-      if (u.includes("/admin/moderation/items/")) return json(200, modDetail(modItem("p", { queue: "APPEAL", targetType: "USER", summary: "Appeal", reasons: [] })));
+      if (u.includes("/admin/moderation/items/")) return json(200, { ...modDetail(modItem("p", { queue: "APPEAL", targetType: "USER", summary: "Appeal", reasons: [] })), appealKind: "SUSPENSION" });
       if (u.includes("/admin/moderation/items")) return json(200, { items: u.includes("queue=APPEAL") ? [modItem("p", { queue: "APPEAL", targetType: "USER", summary: "Appeal", reasons: [] })] : [], nextCursor: null, counts: { APPEAL: 1, open: 1, oldestOpenAt: null } });
       void init;
       return json(404, NOT_FOUND);
@@ -80,9 +80,34 @@ describe("C-M10 and C-L3: moderation words", () => {
     expect(await screen.findByText("Appeal about an account")).toBeTruthy();
     expect(screen.getByText("Asking for a second look")).toBeTruthy();
     await u.type(await screen.findByLabelText(/Reason \(the poster sees this\)/), "Looked again");
-    await u.click(screen.getByRole("button", { name: "Restore it" }));
-    await waitFor(() => expect(screen.getByText("Done. The poster sees your reason.")).toBeTruthy());
+    await u.click(screen.getByRole("button", { name: "Lift the suspension" }));
+    await waitFor(() => expect(screen.getByText("Appeal accepted. The poster sees your reason.")).toBeTruthy());
     expect(screen.queryByText(/can appeal/)).toBeNull();
+  });
+  it.each([
+    ["REMOVAL", "Put it back", "Keep it removed"],
+    ["WARNING", "Remove the warning", "Keep the warning"],
+    ["SUSPENSION", "Lift the suspension", "Keep it"],
+  ])("an appeal about a %s says %s or %s, and nothing else", async (kind, undo, keep) => {
+    const item = modItem("p", { queue: "APPEAL", targetType: "ANSWER", summary: "Appeal", reasons: [] });
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (u: string, init?: RequestInit) => {
+      if (u.endsWith("/me")) return json(200, me(["MODERATOR"]));
+      if (u.includes("/action")) { sent.push(JSON.parse(String(init?.body))); return json(200, {}); }
+      if (u.includes("/admin/moderation/items/")) return json(200, { ...modDetail(item), appealKind: kind });
+      if (u.includes("/admin/moderation/items")) return json(200, { items: u.includes("queue=APPEAL") ? [item] : [], nextCursor: null, counts: { APPEAL: 1, open: 1, oldestOpenAt: null } });
+      return json(404, NOT_FOUND);
+    }));
+    render(<AdminFrame><AdminModerationPage /></AdminFrame>);
+    const u = userEvent.setup();
+    await u.click(await screen.findByRole("tab", { name: /Appeals/ }));
+    expect(await screen.findByRole("button", { name: undo })).toBeTruthy();
+    expect(screen.getByRole("button", { name: keep })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Warn" })).toBeNull();
+    await u.type(await screen.findByLabelText(/Reason \(the poster sees this\)/), "The warning stands");
+    await u.click(screen.getByRole("button", { name: keep }));
+    await waitFor(() => expect(screen.getByText("Appeal declined. The poster sees your reason.")).toBeTruthy());
+    expect(sent).toEqual([{ action: "KEEP", reason: "The warning stands" }]);
   });
   it("a bare account report shows its report count", async () => {
     const it0 = modItem("r", { targetType: "USER", summary: "", reasons: ["other"], reportCount: 1 });

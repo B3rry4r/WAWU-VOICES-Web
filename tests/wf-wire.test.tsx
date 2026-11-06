@@ -109,6 +109,18 @@ describe("RW2: Appeal on a notice", () => {
     expect(await screen.findByText("Appeal sent. Another moderator will look again.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Appeal" })).toBeNull();
   });
+  it("WF-5: the sheet's sent state says 'Another moderator will look again.' once", async () => {
+    routes = (u, m) => (m === "POST" && u.endsWith("/appeals") ? json(201, { id: "ap1", status: "OPEN" }) : u.includes("/notifications") ? page([removal("AVAILABLE")]) : null);
+    const user = userEvent.setup();
+    render(<NotificationsPage />);
+    await user.click(await screen.findByRole("button", { name: "Appeal" }));
+    expect(screen.getAllByText(/Another moderator will look again/).length).toBe(1);
+    await user.type(await screen.findByLabelText("Tell us why we got it wrong"), "Please look again.");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByRole("button", { name: "Done" });
+    const sheet = screen.getByRole("dialog");
+    expect((sheet.textContent ?? "").match(/Another moderator will look again/g)?.length).toBe(1);
+  });
   it("a notice whose appeal is already sent shows the sent line and no button", async () => {
     routes = (u) => (u.includes("/notifications") ? page([removal("SENT")]) : null);
     render(<NotificationsPage />);

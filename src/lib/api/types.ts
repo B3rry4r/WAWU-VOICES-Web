@@ -4363,6 +4363,8 @@ export interface components {
             transcript: string | null;
             playUrl: string | null;
             appeals?: components["schemas"]["ModAppeal"][];
+            /** @enum {string|null} */
+            appealKind?: "REMOVAL" | "WARNING" | "SUSPENSION" | null;
             screening: string[];
             context: components["schemas"]["Question"] | null;
             audit: components["schemas"]["AuditLine"][];

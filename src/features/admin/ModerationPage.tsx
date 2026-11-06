@@ -31,7 +31,20 @@ const CHOICES: Choice[] = [
   { id: "warn", label: "Warn", action: "WARN", button: "Warn" },
   { id: "suspend", label: "Suspend", action: "SUSPEND", button: "Suspend" },
 ];
-const RESTORE: Choice = { id: "restore", label: "Restore", action: "RESTORE", button: "Restore it" };
+
+/** WF-5: on an appeal the two buttons say what happens to the ACTION appealed, in plain words. */
+const APPEAL_WORDS: Record<string, { undo: string; keep: string }> = {
+  REMOVAL: { undo: "Put it back", keep: "Keep it removed" },
+  WARNING: { undo: "Remove the warning", keep: "Keep the warning" },
+  SUSPENSION: { undo: "Lift the suspension", keep: "Keep it" },
+};
+function appealChoices(kind: string | null | undefined): Choice[] {
+  const w = APPEAL_WORDS[kind ?? "REMOVAL"] ?? APPEAL_WORDS.REMOVAL;
+  return [
+    { id: "restore", label: w.undo, action: "RESTORE", button: w.undo },
+    { id: "keep", label: w.keep, action: "KEEP", button: w.keep },
+  ];
+}
 
 function reasonTag(i: ModerationItem): { text: string; cls: string } {
   const r = i.reasons[0];
@@ -109,9 +122,9 @@ function ModerationBody() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
-  const choices = queue === "APPEAL" ? [RESTORE, ...CHOICES] : CHOICES;
-  const cur = choices.find((c) => c.id === choice) ?? choices[0];
   const detail = selected ? details[selected] : undefined;
+  const choices = queue === "APPEAL" ? appealChoices(detail?.appealKind) : CHOICES;
+  const cur = choices.find((c) => c.id === choice) ?? choices[0];
   const reasonOk = reason.trim().length > 0;
 
   async function more() {
@@ -130,7 +143,15 @@ function ModerationBody() {
     });
     if (!done) return;
     // lead ruling WF, 6 Nov (C-M10): a decided appeal is not appealed again, so its banner never says "can appeal".
-    setSaved(c.action === "KEEP" ? "Kept up. The reason is saved." : queue === "APPEAL" ? "Done. The poster sees your reason." : "Done. The poster sees your reason and can appeal.");
+    setSaved(
+      queue === "APPEAL"
+        ? c.action === "KEEP"
+          ? "Appeal declined. The poster sees your reason."
+          : "Appeal accepted. The poster sees your reason."
+        : c.action === "KEEP"
+          ? "Kept up. The reason is saved."
+          : "Done. The poster sees your reason and can appeal.",
+    );
     setItems((x) => {
       const rest = (x ?? []).filter((i) => i.id !== id);
       const at = (x ?? []).findIndex((i) => i.id === id);
@@ -302,7 +323,7 @@ function Panel(p: {
       <ErrorLine>{p.error}</ErrorLine>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant={p.cur.action === "KEEP" ? "primary" : "destructive"} icon={p.cur.action === "KEEP" ? "check" : p.cur.action === "RESTORE" ? "rotate-ccw" : "trash-2"} loading={p.busy} disabled={p.disabled || p.busy} onClick={() => p.onDecide(p.cur)}>
+        <Button variant={p.cur.action === "KEEP" || p.cur.action === "RESTORE" ? "primary" : "destructive"} icon={p.cur.action === "KEEP" ? "check" : p.cur.action === "RESTORE" ? "rotate-ccw" : "trash-2"} loading={p.busy} disabled={p.disabled || p.busy} onClick={() => p.onDecide(p.cur)}>
           {p.cur.button}
         </Button>
         {p.cur.action !== "KEEP" ? (
