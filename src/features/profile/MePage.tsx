@@ -80,7 +80,7 @@ export function MePage() {
   return (
     <div className="pf-page">
       <h1 className="pf-h1">Profile</h1>
-      {/* TODO(WF-6a): Me.suspendedUntil is added by WF-6a; the banner reads the notice's own end day until then. */}
+      {/* Me carries no suspendedUntil (checked against 6a): the banner reads the end day from the suspension notice. */}
       <SuspendedBanner status={me.status} until={(me as { suspendedUntil?: string | null }).suspendedUntil ?? null} />
       <ProfileCard
         own

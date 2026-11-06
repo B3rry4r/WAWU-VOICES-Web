@@ -21,7 +21,7 @@ export function untilFromNoticeTitle(title: string, now: Date = new Date()): str
 
 /**
  * Lead ruling WF-6, 6 Nov (RX2): a suspended person sees this on Home and Profile, so they learn it before a post
- * fails. TODO(WF-6a): `until` is Me.suspendedUntil once WF-6a adds it; until then the end day is read from the
+ * fails. Me carries no suspendedUntil, so `until` stays empty and the end day is read from the
  * suspension notice's own title (suspensionTitle), the one place the API already carries it.
  */
 export function SuspendedBanner({ status, until }: { status?: string | null; until?: string | null }) {

@@ -130,7 +130,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
         </div>
       ) : (
         <div className="flex flex-col gap-4 pt-2 pb-40 dt:pb-0">
-          {posted ? <Toast>Posted. Until it is checked, your post shows Not verified.</Toast> : null}
+          {posted ? <Toast>Posted. Until it is checked, your post carries no mark.</Toast> : null}
           <header className="flex flex-col gap-1.5">
             <span className="text-eyebrow uppercase text-green-text">{thread.title}</span>
             {thread.subtitle ? <h1 className="m-0 font-display text-display-l dt:text-display-xl">{thread.subtitle}</h1> : <h1 className="sr-only">{thread.title}</h1>}

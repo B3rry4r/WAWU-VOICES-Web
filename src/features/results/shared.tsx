@@ -53,7 +53,7 @@ export function LabelsPanel() {
       </div>
       <div className="flex flex-col gap-1">
         <VerifyMark status="unverified" pill />
-        <p className="m-0 text-caption text-ink-2">Not checked yet. Treat with care.</p>
+        <p className="m-0 text-caption text-ink-2">Checked by the WAWU team and not confirmed. Treat with care.</p>
       </div>
       <p className="m-0 border-t border-line pt-3 text-caption text-ink-2">WAWU does not add these up or publish a count of its own.</p>
     </section>

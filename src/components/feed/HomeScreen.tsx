@@ -38,7 +38,7 @@ export function HomeScreen() {
       getAdPlacement().catch(() => null),
       signedIn
         ? getMe().then(
-            // TODO(WF-6a): Me.suspendedUntil is added by WF-6a; the banner reads the notice's own end day until then.
+            // Me carries no suspendedUntil (checked against 6a): the banner reads the end day from the suspension notice.
             (m) => ({ firstName: m.profile?.displayName?.trim().split(/\s+/)[0] ?? null, suspended: m.status === "SUSPENDED" ? { status: m.status, until: (m as { suspendedUntil?: string | null }).suspendedUntil ?? null } : null }),
             () => ({ firstName: null, suspended: null }),
           )

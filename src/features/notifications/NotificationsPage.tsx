@@ -198,13 +198,16 @@ export function NotificationsPage() {
                   {noticeWords(n)}
                 </NotificationRow>
               </div>
-              {n.appeal ? (
+              {n.resolved ? (
+                // lead ruling WF-6 (RX2): its appeal was decided since: no Appeal action, a quiet caption
+                <p className={`m-0 px-4 pb-3 pl-[calc(var(--space-4)+40px+var(--space-3))] text-caption text-[var(--ink-2)] ${n.read ? "" : "bg-[var(--mint)]"}`}>Decided</p>
+              ) : n.appeal ? (
                 <div className={`px-4 pb-3 pl-[calc(var(--space-4)+40px+var(--space-3))] ${n.read ? "" : "bg-[var(--mint)]"}`}>
                   {n.appeal.state === "SENT" || sent.includes(n.id) ? (
                     <p className="m-0 text-caption text-[var(--ink-2)]" role="status">{APPEAL_SENT}</p>
                   ) : n.appeal.state === "AVAILABLE" ? (
                     <button type="button" className="vx-link" onClick={() => setAppealing(n)}>Appeal</button>
-                  ) : null /* lead ruling WF-6, 6 Nov (RX2): any other state (the earlier notice of an accepted appeal) offers no Appeal. TODO(WF-6a): confirm the field WF-6a sends for "resolved". */}
+                  ) : null /* any other state offers no Appeal (fallback to Notification.resolved above) */}
                 </div>
               ) : null}
             </div>

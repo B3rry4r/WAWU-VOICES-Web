@@ -118,6 +118,28 @@ describe("RX2: one word, suspended", () => {
   });
 });
 
+describe("RX2 wiring: Notification.resolved", () => {
+  it("a resolved notice shows Decided and no Appeal, even with an AVAILABLE appeal", async () => {
+    const n = { id: "m2", type: "MODERATION_NOTICE", title: "Your account is suspended until 13 Nov 2026", body: null, targetType: "user", targetId: "u", questionId: null, actorCount: 1, read: true, createdAt: new Date().toISOString(), resolved: true, appeal: { state: "AVAILABLE", targetType: "USER", targetId: "u" } };
+    routes = (u) => (u.includes("/notifications") ? json(200, { items: [n], nextCursor: null, unread: 0 }) : null);
+    render(<NotificationsPage />);
+    expect(await screen.findByText("Decided")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Appeal" })).toBeNull();
+  });
+});
+
+describe("C-N7: an unchecked result shows no mark", () => {
+  const post = (status: string, checkedAt: string | null) => ({ id: "p", author: { handle: "a", displayName: null }, createdAt: "2027-01-16T17:42:00Z", accredited: 1, votesCast: 1, rejected: 0, state: "Lagos", lga: "Ikeja", ward: "3", pollingUnit: "PU 1", status, checkedAt, checkedLine: null }) as never;
+  it("NOT_VERIFIED with no checkedAt has no pill; checked and not verified keeps it; verified keeps it", async () => {
+    const { toComment } = await import("@/features/results/map");
+    const { ResultComment } = await import("@/components/vx");
+    const draw = (c: ReturnType<typeof toComment>) => { cleanup(); return render(<ResultComment {...c} />).container.textContent ?? ""; };
+    expect(draw(toComment(post("NOT_VERIFIED", null)))).not.toContain("Not verified");
+    expect(draw(toComment(post("NOT_VERIFIED", "2027-01-16T18:00:00Z")))).toContain("Not verified");
+    expect(draw(toComment(post("VERIFIED", "2027-01-16T18:00:00Z")))).toContain("Verified");
+  });
+});
+
 describe("A-N2: /weekly with no published report", () => {
   it("a 200 with null is the empty state, not an error", async () => {
     routes = (u) => (u.endsWith("/weekly-reports/latest") ? new Response("null", { status: 200, headers: { "content-type": "application/json" } }) : null);

@@ -34,7 +34,9 @@ describe("LiveResultsPage", () => {
     render(<LiveResultsPage threadId="t1" />);
     expect(await screen.findByText("Presidential and National Assembly elections")).toBeTruthy();
     expect(screen.getByText("Polling unit results")).toBeTruthy();
-    expect(screen.getAllByText("Not verified").length).toBeGreaterThan(0);
+    // WF-6 C-N7: posts nobody has checked (checkedAt null) carry no "Not verified" pill; the verified one keeps its mark
+    expect(screen.queryAllByText("Not verified").length).toBe(0);
+    expect(screen.getAllByText("Verified").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Post the numbers you see" })[0].getAttribute("href")).toBe("/live/t1/post");
   });
 
