@@ -24,7 +24,7 @@ export interface paths {
         post: operations["createMe"];
         /**
          * Delete my account
-         * @description Starts a 14 day grace period (cancel by signing in again), then removes the profile, posts, clips and Voice Units balance. Unspent Voice Units are lost (they are never cashed out, V-9) and the delete screen says so plainly. Auth: signed in with a finished profile.
+         * @description Starts a 14 day grace period (cancelled only by the person's own Undo, POST /me/deletion/cancel; signing in or a refreshed token never cancels it), then removes the profile, posts, clips and Voice Units balance. Unspent Voice Units are lost (they are never cashed out, V-9) and the delete screen says so plainly. Auth: signed in with a finished profile.
          */
         delete: operations["deleteAccount"];
         options?: never;
@@ -322,6 +322,26 @@ export interface paths {
          * @description Posts, transcripts and Voice Units history. Built in the background; poll GET /me/export. Auth: signed in with a finished profile.
          */
         post: operations["requestExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/deletion/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo my pending account deletion
+         * @description The only way a pending deletion is cancelled (lead ruling WF, fix round 1, RW9). Idempotent: with nothing pending it answers the same Me. 409 once the purge has run. Writes an audit line. Auth: WAWU ID token; works before the VOICES profile exists.
+         */
+        post: operations["cancelDeletion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2239,7 +2259,7 @@ export interface paths {
         put?: never;
         /**
          * Create a poll and link it to a topic or question
-         * @description Auth: signed in with role EDITOR or ADMIN.
+         * @description Only one flash poll may be open at a time: a second is 409 'A flash poll is already open.'. Opening a flash poll sends one FLASH_POLL notification to each active person who allows flash alerts (chunked, after the response, one per person per poll). Auth: signed in with role EDITOR or ADMIN.
          */
         post: operations["adminCreatePoll"];
         delete?: never;
@@ -2996,6 +3016,7 @@ export interface components {
             textMaxChars: number;
             freeVoiceSeconds: number;
         };
+        /** @description deletionScheduledFor (RW9) is the day the pending deletion will run: requested-at plus 14 days; null when none is pending. */
         Me: {
             phoneMasked: string | null;
             /** Format: uuid */
@@ -3013,6 +3034,8 @@ export interface components {
             settings: components["schemas"]["Settings"];
             referralCode: string;
             status: components["schemas"]["AccountStatus"];
+            /** Format: date-time */
+            deletionScheduledFor?: string | null;
         };
         /** @description voiceCount, replyCount and reactionsReceived are stored counters kept in step by the service, never counted per request. voicesCount (lead ruling WF, 6 Nov, RW1) is the one count of this person's published top-level answers, voice or text (anonymous ones only on their own page): "My voices N" and the Person tab use it. */
         Profile: {
@@ -5367,6 +5390,29 @@ export interface operations {
                 };
             };
             401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    cancelDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            401: components["responses"]["E401"];
+            409: components["responses"]["E409"];
             429: components["responses"]["E429"];
         };
     };
@@ -8336,6 +8382,7 @@ export interface operations {
             };
             401: components["responses"]["E401"];
             403: components["responses"]["E403"];
+            409: components["responses"]["E409"];
             422: components["responses"]["E422"];
             429: components["responses"]["E429"];
         };
