@@ -15,6 +15,11 @@ export function parseDoc(src: string): LegalDoc {
   return { title: meta.title, updated: meta.updated, lead: meta.lead ?? "", body: m[2].trim() };
 }
 
+/** An [OWNER: ...] gap is for the owner to fill in the markdown. It is never shown on the page. */
+export const OWNER_GAP = /\s*\[OWNER:[^\]]*\]/g;
+export const ownerGaps = (src: string): string[] => src.match(/\[OWNER:[^\]]*\]/g) ?? [];
+export const isGap = (s: string) => /\[OWNER:/.test(s);
+
 const INLINE = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)\s]+)\)|([A-Za-z0-9._-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/g;
 
 function inline(text: string): ReactNode[] {
@@ -44,13 +49,14 @@ export function Markdown({ source }: { source: string }) {
     if (line.startsWith("## ")) { blocks.push(<h3 key={k++} className="lg-h">{line.slice(3)}</h3>); i++; continue; }
     if (line.startsWith("- ")) {
       const items: string[] = [];
-      while (i < lines.length && lines[i].startsWith("- ")) items.push(lines[i++].slice(2));
+      while (i < lines.length && lines[i].startsWith("- ")) items.push(lines[i++].slice(2).replace(OWNER_GAP, "").trim());
       blocks.push(<ul key={k++} className="lg-list">{items.map((t, j) => <li key={j}>{inline(t)}</li>)}</ul>);
       continue;
     }
     const para: string[] = [];
     while (i < lines.length && lines[i].trim() && !lines[i].startsWith("## ") && !lines[i].startsWith("- ")) para.push(lines[i++]);
-    blocks.push(<p key={k++} className="lg-p">{inline(para.join(" "))}</p>);
+    const text = para.join(" ").replace(OWNER_GAP, "").trim();
+    if (text) blocks.push(<p key={k++} className="lg-p">{inline(text)}</p>);
   }
   return <>{blocks}</>;
 }

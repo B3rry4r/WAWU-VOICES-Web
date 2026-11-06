@@ -154,7 +154,7 @@ export function SignIn() {
           <div>
             <label className="flex cursor-pointer items-start gap-3 text-[16px] leading-6">
               <input type="checkbox" className="mt-[2px] h-6 w-6 flex-none accent-[var(--green)]" checked={consent} onChange={(e) => setConsent(e.target.checked)} aria-describedby={errs.consent ? "consent-err" : undefined} />
-              <span>I am 18 or older and I accept the <Link href="/settings/legal/rules" target="_blank" className="text-green-text">Community rules</Link> and <Link href="/settings/legal/terms" target="_blank" className="text-green-text">Terms</Link>.</span>
+              <span>I am 18 or older and I accept the <Link href="/settings/legal/rules" target="_blank" className="text-green-text">Community rules</Link>, <Link href="/settings/legal/terms" target="_blank" className="text-green-text">Terms</Link> and <Link href="/settings/legal/privacy" target="_blank" className="text-green-text">Privacy notice</Link>.</span>
             </label>
             {errs.consent ? <p id="consent-err" role="alert" className="m-0 mt-1 text-[13px] font-medium leading-[18px] text-danger">{errs.consent}</p> : null}
           </div>

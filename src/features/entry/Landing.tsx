@@ -144,7 +144,7 @@ export function Landing() {
             <Button size="l" variant="secondary" block href="/sign-in">Sign in</Button>
             <Button size="l" icon="mic" block href="/join">Join VOICES</Button>
           </div>
-          <p className="m-0 text-center text-[12px] font-medium leading-4 text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="text-green-text">Community rules</Link> and <Link href="/settings/legal/terms" className="text-green-text">Terms</Link>.</p>
+          <p className="m-0 text-center text-[12px] font-medium leading-4 text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="text-green-text">Community rules</Link>, <Link href="/settings/legal/terms" className="text-green-text">Terms</Link> and <Link href="/settings/legal/privacy" className="text-green-text">Privacy</Link>.</p>
         </BottomBar>
       </div>
     </EntryFrame>

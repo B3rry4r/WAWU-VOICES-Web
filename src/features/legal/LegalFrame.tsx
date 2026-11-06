@@ -37,11 +37,11 @@ export function LegalFrame({ tab, children }: { tab: LegalTab; children: ReactNo
   );
 }
 
-export function LegalHead({ title, updated, lead }: { title: string; updated: string; lead?: string }) {
+export function LegalHead({ title, updated, lead }: { title: string; updated?: string; lead?: string }) {
   return (
     <>
       <h2 className="pf-h1 pf-rules__h">{title}</h2>
-      <p className="lg-date">Last updated {updated}</p>
+      {updated ? <p className="lg-date">Last updated {updated}</p> : null}
       {lead ? <p className="pf-body">{lead}</p> : null}
     </>
   );
