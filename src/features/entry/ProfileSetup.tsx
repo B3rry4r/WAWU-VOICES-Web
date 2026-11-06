@@ -30,6 +30,8 @@ export function ProfileSetup() {
   const [posting, setPosting] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const made = useRef(false);
+  /** The person has typed in the handle box: a late answer to the mount getMe() must not overwrite what they typed. */
+  const typedHandle = useRef(false);
   const photoNote = useRef<HTMLParagraphElement>(null);
   const [existing, setExisting] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export function ProfileSetup() {
     getMe().then((me) => {
       if (me.profileComplete && me.handle) {
         setExisting(me.handle);
-        setHandle(me.handle);
+        if (!typedHandle.current) setHandle(me.handle);
         made.current = true;
       }
     }, (e) => { if (isAccountBlocked(e)) setFailure(e); });
@@ -169,7 +171,7 @@ export function ProfileSetup() {
             </div>
           </div>
           <TextField label="Your name" value={name} onChange={setName} autoComplete="name" />
-          <TextField label="Handle" prefix="@" value={handle} onChange={setHandle} autoComplete="off" hint={hint} error={error} />
+          <TextField label="Handle" prefix="@" value={handle} onChange={(v) => { typedHandle.current = true; setHandle(v); }} autoComplete="off" hint={hint} error={error} />
           <div className="hidden items-center gap-4 dt:flex"><span className="w-[260px] flex-none">{submit}</span>{note}</div>
         </DeskCard>
       </EntryScroll>

@@ -27,7 +27,7 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
   const [failed, setFailed] = useState(false);
   const dur = Math.max(1, Math.round((durationMs ?? 0) / 1000));
 
-  useEffect(() => () => { audio.current?.pause(); untrack.current?.(); untrack.current = null; audio.current = null; }, []);
+  useEffect(() => () => { untrack.current?.(); untrack.current = null; audio.current?.pause(); audio.current = null; }, []);
 
   async function play() {
     setFailed(false);

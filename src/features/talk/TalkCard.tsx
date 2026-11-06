@@ -100,8 +100,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   const [shareNode, share] = useShareSheet();
   const likeBusy = useRef(false);
   const onFail = useCallback((e: unknown) => push(failText(e), "danger"), [push]);
-  const onStart = useCallback(() => { void api.countListen(answer.id); }, [answer.id]);
-  const clip = useClipPlayback(answer.clip?.id, onFail, onStart, answer.id);
+  const clip = useClipPlayback(answer.clip?.id, onFail, undefined, answer.id);
   useEffect(() => setA(answer), [answer]);
   const authorBlocked = useBlockedHere(answer.author?.id);
   // The clip reset signal (the voice ended, another took over, or it could not play): the player goes back to its start.

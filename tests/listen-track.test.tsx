@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 
 /** LISTEN-1 (LS7 follow-up): every player of an ANSWER's clip reports; a player of anything else never does. */
 const starts: string[] = [];
-const reports: { aid: string; body: { secondsPlayed: number; finished: boolean } }[] = [];
+const reports: { aid: string; body: { secondsPlayed: number; finished: boolean }; leaving?: boolean }[] = [];
 class FakeAudio extends EventTarget {
   currentTime = 0;
   duration = 10;
@@ -25,7 +25,7 @@ class FakeAudio extends EventTarget {
 let audio: FakeAudio;
 vi.mock("@/lib/api/talk", () => ({
   countListen: (aid: string) => { starts.push(aid); return Promise.resolve(); },
-  reportListen: (aid: string, body: { secondsPlayed: number; finished: boolean }) => { reports.push({ aid, body }); return Promise.resolve(); },
+  reportListen: (aid: string, body: { secondsPlayed: number; finished: boolean }, leaving = false) => { reports.push({ aid, body, leaving }); return Promise.resolve(); },
 }));
 vi.mock("@/features/profile/playback", () => ({
   makePlayer: () => { audio = new FakeAudio(); return audio; },
@@ -47,7 +47,7 @@ describe("LivePlayer listen tracking", () => {
     await waitFor(() => expect(starts).toEqual(["ans-1"]));
     audio.currentTime = 6;
     act(() => audio.pause());
-    expect(reports).toEqual([{ aid: "ans-1", body: { secondsPlayed: 6, finished: false } }]);
+    expect(reports).toEqual([{ aid: "ans-1", body: { secondsPlayed: 6, finished: false }, leaving: false }]);
   });
 
   it("a clip that is not an answer's (a Voice Card) never reports", async () => {

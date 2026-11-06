@@ -89,8 +89,8 @@ export function recordShareEvent(code: string, kind: ShareEventKind, target?: Sh
 }
 
 /** Server side only: the public page data. Never cached, so a card or count change shows at once. */
-export function getSharePage(code: string): Promise<SharePage> {
-  return apiFetch<SharePage>(`/share/${encodeURIComponent(code)}`, { baseUrl: serverApiOrigin(), cache: "no-store" });
+export function getSharePage(code: string, fwd: Record<string, string> = {}): Promise<SharePage> {
+  return apiFetch<SharePage>(`/share/${encodeURIComponent(code)}`, { baseUrl: serverApiOrigin(), cache: "no-store", headers: fwd });
 }
 
 // ---- notifications
@@ -116,9 +116,9 @@ export function getPlayUrl(clipId: string): Promise<PlayUrl> {
 }
 
 /** Server side only: the poll's own title (a question's share page shows the week's poll under it). null when it cannot be read. */
-export async function getPollTitle(pollId: string): Promise<string | null> {
+export async function getPollTitle(pollId: string, fwd: Record<string, string> = {}): Promise<string | null> {
   try {
-    const p = await apiFetch<{ title?: string }>(`/polls/${encodeURIComponent(pollId)}`, { baseUrl: serverApiOrigin(), cache: "no-store" });
+    const p = await apiFetch<{ title?: string }>(`/polls/${encodeURIComponent(pollId)}`, { baseUrl: serverApiOrigin(), cache: "no-store", headers: fwd });
     return p?.title?.trim() || null;
   } catch {
     return null;
@@ -126,9 +126,9 @@ export async function getPollTitle(pollId: string): Promise<string | null> {
 }
 
 /** Server side only: a person's voicesCount for their profile share page. null when it cannot be read. */
-export async function getProfileVoices(handle: string): Promise<number | null> {
+export async function getProfileVoices(handle: string, fwd: Record<string, string> = {}): Promise<number | null> {
   try {
-    const p = await apiFetch<{ profile?: { voicesCount?: number } }>(`/people/by-handle/${encodeURIComponent(handle)}`, { baseUrl: serverApiOrigin(), cache: "no-store" });
+    const p = await apiFetch<{ profile?: { voicesCount?: number } }>(`/people/by-handle/${encodeURIComponent(handle)}`, { baseUrl: serverApiOrigin(), cache: "no-store", headers: fwd });
     return typeof p?.profile?.voicesCount === "number" ? p.profile.voicesCount : null;
   } catch {
     return null;

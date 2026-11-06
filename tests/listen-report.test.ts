@@ -51,6 +51,27 @@ describe("listen reporter", () => {
     expect(sent).toEqual([{ secondsPlayed: 10, finished: true }]);
   });
 
+  it("a pause, an end or a leave sends at once, inside the window (lead ruling LS, 6 Nov); the window only spaces held reports", () => {
+    const r = createListenReporter((p, leaving) => { sent.push({ ...p, ...(leaving ? { leaving } : {}) } as ListenProgress); }, { now: () => t });
+    r.progress(2, false, true); // pause
+    advance(1_000);
+    r.progress(6, false, true); // another pause, inside the 10 s
+    advance(500);
+    r.progress(10, true, true, true); // the end, then the page goes
+    expect(sent).toEqual([
+      { secondsPlayed: 2, finished: false },
+      { secondsPlayed: 6, finished: false },
+      { secondsPlayed: 10, finished: true, leaving: true },
+    ]);
+    // a held report that is not "now" is still spaced
+    sent.length = 0;
+    const s2 = make();
+    s2.progress(3, false);
+    advance(1_000);
+    s2.progress(5, false);
+    expect(sent).toHaveLength(1);
+  });
+
   it("sends nothing when nothing new was played, or at second zero", () => {
     const r = make();
     r.progress(0, false);

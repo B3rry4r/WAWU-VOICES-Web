@@ -426,7 +426,10 @@ describe("ProfileSetup", () => {
     await user.click(screen.getAllByRole("button", { name: "Finish and post my voice" })[0]);
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/speak?autopost=1"));
     const sent = calls.filter((c) => !c.url.includes("handle-check") && !c.url.includes("config/public")).map((c) => `${c.method} ${c.url.replace("/api/v1", "")}`);
-    expect(sent).toEqual(["GET /me", "POST /me", "PUT /me/categories", "POST /uploads", "PUT https://spaces.example/put", "POST /uploads/f1/complete", "PATCH /me/profile"]);
+    // The mount makes one unawaited GET /me (is there a profile already?). Its place among the person's own calls depends on timing,
+    // so it is asserted exactly once, and the person's own calls are asserted in order.
+    expect(sent.filter((x) => x === "GET /me")).toEqual(["GET /me"]);
+    expect(sent.filter((x) => x !== "GET /me")).toEqual(["POST /me", "PUT /me/categories", "POST /uploads", "PUT https://spaces.example/put", "POST /uploads/f1/complete", "PATCH /me/profile"]);
     expect(calls.find((c) => c.method === "POST" && c.url.endsWith("/me"))?.body).toEqual({ handle: "ada.okafor", ageConfirmed: true, termsAccepted: true, rulesAccepted: true, countryCode: "NG", languages: ["en", "pcm"], categoryIds: ["c0", "c1", "c2"] });
     expect(calls.find((c) => c.url.endsWith("/me/categories"))?.body).toEqual({ categories: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: false }, { categoryId: "c2", alertsOn: true }] });
     expect(calls.find((c) => c.url.endsWith("/uploads"))?.body).toEqual({ kind: "AVATAR", mime: "image/png", sizeBytes: 1200 });
@@ -570,6 +573,26 @@ describe("round 1: refused sign-ins, redirects, two tabs, reloads", () => {
     await expect(apiFetch("/me", { authed: true })).rejects.toBeTruthy();
     expect(stored()?.refreshToken).toBe("r1");
   });
+  it("a late answer to the mount GET /me (a profile exists) does not overwrite the handle the person already typed", async () => {
+    window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
+    saveDraft({ fullName: "Ada Okafor", countryCode: "NG", languages: ["en"], topics: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: true }, { categoryId: "c2", alertsOn: true }] });
+    api = (u, m) => (m === "GET" && u.endsWith("/me") ? json({ ...ME_DONE, handle: "ada.old" }) : u.includes("/me/handle-check") ? json({ handle: "typed.one", available: true }) : null);
+    const base = globalThis.fetch;
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    vi.stubGlobal("fetch", async (input: string, init: RequestInit = {}) => {
+      if (String(input).endsWith("/me") && (init.method ?? "GET") === "GET") await gate; // the slow network
+      return base(input, init);
+    });
+    render(<ProfileSetup />);
+    const h = screen.getByLabelText("Handle") as HTMLInputElement;
+    await userEvent.setup().clear(h);
+    await userEvent.setup().type(h, "typed.one");
+    release();
+    await waitFor(() => expect(calls.some((c) => c.method === "GET" && c.url.endsWith("/me"))).toBe(true));
+    await new Promise((r) => setTimeout(r, 50)); // let the late answer land
+    expect((screen.getByLabelText("Handle") as HTMLInputElement).value).toBe("typed.one");
+  });
   it("profile reload: PROFILE_EXISTS carries on (and sets a changed handle); only HANDLE_TAKEN says taken", async () => {
     window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
     saveDraft({ fullName: "Ada Okafor", countryCode: "NG", languages: ["en"], topics: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: true }, { categoryId: "c2", alertsOn: true }] });
@@ -589,7 +612,7 @@ describe("round 1: refused sign-ins, redirects, two tabs, reloads", () => {
     const h = screen.getByLabelText("Handle");
     await userEvent.setup().clear(h);
     await userEvent.setup().type(h, "ada.okafor");
-    await screen.findByText(/is free/);
+    await screen.findByText(/@ada\.okafor is free/); // the answer for what was typed, not the earlier "@ada.old is free"
     await userEvent.setup().click(screen.getAllByRole("button", { name: "Finish" })[0]);
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/"));
     expect(seen).toContain("PATCH /me/profile");
