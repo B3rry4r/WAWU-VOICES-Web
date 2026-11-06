@@ -835,7 +835,7 @@ export interface paths {
         put?: never;
         /**
          * Count a listen, and keep how much of the clip a person played
-         * @description An old body (completed, positionMs) or an empty one counts as a start. A progress report adds secondsPlayed (the most reached) and finished (played to at least 90%). One record per person per answer; it is never shown to anyone and only counts feed the ranking. At most 120 reports a minute per visitor. Auth: guest or signed in. Rate limit: 120 reports per minute per visitor or account.
+         * @description An old body (completed, positionMs) or an empty one counts as a start. A progress report adds secondsPlayed (the most reached) and finished (played to at least 90%). One record per person per answer; it is never shown to anyone and only counts feed the ranking. A request without a visitor id (signed out) records nothing. The server decides finished from the time it has seen: a finish needs the clip's own time to have passed since the first report, so the old body {completed: true} alone is never a finish. At most 120 reports a minute per visitor and 300 per network address. Auth: guest or signed in. Rate limit: 120 reports per minute per visitor or account, 300 per network address.
          */
         post: operations["recordListen"];
         delete?: never;
