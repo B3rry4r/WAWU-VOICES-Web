@@ -199,8 +199,6 @@ export interface ResultCommentProps {
   figures: ResultFigure[];
   status: 'verified' | 'unverified';
   checked?: string;
-  /** Lead ruling WF-6, C-N7: a result nobody has checked yet carries no mark at all. */
-  unchecked?: boolean;
   note?: string;
   isNew?: boolean;
   /** Leaves the Reply and Report buttons out (a preview, or a screen where they do nothing yet). */
@@ -221,7 +219,7 @@ export function ResultComment(p: ResultCommentProps): ReactElement {
           <span className="vx-answer__name">{a.handle || a.name}</span>
           <span className="vx-answer__time">{p.time}</span>
         </div>
-        {p.unchecked ? null : <VerifyMark status={p.status} pill />}
+        <VerifyMark status={p.status} pill />
       </div>
       <div className="vx-result__place">
         <Icon name="map-pin" size={18} />

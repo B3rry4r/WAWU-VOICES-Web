@@ -88,7 +88,6 @@ export function PostResultPage({ threadId }: { threadId: string }) {
         { label: "Rejected", value: form.rejected.trim() || "0" },
       ]}
       status="unverified"
-      unchecked
       checked="Not checked yet. The WAWU team is on it."
       hideActions
     />
@@ -181,7 +180,7 @@ export function PostResultPage({ threadId }: { threadId: string }) {
           {photoError ? <p className="m-0 text-caption text-danger" role="alert">{photoError}</p> : null}
         </div> : null}
 
-        <Banner title="The WAWU team checks every post">Until it is checked, your post carries no mark. Post only what is written on the sheet.</Banner>
+        <Banner title="The WAWU team checks every post">Until it is checked, your post shows Not verified. Post only what is written on the sheet.</Banner>
 
         <section className="flex flex-col gap-2" aria-label="How it will look">
           <h2 className="m-0 font-display text-display-s">How it will look</h2>

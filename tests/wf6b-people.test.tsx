@@ -128,15 +128,12 @@ describe("RX2 wiring: Notification.resolved", () => {
   });
 });
 
-describe("C-N7: an unchecked result shows no mark", () => {
-  const post = (status: string, checkedAt: string | null) => ({ id: "p", author: { handle: "a", displayName: null }, createdAt: "2027-01-16T17:42:00Z", accredited: 1, votesCast: 1, rejected: 0, state: "Lagos", lga: "Ikeja", ward: "3", pollingUnit: "PU 1", status, checkedAt, checkedLine: null }) as never;
-  it("NOT_VERIFIED with no checkedAt has no pill; checked and not verified keeps it; verified keeps it", async () => {
+describe("C-N7 withdrawn: an unchecked result still shows Not verified (V-7)", () => {
+  it("NOT_VERIFIED with no checkedAt keeps its pill", async () => {
     const { toComment } = await import("@/features/results/map");
     const { ResultComment } = await import("@/components/vx");
-    const draw = (c: ReturnType<typeof toComment>) => { cleanup(); return render(<ResultComment {...c} />).container.textContent ?? ""; };
-    expect(draw(toComment(post("NOT_VERIFIED", null)))).not.toContain("Not verified");
-    expect(draw(toComment(post("NOT_VERIFIED", "2027-01-16T18:00:00Z")))).toContain("Not verified");
-    expect(draw(toComment(post("VERIFIED", "2027-01-16T18:00:00Z")))).toContain("Verified");
+    const p = { id: "p", author: { handle: "a", displayName: null }, createdAt: "2027-01-16T17:42:00Z", accredited: 1, votesCast: 1, rejected: 0, state: "Lagos", lga: "Ikeja", ward: "3", pollingUnit: "PU 1", status: "NOT_VERIFIED", checkedAt: null, checkedLine: null } as never;
+    expect(render(<ResultComment {...toComment(p)} />).container.textContent).toContain("Not verified");
   });
 });
 

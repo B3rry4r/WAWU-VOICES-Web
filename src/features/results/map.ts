@@ -17,8 +17,6 @@ export function toComment(p: ResultPost, isNew = false): ResultCommentProps {
     ],
     status: p.status === "VERIFIED" ? "verified" : "unverified",
     checked: p.checkedLine ?? undefined,
-    // C-N7: not verified AND never checked shows nothing; a checked, not verified post keeps its pill
-    unchecked: p.status === "NOT_VERIFIED" && !p.checkedAt,
     isNew,
   };
 }
