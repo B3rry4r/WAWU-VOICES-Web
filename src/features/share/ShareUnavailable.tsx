@@ -8,8 +8,8 @@ export function ShareUnavailable() {
         <Logo height={36} />
       </header>
       <main className="mx-auto flex max-w-[480px] flex-col items-center gap-4 px-4 pb-16 pt-16 text-center">
-        <h1 className="m-0 font-display text-[30px] font-normal leading-9">We could not open that link</h1>
-        <p className="m-0 text-[16px] leading-6 text-ink-2">Something is not reachable right now. Wait a moment and open the link again.</p>
+        <h1 className="m-0 font-display text-display-l">We could not open that link</h1>
+        <p className="m-0 text-body text-ink-2">Something is not reachable right now. Wait a moment and open the link again.</p>
         <Button href="/">Go to VOICES</Button>
       </main>
     </div>

@@ -85,7 +85,7 @@ export function QuestionScreen({ id }: { id: string }) {
     <>
       
       <div className="hidden items-center justify-between dt:flex">
-        <Link href="/" className="inline-flex min-h-11 items-center gap-2 text-[14px] font-semibold text-[var(--ink)] no-underline"><Icon name="arrow-left" size={18} />Back to Home</Link>
+        <Link href="/" className="inline-flex min-h-11 items-center gap-2 text-label text-[var(--ink)] no-underline"><Icon name="arrow-left" size={18} />Back to Home</Link>
         <BarButton icon="share-2" label="Share this question" onClick={() => share("QUESTION", id)} />
       </div>
       <AppBar phoneOnly title={daily ? "Today’s question" : "Question"} back="/">
@@ -96,13 +96,13 @@ export function QuestionScreen({ id }: { id: string }) {
 
       <section aria-label="The question" className="flex flex-col gap-3 pb-2 pt-5">
         <div className="flex flex-wrap items-center gap-2">
-          {daily ? <span className="hidden text-[12px] font-bold uppercase leading-4 tracking-[0.08em] text-[var(--green-text)] dt:inline">Today’s question</span> : null}
-          {question.category ? <span className="text-[12px] font-bold uppercase leading-4 tracking-[0.08em] text-[var(--green-text)]">{question.category.name}</span> : null}
-          {question.topicTitle ? <span className="text-[13px] font-medium leading-[18px] text-[var(--ink-2)]">{question.topicTitle}</span> : null}
+          {daily ? <span className="hidden text-eyebrow uppercase text-[var(--green-text)] dt:inline">Today’s question</span> : null}
+          {question.category ? <span className="text-eyebrow uppercase text-[var(--green-text)]">{question.category.name}</span> : null}
+          {question.topicTitle ? <span className="text-caption text-[var(--ink-2)]">{question.topicTitle}</span> : null}
         </div>
-        <h1 className="m-0 font-display text-[32px] font-normal leading-9 tracking-[-0.01em] [text-wrap:balance] dt:text-[44px] dt:leading-[48px]">{question.text}</h1>
-        {question.hint ? <p className="m-0 text-[17px] font-medium leading-6 text-[var(--ink-2)]">{question.hint}</p> : null}
-        <div className="hidden items-center gap-4 text-[13px] leading-[18px] text-[var(--ink-2)] dt:flex">
+        <h1 className="m-0 font-display text-display-l [text-wrap:balance] dt:text-display-2xl">{question.text}</h1>
+        {question.hint ? <p className="m-0 text-body-l text-[var(--ink-2)]">{question.hint}</p> : null}
+        <div className="hidden items-center gap-4 text-caption text-[var(--ink-2)] dt:flex">
           <span className="inline-flex items-center gap-1"><Icon name="mic" size={14} />{`${question.voiceCount.toLocaleString("en-NG")} ${question.voiceCount === 1 ? "voice" : "voices"} so far`}</span>
           {close && open ? <span className="inline-flex items-center gap-1"><Icon name="clock" size={14} />{`Closes in ${close}`}</span> : null}
         </div>
@@ -114,7 +114,7 @@ export function QuestionScreen({ id }: { id: string }) {
               ))}
             </span>
           ) : null}
-          <span className="text-[15px] leading-5 text-[var(--ink-2)]"><b className="text-[var(--ink)]">{short(question.voiceCount)} {question.voiceCount === 1 ? "voice" : "voices"}</b>{close && open ? ` · closes in ${close}` : ""}</span>
+          <span className="text-caption text-[var(--ink-2)]"><b className="text-[var(--ink)]">{short(question.voiceCount)} {question.voiceCount === 1 ? "voice" : "voices"}</b>{close && open ? ` · closes in ${close}` : ""}</span>
         </div>
         {open ? (
           <>
@@ -122,7 +122,7 @@ export function QuestionScreen({ id }: { id: string }) {
               <Button size="l" icon="mic" block href="/speak">Speak</Button>
               <Button size="l" variant="secondary" block href={writeHref}>Write instead</Button>
             </div>
-            {seconds ? <p className="m-0 text-[14px] dt:hidden leading-5 text-[var(--ink-2)]">{`You have ${seconds} seconds on a free post. Reading and listening are always free.`}</p> : null}
+            {seconds ? <p className="m-0 text-caption dt:hidden text-[var(--ink-2)]">{`You have ${seconds} seconds on a free post. Reading and listening are always free.`}</p> : null}
           </>
         ) : (
           <Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner>
@@ -131,8 +131,8 @@ export function QuestionScreen({ id }: { id: string }) {
 
       {open && seconds && allow ? (
         <section aria-label="Add your voice" className="mt-4 hidden rounded-[var(--radius-l)] bg-[var(--surface)] p-5 shadow-[inset_0_0_0_1px_var(--line)] dt:block">
-          <h2 className="m-0 text-[17px] font-bold">Add your voice</h2>
-          <p className="m-0 mt-2 text-[14px] leading-5 text-[var(--ink-2)]">{`Speak for up to ${seconds} seconds, or write up to ${allow.costs.textMaxChars} characters.`}</p>
+          <h2 className="m-0 text-title">Add your voice</h2>
+          <p className="m-0 mt-2 text-caption text-[var(--ink-2)]">{`Speak for up to ${seconds} seconds, or write up to ${allow.costs.textMaxChars} characters.`}</p>
           <div className="mt-4 flex items-center gap-3">
             <Button size="l" icon="mic" href="/speak">Speak</Button>
             <Button size="l" variant="secondary" href={writeHref}>Write instead</Button>
@@ -141,15 +141,15 @@ export function QuestionScreen({ id }: { id: string }) {
         </section>
       ) : null}
       <div className="mt-4 flex items-center justify-between border-b border-[var(--line)] pt-2 dt:border-0">
-        <h2 className="m-0 font-display text-[20px] font-normal dt:hidden">Voices</h2>
-        <span className="text-[13px] text-[var(--ink-2)] dt:hidden">{question.answerCount.toLocaleString("en-NG")}</span>
+        <h2 className="m-0 font-display text-display-m dt:hidden">Voices</h2>
+        <span className="text-caption text-[var(--ink-2)] dt:hidden">{question.answerCount.toLocaleString("en-NG")}</span>
       </div>
       <div className="my-3 flex items-center justify-between gap-3">
-        <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--mint)] px-4 text-[15px] font-bold text-[var(--green-text)] dt:hidden" aria-label={`Sort voices: ${SORTS.find((x) => x.id === sort)!.label}. Change`} onClick={() => setSortOpen(true)}>
+        <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--mint)] px-4 text-label text-[var(--green-text)] dt:hidden" aria-label={`Sort voices: ${SORTS.find((x) => x.id === sort)!.label}. Change`} onClick={() => setSortOpen(true)}>
           <Icon name="trending-up" size={18} />{SORTS.find((x) => x.id === sort)!.label}<Icon name="chevron-down" size={18} />
         </button>
         <div className="hidden dt:block"><Tabs label="Sort voices" items={SORTS} value={sort} onChange={(s) => setSort(s as AnswerSort)} /></div>
-        <span className="hidden text-[13px] text-[var(--ink-2)] dt:block">{`${question.answerCount.toLocaleString("en-NG")} ${question.answerCount === 1 ? "voice" : "voices"}`}</span>
+        <span className="hidden text-caption text-[var(--ink-2)] dt:block">{`${question.answerCount.toLocaleString("en-NG")} ${question.answerCount === 1 ? "voice" : "voices"}`}</span>
       </div>
       {sortOpen ? (
         <Sheet title="Sort voices" onClose={() => setSortOpen(false)}>
@@ -169,22 +169,22 @@ export function QuestionScreen({ id }: { id: string }) {
           <div key={a.id} className="grid gap-1">
             <TalkCard answer={a} signedIn={!!signedIn} freeReactions={allow?.freeReactionsLeftToday} onAllowance={(p) => setAllow((c) => (c ? { ...c, ...p } : c))} push={push} />
             {a.replyCount > 0 ? (
-              <Link href={`/q/${id}/a/${a.id}`} className="flex items-center gap-2 px-2 text-[14px] font-semibold">
-                {`View ${a.replyCount} ${a.replyCount === 1 ? "reply" : "replies"}`}
-                {a.agreeCount + a.disagreeCount > 0 ? <span className="font-medium text-[var(--ink-2)]">{`${a.agreeCount} agree · ${a.disagreeCount} disagree`}</span> : null}
-              </Link>
+              <div className="flex items-center gap-2 px-2">
+                <Link href={`/q/${id}/a/${a.id}`} className="link-more text-label">{`View ${a.replyCount} ${a.replyCount === 1 ? "reply" : "replies"}`}</Link>
+                {a.agreeCount + a.disagreeCount > 0 ? <span className="text-caption text-[var(--ink-2)]">{`${a.agreeCount} agree · ${a.disagreeCount} disagree`}</span> : null}
+              </div>
             ) : null}
           </div>
         ))}
       </div>
       {state === "error" && items.length ? <div className="mt-3"><Problem error={err} onRetry={() => void loadPage(next ?? undefined)} /></div> : null}
       {next ? <div className="mt-3"><Button variant="secondary" size="l" block loading={state === "more"} onClick={() => void loadPage(next)}>Load more voices</Button></div> : null}
-      {open ? <p className="mb-32 mt-6 text-center dt:hidden"><Link href={writeHref} className="text-[15px] font-semibold">Add your voice in words</Link></p> : null}
+      {open ? <p className="mx-auto mb-32 mt-6 text-center dt:hidden"><Link href={writeHref} className="link-more text-label">Add your voice in words</Link></p> : null}
 
       {open ? (
         <div className="tk-dock fixed inset-x-0 bottom-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] z-[var(--z-sticky)] border-t border-[var(--line)] bg-[var(--surface)] px-3 py-[10px] dt:hidden">
           <div className="flex items-center gap-[10px]">
-            <Link href={writeHref} className="flex min-h-12 min-w-0 flex-1 items-center rounded-full bg-[var(--surface)] px-[18px] text-[16px] font-medium text-[var(--ink-2)] no-underline shadow-[inset_0_0_0_1px_var(--line-strong)]">Add your voice in words</Link>
+            <Link href={writeHref} className="flex min-h-12 min-w-0 flex-1 items-center rounded-full bg-[var(--surface)] px-[18px] text-body text-[var(--ink-2)] no-underline shadow-[inset_0_0_0_1px_var(--line-strong)]">Add your voice in words</Link>
             {left !== undefined ? <FreePosts left={left} pill /> : null}
           </div>
         </div>

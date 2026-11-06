@@ -25,8 +25,8 @@ export function AppBar({ href, back = "back", backLabel, title, subtitle, right 
         <Icon name={icon} size={24} />
       </Link>
       <div className="min-w-0 flex-1">
-        <div className="truncate font-body text-[16px] font-bold leading-5 text-ink">{title}</div>
-        {subtitle ? <div className="truncate text-[13px] leading-4 text-ink-2">{subtitle}</div> : null}
+        <div className="t-bar-title truncate text-ink">{title}</div>
+        {subtitle ? <div className="truncate text-caption text-ink-2">{subtitle}</div> : null}
       </div>
       {right}
     </div>
@@ -35,7 +35,7 @@ export function AppBar({ href, back = "back", backLabel, title, subtitle, right 
 
 export function DesktopBack({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className="mb-3 hidden items-center gap-1 text-[14px] font-semibold text-green-text no-underline hover:text-ink dt:inline-flex">
+    <Link href={href} className="mb-3 hidden items-center gap-1 text-label text-green-text no-underline hover:text-ink dt:inline-flex">
       <Icon name="arrow-left" size={18} />
       {label}
     </Link>
@@ -45,16 +45,16 @@ export function DesktopBack({ href, label }: { href: string; label: string }) {
 export function LabelsPanel() {
   return (
     <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="What the labels mean">
-      <h2 className="m-0 font-display text-[18px] font-normal leading-6">What the labels mean</h2>
+      <h2 className="m-0 font-display text-display-s">What the labels mean</h2>
       <div className="flex flex-col gap-1">
         <VerifyMark status="verified" pill />
-        <p className="m-0 text-[14px] leading-5 text-ink-2">The WAWU team checked these numbers against the result sheet.</p>
+        <p className="m-0 text-caption text-ink-2">The WAWU team checked these numbers against the result sheet.</p>
       </div>
       <div className="flex flex-col gap-1">
         <VerifyMark status="unverified" pill />
-        <p className="m-0 text-[14px] leading-5 text-ink-2">Not checked yet. Treat with care.</p>
+        <p className="m-0 text-caption text-ink-2">Not checked yet. Treat with care.</p>
       </div>
-      <p className="m-0 border-t border-line pt-3 text-[14px] leading-5 text-ink-2">WAWU does not add these up or publish a count of its own.</p>
+      <p className="m-0 border-t border-line pt-3 text-caption text-ink-2">WAWU does not add these up or publish a count of its own.</p>
     </section>
   );
 }

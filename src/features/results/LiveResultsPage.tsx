@@ -132,17 +132,17 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
         <div className="flex flex-col gap-4 pt-2 pb-40 dt:pb-0">
           {posted ? <Toast>Posted. Until it is checked, your post shows Not verified.</Toast> : null}
           <header className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-bold uppercase leading-4 tracking-wide text-green-text">{thread.title}</span>
-            {thread.subtitle ? <h1 className="m-0 font-display text-[28px] font-normal leading-8 dt:text-[32px] dt:leading-9">{thread.subtitle}</h1> : <h1 className="sr-only">{thread.title}</h1>}
-            <p className="m-0 text-[14px] leading-5 text-ink-2">{longDate(thread.heldOn)}</p>
+            <span className="text-eyebrow uppercase text-green-text">{thread.title}</span>
+            {thread.subtitle ? <h1 className="m-0 font-display text-display-l dt:text-display-xl">{thread.subtitle}</h1> : <h1 className="sr-only">{thread.title}</h1>}
+            <p className="m-0 text-caption text-ink-2">{longDate(thread.heldOn)}</p>
           </header>
 
           <section className="flex flex-col gap-3" aria-label="Polling unit results">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="m-0 font-display text-[22px] font-normal leading-7">Polling unit results</h2>
+              <h2 className="m-0 font-display text-display-m">Polling unit results</h2>
               {thread.status === "OPEN" ? <Badge tone="live" /> : null}
             </div>
-            <p className="m-0 text-[14px] leading-5 text-ink-2">People post the numbers they see. Verified means the WAWU team checked them. WAWU does not publish its own count.</p>
+            <p className="m-0 text-caption text-ink-2">People post the numbers they see. Verified means the WAWU team checked them. WAWU does not publish its own count.</p>
 
             <div className="sticky top-[calc(var(--topbar-h)+env(safe-area-inset-top,0px))] z-sticky -mx-1 flex flex-col items-stretch gap-2 bg-bg px-1 py-2 dt:top-0">
               <Tabs
@@ -190,8 +190,8 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
       <Rail>
         {canPost ? (
           <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="Were you at a polling unit?">
-            <h2 className="m-0 font-display text-[18px] font-normal leading-6">Were you at a polling unit?</h2>
-            <p className="m-0 text-[14px] leading-5 text-ink-2">Copy them from the result sheet. The WAWU team checks every post.</p>
+            <h2 className="m-0 font-display text-display-s">Were you at a polling unit?</h2>
+            <p className="m-0 text-caption text-ink-2">Copy them from the result sheet. The WAWU team checks every post.</p>
             <Button block icon="plus" href={postHref}>Post the numbers you see</Button>
           </section>
         ) : null}

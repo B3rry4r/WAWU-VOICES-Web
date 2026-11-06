@@ -28,10 +28,10 @@ export function RulesPage() {
     <LegalFrame tab="rules">
       <LegalHead title="Community rules" lead="VOICES is for strong opinions and real disagreement. We step in for harm, never for a point of view." />
       <ol className="pf-rulelist">
-        {RULES.map((r, i) => (
+        {RULES.map((r) => (
           <li key={r.title}>
             <span className="pf-rulelist__ic"><Icon name={r.icon} size={22} /></span>
-            <span><b>{`${i + 1} ${r.title}`}</b><span>{r.line}</span></span>
+            <span><b>{r.title}</b><span>{r.line}</span></span>
           </li>
         ))}
       </ol>

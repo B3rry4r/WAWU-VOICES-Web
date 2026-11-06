@@ -30,8 +30,8 @@ export function AppBar({ title, sub, back, close, children, phoneOnly }: { title
         <Icon name={close ? "x" : "arrow-left"} size={24} />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col pl-1">
-        <span className="truncate text-[17px] font-bold leading-[22px]">{title}</span>
-        {sub ? <span className="truncate text-[13px] leading-[18px] text-[var(--ink-2)]">{sub}</span> : null}
+        <span className="t-bar-title truncate">{title}</span>
+        {sub ? <span className="truncate text-caption text-[var(--ink-2)]">{sub}</span> : null}
       </div>
       {children}
     </header>

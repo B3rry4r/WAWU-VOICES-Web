@@ -73,11 +73,11 @@ export function NewsroomPage() {
     <div className="flex flex-col gap-3">
       {TAGS.map((t) => (
         <div key={t.tag} className="flex items-center justify-between gap-3">
-          <span className="text-[16px] font-semibold leading-5">{t.label}</span>
+          <span className="text-body-strong">{t.label}</span>
           <Switch on={followed(t.tag)} disabled={t.tag === "VERIFIED_NEWS"} label={t.label} onChange={(on) => void toggle(t.tag, on)} />
         </div>
       ))}
-      {followNote ? <p className="m-0 text-[13px] leading-4 text-danger" role="alert">{followNote}</p> : null}
+      {followNote ? <p className="m-0 text-caption text-danger" role="alert">{followNote}</p> : null}
     </div>
   );
 
@@ -87,17 +87,17 @@ export function NewsroomPage() {
         <Link href="/discover" aria-label="Back to Discover" className="flex h-11 w-11 flex-none items-center justify-center rounded-pill bg-surface text-ink no-underline shadow-1 dt:hidden">
           <Icon name="arrow-left" size={24} />
         </Link>
-        <Link href="/discover" className="mr-1 hidden items-center gap-1 text-[14px] font-semibold text-green-text no-underline hover:text-ink dt:inline-flex">
+        <Link href="/discover" className="mr-1 hidden items-center gap-1 text-label text-green-text no-underline hover:text-ink dt:inline-flex">
           <Icon name="arrow-left" size={18} />
           Discover
         </Link>
-        <h1 className="m-0 mr-auto font-display text-[28px] font-normal leading-8 dt:hidden">Newsroom</h1>
+        <h1 className="m-0 mr-auto font-display text-display-l dt:hidden">Newsroom</h1>
         <button type="button" aria-label="What the tags mean" onClick={() => setInfo(true)} className="flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-pill border-0 bg-surface p-0 text-ink shadow-1 dt:hidden">
           <Icon name="info" size={24} />
         </button>
       </div>
-      <h1 className="m-0 mb-1 hidden font-display text-[32px] font-normal leading-9 dt:block">Newsroom</h1>
-      <p className="m-0 mb-3 text-[16px] leading-6 text-ink-2">Every news post shows one tag, so you know what is confirmed and what is talk. Only WAWU editors can mark a post Verified News.</p>
+      <h1 className="m-0 mb-1 hidden font-display text-display-xl dt:block">Newsroom</h1>
+      <p className="m-0 mb-3 text-body text-ink-2">Every news post shows one tag, so you know what is confirmed and what is talk. Only WAWU editors can mark a post Verified News.</p>
 
       <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Filter by tag">
         <TopicChip label="All" selected={tag === null} count={desktop && tags.length ? allCount : undefined} newCount={desktop && allNew ? allNew : undefined} onClick={() => setTag(null)} />
@@ -110,7 +110,7 @@ export function NewsroomPage() {
       {SERVED.tagFollows && signedIn && tags.length ? (
         <div className="mb-4 flex items-center gap-3 rounded-l bg-surface-2 p-3 dt:hidden">
           <Icon name="bell" size={20} />
-          <span className="flex-1 text-[14px] leading-5">You follow <b>{followText}</b></span>
+          <span className="flex-1 text-caption">You follow <b>{followText}</b></span>
           <button type="button" className="vx-link" onClick={() => setChange(true)}>Change</button>
         </div>
       ) : null}
@@ -136,20 +136,20 @@ export function NewsroomPage() {
       {change ? (
         <Sheet title="Follow by tag" onClose={() => setChange(false)}>
           {switches}
-          <p className="m-0 mt-3 text-[14px] leading-5 text-ink-2">We tell you when a post with that tag goes up. Never on the lock screen.</p>
+          <p className="m-0 mt-3 text-caption text-ink-2">We tell you when a post with that tag goes up. Never on the lock screen.</p>
         </Sheet>
       ) : null}
 
       <Rail>
         <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="What the tags mean">
-          <h2 className="m-0 font-display text-[18px] font-normal leading-6">What the tags mean</h2>
+          <h2 className="m-0 font-display text-display-s">What the tags mean</h2>
           <TagMeanings withFlagHint />
         </section>
         {SERVED.tagFollows && signedIn && tags.length ? (
           <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="Follow by tag">
-            <h2 className="m-0 font-display text-[18px] font-normal leading-6">Follow by tag</h2>
+            <h2 className="m-0 font-display text-display-s">Follow by tag</h2>
             {switches}
-            <p className="m-0 text-[14px] leading-5 text-ink-2">We tell you when a post with that tag goes up. Never on the lock screen.</p>
+            <p className="m-0 text-caption text-ink-2">We tell you when a post with that tag goes up. Never on the lock screen.</p>
           </section>
         ) : null}
       </Rail>

@@ -14,7 +14,7 @@ import { cardRows, moodRows, readPollSummary, readThemes } from "./weekly-map";
 type Load = "loading" | "error" | "none" | "ready";
 
 const PastLink = ({ className }: { className?: string }) => (
-  <Link href="/weekly/archive" className={"inline-flex items-center gap-1 text-[15px] font-bold leading-5 text-green-text no-underline hover:text-ink " + (className ?? "")}>
+  <Link href="/weekly/archive" className={"inline-flex items-center gap-1 text-label text-green-text no-underline hover:text-ink " + (className ?? "")}>
     <Icon name="clock" size={20} />
     Past reports
   </Link>
@@ -61,7 +61,7 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
       <div className="hidden items-end justify-between gap-4 pb-4 dt:flex">
         <div className="min-w-0">
           {report ? <span className="vx-eyebrow text-green-text">{report.title}</span> : null}
-          <h1 className="m-0 font-display text-[32px] font-normal leading-9">Weekly report</h1>
+          <h1 className="m-0 font-display text-display-l dt:text-display-xl">Weekly report</h1>
         </div>
         <PastLink />
       </div>
@@ -128,11 +128,11 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
             <h2 className="vx-eyebrow m-0 text-ink-2">In their own words</h2>
             {report.quotes.map((q, i) => (
               <figure key={i} className="m-0 flex flex-col gap-2 rounded-l bg-surface p-4 shadow-1">
-                <blockquote className="m-0 text-[16px] leading-6 text-ink">{`"${q.excerpt}"`}</blockquote>
-                <figcaption className="text-[13px] leading-4 text-ink-2">{q.placeLabel + " · shared with consent"}</figcaption>
+                <blockquote className="m-0 text-body text-ink">{`"${q.excerpt}"`}</blockquote>
+                <figcaption className="text-caption text-ink-2">{q.placeLabel + " · shared with consent"}</figcaption>
               </figure>
             ))}
-            <p className="m-0 hidden text-[13px] leading-4 text-ink-2 dt:block">Quotes are shared only with the speaker&apos;s consent. No names, no handles, and no group too small to stay anonymous.</p>
+            <p className="m-0 hidden text-caption text-ink-2 dt:block">Quotes are shared only with the speaker&apos;s consent. No names, no handles, and no group too small to stay anonymous.</p>
           </section>
         ) : null}
       </div>
@@ -150,8 +150,8 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
           />
         </div>
         <div className="flex flex-col gap-3 dt:w-1/2">
-          <h2 className="m-0 font-display text-[22px] font-normal leading-7 dt:text-[28px] dt:leading-8">Share this week</h2>
-          <p className="m-0 hidden text-[16px] leading-6 text-ink-2 dt:block">The card carries the mood, the poll and a link back to the full report. Journalists and brands can quote it with the label.</p>
+          <h2 className="m-0 font-display text-display-m dt:text-display-l">Share this week</h2>
+          <p className="m-0 hidden text-body text-ink-2 dt:block">The card carries the mood, the poll and a link back to the full report. Journalists and brands can quote it with the label.</p>
           <div>
             <Button icon="share-2" onClick={() => setShare(true)}>Share the card</Button>
           </div>

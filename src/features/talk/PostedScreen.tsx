@@ -80,13 +80,13 @@ export function PostedScreen({ qid }: { qid: string }) {
         <div className="flex items-center gap-4">
           <span className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-[var(--mint)] text-[var(--green-text)]"><Icon name="circle-check" size={28} /></span>
           <div>
-            <h1 className="m-0 font-display text-[28px] font-normal leading-8">Your voice is live</h1>
-            <p className="m-0 mt-1 text-[15px] leading-5 text-[var(--ink-2)]">It is under New. We will tell you when people reply.</p>
+            <h1 className="m-0 font-display text-display-l">Your voice is live</h1>
+            <p className="m-0 mt-1 text-body text-[var(--ink-2)]">It is under New. We will tell you when people reply.</p>
           </div>
         </div>
         {allow ? <FreePosts left={allow.freePostsRemaining} /> : null}
         <section className="grid gap-3" aria-label="Share">
-          <span className="hidden text-[16px] font-bold dt:block">Now let people hear you</span>
+          <span className="hidden text-body-strong dt:block">Now let people hear you</span>
           <Button size="l" block icon="share-2" disabled={!url} href={url ? `https://wa.me/?text=${encodeURIComponent(url)}` : undefined} target="_blank" rel="noopener noreferrer" onClick={() => intent("WHATSAPP")}>Share to WhatsApp</Button>
           <div className="grid grid-cols-2 gap-3">
             <Button variant="secondary" disabled={!url} href={statusHref} target="_blank" rel="noopener noreferrer" onClick={() => intent("WHATSAPP_STATUS")}>WhatsApp Status</Button>
@@ -98,16 +98,16 @@ export function PostedScreen({ qid }: { qid: string }) {
         {ans ? <TalkCard answer={ans} signedIn push={push} /> : null}
         {link?.imageUrl && link.cardStatus === "READY" ? (
           <>
-            <p className="m-0 text-[14px] leading-5 text-[var(--ink-2)]">People get this card and a link. Your recording itself is never shared as a file.</p>
+            <p className="m-0 text-caption text-[var(--ink-2)]">People get this card and a link. Your recording itself is never shared as a file.</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`${API_BASE}/share/${link.code}/card`} alt="The share card for your voice" className="w-full rounded-[var(--radius-l)]" />
           </>
         ) : null}
-        <Link href={`/q/${qid}`} className="text-center text-[15px] font-semibold">Back to the conversation</Link>
+        <Link href={`/q/${qid}`} className="link-more justify-center text-label">Back to the conversation</Link>
       </div>
       {storyHelp ? (
         <Sheet title="Your card is saved" onClose={() => setStoryHelp(false)} footer={<Button size="l" block onClick={() => setStoryHelp(false)}>Done</Button>}>
-          <ol className="m-0 grid gap-2 pl-5 text-[16px] leading-6">
+          <ol className="m-0 grid gap-2 pl-5 text-body">
             <li>Open Instagram and tap Your story.</li>
             <li>Pick the VOICES card from your photos.</li>
             <li>Add a link sticker with your link, then share.</li>

@@ -89,8 +89,8 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
   const flagBlock = (long: boolean) =>
     signedIn && post?.news ? (
       <section className="flex flex-col gap-2 border-t border-line pt-3" aria-label="Is this tag wrong?">
-        <h3 className="m-0 text-[16px] font-bold leading-5">Is this tag wrong?</h3>
-        <p className="m-0 text-[14px] leading-5 text-ink-2">
+        <h3 className="m-0 text-body-strong">Is this tag wrong?</h3>
+        <p className="m-0 text-caption text-ink-2">
           {long
             ? "If this is presented as news but is not, or the tag hides what it is, flag it. An editor reviews every flag. If the tag changes, the poster is told why."
             : "Flag it. An editor reviews every flag, and the poster is told if the tag changes."}
@@ -106,7 +106,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
   if (load === "missing" || load === "error") {
     return (
       <>
-        <Link href="/news" className="mb-3 inline-flex items-center gap-1 text-[14px] font-semibold text-green-text no-underline"><Icon name="arrow-left" size={18} />Back to the Newsroom</Link>
+        <Link href="/news" className="mb-3 inline-flex items-center gap-1 text-label text-green-text no-underline"><Icon name="arrow-left" size={18} />Back to the Newsroom</Link>
         <EmptyState icon={load === "missing" ? "radio" : "wifi-off"} title={load === "missing" ? "This post is not available" : "Could not load this post"} action={load === "error" ? "Try again" : undefined} actionIcon="refresh-cw" onAction={fetchAll} />
       </>
     );
@@ -116,8 +116,8 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
     <>
       <div className="flex items-center gap-2 pb-2 pt-1">
         <Link href="/news" aria-label="Back to the Newsroom" className="flex h-11 w-11 flex-none items-center justify-center rounded-pill bg-surface text-ink no-underline shadow-1 dt:hidden"><Icon name="arrow-left" size={24} /></Link>
-        <Link href="/news" className="hidden items-center gap-1 text-[14px] font-semibold text-green-text no-underline hover:text-ink dt:inline-flex"><Icon name="arrow-left" size={18} />Newsroom</Link>
-        <span className="mr-auto text-[16px] font-bold text-ink-2 dt:hidden">Newsroom</span>
+        <Link href="/news" className="hidden items-center gap-1 text-label text-green-text no-underline hover:text-ink dt:inline-flex"><Icon name="arrow-left" size={18} />Newsroom</Link>
+        <span className="t-bar-title mr-auto text-ink-2 dt:hidden">Newsroom</span>
         <button type="button" aria-label="Share this post" onClick={() => setSharing(true)} className="ml-auto flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-pill border-0 bg-surface p-0 text-ink shadow-1 dt:hidden"><Icon name="share-2" size={24} /></button>
       </div>
 
@@ -127,13 +127,13 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
         <div className="flex flex-col gap-4 pb-6">
           {post.questionText ? (
             <Link href={`/q/${post.questionId}`} className="flex flex-col gap-1 rounded-l bg-surface-2 p-4 no-underline text-ink">
-              <span className="text-[12px] font-bold uppercase leading-4 tracking-wide text-ink-2">Answering</span>
-              <span className="font-display text-[20px] font-normal leading-6">{post.questionText}</span>
+              <span className="text-eyebrow uppercase text-ink-2">Answering</span>
+              <span className="font-display text-display-m">{post.questionText}</span>
             </Link>
           ) : null}
           <NewsCard post={post} signedIn={signedIn === true} repliesHref="#replies" open />
           {chosenLine(post) ? (
-            <p className="m-0 flex items-center gap-2 text-[14px] leading-5 text-ink-2"><Icon name="clock" size={18} />{chosenLine(post)}</p>
+            <p className="m-0 flex items-center gap-2 text-caption text-ink-2"><Icon name="clock" size={18} />{chosenLine(post)}</p>
           ) : null}
           {post.news ? (
             <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1 dt:hidden" aria-label="This post's tag">
@@ -143,7 +143,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
           ) : null}
 
           {SERVED.replies ? <section id="replies" className="flex flex-col gap-3" aria-label="Replies">
-            <h2 className="m-0 font-display text-[20px] font-normal leading-6">{post.replyCount + (post.replyCount === 1 ? " reply" : " replies")}</h2>
+            <h2 className="m-0 font-display text-display-m">{post.replyCount + (post.replyCount === 1 ? " reply" : " replies")}</h2>
             {replies.map((r) => <ReplyCard key={r.id} r={r} />)}
             {nextReplies ? <Button variant="secondary" block onClick={moreReplies}>Show more</Button> : null}
           </section> : null}
@@ -157,20 +157,20 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
           onClose={() => setFlagOpen(false)}
           footer={<Button block icon="flag" loading={flagState === "busy"} onClick={sendFlag}>Flag as misleading</Button>}
         >
-          <label className="flex flex-col gap-1 text-[14px] font-semibold leading-5">
+          <label className="flex flex-col gap-1 text-label">
             Add a note for the editor (optional)
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} rows={4} className="rounded-m border border-line-strong bg-surface p-3 font-body text-[16px] font-normal leading-6 text-ink" />
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} rows={4} className="rounded-m border border-line-strong bg-surface p-3 font-body text-body text-ink" />
           </label>
-          {flagError ? <p className="m-0 mt-2 text-[13px] leading-4 text-danger" role="alert">{flagError}</p> : null}
+          {flagError ? <p className="m-0 mt-2 text-caption text-danger" role="alert">{flagError}</p> : null}
         </Sheet>
       ) : null}
 
       <Rail>
         {post?.news ? (
           <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="About this post">
-            <h2 className="m-0 font-display text-[18px] font-normal leading-6">About this post</h2>
+            <h2 className="m-0 font-display text-display-s">About this post</h2>
             <div className="flex flex-col gap-1">
-              <span className="text-[12px] font-bold uppercase leading-4 tracking-wide text-ink-2">This post&apos;s tag</span>
+              <span className="text-eyebrow uppercase text-ink-2">This post&apos;s tag</span>
               <NewsTag kind={kindOf(post.news.tag)} size="m" withNote />
             </div>
             {flagBlock(true)}
@@ -178,9 +178,9 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
         ) : null}
         {more.length ? (
           <section className="flex flex-col gap-3 rounded-l bg-surface p-4 shadow-1" aria-label="More in the Newsroom">
-            <h2 className="m-0 font-display text-[18px] font-normal leading-6">More in the Newsroom</h2>
+            <h2 className="m-0 font-display text-display-s">More in the Newsroom</h2>
             {more.map((m) => (
-              <Link key={m.id} href={`/news/${m.id}`} className="flex flex-col gap-1 text-[14px] leading-5 text-ink no-underline hover:underline">
+              <Link key={m.id} href={`/news/${m.id}`} className="flex flex-col gap-1 text-caption text-ink no-underline hover:underline">
                 {m.news ? <NewsTag kind={kindOf(m.news.tag)} /> : null}
                 <span>{m.body ?? "Voice post"}</span>
               </Link>

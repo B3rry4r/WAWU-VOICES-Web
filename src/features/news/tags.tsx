@@ -55,7 +55,7 @@ export function TagMeanings({ withFlagHint }: { withFlagHint?: boolean }) {
     <div className="flex flex-col gap-3">
       {TAGS.map((t) => <NewsTag key={t.tag} kind={t.kind} withNote />)}
       {withFlagHint ? (
-        <p className="m-0 flex gap-2 border-t border-line pt-3 text-[14px] leading-5 text-ink-2">
+        <p className="m-0 flex gap-2 border-t border-line pt-3 text-caption text-ink-2">
           <Icon name="flag" size={18} className="mt-0.5 flex-none" />
           Think a tag is wrong? Open the post and flag it as misleading. An editor checks every flag.
         </p>

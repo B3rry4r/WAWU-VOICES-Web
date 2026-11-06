@@ -36,9 +36,9 @@ export function AppBar({ href, backLabel, title, right, big }: { href: string; b
         <Icon name="arrow-left" size={22} />
       </Link>
       {big ? (
-        <h1 className="m-0 min-w-0 flex-1 truncate font-display text-[26px] font-normal leading-8">{title}</h1>
+        <h1 className="m-0 min-w-0 flex-1 truncate font-display text-display-l">{title}</h1>
       ) : (
-        <div className="min-w-0 flex-1 truncate text-[16px] font-bold leading-5 text-ink-2">{title}</div>
+        <div className="min-w-0 flex-1 t-bar-title truncate text-ink-2">{title}</div>
       )}
       {right}
     </div>

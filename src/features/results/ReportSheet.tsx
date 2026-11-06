@@ -37,13 +37,13 @@ export function ReportSheet({ postId, signedIn, onClose }: { postId: string; sig
         <Banner tone="info" title="Sign in to report.">Reading stays free.</Banner>
       ) : done ? (
         <div className="grid gap-3 pb-2">
-          <p className="m-0 text-[16px] leading-6" role="status">Thanks. We got your report. The WAWU team will check these numbers.</p>
+          <p className="m-0 text-body" role="status">Thanks. We got your report. The WAWU team will check these numbers.</p>
           <Button size="l" block onClick={onClose}>Done</Button>
         </div>
       ) : (
         <div className="grid gap-2 pb-2">
           {WHY.map((w) => <Button key={w.reason} variant="secondary" size="l" block loading={busy === w.reason} disabled={!!busy} onClick={() => void send(w)}>{w.label}</Button>)}
-          {msg ? <p role="alert" className="m-0 text-[14px] font-semibold text-[var(--danger)]">{msg}</p> : null}
+          {msg ? <p role="alert" className="m-0 text-label text-[var(--danger)]">{msg}</p> : null}
         </div>
       )}
     </Sheet>
