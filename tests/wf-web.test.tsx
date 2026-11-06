@@ -96,18 +96,32 @@ describe("A-M5 photo words", () => {
 });
 
 describe("A-M6 deletion pending", () => {
-  it("Undo signs out and goes to sign in; Sign out lands on the Landing page", async () => {
+  it("shows the day, Sign out lands on /welcome, Undo calls the cancel route (no sign-out) and returns to the profile", async () => {
     window.localStorage.setItem("voices-web-session", SESSION);
-    vi.stubGlobal("fetch", vi.fn(async () => json({})));
+    const calls: { url: string; method: string }[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => { calls.push({ url, method: init?.method ?? "GET" }); return json({ status: "ACTIVE" }); }));
     const u = userEvent.setup();
-    render(<DeletionPending />);
+    render(<DeletionPending scheduledFor="2026-11-20" />);
+    expect(screen.getByText("Your account will be deleted on 20 Nov 2026.")).toBeTruthy();
+    expect(screen.getByText("To keep your account, tap Undo before 20 Nov 2026.")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("sign in again");
     await u.click(screen.getByRole("button", { name: "Sign out" }));
     expect(replace).toHaveBeenCalledWith("/welcome");
     expect(JSON.parse(window.localStorage.getItem("voices-web-session") ?? "{}").accessToken ?? null).toBeNull();
     cleanup(); replace.mockReset();
-    render(<DeletionPending />);
+    window.localStorage.setItem("voices-web-session", SESSION);
+    render(<DeletionPending scheduledFor="2026-11-20" />);
     await u.click(screen.getByRole("button", { name: "Undo" }));
-    expect(replace).toHaveBeenCalledWith("/sign-in");
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/profile"));
+    expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/me/deletion/cancel"))).toBe(true);
+    expect(JSON.parse(window.localStorage.getItem("voices-web-session") ?? "{}").accessToken).toBeTruthy();
+  });
+  it("a 409 after the purge says so in plain words", async () => {
+    window.localStorage.setItem("voices-web-session", SESSION);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { code: "CONFLICT", message: "gone" } }), { status: 409, headers: { "content-type": "application/json" } })));
+    render(<DeletionPending scheduledFor="2026-11-20" />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByText("This account has already been deleted, so it cannot be kept.")).toBeTruthy();
   });
 });
 

@@ -241,6 +241,6 @@ export function SettingsPage() {
   if (state.status === "guest") return <div className="pf-page"><h1 className="pf-h1">Settings</h1><SignedOutNotice what="your settings" /></div>;
   if (state.status === "error") return <div className="pf-page"><h1 className="pf-h1">Settings</h1><LoadError error={state.error} onRetry={reload} /></div>;
   if (state.status === "needs-profile") return <div className="pf-page"><h1 className="pf-h1">Settings</h1><NeedsProfileNotice /></div>;
-  if (state.me.status === "DELETION_PENDING") return <DeletionPending />;
+  if (state.me.status === "DELETION_PENDING") return <DeletionPending scheduledFor={state.me.deletionScheduledFor ?? null} onUndone={() => reload()} />;
   return <SettingsBody me={state.me} />;
 }

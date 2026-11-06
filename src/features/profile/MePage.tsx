@@ -73,7 +73,7 @@ export function MePage() {
   if (state.status === "error") return <><h1 className="pf-h1">Profile</h1><LoadError error={state.error} onRetry={reload} /></>;
   if (state.status === "needs-profile") return <><h1 className="pf-h1">Profile</h1><NeedsProfileNotice /></>;
   const { me } = state;
-  if (me.status === "DELETION_PENDING") return <DeletionPending />;
+  if (me.status === "DELETION_PENDING") return <DeletionPending scheduledFor={me.deletionScheduledFor ?? null} onUndone={() => reload()} />;
   const profile = me.profile!;
   const a = me.allowances;
   return (

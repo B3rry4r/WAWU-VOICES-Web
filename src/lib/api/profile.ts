@@ -27,6 +27,8 @@ const q = (p: Record<string, string | number | undefined>) => {
 };
 
 export const getMe = () => apiFetch<Me>("/me", { authed: true });
+/** RW9: the only way a pending deletion is cancelled. Idempotent; 409 once the purge has run. */
+export const cancelDeletion = () => apiFetch<Me>("/me/deletion/cancel", { method: "POST", authed: true });
 export const updateProfile = (body: UpdateProfileRequest) => apiFetch<Profile>("/me/profile", { method: "PATCH", authed: true, body });
 export const checkHandle = (handle: string) => apiFetch<S["HandleCheck"]>(`/me/handle-check${q({ handle })}`, { authed: true });
 export const getSettings = () => apiFetch<Settings>("/me/settings", { authed: true });
