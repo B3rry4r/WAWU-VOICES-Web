@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AdSlot, Button, EmptyState, Icon, TextField, TopicChip } from "@/components/vx";
-import { createAd, decideAd, listAds } from "@/lib/api/admin";
+import { createAd, decideAd, listAds, updateAd } from "@/lib/api/admin";
 import type { AdminAd, UpsertAdRequest } from "@/lib/api/admin";
 import { getCategories } from "@/lib/api/feed";
 import { useAdmin } from "./AdminFrame";
@@ -40,6 +40,7 @@ function AdsBody() {
   const [cats, setCats] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -78,7 +79,7 @@ function AdsBody() {
         eyebrow={`Ad manager · ${awaiting} awaiting approval`}
         title="Adverts"
         right={
-          <Button icon="plus" onClick={() => { setCreating(true); setSaved(null); }}>
+          <Button icon="plus" onClick={() => { setCreating(true); setEditing(false); setSaved(null); }}>
             New advert
           </Button>
         }
@@ -93,7 +94,7 @@ function AdsBody() {
       ) : items === null ? (
         <ListSkeleton />
       ) : items.length === 0 && !creating ? (
-        <EmptyState icon="megaphone" title="No adverts yet" body="Brands’ adverts land here for approval. You can also add one yourself." action="New advert" actionIcon="plus" onAction={() => setCreating(true)} />
+        <EmptyState icon="megaphone" title="No adverts yet" body="Adverts you add land here for approval." action="New advert" actionIcon="plus" onAction={() => setCreating(true)} />
       ) : (
         <>
           {items.length ? (
@@ -102,7 +103,7 @@ function AdsBody() {
                 <thead>
                   <tr className="text-ink-2">
                     {["Brand", "Type and placement", "Audience", "Dates", "Views · taps · listens", "Status"].map((h) => (
-                      <th key={h} className="vx-eyebrow px-4 py-4">{h}</th>
+                      <th key={h} className="vx-eyebrow whitespace-nowrap px-4 py-4">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -110,7 +111,7 @@ function AdsBody() {
                   {items.map((a) => (
                     <tr
                       key={a.id}
-                      onClick={() => { setSelected(a.id); setCreating(false); setSaved(null); }}
+                      onClick={() => { setSelected(a.id); setCreating(false); setEditing(false); setSaved(null); }}
                       className={`cursor-pointer border-t border-line align-top ${selected === a.id && !creating ? "bg-mint" : "hover:bg-surface-2"}`}
                     >
                       <td className="px-4 py-3 text-body-strong">
@@ -128,12 +129,14 @@ function AdsBody() {
             </div>
           ) : null}
 
-          {creating ? (
-            <NewAd cats={cats} onClose={() => setCreating(false)} onCreated={(a) => { setCreating(false); setSelected(a.id); setSaved("Advert saved. It now waits for approval."); reloadToday(); void load(); }} />
+          {editing && ad && !creating ? (
+            <AdForm key={ad.id} ad={ad} cats={cats} onClose={() => setEditing(false)} onSaved={(a) => { setEditing(false); changed(a, ad.status === "PAUSED" ? "Advert saved. If you changed its words, it waits for approval again." : "Advert saved."); }} />
+          ) : creating ? (
+            <AdForm cats={cats} onClose={() => setCreating(false)} onSaved={(a) => { setCreating(false); setSelected(a.id); setSaved("Advert saved. It now waits for approval."); reloadToday(); void load(); }} />
           ) : ad ? (
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
               <Preview ad={ad} />
-              <Review key={ad.id + ad.status} ad={ad} cats={cats} onDone={changed} />
+              <Review key={ad.id + ad.status} ad={ad} cats={cats} onDone={changed} onEdit={() => { setEditing(true); setSaved(null); }} />
             </div>
           ) : null}
         </>
@@ -152,7 +155,7 @@ function Preview({ ad }: { ad: AdminAd }) {
   );
 }
 
-function Review({ ad, cats, onDone }: { ad: AdminAd; cats: Record<string, string>; onDone: (a: AdminAd, word: string) => void }) {
+function Review({ ad, cats, onDone, onEdit }: { ad: AdminAd; cats: Record<string, string>; onDone: (a: AdminAd, word: string) => void; onEdit: () => void }) {
   const [reason, setReason] = useState("");
   const act = useAction();
   const waiting = ad.status === "AWAITING_APPROVAL";
@@ -187,6 +190,13 @@ function Review({ ad, cats, onDone }: { ad: AdminAd; cats: Record<string, string
       </dl>
       {ad.changeRequest ? <p className="m-0 mt-4 rounded-m bg-surface-2 p-3 text-caption">{`Changes asked: ${ad.changeRequest}`}</p> : null}
 
+      {/* lead ruling WF, 6 Nov (C-M8): the API lets an advert be edited while it waits, has changes asked, or is paused. */}
+      {waiting || ad.status === "DRAFT" || ad.status === "PAUSED" ? (
+        <div className="mt-4">
+          <Button variant="secondary" onClick={onEdit}>Edit advert</Button>
+        </div>
+      ) : null}
+
       {waiting ? (
         <div className="mt-4 flex flex-col gap-4">
           <TextField label="Note to the brand" multiline value={reason} onChange={setReason} hint="Needed to ask for changes or reject. The brand sees it." />
@@ -213,11 +223,21 @@ function Review({ ad, cats, onDone }: { ad: AdminAd; cats: Record<string, string
   );
 }
 
-function NewAd({ cats, onClose, onCreated }: { cats: Record<string, string>; onClose: () => void; onCreated: (a: AdminAd) => void }) {
-  const [f, setF] = useState({ brand: "", headline: "", body: "", linkUrl: "", ctaLabel: "", startsOn: "", endsOn: "", cap: "3", price: "" });
-  const [kind, setKind] = useState<AdminAd["kind"]>("FEED_CARD");
-  const [picked, setPicked] = useState<string[]>([]);
-  const [states, setStates] = useState("");
+function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<string, string>; onClose: () => void; onSaved: (a: AdminAd) => void }) {
+  const [f, setF] = useState({
+    brand: ad?.brand ?? "",
+    headline: ad?.headline ?? "",
+    body: ad?.body ?? "",
+    linkUrl: ad?.linkUrl ?? "",
+    ctaLabel: ad?.ctaLabel ?? "",
+    startsOn: ad?.startsOn ?? "",
+    endsOn: ad?.endsOn ?? "",
+    cap: String(ad?.frequencyCapPerDay ?? 3),
+    price: ad?.priceKobo != null ? String(ad.priceKobo / 100) : "",
+  });
+  const [kind, setKind] = useState<AdminAd["kind"]>(ad?.kind ?? "FEED_CARD");
+  const [picked, setPicked] = useState<string[]>(ad?.categoryIds ?? []);
+  const [states, setStates] = useState(ad?.states.join(", ") ?? "");
   const act = useAction();
   const set = (k: keyof typeof f) => (v: string) => setF((o) => ({ ...o, [k]: v }));
 
@@ -236,13 +256,13 @@ function NewAd({ cats, onClose, onCreated }: { cats: Record<string, string>; onC
       ...(f.cap ? { frequencyCapPerDay: Number(f.cap) } : {}),
       ...(f.price ? { priceKobo: Math.round(Number(f.price) * 100) } : {}),
     };
-    const out = await act.run(() => createAd(body));
-    if (out) onCreated(out);
+    const out = await act.run(() => (ad ? updateAd(ad.id, body) : createAd(body)));
+    if (out) onSaved(out);
   }
 
   return (
     <Card>
-      <CardTitle>New advert</CardTitle>
+      <CardTitle>{ad ? "Edit advert" : "New advert"}</CardTitle>
       <div className="grid grid-cols-2 gap-4">
         <TextField label="Brand" value={f.brand} onChange={set("brand")} />
         <div className="vx-field">

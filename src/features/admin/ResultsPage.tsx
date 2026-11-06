@@ -18,6 +18,13 @@ function Mark({ post }: { post: AdminResultPost["post"] }) {
   );
 }
 
+/** "PU 012, Ward 3, Ikeja, Lagos": people type "PU 012" or "Ward 3" themselves, so the label never doubles the prefix (C-M5). */
+export function unitLabel(p: { pollingUnit: string; ward: string; lga: string; state: string }): string {
+  const pu = String(p.pollingUnit).trim().replace(/^(?:PU|polling unit)\b[\s.:#-]*/i, "");
+  const ward = String(p.ward).trim().replace(/^ward\b[\s.:#-]*/i, "");
+  return `PU ${pu}, Ward ${ward}, ${p.lga}, ${p.state}`;
+}
+
 function ResultsBody() {
   const { reloadToday } = useAdmin();
   const [threads, setThreads] = useState<ResultThread[] | null>(null);
@@ -128,7 +135,7 @@ function ResultsBody() {
                       <span className="flex items-center gap-3">
                         <Icon name="map-pin" size={22} />
                         <span className="min-w-0 flex-1">
-                          <span className="block text-label">{`PU ${p.pollingUnit}, Ward ${p.ward}, ${p.lga}, ${p.state}`}</span>
+                          <span className="block text-label">{unitLabel(p)}</span>
                           <span className="block text-caption text-ink-2">{`@${p.author.handle} · ${clock(p.createdAt)} · ${i.hasPhoto ? "photo attached" : "no photo"}${i.checkedBy ? ` · checked by ${i.checkedBy}` : ""}`}</span>
                         </span>
                         <Mark post={p} />
@@ -183,7 +190,7 @@ function Check({ row, onDone }: { row: AdminResultPost; onDone: (row: AdminResul
           </div>
           <span className={`rounded-pill px-3 py-1 ${p.status === "VERIFIED" ? "bg-verified-bg" : "bg-unverified-bg"}`}><Mark post={p} /></span>
         </div>
-        <div className="mt-3 flex items-center gap-2 text-body-strong"><Icon name="map-pin" size={20} />{`PU ${p.pollingUnit}, Ward ${p.ward}, ${p.lga}, ${p.state}`}</div>
+        <div className="mt-3 flex items-center gap-2 text-body-strong"><Icon name="map-pin" size={20} />{unitLabel(p)}</div>
         <div className="mt-3 grid grid-cols-3 gap-3">
           {[
             ["Accredited", p.accredited],

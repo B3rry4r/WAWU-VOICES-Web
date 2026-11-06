@@ -81,6 +81,7 @@ function OverrideBody() {
 
   const q = today?.todaysQuestion;
   const live = today?.flowState === "OVERRIDE_LIVE";
+  const pausedQuestion = live ? (log ?? []).find((o) => o.status === "LIVE")?.replaced ?? null : null;
 
   async function submit(emergencyNow: boolean) {
     setConfirm(false);
@@ -124,7 +125,18 @@ function OverrideBody() {
       ) : null}
       <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start gap-5">
         <div className="flex flex-col gap-5">
-          {q?.id ? (
+          {/* lead ruling WF, 6 Nov (C-M7): while an override is live, today's question is the override itself, so the card never calls it scheduled. It shows the question the override replaced, if there was one. */}
+          {live ? (
+            pausedQuestion ? (
+              <Card tone="mint">
+                <Eyebrow>Paused by the override</Eyebrow>
+                <h2 className="m-0 mt-2 font-display text-display-m">{pausedQuestion.text}</h2>
+                <p className="m-0 mt-2 text-caption text-ink-2">
+                  {pausedQuestion.voiceCount > 0 ? `It had ${pausedQuestion.voiceCount.toLocaleString("en-NG")} ${pausedQuestion.voiceCount === 1 ? "voice" : "voices"}. ` : ""}It is not lost. The flow resumes by itself when the override ends.
+                </p>
+              </Card>
+            ) : null
+          ) : q?.id ? (
             <Card tone="mint">
               <Eyebrow>Scheduled for today</Eyebrow>
               <h2 className="m-0 mt-2 font-display text-display-m">{q.text}</h2>
@@ -251,7 +263,7 @@ function LogRow({ o, onChanged }: { o: AdminOverride; onChanged: () => void }) {
       <tr className="border-t border-line align-top">
         <td className="whitespace-nowrap px-4 py-3">{dayClock(o.startsAt)}</td>
         <td className="px-4 py-3">{o.headline || o.body || "An override"}</td>
-        <td className="px-4 py-3">{o.replaced ? o.replaced.text : "Nothing"}</td>
+        <td className="px-4 py-3">{o.replaced ? `${o.replaced.weekNumber ? `Week ${o.replaced.weekNumber}: ` : ""}${o.replaced.text}` : "Nothing"}</td>
         <td className="px-4 py-3">{o.by}</td>
         <td className="px-4 py-3">
           {resultWords(o)}
