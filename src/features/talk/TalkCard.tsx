@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AnswerCard, Button, Sheet, Toast, REACTIONS } from "@/components/vx";
 import { ShareSheet } from "@/features/share";
 import { answerCardProps } from "@/lib/feed-format";
@@ -64,6 +64,24 @@ interface Props {
   onChange?: (a: Answer) => void;
 }
 
+/** People blocked in this tab (WF-7b): their cards leave every list at once, and Undo brings them back. A reload reads the server's own list. */
+const blockedHere = new Set<string>();
+const blockListeners = new Set<() => void>();
+let blockedVersion = 0;
+function setBlockedHere(id: string, on: boolean) {
+  if (on) blockedHere.add(id); else blockedHere.delete(id);
+  blockedVersion++;
+  blockListeners.forEach((f) => f());
+}
+function useBlockedHere(id: string | undefined): boolean {
+  useSyncExternalStore(
+    (f) => { blockListeners.add(f); return () => { blockListeners.delete(f); }; },
+    () => blockedVersion,
+    () => 0,
+  );
+  return !!id && blockedHere.has(id);
+}
+
 /** The design system card wired to the real API. The card is controlled (liked, likeCount, reaction, reactionCounts, trayOpen, playing):
  *  it shows what the server last said, a tap is sent through onLike / onReact / onReply / onShare / onMore, and a refusal puts the props back. */
 export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, className, onChange }: Props) {
@@ -85,6 +103,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   const onStart = useCallback(() => { void api.countListen(answer.id); }, [answer.id]);
   const clip = useClipPlayback(answer.clip?.id, onFail, onStart);
   useEffect(() => setA(answer), [answer]);
+  const authorBlocked = useBlockedHere(answer.author?.id);
   // The clip reset signal (the voice ended, another took over, or it could not play): the player goes back to its start.
   useEffect(() => { setPlaying(false); }, [clip.rev]);
   const upd = (n: Answer) => { setA(n); onChange?.(n); };
@@ -152,6 +171,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   const counts: Record<string, number> = {};
   for (const r of a.reactionBreakdown) { const n = nameOf(r.kind); if (n) counts[n] = r.count; }
   const handle = a.author?.handle;
+  if (authorBlocked) return null;
   return (
     <>
       <AnswerCard
@@ -198,7 +218,8 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
                   try {
                     const uid = a.author!.id;
                     await api.blockUser(uid);
-                    push(`You blocked @${handle}.`, "success", { label: "Undo", run: () => { api.unblockUser(uid).then(() => push(`@${handle} is unblocked.`, "info"), (e) => push(failText(e), "danger")); } });
+                    setBlockedHere(uid, true);
+                    push(`You blocked @${handle}.`, "success", { label: "Undo", run: () => { api.unblockUser(uid).then(() => { setBlockedHere(uid, false); push(`@${handle} is unblocked.`, "info"); }, (e) => push(failText(e), "danger")); } });
                   } catch (e) { push(failText(e), "danger"); }
                 }}
               >

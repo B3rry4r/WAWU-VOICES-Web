@@ -158,13 +158,18 @@ function ModerationBody() {
       setSelected(rest[Math.min(at, rest.length - 1)]?.id ?? null);
       return rest;
     });
-    setCounts((c0) => ({ ...c0, [queue]: Math.max(0, Number(c0[queue] ?? 0) - 1), open: Math.max(0, Number(c0.open ?? 0) - 1) }));
+    setCounts((c0) => {
+      const open0 = Math.max(0, Number(c0.open ?? 0) - 1);
+      // WF-7b (C-N-c4): with nothing open there is no "oldest"; otherwise it is re-read below.
+      return { ...c0, [queue]: Math.max(0, Number(c0[queue] ?? 0) - 1), open: open0, ...(open0 === 0 ? { oldestOpenAt: null } : {}) };
+    });
+    listModeration({ queue }).then((p) => setCounts((p.counts ?? {}) as Counts), () => undefined);
     reloadToday();
   }
 
 
   const open = Number(counts.open ?? 0);
-  const oldest = typeof counts.oldestOpenAt === "string" ? minutesWords(Math.max(0, Math.round((Date.now() - new Date(counts.oldestOpenAt).getTime()) / 60000))) : null;
+  const oldest = open > 0 && typeof counts.oldestOpenAt === "string" ? minutesWords(Math.max(0, Math.round((Date.now() - new Date(counts.oldestOpenAt).getTime()) / 60000))) : null;
   const cnt = (q: string) => Number(counts[q] ?? 0);
 
   return (
@@ -203,7 +208,7 @@ function ModerationBody() {
             {items.map((it) => {
               const tag = reasonTag(it);
               const accountItem = !it.postKind && it.targetType === "USER";
-              const what = accountItem ? (it.queue === "APPEAL" ? "Appeal about an account" : "Report about an account") : it.postKind === "VOICE" ? "Voice reply" : it.postKind === "TEXT" ? "Text answer" : it.postKind === "REPLY_VOICE" ? "Voice reply to a voice" : it.postKind === "REPLY_TEXT" ? "Text reply" : null;
+              const what = accountItem ? (it.queue === "APPEAL" ? "Appeal about an account" : "Report about an account") : it.postKind === "VOICE" ? "Voice answer" : it.postKind === "TEXT" ? "Text answer" : it.postKind === "REPLY_VOICE" ? "Voice reply to a voice" : it.postKind === "REPLY_TEXT" ? "Text reply" : null;
               return (
                 <button key={it.id} type="button" role="listitem" className={queueRow(selected === it.id)} onClick={() => setSelected(it.id)} aria-current={selected === it.id ? "true" : undefined}>
                   <span className="flex flex-wrap items-center gap-2 text-caption text-ink-2">

@@ -38,6 +38,8 @@ export interface PollProps {
   onSelect?: (optionId: string) => void;
   /** Called by "Confirm vote" with the chosen option. May return a promise: the button waits on it, and a rejection keeps the confirm step. */
   onConfirm?: (optionId: string) => void | Promise<void>;
+  /** The page already shows the poll's title above it: the title stays for screen readers only. */
+  hideQuestion?: boolean;
   className?: string;
 }
 
@@ -143,7 +145,8 @@ export function Poll(p: PollProps): ReactElement {
           {opts.map((o) => {
             const pct = total ? Math.round(((o.votes || 0) * 100) / total) : 0;
             // lead ruling WF, 6 Nov (B-L4): nobody leads a poll with no votes (no "Leading 0%").
-            const isLead = (o.votes || 0) > 0 && o.id === lead.id;
+            // A tie has no leader (WF-7b, A-F5): two options level at the top show no Leading mark.
+            const isLead = (o.votes || 0) > 0 && o.id === lead.id && !opts.some((x) => x.id !== o.id && (x.votes || 0) === (o.votes || 0));
             return (
               <li key={o.id} className={cx('vx-res__row', isLead && 'is-lead')}>
                 <span className="vx-res__label">
@@ -178,7 +181,7 @@ export function Poll(p: PollProps): ReactElement {
   return (
     <section className={cx('vx-poll', p.sponsor && 'vx-poll--sponsored', p.className)} aria-label="Poll">
       {head}
-      <h3 className="vx-poll__q">{p.question}</h3>
+      <h3 className={cx('vx-poll__q', p.hideQuestion && 'sr-only')}>{p.question}</h3>
       {body}
     </section>
   );

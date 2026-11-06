@@ -42,7 +42,7 @@ export function ReceiptScreen({ paymentId }: { paymentId: string }) {
             ["Paid", naira(r.amountKobo)],
             ...((methodLabel(r) ? [["Method", methodLabel(r) as string]] : []) as Array<[string, string]>),
             ["Time", dateTimeLagos(r.paidAt)],
-            ["Account", r.buyerHandle],
+            ["Account", r.buyerHandle.startsWith("@") ? r.buyerHandle : "@" + r.buyerHandle],
           ];
           return (
             <>

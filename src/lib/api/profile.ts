@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type { components } from "./types";
+import { isSignedIn } from "./auth";
 
 /* me-profile group (A1), people, media presign, reports. Every call is a contract path under /api/v1 (API_BASE). */
 type S = components["schemas"];
@@ -33,7 +34,8 @@ export const updateProfile = (body: UpdateProfileRequest) => apiFetch<Profile>("
 export const checkHandle = (handle: string) => apiFetch<S["HandleCheck"]>(`/me/handle-check${q({ handle })}`, { authed: true });
 export const getSettings = () => apiFetch<Settings>("/me/settings", { authed: true });
 export const updateSettings = (body: UpdateSettingsRequest) => apiFetch<Settings>("/me/settings", { method: "PATCH", authed: true, body });
-export const getFollowedCategories = () => apiFetch<S["CategoryFollowList"]>("/me/categories", { authed: true });
+/** Signed out (WF-7b, A-F6): no call is made, so no 401 reaches the console; the list is empty. */
+export const getFollowedCategories = (): Promise<S["CategoryFollowList"]> => (isSignedIn() ? apiFetch<S["CategoryFollowList"]>("/me/categories", { authed: true }) : Promise.resolve({ categories: [] } as S["CategoryFollowList"]));
 export const setFollowedCategories = (categories: CategoryFollow[]) => apiFetch<S["SetCategoriesRequest"]>("/me/categories", { method: "PUT", authed: true, body: { categories } });
 export const listCategories = () => apiFetch<S["CategoryList"]>("/categories");
 export const listMyAnswers = (cursor?: string) => apiFetch<Page<S["AnswerOrAd"]>>(`/me/answers${q({ cursor, limit: 20 })}`, { authed: true });

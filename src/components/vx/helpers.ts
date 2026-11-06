@@ -14,6 +14,11 @@ export function voicesText(n: number | undefined): string {
   return short(n) + (n === 1 ? ' voice' : ' voices');
 }
 
+/** "1 vote", "0 votes": a poll counts votes, not voices (RX5). */
+export function votesCount(n: number | undefined): string {
+  return short(n) + (n === 1 ? ' vote' : ' votes');
+}
+
 export function short(n: number | string | undefined): string {
   if (typeof n !== 'number') return n === undefined ? '' : n;
   if (n >= 1e6) return Math.round(n / 1e5) / 10 + 'M';

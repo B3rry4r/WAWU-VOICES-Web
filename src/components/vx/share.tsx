@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { ASSETS } from './assets';
-import { cx, voicesText } from './helpers';
+import { cx, voicesText, votesCount } from './helpers';
 import type { NewsKind } from './helpers';
 import { Icon } from './Icon';
 import { NewsTag } from './labels';
@@ -46,6 +46,8 @@ export function ShareCard(p: ShareCardProps): ReactElement {
       <span className="vx-share__topic">{(p.country || 'Nigeria') + ' · ' + p.topic}</span>
     </div>
   );
+  // A tie at the top has no leader (WF-7b, A-F5).
+  const tie = (p.poll || []).length > 1 && (p.poll || [])[0].pct === (p.poll || [])[1].pct;
   let mid: ReactElement;
   if (kind === 'voice') {
     mid = (
@@ -63,9 +65,9 @@ export function ShareCard(p: ShareCardProps): ReactElement {
             <div key={i}>
               <div className="vx-share__pollrow">
                 <span>{r.label}</span>
-                <span>{r.pct + '%' + (i === 0 && kind === 'poll' && p.open ? ' so far' : '')}</span>
+                <span>{r.pct + '%' + (i === 0 && kind === 'poll' && p.open && !tie ? ' so far' : '')}</span>
               </div>
-              <div className="vx-share__pollbar"><i style={{ width: r.pct + '%', background: i === 0 ? 'var(--sun)' : 'var(--on-forest-2)' }} /></div>
+              <div className="vx-share__pollbar"><i style={{ width: r.pct + '%', background: i === 0 && !tie ? 'var(--sun)' : 'var(--on-forest-2)' }} /></div>
             </div>
           ))}
         </div>
@@ -97,7 +99,7 @@ export function ShareCard(p: ShareCardProps): ReactElement {
           <span className="vx-share__based">
             {/* lead ruling WF, 6 Nov (B-L4): "split" is said only when there are votes to split. */}
             {p.summary || (p.poll || []).some((r) => r.pct > 0) ? <><b>{p.summary || 'People are split so far.'}</b><br /></> : null}
-            {'Based on ' + voicesText(p.voices) + ' · updated ' + (p.updated || 'just now')}
+            {'Based on ' + (kind === 'poll' ? votesCount(p.voices) : voicesText(p.voices)) + ' · updated ' + (p.updated || 'just now')}
             <br />
             {p.link || 'voices.wawuafrica.com'}
           </span>

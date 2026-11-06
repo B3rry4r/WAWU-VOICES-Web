@@ -7,7 +7,7 @@ import type { AdminAd, UpsertAdRequest } from "@/lib/api/admin";
 import { getCategories } from "@/lib/api/feed";
 import { useAdmin } from "./AdminFrame";
 import { dayMonth } from "./time";
-import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, useAction, Gated } from "./ui";
+import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, isSuspendedError, useAction, Gated } from "./ui";
 
 const KIND_WORDS: Record<AdminAd["kind"], string> = {
   FEED_CARD: "Ad · feed card",
@@ -84,11 +84,11 @@ function AdsBody() {
       <PageHead
         eyebrow={`Ad manager · ${awaiting} awaiting approval`}
         title="Adverts"
-        right={
+        right={error && isSuspendedError(error) ? undefined : (
           <Button icon="plus" onClick={() => { setCreating(true); setEditing(false); setSaved(null); }}>
             New advert
           </Button>
-        }
+        )}
       />
       {saved ? (
         <div className="mb-4">

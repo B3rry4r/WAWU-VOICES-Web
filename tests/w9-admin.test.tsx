@@ -138,7 +138,7 @@ describe("round 1", () => {
       return json(404, { error: { code: "NOT_FOUND", message: "no" } });
     }));
     render(<AdminFrame><AdminModerationPage /></AdminFrame>);
-    await waitFor(() => expect(screen.getAllByText(/Voice reply on “Which promise\?”/).length).toBe(4));
+    await waitFor(() => expect(screen.getAllByText(/Voice answer on “Which promise\?”/).length).toBe(4));
     expect(screen.getAllByText(/220 listens/).length).toBeGreaterThan(0);
     // only the first row's detail (the open item) is fetched
     expect(calls.filter((c) => c.includes("/admin/moderation/items/")).length).toBe(1);

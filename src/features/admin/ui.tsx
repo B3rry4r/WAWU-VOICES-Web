@@ -153,7 +153,17 @@ export function SavedLine({ children }: { children: ReactNode }) {
   );
 }
 
+/** A suspended admin person is told so; a retry cannot help, so none is offered (WF-7b, C-N-c6). */
+export const isSuspendedError = (e: unknown): boolean => e instanceof ApiError && e.code === "ACCOUNT_SUSPENDED";
+
 export function LoadFailed({ error, retry }: { error: Error; retry: () => void }) {
+  if (isSuspendedError(error)) {
+    return (
+      <Banner tone="danger" title="This account is suspended">
+        {refusalWords(error)}
+      </Banner>
+    );
+  }
   return (
     <Banner tone="danger" title="This did not load" action="Try again" actionIcon="refresh-cw" onAction={retry}>
       {refusalWords(error)}

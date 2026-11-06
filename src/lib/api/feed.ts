@@ -11,6 +11,7 @@ export type CategoryDetail = S["CategoryDetail"];
 export type SearchResults = S["SearchResults"];
 export type PublicConfig = S["PublicConfig"];
 
+import { isSignedIn } from "./auth";
 const GUEST_KEY = "voices-guest-id";
 
 /** A client-made id kept in local storage, sent as X-Guest-Id so a guest's likes and ad caps can be counted (V-15). */
@@ -53,7 +54,8 @@ export const search = (q: string, type?: string) => apiFetch<SearchResults>(`/se
 export type Me = S["Me"];
 /** The signed-in person: first name for the greeting, allowances for the vote cost. Signed in with a finished profile only. */
 export const getMe = () => apiFetch<Me>("/me", { authed: true });
-export const getMyCategories = () => apiFetch<S["CategoryFollowList"]>("/me/categories", { authed: true });
+/** Signed out (WF-7b, A-F6): no call is made, so no 401 reaches the console; the list is empty. */
+export const getMyCategories = (): Promise<S["CategoryFollowList"]> => (isSignedIn() ? apiFetch<S["CategoryFollowList"]>("/me/categories", { authed: true }) : Promise.resolve({ categories: [] } as S["CategoryFollowList"]));
 export const setMyCategories = (categories: S["CategoryFollow"][]) =>
   apiFetch<S["SetCategoriesRequest"]>("/me/categories", { method: "PUT", authed: true, body: { categories } });
 export const getNewsTags = () => apiFetch<S["TagInfoList"]>("/news/tags", opts());

@@ -100,7 +100,7 @@ export function PostedScreen({ qid }: { qid: string }) {
         {ans ? <TalkCard answer={ans} signedIn push={push} /> : null}
         {link?.imageUrl && link.cardStatus === "READY" ? (
           <>
-            <p className="m-0 text-caption text-[var(--ink-2)]">People get this card and a link. Your recording itself is never shared as a file.</p>
+            <p className="m-0 text-caption text-[var(--ink-2)]">{ans?.clip ? "People get this card and a link. Your recording itself is never shared as a file." : "People get this card and a link."}</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`${API_BASE}/share/${link.code}/card`} alt="The share card for your voice" className="w-full rounded-[var(--radius-l)]" />
           </>

@@ -58,7 +58,9 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
       ? [extras?.profileVoices != null ? countText(extras.profileVoices, "voice") : null]
       : [countText(voicesN, "voice"), page.poll ? `${countText(page.poll.totalVotes, "vote")} so far` : null]
   ).filter(Boolean).join(" · ");
-  const hasLean = !!page.leanLine || page.arguments.length > 0;
+  // A poll page lists its options once, in the poll card below (WF-7b, A-F2): the heading block keeps only the summary line.
+  const shownArgs = isPoll ? [] : page.arguments;
+  const hasLean = !!page.leanLine || shownArgs.length > 0;
 
   const cta = (
     <>
@@ -91,7 +93,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
               <Eyebrow>Where it is heading</Eyebrow>
               {page.leanLine ? <p className="m-0 text-title">{page.leanLine}</p> : null}
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {page.arguments.map((a, i) => (
+                {shownArgs.map((a, i) => (
                   <li key={i} className="flex flex-col gap-1">
                     <div className="flex items-baseline justify-between gap-3 text-body"><span>{a.text}</span><span className="text-body-strong text-ink-2">{fmt(a.voices)}</span></div>
                     <span className="block h-2 overflow-hidden rounded-pill bg-surface-3" aria-hidden="true"><i className={"block h-full rounded-pill " + (i === 0 ? "bg-green" : "bg-mint")} style={bar(i)} /></span>
@@ -124,7 +126,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
           {page.poll ? (
             <section className="flex flex-col gap-2" aria-label="The poll so far">
               <Eyebrow>The poll so far</Eyebrow>
-              <Poll question={isPoll ? page.topicLine : extras?.pollTitle || "Poll results"} options={leaderFirst(page.poll.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes ?? 0 })))} total={page.poll.totalVotes} state="results" live={false} onExplain={false} />
+              <Poll question={isPoll ? page.topicLine : extras?.pollTitle || "Poll results"} options={leaderFirst(page.poll.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes ?? 0 })))} total={page.poll.totalVotes} state="results" live={false} onExplain={false} hideQuestion={isPoll} />
             </section>
           ) : null}
 
