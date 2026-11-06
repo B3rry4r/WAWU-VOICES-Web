@@ -1,4 +1,5 @@
 "use client";
+import { countText } from "@/lib/format/plural";
 import Link from "next/link";
 import { useState } from "react";
 import { Avatar, Badge, Icon, NewsTag, REACTIONS } from "@/components/vx";
@@ -62,11 +63,11 @@ export function PostRow({ a }: { a: Answer }) {
         {a.body ? <p className="vx-answer__text">{a.body}</p> : null}
         {transcript ? <Transcript text={transcript} /> : null}
         {a.reactionCount > 0 ? (
-          <div className="vx-answer__sum"><span className="e" aria-hidden="true">{top.map((t) => emoji(t.kind)).join(" ")}</span>{fmt(a.reactionCount) + " reactions"}</div>
+          <div className="vx-answer__sum"><span className="e" aria-hidden="true">{top.map((t) => emoji(t.kind)).join(" ")}</span>{countText(a.reactionCount, "reaction")}</div>
         ) : null}
         <div className="pf-counts">
-          <span><Icon name="heart" size={18} />{short(a.likeCount)}<span className="pf-sr"> likes</span></span>
-          <span><Icon name="message-circle" size={18} />{short(a.replyCount)}<span className="pf-sr"> replies</span></span>
+          <span><Icon name="heart" size={18} />{short(a.likeCount)}<span className="pf-sr">{a.likeCount === 1 ? " like" : " likes"}</span></span>
+          <span><Icon name="message-circle" size={18} />{short(a.replyCount)}<span className="pf-sr">{a.replyCount === 1 ? " reply" : " replies"}</span></span>
         </div>
       </article>
     </div>

@@ -56,7 +56,7 @@ describe("NewsCard", () => {
     render(<NewsCard post={base} signedIn repliesHref="/news/a1" />);
     await user.click(screen.getByRole("button", { name: "React" }));
     await user.click(screen.getByRole("radio", { name: /Well said/ }));
-    await waitFor(() => expect(screen.getByText("1 reactions")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("1 reaction")).toBeTruthy());
     const r = calls.find((c) => c.url.endsWith("/reaction"));
     expect(r?.method).toBe("PUT");
     expect(r?.headers.get("Idempotency-Key")).toBeTruthy();

@@ -5,7 +5,7 @@ import { Avatar, Button, Icon, TextField } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { isAccountBlocked } from "@/lib/api/auth";
 import { getPublicConfig } from "@/lib/api/feed";
-import { checkHandle, createMe, getMe, PHOTO_MAX_BYTES, PHOTO_MIMES, setCategories, updateProfile, uploadAvatar } from "@/lib/api/me";
+import { checkHandle, createMe, getMe, PHOTO_MAX_BYTES, PHOTO_MIMES, setCategories, updateProfile, updateSettings, uploadAvatar } from "@/lib/api/me";
 import { handleFromName, tokenName } from "@/lib/auth/claims";
 import { clearDraft, peekHeldPost, readDraft, takeReturn, type JoinDraft } from "@/lib/auth/entry-draft";
 import { BottomBar, DeskCard, DeskHeader, EntryFrame, EntryScroll, ErrorBanner, StepHeader, refusalWords, useNeedSession } from "./ui";
@@ -94,6 +94,8 @@ export function ProfileSetup() {
       if (!made.current) {
         try {
           await createMe({ handle: h, ageConfirmed: true, termsAccepted: true, rulesAccepted: true, countryCode: draft.countryCode, languages: draft.languages, categoryIds: topics.map((t) => t.categoryId) });
+          // The Settings board draws Flash polls off for a new account (the API's own default is on). A miss here never blocks sign-up.
+          await updateSettings({ notifyFlashPolls: false }).catch(() => undefined);
         } catch (e) {
           // The profile was made before (a reload, a second tab): carry on, and set the handle if the person changed it.
           const reason = e instanceof ApiError && e.status === 409 ? (e.details as { reason?: string } | undefined)?.reason : undefined;

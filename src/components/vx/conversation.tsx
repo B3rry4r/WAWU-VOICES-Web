@@ -292,6 +292,24 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
         </div>
       ) : null}
       <div className="vx-answer__actions">
+        <button
+          type="button"
+          className="vx-act"
+          aria-pressed={liked ? 'true' : 'false'}
+          aria-label={'Like, ' + likes + (likes === 1 ? ' like' : ' likes')}
+          onClick={() => {
+            if (likeCtl) p.onLike!(!liked);
+            else setLiked(!liked);
+          }}
+        >
+          <Icon name="heart" size={20} fill={liked} />
+          {short(likes)}
+        </button>
+        <button type="button" className={cx('vx-act', r && 'vx-act--reacted')} aria-expanded={tray ? 'true' : 'false'} aria-label={r ? 'Your reaction: ' + r.name + '. Change' : 'React'} onClick={() => setTrayOpen(!tray)}>
+          {r ? <span className="vx-act__emoji" aria-hidden="true">{r.e}</span> : <Icon name="smile-plus" size={20} />}
+          {r ? r.name : 'React'}
+        </button>
+        {/* After the React button in the DOM so Tab reaches the tray next; it is absolutely placed above the row, so nothing moves. */}
         {tray ? (
           <div className="vx-answer__tray">
             <ReactionTray
@@ -305,24 +323,7 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
             />
           </div>
         ) : null}
-        <button
-          type="button"
-          className="vx-act"
-          aria-pressed={liked ? 'true' : 'false'}
-          aria-label={'Like, ' + likes + ' likes'}
-          onClick={() => {
-            if (likeCtl) p.onLike!(!liked);
-            else setLiked(!liked);
-          }}
-        >
-          <Icon name="heart" size={20} fill={liked} />
-          {short(likes)}
-        </button>
-        <button type="button" className={cx('vx-act', r && 'vx-act--reacted')} aria-expanded={tray ? 'true' : 'false'} aria-label={r ? 'Your reaction: ' + r.name + '. Change' : 'React'} onClick={() => setTrayOpen(!tray)}>
-          {r ? <span className="vx-act__emoji" aria-hidden="true">{r.e}</span> : <Icon name="smile-plus" size={20} />}
-          {r ? r.name : 'React'}
-        </button>
-        <button type="button" className="vx-act" aria-label={'Reply, ' + (p.replies || 0) + ' replies'} onClick={p.onReply}>
+        <button type="button" className="vx-act" aria-label={'Reply, ' + (p.replies === 1 ? '1 reply' : (p.replies || 0) + ' replies')} onClick={p.onReply}>
           <Icon name="message-circle" size={20} />
           {short(p.replies || 0)}
         </button>

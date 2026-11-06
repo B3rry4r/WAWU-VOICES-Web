@@ -53,13 +53,14 @@ export function PostedScreen({ qid }: { qid: string }) {
   const intent = (t: ShareTarget) => { if (link) void recordShareEvent(link.code, "intent", t); };
   /** WhatsApp Status cannot be posted from a web page: the link opens in WhatsApp, where the person picks Status or a chat. */
   const statusHref = link ? `https://wa.me/?text=${encodeURIComponent(link.previewText || link.url)}` : undefined;
-  /** Instagram Stories cannot be posted from a web page either: the story-size card is saved to the phone and a short how-to shows. */
+  /** Instagram Stories cannot be posted from a web page either: the 1080x1920 story card (the link's storyImageUrl) is saved to the phone and a short how-to shows. */
   async function saveStoryCard() {
     if (!link) return;
     intent("INSTAGRAM_STORIES");
     try {
-      const r = await fetch(`${API_BASE}/share/${encodeURIComponent(link.code)}/card?size=story`);
-      if (!r.ok || r.status === 202) throw new Error("card not ready");
+      if (!link.storyImageUrl) throw new Error("no story card");
+      const r = await fetch(link.storyImageUrl);
+      if (!r.ok) throw new Error("card not ready");
       const blob = await r.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);

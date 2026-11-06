@@ -1,4 +1,5 @@
 "use client";
+import { countText } from "@/lib/format/plural";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { ASSETS, Button, FreePosts, Icon, Logo, VoicePlayer } from "@/components/vx";
@@ -74,7 +75,7 @@ export function Onboarding() {
             <div className="relative flex flex-col gap-2 rounded-[20px] bg-[var(--forest-2)] p-4">
               <span className="flex justify-between text-count"><span>{lead.label}</span><span>{leadPct}%</span></span>
               <span className="block h-[10px] rounded-full bg-forest"><i className="block h-[10px] rounded-full bg-green" style={{ width: `${leadPct}%` }} /></span>
-              <span className="text-caption text-[var(--on-forest-2)]">{`Open poll · ${poll.totalVotes.toLocaleString("en-NG")} votes so far`}</span>
+              <span className="text-caption text-[var(--on-forest-2)]">{`Open poll · ${countText(poll.totalVotes, "vote")} so far`}</span>
             </div>
           ) : null}
         </>

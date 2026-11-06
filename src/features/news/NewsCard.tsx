@@ -1,5 +1,6 @@
 "use client";
 
+import { countText } from "@/lib/format/plural";
 import Link from "next/link";
 import { useState } from "react";
 import { Avatar, Icon, NewsTag, ReactionTray, REACTIONS } from "@/components/vx";
@@ -94,18 +95,17 @@ export function NewsCard({ post, signedIn, repliesHref, open }: { post: NewsAnsw
         {total > 0 ? (
           <div className="vx-answer__sum">
             <span className="e" aria-hidden="true">{emojis.join(" ")}</span>
-            {fmt(total) + " reactions"}
+            {countText(total, "reaction")}
           </div>
         ) : null}
         <div className="vx-answer__actions">
-          {tray ? <div className="vx-answer__tray"><ReactionTray value={nameOf(mine)} onChange={react} /></div> : null}
           {SERVED.likes ? (
-            <button type="button" className="vx-act" aria-pressed={liked} aria-label={"Like, " + likes + " likes"} onClick={like}>
+            <button type="button" className="vx-act" aria-pressed={liked} aria-label={"Like, " + likes + (likes === 1 ? " like" : " likes")} onClick={like}>
               <Icon name="heart" size={20} fill={liked} />
               {short(likes)}
             </button>
           ) : (
-            <span className="vx-act" aria-label={likes + " likes"}><Icon name="heart" size={20} />{short(likes)}</span>
+            <span className="vx-act" aria-label={countText(likes, "like")}><Icon name="heart" size={20} />{short(likes)}</span>
           )}
           {signedIn && SERVED.reactions ? (
             <button type="button" className={"vx-act" + (reacted ? " vx-act--reacted" : "")} aria-expanded={tray} aria-label={reacted ? "Your reaction: " + reacted.name + ". Change" : "React"} onClick={() => setTray(!tray)}>
@@ -113,13 +113,15 @@ export function NewsCard({ post, signedIn, repliesHref, open }: { post: NewsAnsw
               {reacted ? reacted.name : "React"}
             </button>
           ) : null}
+          {/* After the React button so Tab reaches the tray next (it is positioned above the row). */}
+          {tray ? <div className="vx-answer__tray"><ReactionTray value={nameOf(mine)} onChange={react} /></div> : null}
           {SERVED.replies ? (
             <Link href={repliesHref} className="vx-act" aria-label={"Replies, " + post.replyCount}>
               <Icon name="message-circle" size={20} />
               {short(post.replyCount)}
             </Link>
           ) : (
-            <span className="vx-act" aria-label={post.replyCount + " replies"}><Icon name="message-circle" size={20} />{short(post.replyCount)}</span>
+            <span className="vx-act" aria-label={countText(post.replyCount, "reply", "replies")}><Icon name="message-circle" size={20} />{short(post.replyCount)}</span>
           )}
           <button type="button" className="vx-act vx-act--end" aria-label="Share" onClick={() => setSharing(true)}>
             <Icon name="share-2" size={20} />

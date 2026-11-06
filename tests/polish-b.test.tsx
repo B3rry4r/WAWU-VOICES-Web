@@ -100,7 +100,7 @@ describe("T1 transcript row only when the transcript is READY", () => {
 });
 
 describe("T5 Posted share buttons", () => {
-  const link = { code: "abc12345", url: "https://voices.example/s/abc12345", previewText: "A voice from @ada\nhttps://voices.example/s/abc12345", cardStatus: "READY", imageUrl: "https://x/card.png" };
+  const link = { code: "abc12345", url: "https://voices.example/s/abc12345", previewText: "A voice from @ada\nhttps://voices.example/s/abc12345", cardStatus: "READY", imageUrl: "https://x/card.png", storyImageUrl: "https://voices.example/api/v1/share/abc12345/story" };
   function routes(c: Call) {
     if (c.url.endsWith("/answers/a1")) return json(answer());
     if (c.url.endsWith("/me/allowance")) return json({ freePostsRemaining: 6, balanceMilli: 0, maxVoiceSeconds: 10, freeReactionsLeftToday: 1, costs: {}, extraVoiceTokens: [] });
@@ -118,7 +118,7 @@ describe("T5 Posted share buttons", () => {
     await waitFor(() => expect(calls.some((c) => c.url.includes("/share/abc12345/events") && (c.body as { target?: string })?.target === "WHATSAPP_STATUS")).toBe(true));
   });
   it("Instagram Stories downloads the story card and shows the how-to", async () => {
-    stub((c) => (c.url.includes("/card") ? new Response(new Blob(["png"], { type: "image/png" }), { status: 200 }) : routes(c)));
+    stub((c) => (c.url.includes("/story") ? new Response(new Blob(["png"], { type: "image/png" }), { status: 200 }) : routes(c)));
     (URL as unknown as { createObjectURL: () => string }).createObjectURL = () => "blob:x";
     (URL as unknown as { revokeObjectURL: () => void }).revokeObjectURL = () => undefined;
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
@@ -127,7 +127,7 @@ describe("T5 Posted share buttons", () => {
     await waitFor(() => expect((b as HTMLButtonElement).disabled).toBe(false));
     await userEvent.click(b);
     await waitFor(() => expect(click).toHaveBeenCalled());
-    expect(calls.some((c) => c.url.includes("/card?size=story"))).toBe(true);
+    expect(calls.some((c) => c.url.includes("/share/abc12345/story"))).toBe(true);
     expect(await screen.findByText(/Open Instagram and tap Your story/)).toBeTruthy();
     expect(calls.some((c) => c.url.includes("/events") && (c.body as { target?: string })?.target === "INSTAGRAM_STORIES")).toBe(true);
   });

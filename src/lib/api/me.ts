@@ -23,6 +23,8 @@ export const setCategories = (categories: S["CategoryFollow"][]) =>
 
 export const updateProfile = (body: S["UpdateProfileRequest"]) => apiFetch<S["Profile"]>("/me/profile", { method: "PATCH", authed: true, body });
 
+export const updateSettings = (body: S["UpdateSettingsRequest"]) => apiFetch<S["Settings"]>("/me/settings", { method: "PATCH", authed: true, body });
+
 export const PHOTO_MIMES = ["image/jpeg", "image/png", "image/webp"] as const;
 /** The API refuses uploads over upload.max_bytes (5,000,000; not served in /config/public, so held here). */
 export const PHOTO_MAX_BYTES = 5_000_000;

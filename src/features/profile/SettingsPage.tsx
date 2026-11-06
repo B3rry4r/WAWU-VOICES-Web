@@ -2,12 +2,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Icon, IconButton, Sheet, Switch as VxSwitch, Tabs, TextField } from "@/components/vx";
+import { Button, Icon, IconButton, Sheet, Switch as VxSwitch, Tabs, TextField, TopicChip } from "@/components/vx";
 import { signOut } from "@/lib/api/auth";
 import {
-  deleteAccount, getExport, getFollowedCategories, listBlocks, listCategories, requestExport, setFollowedCategories, unblockUser, updateSettings,
+  deleteAccount, getExport, getFollowedCategories, listBlocks, listCategories, requestExport, setFollowedCategories, unblockUser, updateProfile, updateSettings,
   type BlockedUser, type Category, type CategoryFollow, type DataExport, type Me, type Settings,
 } from "@/lib/api/profile";
+import { listCountries, type Country } from "@/lib/api/me";
+import { LANGUAGES } from "@/features/entry/Country";
 import { DELETE_WORDS, DeletionPending } from "./DeletionPending";
 import { LoadError, LoadingBlock, NeedsProfileNotice, Section, SignedOutNotice, errorLine } from "./states";
 import { minuteLabel } from "./format";
@@ -24,11 +26,12 @@ function Switch({ label, detail, checked, onChange, disabled }: { label: string;
   );
 }
 
-function RowButton({ icon, label, detail, onClick, danger, trailing }: { icon?: Parameters<typeof Icon>[0]["name"]; label: string; detail?: string; onClick: () => void; danger?: boolean; trailing?: ReactNode }) {
+function RowButton({ icon, label, detail, value, onClick, danger, trailing }: { value?: string; icon?: Parameters<typeof Icon>[0]["name"]; label: string; detail?: string; onClick: () => void; danger?: boolean; trailing?: ReactNode }) {
   return (
     <button type="button" className={"pf-row-item pf-row-item--btn" + (danger ? " is-danger" : "")} onClick={onClick}>
       {icon ? <Icon name={icon} size={22} /> : null}
       <span className="pf-row-item__txt"><b>{label}</b>{detail ? <span>{detail}</span> : null}</span>
+      {value ? <span className="pf-row-item__val">{value}</span> : null}
       {trailing ?? <Icon name="chevron-right" size={20} />}
     </button>
   );
@@ -58,6 +61,87 @@ function CategoryAlertsSheet({ settings, patch, onClose }: { settings: Settings;
       </div>
       {follows.length === 0 && cats ? <p className="pf-hint">Follow topics from Edit profile to get alerts for them.</p> : null}
       {error ? <p className="pf-note pf-note--err" role="alert">{errorLine(error)}</p> : null}
+    </Sheet>
+  );
+}
+
+const HALF_HOURS = Array.from({ length: 48 }, (_, i) => i * 30);
+
+function QuietHoursSheet({ settings, patch, onClose }: { settings: Settings; patch: (p: Partial<Settings>) => Promise<boolean>; onClose: () => void }) {
+  const [from, setFrom] = useState<number>(settings.quietHoursStart ?? 22 * 60);
+  const [to, setTo] = useState<number>(settings.quietHoursEnd ?? 7 * 60);
+  const [busy, setBusy] = useState(false);
+  const on = settings.quietHoursStart !== null && settings.quietHoursEnd !== null;
+  async function save(p: Partial<Settings>) {
+    setBusy(true);
+    const ok = await patch(p);
+    setBusy(false);
+    if (ok) onClose();
+  }
+  const options = (v: number) => (HALF_HOURS.includes(v) ? HALF_HOURS : [...HALF_HOURS, v].sort((a, b) => a - b)).map((m) => <option key={m} value={m}>{minuteLabel(m)}</option>);
+  return (
+    <Sheet title="Quiet hours" subtitle="No alerts in this window. They wait for you in Notifications." onClose={onClose}>
+      <div className="pf-menu">
+        <label className="vx-field"><span className="vx-field__label">From</span>
+          <select className="vx-field__input" value={from} onChange={(e) => setFrom(Number(e.target.value))}>{options(from)}</select>
+        </label>
+        <label className="vx-field"><span className="vx-field__label">To</span>
+          <select className="vx-field__input" value={to} onChange={(e) => setTo(Number(e.target.value))}>{options(to)}</select>
+        </label>
+        <Button block loading={busy} disabled={from === to} onClick={() => save({ quietHoursStart: from, quietHoursEnd: to })}>Save quiet hours</Button>
+        {on ? <Button variant="secondary" block disabled={busy} onClick={() => save({ quietHoursStart: null, quietHoursEnd: null })}>Turn quiet hours off</Button> : null}
+      </div>
+    </Sheet>
+  );
+}
+
+function LanguageSheet({ languages, onSaved, onClose }: { languages: string[]; onSaved: (l: string[]) => void; onClose: () => void }) {
+  const [langs, setLangs] = useState(languages);
+  const [error, setError] = useState<string | null>(null);
+  async function toggle(code: string, on: boolean) {
+    const next = on ? [...langs, code] : langs.filter((x) => x !== code);
+    if (next.length === 0) { setError("Keep at least one language."); return; }
+    const before = langs;
+    setLangs(next); setError(null);
+    try { const p = await updateProfile({ languages: next }); onSaved(p.languages); } catch (e) { setLangs(before); setError(errorLine(e, "Could not save that change. Try again.")); }
+  }
+  return (
+    <Sheet title="Language" subtitle="The app is in English. We use your languages to transcribe your voice and to find voices you understand." onClose={onClose}>
+      <div className="pf-menu">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Languages">
+          {LANGUAGES.map((l) => <TopicChip key={l.code} label={l.label} selected={langs.includes(l.code)} onClick={(on) => toggle(l.code, on)} />)}
+        </div>
+        {error ? <p className="pf-note pf-note--err" role="alert">{error}</p> : null}
+      </div>
+    </Sheet>
+  );
+}
+
+function CountrySheet({ code, countries, onSaved, onClose }: { code: string; countries: Country[] | null; onSaved: (c: string) => void; onClose: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function pick(next: string) {
+    if (next === code || busy) return;
+    setBusy(true); setError(null);
+    try { const p = await updateProfile({ countryCode: next }); onSaved(p.countryCode); onClose(); } catch (e) { setError(errorLine(e, "Could not save that change. Try again.")); setBusy(false); }
+  }
+  return (
+    <Sheet title="Country" subtitle="Your country sets your questions, prices and polls." onClose={onClose}>
+      <div className="pf-menu">
+        {!countries ? <LoadingBlock rows={1} /> : null}
+        <div role="radiogroup" aria-label="Country" className="pf-radios">
+          {countries?.map((c) => {
+            const live = c.status === "live";
+            return (
+              <label key={c.code} className="pf-radio">
+                <input type="radio" name="country" checked={c.code === code} disabled={!live || busy} onChange={() => pick(c.code)} />
+                {c.name}{live ? "" : " (coming soon)"}
+              </label>
+            );
+          })}
+        </div>
+        {error ? <p className="pf-note pf-note--err" role="alert">{error}</p> : null}
+      </div>
     </Sheet>
   );
 }
@@ -143,21 +227,37 @@ function SettingsBody({ me }: { me: Me }) {
   const router = useRouter();
   const [s, setS] = useState<Settings>(me.settings);
   const [error, setError] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<null | "cats" | "blocked" | "delete">(null);
+  const [sheet, setSheet] = useState<null | "cats" | "blocked" | "delete" | "quiet" | "language" | "country">(null);
+  const [countryCode, setCountryCode] = useState(me.profile?.countryCode ?? "NG");
+  const [languages, setLanguages] = useState<string[]>(me.profile?.languages ?? []);
+  const [countries, setCountries] = useState<Country[] | null>(null);
+  const [alertTopics, setAlertTopics] = useState<string[] | null>(null);
   const [blockedCount, setBlockedCount] = useState<number | null>(null);
   const [deleted, setDeleted] = useState(false);
 
   useEffect(() => { applyAccountTheme(me.settings.theme); }, [me.settings.theme]);
   useEffect(() => { listBlocks().then((p) => setBlockedCount(p.items.length + (p.nextCursor ? 1 : 0)), () => setBlockedCount(null)); }, []);
 
-  async function patch(p: Partial<Settings>) {
+  useEffect(() => { listCountries().then((c) => setCountries(c.items), () => setCountries(null)); }, []);
+  useEffect(() => {
+    if (sheet === "cats") return;
+    Promise.all([listCategories(), getFollowedCategories()]).then(
+      ([c, f]) => setAlertTopics(f.categories.filter((x) => x.alertsOn).map((x) => c.items.find((k) => k.id === x.categoryId)?.name).filter((n): n is string => !!n)),
+      () => setAlertTopics(null),
+    );
+  }, [sheet]);
+
+  async function patch(p: Partial<Settings>): Promise<boolean> {
     const before = s;
     const prevDevice = deviceChoice();
     setS({ ...s, ...p });
     if (p.theme) chooseTheme(p.theme);
     setError(null);
-    try { setS(await updateSettings(p)); } catch (e) { setS(before); if (p.theme) chooseTheme(prevDevice ?? before.theme); setError(errorLine(e, "Could not save that change. Try again.")); }
+    try { setS(await updateSettings(p)); return true; } catch (e) { setS(before); if (p.theme) chooseTheme(prevDevice ?? before.theme); setError(errorLine(e, "Could not save that change. Try again.")); return false; }
   }
+  const quiet = s.quietHoursStart !== null && s.quietHoursEnd !== null ? `${minuteLabel(s.quietHoursStart)} to ${minuteLabel(s.quietHoursEnd)}` : "Off";
+  const countryName = countries?.find((c) => c.code === countryCode)?.name;
+  const languageNames = languages.map((c) => LANGUAGES.find((l) => l.code === c)?.label).filter(Boolean).join(", ");
 
   if (deleted) return <DeletionPending />;
   return (
@@ -178,12 +278,15 @@ function SettingsBody({ me }: { me: Me }) {
           <Switch label="Reactions on your voices" detail="Grouped, never one by one" checked={s.notifyReactions} onChange={(v) => patch({ notifyReactions: v })} />
           <Switch label="Poll results" checked={s.notifyPollResults} onChange={(v) => patch({ notifyPollResults: v })} />
           <Switch label="Flash polls" checked={s.notifyFlashPolls} onChange={(v) => patch({ notifyFlashPolls: v })} />
-          <RowButton label="Category alerts" onClick={() => setSheet("cats")} />
+          <RowButton label="Category alerts" detail={alertTopics && alertTopics.length ? alertTopics.join(", ") : undefined} onClick={() => setSheet("cats")} />
+          <RowButton label="Quiet hours" detail={quiet} onClick={() => setSheet("quiet")} />
         </div>
       </Section>
 
       <Section id="a-h" title="App">
         <div className="pf-card">
+          <RowButton icon="globe" label="Country" value={countryName} onClick={() => setSheet("country")} />
+          <RowButton icon="message-square" label="Language" value={languageNames || undefined} onClick={() => setSheet("language")} />
           <Switch label="Data saver" detail="Voices play only when you tap, in lighter quality" checked={s.dataSaver} onChange={(v) => patch({ dataSaver: v })} />
           <div className="pf-appearance">
             <span className="pf-appearance__t"><Icon name="moon" size={22} />Appearance</span>
@@ -219,6 +322,9 @@ function SettingsBody({ me }: { me: Me }) {
       <p className="pf-signed pf-only-phone">{`Signed in as @${me.handle}${me.phoneMasked ? " · " + me.phoneMasked : ""}`}</p>
 
       {sheet === "cats" ? <CategoryAlertsSheet settings={s} patch={patch} onClose={() => setSheet(null)} /> : null}
+      {sheet === "quiet" ? <QuietHoursSheet settings={s} patch={patch} onClose={() => setSheet(null)} /> : null}
+      {sheet === "language" ? <LanguageSheet languages={languages} onSaved={setLanguages} onClose={() => setSheet(null)} /> : null}
+      {sheet === "country" ? <CountrySheet code={countryCode} countries={countries} onSaved={setCountryCode} onClose={() => setSheet(null)} /> : null}
       {sheet === "blocked" ? <BlockedSheet onClose={() => setSheet(null)} onCount={setBlockedCount} /> : null}
       {sheet === "delete" ? <DeleteSheet me={me} onClose={() => setSheet(null)} onDone={() => { setSheet(null); setDeleted(true); }} /> : null}
     </div>

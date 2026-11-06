@@ -1,5 +1,6 @@
 "use client";
 
+import { countText } from "@/lib/format/plural";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar, Button, EmptyState, Icon, NewsTag, Tabs, TextField } from "@/components/vx";
 import { decideNews, listNews } from "@/lib/api/admin";
@@ -112,7 +113,7 @@ function NewsBody() {
                   </span>
                 </span>
                 <span className="mt-2 block text-body">{i.answer.body}</span>
-                <span className="mt-1 block text-caption text-ink-2">{`@${i.answer.author?.handle ?? "removed"} · ${ago(i.answer.createdAt)} · ${i.answer.likeCount} likes${i.evidenceUrl ? " · source photo attached" : ""}`}</span>
+                <span className="mt-1 block text-caption text-ink-2">{`@${i.answer.author?.handle ?? "removed"} · ${ago(i.answer.createdAt)} · ${countText(i.answer.likeCount, "like")}${i.evidenceUrl ? " · source photo attached" : ""}`}</span>
               </button>
             ))}
             {next ? (

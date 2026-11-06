@@ -9,6 +9,9 @@ import { BottomBar, DeskCard, DeskHeader, EntryFrame, EntryScroll, ErrorBanner, 
 
 export const MIN_TOPICS = 3;
 
+/** The board draws the alert switches mixed: the 1st, 3rd, 5th picked topic on, the 2nd, 4th off. Until a person flips one, that is the default. */
+export const alertsDefault = (position: number) => position % 2 === 0;
+
 const ICONS: Record<string, IconName> = { money: "coins", work: "clipboard-list", power: "lightbulb", family: "heart", love: "heart", faith: "sun", roads: "map-pin", politics: "vote", elections: "vote", health: "heart", security: "shield-check" };
 
 /** /join/topics (step 1 of 2): at least 3 topics and an alerts switch for each. They are held here and saved with the profile (PUT /me/categories needs the profile to exist first). */
@@ -26,10 +29,11 @@ export function Topics() {
   if (!ok) return null;
   const cats = load.state === "ready" ? load.data.items : [];
   const have = chosen.filter((id) => cats.some((c) => c.id === id));
+  const shown = cats.filter((c) => have.includes(c.id));
   const enough = have.length >= MIN_TOPICS;
   const toggle = (id: string, on: boolean) => setChosen((c) => (on ? [...c.filter((x) => x !== id), id] : c.filter((x) => x !== id)));
   const next = () => {
-    saveDraft({ topics: have.map((categoryId) => ({ categoryId, alertsOn: alerts[categoryId] ?? true })) });
+    saveDraft({ topics: shown.map((c, n) => ({ categoryId: c.id, alertsOn: alerts[c.id] ?? alertsDefault(n) })) });
     router.push("/join/profile");
   };
   const label = enough ? `Continue with ${have.length} topics` : `Pick ${MIN_TOPICS - have.length} more`;
@@ -55,11 +59,11 @@ export function Topics() {
                 <p className="m-0 text-body text-ink-2">Get told when a new question lands in a topic you picked.</p>
               </div>
               <div className="vx-notes dt:grid dt:grid-cols-2">
-                {cats.filter((c) => have.includes(c.id)).map((c, n) => (
+                {shown.map((c, n) => (
                   <label key={c.id} className={`flex min-h-[56px] cursor-pointer items-center gap-3 px-4 ${n ? "shadow-[0_-1px_0_var(--line)] dt:shadow-none" : ""} border-line dt:[&:nth-child(even)]:border-l dt:[&:nth-child(n+3)]:border-t`}>
                     <Icon name={ICONS[c.slug] ?? "message-square"} size={20} />
                     <span className="flex-1 text-body-strong">{c.name}</span>
-                    <Switch checked={alerts[c.id] ?? true} label={`Alerts for ${c.name}`} onChange={(on) => setAlerts({ ...alerts, [c.id]: on })} />
+                    <Switch checked={alerts[c.id] ?? alertsDefault(n)} label={`Alerts for ${c.name}`} onChange={(on) => setAlerts({ ...alerts, [c.id]: on })} />
                   </label>
                 ))}
               </div>

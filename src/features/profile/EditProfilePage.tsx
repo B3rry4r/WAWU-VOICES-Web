@@ -1,4 +1,5 @@
 "use client";
+import { countText } from "@/lib/format/plural";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, Button, Icon, IconButton, Toast, TextField, TopicChip } from "@/components/vx";
@@ -172,11 +173,14 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
           </section>
         )}
 
-        <TextField label="Handle" prefix="@" value={handle} onChange={setHandle} error={handleError} hint={handleHint} autoComplete="off" />
+        {/* Phone: handle, Voice Card, place, as drawn. 1024 and up: handle and place sit together in one card, the Voice Card after them. */}
+        <div className="pf-fields">
+          <div className="pf-e-handle"><TextField label="Handle" prefix="@" value={handle} onChange={setHandle} error={handleError} hint={handleHint} autoComplete="off" /></div>
+          <div className="pf-e-place"><TextField label="Where you are (optional)" value={place} onChange={setPlace} hint="Shown under your handle. A state or city, never your street." /></div>
+        </div>
         <VoiceCardEditor clip={clip} onChange={setClip} />
-        <TextField label="Where you are (optional)" value={place} onChange={setPlace} hint="Shown under your handle. A state or city, never your street." />
 
-        <section className="pf-form-sec" aria-labelledby="tp-h">
+        <section className="pf-form-sec pf-e-topics" aria-labelledby="tp-h">
           <h2 id="tp-h" className="pf-label">Topics you follow</h2>
           <p className="pf-hint">We alert you when a new question lands in these.</p>
           <div className="pf-chips">
@@ -204,7 +208,7 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
             </div>
           </div>
           {clip ? <ClipPlayer clip={clip} label="Voice Card" /> : null}
-          <p className="pf-hint">{`${profile.voiceCount} ${profile.voiceCount === 1 ? "voice" : "voices"} · ${me.reactionsReceived.toLocaleString("en-NG")} reactions · ${me.savedCount} saved`}</p>
+          <p className="pf-hint">{`${profile.voiceCount} ${profile.voiceCount === 1 ? "voice" : "voices"} · ${countText(me.reactionsReceived, "reaction")} · ${me.savedCount} saved`}</p>
           <p className="pf-hint">Your units, free posts and referral code stay private. Only you see them.</p>
         </section>
       </Rail>

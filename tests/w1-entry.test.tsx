@@ -376,12 +376,12 @@ describe("Topics", () => {
     await user.click(screen.getByRole("button", { name: "Family" }));
     expect(go().textContent).toBe("Continue with 4 topics");
     const sw = screen.getByRole("switch", { name: "Alerts for Work" }) as HTMLInputElement;
-    expect(sw.checked).toBe(true);
+    expect(sw.checked).toBe(false); // the board draws the 2nd topic off
     await user.click(sw);
     await user.click(go());
     expect(push).toHaveBeenCalledWith("/join/profile");
     expect(readDraft().topics).toEqual([
-      { categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: false }, { categoryId: "c2", alertsOn: true }, { categoryId: "c3", alertsOn: true },
+      { categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: true }, { categoryId: "c2", alertsOn: true }, { categoryId: "c3", alertsOn: false },
     ]);
   });
 });
@@ -426,7 +426,7 @@ describe("ProfileSetup", () => {
     await user.click(screen.getAllByRole("button", { name: "Finish and post my voice" })[0]);
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/speak"));
     const sent = calls.filter((c) => !c.url.includes("handle-check") && !c.url.includes("config/public")).map((c) => `${c.method} ${c.url.replace("/api/v1", "")}`);
-    expect(sent).toEqual(["GET /me", "POST /me", "PUT /me/categories", "POST /uploads", "PUT https://spaces.example/put", "POST /uploads/f1/complete", "PATCH /me/profile"]);
+    expect(sent).toEqual(["GET /me", "POST /me", "PATCH /me/settings", "PUT /me/categories", "POST /uploads", "PUT https://spaces.example/put", "POST /uploads/f1/complete", "PATCH /me/profile"]);
     expect(calls.find((c) => c.method === "POST" && c.url.endsWith("/me"))?.body).toEqual({ handle: "ada.okafor", ageConfirmed: true, termsAccepted: true, rulesAccepted: true, countryCode: "NG", languages: ["en", "pcm"], categoryIds: ["c0", "c1", "c2"] });
     expect(calls.find((c) => c.url.endsWith("/me/categories"))?.body).toEqual({ categories: [{ categoryId: "c0", alertsOn: true }, { categoryId: "c1", alertsOn: false }, { categoryId: "c2", alertsOn: true }] });
     expect(calls.find((c) => c.url.endsWith("/uploads"))?.body).toEqual({ kind: "AVATAR", mime: "image/png", sizeBytes: 1200 });

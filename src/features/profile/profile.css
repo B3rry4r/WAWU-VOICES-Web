@@ -51,6 +51,7 @@
 .pf-row-item { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-2) var(--space-4); border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); text-decoration: none; text-align: left; font-family: var(--font-body); width: 100%; cursor: pointer; }
 .pf-row-item:last-child { border-bottom: 0; }
 .pf-row-item__txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.pf-row-item__val { font-family: var(--font-body); font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--t-label-weight); color: var(--ink-2); text-align: right; max-width: 50%; }
 .pf-row-item--btn:hover, .pf-dl:hover { background: var(--surface-2); }
 .pf-row-item.is-danger { color: var(--danger); }
 .pf-dl { font-family: var(--font-body); font-size: var(--t-body-strong-size); line-height: var(--t-body-strong-line); font-weight: var(--t-body-strong-weight); letter-spacing: var(--t-body-strong-tracking); color: var(--green-text); }
@@ -73,6 +74,8 @@
 .pf-edit { display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-1) 0 var(--space-6); }
 .pf-edit__bar { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-h); }
 .pf-edit__h1 { font-size: var(--t-display-m-size); line-height: var(--t-display-m-line); }
+.pf-fields { display: contents; }
+.pf-edit__bar { order: 0; } .pf-photo { order: 1; } .pf-e-handle { order: 2; } .pf-vcard { order: 3; } .pf-e-place { order: 4; } .pf-e-topics { order: 5; } .pf-edit > .pf-note { order: 6; } .pf-savebar { order: 7; } .pf-toast { order: 8; }
 .pf-form-sec { display: flex; flex-direction: column; gap: var(--space-2); }
 .pf-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .pf-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
@@ -118,6 +121,9 @@
   .pf-h1 { font-size: var(--t-display-xl-size); line-height: var(--t-display-xl-line); letter-spacing: var(--t-display-xl-tracking); }
   .pf-edit { max-width: var(--feed-max); margin: 0 auto; padding: var(--space-6) 0; }
   .pf-edit__bar { gap: var(--space-3); }
+  .pf-photo, .pf-fields { padding: var(--space-5); border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+  .pf-fields { display: flex; flex-direction: column; gap: var(--space-4); order: 2; }
+  .pf-e-handle, .pf-e-place { order: 0; }
   .pf-toast { bottom: var(--space-8); }
 }
 
