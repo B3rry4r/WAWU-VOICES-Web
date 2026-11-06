@@ -1680,6 +1680,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/share/{code}/story": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Instagram Stories card image
+         * @description The 1080x1920 Stories card: same words and colours as the card, stacked for a tall frame. Text and brand only. Drawn on request, never stored. 404 for an unknown link, a deleted person's card or a failed card. Auth: none (public).
+         */
+        get: operations["getShareStoryImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/share/{code}/events": {
         parameters: {
             query?: never;
@@ -3803,7 +3823,7 @@ export interface components {
             objectId: string;
             language?: string;
         };
-        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl and squareImageUrl are not drawn: null at launch. */
+        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story), null only where that route would 404. squareImageUrl is not drawn: null at launch. */
         ShareLink: {
             code: string;
             url: string;
@@ -7395,7 +7415,7 @@ export interface operations {
     getShareCardImage: {
         parameters: {
             query?: {
-                /** @description story (1080x1920) or square (1080x1080) */
+                /** @description ignored: this route always returns the 1200x630 card */
                 size?: string;
             };
             header?: never;
@@ -7421,6 +7441,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getShareStoryImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
             };
             404: components["responses"]["E404"];
             429: components["responses"]["E429"];
