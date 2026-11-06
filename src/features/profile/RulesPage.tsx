@@ -1,7 +1,6 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { Banner, Icon, IconButton } from "@/components/vx";
-import { Rail } from "@/components/shell/ShellSlots";
+import { Banner, Icon } from "@/components/vx";
+import { LegalFrame, LegalHead } from "@/features/legal/LegalFrame";
 import "./profile.css";
 
 type IconName = Parameters<typeof Icon>[0]["name"];
@@ -25,35 +24,20 @@ const named = (
 );
 
 export function RulesPage() {
-  const router = useRouter();
   return (
-    <div className="pf-page">
-      <header className="pf-bar pf-only-phone">
-        <IconButton icon="arrow-left" label="Back to settings" variant="ghost" onClick={() => router.push("/settings")} />
-        <h1 className="pf-h1 pf-bar__h1">Help and legal</h1>
-      </header>
-      <article className="pf-rules">
-        <h2 className="pf-h1 pf-rules__h">Community rules</h2>
-        <p className="pf-body">VOICES is for strong opinions and real disagreement. We step in for harm, never for a point of view.</p>
-        <ol className="pf-rulelist">
-          {RULES.map((r, i) => (
-            <li key={r.title}>
-              <span className="pf-rulelist__ic"><Icon name={r.icon} size={22} /></span>
-              <span><b>{`${i + 1} ${r.title}`}</b><span>{r.line}</span></span>
-            </li>
-          ))}
-        </ol>
-        <h3 className="pf-rules__sub">When a post breaks a rule</h3>
-        <ol className="pf-steps">{STEPS.map((t, i) => <li key={i}><span className="pf-steps__n">{i + 1}</span><span>{t}</span></li>)}</ol>
-        <div className="pf-only-phone">{named}</div>
-      </article>
-      <Rail>
-        <section className="pf-panel" aria-label="Help">
-          <h2 className="vx-eyebrow pf-eyebrow">Help</h2>
-          {named}
-          <div className="pf-always"><b>Always free</b><span>Reading, listening, liking and sharing never cost anything. Paid posts always show their price first.</span></div>
-        </section>
-      </Rail>
-    </div>
+    <LegalFrame tab="rules">
+      <LegalHead title="Community rules" updated="16 Nov 2026" lead="VOICES is for strong opinions and real disagreement. We step in for harm, never for a point of view." />
+      <ol className="pf-rulelist">
+        {RULES.map((r, i) => (
+          <li key={r.title}>
+            <span className="pf-rulelist__ic"><Icon name={r.icon} size={22} /></span>
+            <span><b>{`${i + 1} ${r.title}`}</b><span>{r.line}</span></span>
+          </li>
+        ))}
+      </ol>
+      <h3 className="pf-rules__sub">When a post breaks a rule</h3>
+      <ol className="pf-steps">{STEPS.map((t, i) => <li key={i}><span className="pf-steps__n">{i + 1}</span><span>{t}</span></li>)}</ol>
+      <div className="pf-only-phone">{named}</div>
+    </LegalFrame>
   );
 }
