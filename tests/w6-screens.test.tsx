@@ -107,10 +107,12 @@ describe("Settings", () => {
     let fail = false;
     mockApi({ ...meRoutes, "PATCH /me/settings": ({ body }: { body: unknown }) => (fail ? new Response("<html>", { status: 502 }) : { ...me.settings, ...(body as object) }) });
     render(<SettingsPage />);
-    const sw = (await screen.findByRole("switch", { name: /Flash polls/ })) as HTMLInputElement;
-    expect(sw.checked).toBe(false);
+    // lead ruling RW5b: the Flash polls row is not drawn (nothing can start a flash poll at launch); the toggle test uses Replies.
+    const sw = (await screen.findByRole("switch", { name: /Replies to you/ })) as HTMLInputElement;
+    expect(screen.queryByRole("switch", { name: /Flash polls/ })).toBeNull();
+    expect(sw.checked).toBe(true);
     await userEvent.click(sw);
-    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ notifyFlashPolls: true }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ notifyReplies: false }));
     fail = true;
     await userEvent.click(screen.getByRole("switch", { name: /Poll results/ }));
     expect(await screen.findByText("Could not save that change. Try again.")).toBeTruthy();
