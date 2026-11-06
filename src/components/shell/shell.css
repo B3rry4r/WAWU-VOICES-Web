@@ -32,12 +32,12 @@
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: end; height: calc(var(--bottombar-h) + env(safe-area-inset-bottom, 0px));
   padding: 0 var(--space-2) env(safe-area-inset-bottom, 0px); }
 .sh-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; border-radius: var(--radius-l);
-  color: var(--ink-2); text-decoration: none; font-family: var(--font-body); font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--t-label-weight); }
+  color: var(--ink-2); text-decoration: none; font-family: var(--font-body); font-size: var(--t-nav-size); line-height: var(--t-nav-line); font-weight: var(--t-nav-weight); }
 .sh-tab:hover { color: var(--ink); }
 .sh-tab[aria-current="page"] { color: var(--green-text); }
 .sh-tab__ic { width: 52px; height: 30px; border-radius: var(--radius-pill); display: flex; align-items: center; justify-content: center; }
 .sh-tab[aria-current="page"] .sh-tab__ic { background: var(--mint); }
-.sh-speak { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink); text-decoration: none; font-family: var(--font-body); font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--t-label-weight); padding-bottom: 6px; }
+.sh-speak { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink); text-decoration: none; font-family: var(--font-body); font-size: var(--t-nav-size); line-height: var(--t-nav-line); font-weight: var(--t-nav-weight); padding-bottom: 6px; }
 .sh-speak[aria-current="page"] { color: var(--green-text); }
 .sh-speak__btn { width: var(--speak-fab); height: var(--speak-fab); margin-top: -26px; border-radius: 50%; background: var(--green); color: var(--on-green);
   display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-speak), 0 0 0 5px var(--surface); }
@@ -54,7 +54,7 @@
     border-right: 1px solid var(--line); background: var(--bg); }
   .sh-sidenav__logo { display: block; margin: 0 var(--space-3) var(--space-6); }
   .sh-sidenav__logo img { height: 40px; width: auto; display: block; }
-  .sh-sidenav .sh-tab { flex-direction: row; justify-content: flex-start; gap: var(--space-3); min-height: 52px; padding: 0 var(--space-3); color: var(--ink); border-radius: var(--radius-m); }
+  .sh-sidenav .sh-tab { flex-direction: row; justify-content: flex-start; gap: var(--space-3); min-height: 52px; padding: 0 var(--space-3); font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--t-label-weight); color: var(--ink); border-radius: var(--radius-m); }
   .sh-sidenav .sh-tab:hover { background: var(--surface-2); }
   .sh-sidenav .sh-tab[aria-current="page"] { background: var(--mint); color: var(--green-text); }
   .sh-sidenav .sh-tab__ic { width: auto; height: auto; background: none !important; }

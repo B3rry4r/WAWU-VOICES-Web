@@ -47,6 +47,7 @@ const config: Config = {
         "eyebrow": ["var(--t-eyebrow-size)", { lineHeight: "var(--t-eyebrow-line)", fontWeight: "var(--t-eyebrow-weight)", letterSpacing: "var(--t-eyebrow-tracking)" }],
         "count": ["var(--t-count-size)", { lineHeight: "var(--t-count-line)", fontWeight: "var(--t-count-weight)", letterSpacing: "var(--t-count-tracking)" }],
         "bar": ["var(--t-bar-size)", { lineHeight: "var(--t-bar-line)", fontWeight: "var(--t-bar-weight)", letterSpacing: "var(--t-bar-tracking)" }],
+        "nav": ["var(--t-nav-size)", { lineHeight: "var(--t-nav-line)", fontWeight: "var(--t-nav-weight)", letterSpacing: "var(--t-nav-tracking)" }],
       },
       fontFamily: { display: ["var(--font-display)"], body: ["var(--font-body)"] },
       spacing: { gutter: "var(--gutter-phone)", "gutter-d": "var(--gutter-desktop)", nav: "var(--nav-w)", rail: "var(--rail-w)", topbar: "var(--topbar-h)", bottombar: "var(--bottombar-h)" },

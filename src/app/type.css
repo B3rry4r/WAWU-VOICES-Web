@@ -1,4 +1,4 @@
-/* VOICES type scale: the design system's 16 text styles plus one named addition, `bar` (the phone app-bar title).
+/* VOICES type scale: the design system's 16 text styles plus two named additions: `bar` (the phone app-bar title) and `nav` (the phone bottom-bar label, 12/16/600 as the boards draw it).
    One custom property set and one class per style. Source of truth: the design system tokens (type.groups).
    Kept out of tokens.css on purpose (the colour pass edits that file).
    Display and numeral styles (display-*, num-*) set the display face; every other style sets the body face.
@@ -22,6 +22,7 @@
   --t-eyebrow-size: 12px; --t-eyebrow-line: 16px; --t-eyebrow-weight: 700; --t-eyebrow-tracking: 0.08em;
   --t-count-size: 14px; --t-count-line: 18px; --t-count-weight: 600; --t-count-tracking: 0em;
   --t-bar-size: 16px; --t-bar-line: 20px; --t-bar-weight: 700; --t-bar-tracking: 0em;
+  --t-nav-size: 12px; --t-nav-line: 16px; --t-nav-weight: 600; --t-nav-tracking: 0em;
 }
 
 .t-display-2xl { font-family: var(--font-display); font-size: var(--t-display-2xl-size); line-height: var(--t-display-2xl-line); font-weight: var(--t-display-2xl-weight); letter-spacing: var(--t-display-2xl-tracking); }
@@ -43,6 +44,8 @@
 .t-bar { font-family: var(--font-body); font-size: var(--t-bar-size); line-height: var(--t-bar-line); font-weight: var(--t-bar-weight); letter-spacing: var(--t-bar-tracking); }
 
 /* The app-bar title: `bar` on the phone, `title` from 1024 px. One class for every bar. */
+.t-nav { font-family: var(--font-body); font-size: var(--t-nav-size); line-height: var(--t-nav-line); font-weight: var(--t-nav-weight); letter-spacing: var(--t-nav-tracking); }
+
 .t-bar-title { font-family: var(--font-body); font-size: var(--t-bar-size); line-height: var(--t-bar-line); font-weight: var(--t-bar-weight); letter-spacing: var(--t-bar-tracking); }
 @media (min-width: 1024px) {
   .t-bar-title { font-size: var(--t-title-size); line-height: var(--t-title-line); font-weight: var(--t-title-weight); letter-spacing: var(--t-title-tracking); }

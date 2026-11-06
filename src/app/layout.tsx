@@ -7,7 +7,7 @@ import "./globals.css";
 import "./type.css";
 import "../components/vx/vx.css";
 
-// Fonts are committed under public/fonts (OFL, see OFL.txt there): the build never reaches a font server.
+// Fonts are committed under public/fonts (OFL, see OFL-Archivo.txt and OFL-BagelFatOne.txt there): the build never reaches a font server.
 // Archivo is one variable file per subset (400 to 700). The latin-ext file carries the naira sign (U+20A6). Options are literals because next/font reads them at build time.
 
 const bagel = localFont({ src: "../../public/fonts/bagel-fat-one-latin-400.woff2", weight: "400", display: "swap", variable: "--nf-bagel" });

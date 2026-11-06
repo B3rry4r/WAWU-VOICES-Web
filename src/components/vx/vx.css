@@ -168,7 +168,7 @@ button.vx-reset, .vx-reset { appearance: none; background: none; border: 0; padd
 .vx-bottombar { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); align-items: end; height: var(--bottombar-h); padding: 0 var(--space-2) var(--space-2);
   margin: 0 var(--space-3) var(--space-3); background: var(--surface); border-radius: var(--radius-pill); box-shadow: var(--shadow-2), inset 0 0 0 1px var(--line); z-index: var(--z-nav); }
 .vx-navitem { appearance: none; border: 0; background: none; margin: 0; cursor: pointer; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  min-height: 56px; border-radius: var(--radius-l); color: var(--ink-2); font-family: var(--font-body); font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--t-label-weight); }
+  min-height: 56px; border-radius: var(--radius-l); color: var(--ink-2); font-family: var(--font-body); font-size: var(--t-nav-size); line-height: var(--t-nav-line); font-weight: var(--t-nav-weight); }
 .vx-navitem:hover { color: var(--ink); }
 .vx-navitem[aria-current="page"] { color: var(--green-text); }
 .vx-navitem[aria-current="page"] .vx-navitem__ic { background: var(--mint); }
@@ -181,7 +181,7 @@ button.vx-reset, .vx-reset { appearance: none; background: none; border: 0; padd
 .vx-speak[aria-current="page"] { color: var(--green-text); }
 .vx-sidenav { display: flex; flex-direction: column; gap: var(--space-1); width: var(--nav-w); padding: var(--space-6) var(--space-4); height: 100%; border-right: 1px solid var(--line); background: var(--bg); }
 .vx-sidenav__logo { height: 40px; width: auto; display: block; margin: 0 var(--space-3) var(--space-6); align-self: flex-start; }
-.vx-sidenav .vx-navitem { flex-direction: row; justify-content: flex-start; gap: var(--space-3); min-height: 52px; padding: 0 var(--space-3); color: var(--ink); border-radius: var(--radius-m); }
+.vx-sidenav .vx-navitem { flex-direction: row; justify-content: flex-start; gap: var(--space-3); min-height: 52px; padding: 0 var(--space-3); font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--t-label-weight); color: var(--ink); border-radius: var(--radius-m); }
 .vx-sidenav .vx-navitem:hover { background: var(--surface-2); }
 .vx-sidenav .vx-navitem[aria-current="page"] { background: var(--mint); color: var(--green-text); }
 .vx-sidenav .vx-navitem__ic { width: auto; height: auto; background: none !important; }
