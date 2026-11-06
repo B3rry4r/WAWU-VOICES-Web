@@ -193,13 +193,13 @@ describe("Edit profile, more", () => {
 });
 
 describe("Rules", () => {
-  it("has the six rules and the four steps, the four legal tabs (all built) and the date", () => {
+  it("has the six rules and the four steps, the four legal tabs (all built) and no date until the owner approves the text", () => {
     render(<RulesPage />);
     expect(screen.getAllByRole("listitem").length).toBe(10);
     expect(screen.getByText("1 Speak your mind, disagree hard")).toBeTruthy();
     expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Rules", "Terms", "Privacy", "Refunds"]);
     expect(screen.queryByText("Report a problem")).toBeNull();
-    expect(screen.getByText("Last updated 16 Nov 2026")).toBeTruthy();
+    expect(screen.queryByText(/Last updated/)).toBeNull();
   });
 });
 

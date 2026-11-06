@@ -26,7 +26,7 @@ const named = (
 export function RulesPage() {
   return (
     <LegalFrame tab="rules">
-      <LegalHead title="Community rules" updated="16 Nov 2026" lead="VOICES is for strong opinions and real disagreement. We step in for harm, never for a point of view." />
+      <LegalHead title="Community rules" lead="VOICES is for strong opinions and real disagreement. We step in for harm, never for a point of view." />
       <ol className="pf-rulelist">
         {RULES.map((r, i) => (
           <li key={r.title}>
