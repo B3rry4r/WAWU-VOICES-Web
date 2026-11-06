@@ -37,11 +37,11 @@ function Summary({ s, proposals, groups }: { s: EditorialSummary; proposals: num
         <p className="vx-eyebrow">Main arguments</p>
         <div className="vt-summary__row">
           <p>{`Most voices so far lean towards: ${s.mainView}`}</p>
-          <span className="vt-summary__n">{`${fmt(s.mainViewVoices)} voices`}</span>
+          <span className="vt-summary__n">{`${fmt(s.mainViewVoices)} ${s.mainViewVoices === 1 ? "voice" : "voices"}`}</span>
         </div>
         <div className="vt-summary__row">
           <p>{`The main opposing view: ${s.opposingView}`}</p>
-          <span className="vt-summary__n">{`${fmt(s.opposingViewVoices)} voices`}</span>
+          <span className="vt-summary__n">{`${fmt(s.opposingViewVoices)} ${s.opposingViewVoices === 1 ? "voice" : "voices"}`}</span>
         </div>
       </div>
       <div className="vt-summary__blk">
@@ -53,7 +53,7 @@ function Summary({ s, proposals, groups }: { s: EditorialSummary; proposals: num
         <p>{`${fmt(proposals)} ${proposals === 1 ? "proposal" : "proposals"} in ${fmt(groups)} ${groups === 1 ? "group" : "groups"}. ${s.nextStepsLine}`}</p>
       </div>
       <div className="vt-summary__foot">
-        <p>{`Based on ${fmt(s.basedOnVoices)} voices and ${fmt(s.basedOnVotes)} votes. Updated ${updatedAgo(s.updatedAt)}. These are proposals, not decisions.`}</p>
+        <p>{`Based on ${fmt(s.basedOnVoices)} ${s.basedOnVoices === 1 ? "voice" : "voices"} and ${fmt(s.basedOnVotes)} ${s.basedOnVotes === 1 ? "vote" : "votes"}. Updated ${updatedAgo(s.updatedAt)}. These are proposals, not decisions.`}</p>
       </div>
     </section>
   );

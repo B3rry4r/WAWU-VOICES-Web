@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { Button, IconButton } from './actions';
 import { Avatar } from './identity';
-import { cx, fmt, short } from './helpers';
+import { cx, fmt, voicesText } from './helpers';
 import type { Person } from './helpers';
 import { Icon } from './Icon';
 import { Badge, VerifyMark } from './labels';
@@ -371,7 +371,7 @@ export function WeeklyReportCard(p: WeeklyReportCardProps): ReactElement {
             {(p.themes || []).map((t, i) => (
               <li key={i}>
                 {t.text}
-                <span>{short(t.voices) + ' voices'}</span>
+                <span>{voicesText(t.voices)}</span>
               </li>
             ))}
           </ol>
@@ -383,7 +383,7 @@ export function WeeklyReportCard(p: WeeklyReportCardProps): ReactElement {
           ) : null}
         </div>
         <div className="vx-report__foot">
-          <p className="vx-report__based">{'Based on ' + fmt(p.voices) + ' voices and ' + fmt(p.votes) + ' votes. ' + (p.updated || '') + ' People are split on some points; this is a summary, not a consensus.'}</p>
+          <p className="vx-report__based">{'Based on ' + fmt(p.voices) + (p.voices === 1 ? ' voice' : ' voices') + ' and ' + fmt(p.votes) + (p.votes === 1 ? ' vote. ' : ' votes. ') + (p.updated || '') + ' People are split on some points; this is a summary, not a consensus.'}</p>
           <div className="vx-report__btns">
             <Button variant="secondary" icon="share-2" size="s" onClick={p.onShare}>Share</Button>
             {p.hidePdf === false ? <Button variant="secondary" icon="file-down" size="s">Download PDF</Button> : null}

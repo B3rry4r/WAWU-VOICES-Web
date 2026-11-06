@@ -63,6 +63,21 @@ export function clock24(w: When): string {
   return `${p.hour}:${p.minute}`;
 }
 
+/** "Sunday 6 Dec, 11:59pm": a deadline with the long weekday. */
+export function longSlot(w: When): string {
+  return `${weekday(w, "long")} ${dayMonth(w)}, ${clock(w)}`;
+}
+
+/** "30 Nov, 6pm": when something publishes (day and month, then the short clock). */
+export function published(w: When): string {
+  return `${dayMonth(w)}, ${clock(w, { short: true })}`;
+}
+
+/** "Tue 8am": the weekday and the short clock, for the next item in a schedule. */
+export function weekdayClock(w: When): string {
+  return `${weekday(w)} ${clock(w, { short: true })}`;
+}
+
 /** The Lagos calendar day as "2026-11-05", for comparing days. */
 export function dayKey(w: When): string {
   const p = parts(w, { year: "numeric", month: "2-digit", day: "2-digit" });

@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 import { ASSETS } from './assets';
 import { Button } from './actions';
 import { AvatarStack } from './identity';
-import { cx, short, waveBars } from './helpers';
+import { cx, voicesText, waveBars } from './helpers';
 import type { NewsKind, Tone } from './helpers';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
@@ -33,7 +33,7 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
         <h2 className="vx-hero__q" id="vx-hero-q">{p.question}</h2>
         <div className="vx-hero__meta">
           {p.avatars ? <AvatarStack names={p.avatars} /> : null}
-          <span className="vx-num">{short(p.voices) + ' voices so far'}</span>
+          <span className="vx-num">{voicesText(p.voices) + ' so far'}</span>
           {p.closesIn ? (
             <>
               <span className="vx-dot" aria-hidden="true" />
@@ -118,7 +118,7 @@ export function TopicTile(p: TopicTileProps): ReactElement {
             <i key={i} style={{ height: Math.round(4 + b * 10) }} />
           ))}
         </span>
-        {short(p.voices) + ' voices'}
+        {voicesText(p.voices)}
       </span>
     </>
   );
@@ -149,7 +149,7 @@ export function TrendingList(p: TrendingListProps): ReactElement {
               <span className="vx-trend__n" aria-hidden="true">{i + 1}</span>
               <span>
                 <p className="vx-trend__q">{it.question}</p>
-                <span className="vx-trend__meta">{short(it.voices) + ' voices' + (it.category ? ' · ' + it.category : '')}</span>
+                <span className="vx-trend__meta">{voicesText(it.voices) + (it.category ? ' · ' + it.category : '')}</span>
               </span>
             </a>
           </li>

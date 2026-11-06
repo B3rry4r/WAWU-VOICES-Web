@@ -1,7 +1,7 @@
 import type { Answer } from "@/lib/api/feed";
 import { countdown } from "@/lib/format/date";
 
-/** "9 h", "2 days", "45 min": time left until an ISO instant (the shared countdown). */
+/** "9h", "2 days", "45 min": time left until an ISO instant (the shared countdown). */
 export function closesIn(endsAt: string | null | undefined, now = Date.now()): string | undefined {
   if (!endsAt) return undefined;
   return countdown(Date.parse(endsAt) - now);

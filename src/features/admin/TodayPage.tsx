@@ -9,6 +9,7 @@ import type { AdminToday, Role } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
 import { canOpen } from "./roles";
 import type { AdminPageId } from "./roles";
+import { longSlot, weekday, weekdayClock } from "@/lib/format/date";
 import { clock, dayMonth, longDate, minutesWords, slot } from "./time";
 import { Card, Eyebrow, LoadFailed, PageHead, Pill, StatePill } from "./ui";
 
@@ -152,7 +153,7 @@ export function AdminTodayPage() {
               <Eyebrow>Topic of the week</Eyebrow>
               <h2 className="m-0 mt-2 font-display text-display-m">{t.topic.title}</h2>
               {poll ? (
-                <p className="m-0 mt-2 text-body text-ink-2">{`Poll: ${poll.title} Closes ${slot(poll.endsAt)}. The weekly report drafts itself after.`}</p>
+                <p className="m-0 mt-2 text-body text-ink-2">{`Poll: ${poll.title} Closes ${longSlot(poll.endsAt)}. The weekly report drafts itself after.`}</p>
               ) : null}
             </Card>
           ) : null}
@@ -170,7 +171,7 @@ export function AdminTodayPage() {
                 ))}
                 {t.nextQuestion ? (
                   <li className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-3 border-t border-line py-3">
-                    <span className="text-label">{t.nextQuestion.scheduledFor ? dayMonth(t.nextQuestion.scheduledFor + "T12:00:00+01:00") : "Next"}</span>
+                    <span className="text-label">{t.nextQuestion.startsAt ? weekdayClock(t.nextQuestion.startsAt) : t.nextQuestion.scheduledFor ? weekday(t.nextQuestion.scheduledFor + "T12:00:00+01:00") : "Next"}</span>
                     <span className="text-body">{t.nextQuestion.text}</span>
                   </li>
                 ) : null}

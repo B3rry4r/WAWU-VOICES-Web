@@ -36,7 +36,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
   const voice = page.featuredVoice;
   const transcript = voice?.clip?.transcript?.status === "READY" ? voice.clip.transcript.text : null;
   const bar = (i: number) => ({ width: `${Math.max(4, Math.round((page.arguments[i].voices * 100) / maxArg))}%` });
-  const stats = [`${fmt(page.basedOnVoices)} voices`, page.poll ? `${fmt(page.poll.totalVotes)} votes so far` : null].filter(Boolean).join(" · ");
+  const stats = [`${fmt(page.basedOnVoices)} ${page.basedOnVoices === 1 ? "voice" : "voices"}`, page.poll ? `${fmt(page.poll.totalVotes)} votes so far` : null].filter(Boolean).join(" · ");
   const hasLean = !!page.leanLine || page.arguments.length > 0;
 
   const cta = (
@@ -77,7 +77,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
                   </li>
                 ))}
               </ul>
-              <p className="m-0 text-caption text-ink-2">{`Based on ${fmt(page.basedOnVoices)} voices · updated ${agoShort(page.summaryUpdatedAt, now)} ago · ${page.summaryLabel}`}</p>
+              <p className="m-0 text-caption text-ink-2">{`Based on ${fmt(page.basedOnVoices)} ${page.basedOnVoices === 1 ? "voice" : "voices"} · updated ${agoShort(page.summaryUpdatedAt, now)} ago · ${page.summaryLabel}`}</p>
             </section>
           ) : null}
 

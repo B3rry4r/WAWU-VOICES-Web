@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { ASSETS } from './assets';
-import { cx, short } from './helpers';
+import { cx, voicesText } from './helpers';
 import type { NewsKind } from './helpers';
 import { Icon } from './Icon';
 import { NewsTag } from './labels';
@@ -79,7 +79,7 @@ export function ShareCard(p: ShareCardProps): ReactElement {
           {(p.args || []).map((a, i) => (
             <div key={i} className="vx-share__arg">
               {a.text}
-              <small>{short(a.voices) + ' voices'}</small>
+              <small>{voicesText(a.voices)}</small>
             </div>
           ))}
         </div>
@@ -97,7 +97,7 @@ export function ShareCard(p: ShareCardProps): ReactElement {
           <span className="vx-share__based">
             <b>{p.summary || 'People are split so far.'}</b>
             <br />
-            {'Based on ' + short(p.voices) + ' voices · updated ' + (p.updated || 'just now')}
+            {'Based on ' + voicesText(p.voices) + ' · updated ' + (p.updated || 'just now')}
             <br />
             {p.link || 'voices.wawuafrica.com'}
           </span>

@@ -130,7 +130,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
       </div>
       {open ? (
         <div className="tk-dock fixed inset-x-0 bottom-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] z-[var(--z-sticky)] border-t border-[var(--line)] bg-[var(--surface)] px-3 py-[10px] dt:hidden">
-          <div className="mb-2 flex gap-2 overflow-x-auto" role="group" aria-label="How are you replying?">
+          <div className="mb-2 flex min-w-0 max-w-full gap-2 overflow-x-auto" role="group" aria-label="How are you replying?">
             {STANCES.map((s) => <TopicChip key={s.id} label={s.label} selected={pick === s.id} onClick={() => setPick(pick === s.id ? undefined : s.id)} />)}
           </div>
           {signedIn === false ? <Banner tone="info" title="Sign in to reply.">Reading and listening are free. We ask for your number when you post.</Banner> : (

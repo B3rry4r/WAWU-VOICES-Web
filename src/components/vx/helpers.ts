@@ -9,6 +9,11 @@ export function fmt(n: number | string): string {
   return typeof n === 'number' ? n.toLocaleString('en-NG') : n;
 }
 
+/** "1 voice", "0 voices", "12.5K voices": plural for every count except exactly 1. */
+export function voicesText(n: number | undefined): string {
+  return short(n) + (n === 1 ? ' voice' : ' voices');
+}
+
 export function short(n: number | string | undefined): string {
   if (typeof n !== 'number') return n === undefined ? '' : n;
   if (n >= 1e6) return Math.round(n / 1e5) / 10 + 'M';

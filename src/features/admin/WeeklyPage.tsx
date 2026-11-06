@@ -6,6 +6,7 @@ import { approveWeekly, editWeekly, holdWeekly, listWeekly } from "@/lib/api/adm
 import type { AdminWeeklyReport } from "@/lib/api/admin";
 import { readPollSummary, readThemes } from "@/features/reach/weekly-map";
 import { useAdmin } from "./AdminFrame";
+import { published } from "@/lib/format/date";
 import { clock, dayMonth, fromLocalInput, slot, toLocalInput } from "./time";
 import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, SavedLine, StatePill, useAction, Gated, DateTimeField } from "./ui";
 
@@ -160,7 +161,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
               poll={summary ? { pct: summary.pct, text: summary.text } : undefined}
               voices={r.basedOnVoices}
               votes={r.basedOnVotes}
-              updated={r.publishAt ? `Publishes ${slot(r.publishAt)}.` : undefined}
+              updated={r.publishAt ? `Publishes ${published(r.publishAt)}.` : undefined}
             />
           )}
         </div>
@@ -181,7 +182,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
           </ul>
           <dl className="m-0 mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t border-line pt-4 text-caption">
             <dt className="text-ink-2">Based on</dt>
-            <dd className="m-0">{`${r.basedOnVoices.toLocaleString("en-NG")} voices and ${r.basedOnVotes.toLocaleString("en-NG")} votes`}</dd>
+            <dd className="m-0">{`${r.basedOnVoices.toLocaleString("en-NG")} ${r.basedOnVoices === 1 ? "voice" : "voices"} and ${r.basedOnVotes.toLocaleString("en-NG")} ${r.basedOnVotes === 1 ? "vote" : "votes"}`}</dd>
             {r.pollClosedAt ? (
               <>
                 <dt className="text-ink-2">Poll closed</dt>

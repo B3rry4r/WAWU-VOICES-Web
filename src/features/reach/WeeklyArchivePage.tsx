@@ -10,7 +10,7 @@ import { AppBar, lagosSlot, monthOf, useSignedIn } from "./shared";
 
 type Load = "loading" | "error" | "ready";
 
-const counts = (r: WeeklyReportCard) => `${fmt(r.basedOnVoices)} voices · ${fmt(r.basedOnVotes)} votes`;
+const counts = (r: WeeklyReportCard) => `${fmt(r.basedOnVoices)} ${r.basedOnVoices === 1 ? "voice" : "voices"} · ${fmt(r.basedOnVotes)} ${r.basedOnVotes === 1 ? "vote" : "votes"}`;
 
 /** /weekly/archive: every published report, newest first, the latest on top in green, the rest under their month. */
 export function WeeklyArchivePage() {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clock, countdown, date, dateTime, dayKey, dayMonth, monthYear, slot, weekday } from "@/lib/format/date";
+import { clock, countdown, date, longSlot, published, weekdayClock, dateTime, dayKey, dayMonth, monthYear, slot, weekday } from "@/lib/format/date";
 
 describe("shared date helper (Lagos time)", () => {
   it("writes the clock as the boards do: 12 hour, no space, lower case", () => {
@@ -43,5 +43,12 @@ describe("shared date helper (Lagos time)", () => {
     expect(countdown(4 * 24 * 3600000 + 3600000)).toBe("4 days");
     expect(countdown(0)).toBeUndefined();
     expect(countdown(-5)).toBeUndefined();
+  });
+
+  it("has the admin board forms", () => {
+    expect(published("2026-11-30T17:00:00Z")).toBe("30 Nov, 6pm");
+    expect(published("2026-11-30T17:03:00Z")).toBe("30 Nov, 6:03pm");
+    expect(longSlot("2026-12-06T22:59:00Z")).toBe("Sunday 6 Dec, 11:59pm");
+    expect(weekdayClock("2026-12-01T07:00:00Z")).toBe("Tue 8am");
   });
 });

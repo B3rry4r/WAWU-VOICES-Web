@@ -149,7 +149,7 @@ export function Composer(p: ComposerProps): ReactElement {
             if (p.onSend) p.onSend();
           }}
         >
-          {free > 0 || !meter ? 'Post' : 'Post for ' + (p.costShort || '0.5 unit')}
+          {free > 0 || !meter ? 'Post' : 'Post for ' + (p.costShort || '0.5 units')}
         </Button>
       </div>
     </section>

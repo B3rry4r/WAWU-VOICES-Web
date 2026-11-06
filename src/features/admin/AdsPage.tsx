@@ -93,7 +93,7 @@ function AdsBody() {
       ) : items === null ? (
         <ListSkeleton />
       ) : items.length === 0 && !creating ? (
-        <EmptyState icon="megaphone" title="No adverts yet" body="Brands' adverts land here for approval. You can also add one yourself." action="New advert" actionIcon="plus" onAction={() => setCreating(true)} />
+        <EmptyState icon="megaphone" title="No adverts yet" body="Brands’ adverts land here for approval. You can also add one yourself." action="New advert" actionIcon="plus" onAction={() => setCreating(true)} />
       ) : (
         <>
           {items.length ? (
