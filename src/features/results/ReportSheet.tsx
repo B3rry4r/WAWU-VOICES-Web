@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Banner, Button, Sheet } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { createReport } from "@/lib/api/talk";
@@ -14,19 +14,23 @@ const WHY: { reason: ReportReason; label: string; note?: string }[] = [
 /** Report a result post (POST /reports, RESULT_POST). The post's author is never told who reported it. */
 export function ReportSheet({ postId, signedIn, onClose }: { postId: string; signedIn: boolean | null; onClose: () => void }) {
   const [busy, setBusy] = useState<ReportReason | null>(null);
+  // Set at once, before the next render, so a double tap sends one report (state alone lags a frame behind).
+  const sending = useRef(false);
   const [done, setDone] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function send(w: (typeof WHY)[number]) {
-    if (busy) return;
+    if (busy || sending.current) return;
+    sending.current = true;
     setBusy(w.reason);
     setMsg(null);
     try {
       await createReport({ targetType: "RESULT_POST", targetId: postId, reason: w.reason, note: w.note });
       setDone(true);
     } catch (e) {
-      setMsg(e instanceof ApiError && e.status === 409 ? "You already reported this. Our team has it." : e instanceof ApiError && e.status === 0 ? "You are offline. Check your connection and try again." : "We could not send your report. Try again in a moment.");
+      setMsg(e instanceof ApiError && e.status === 422 && e.explained && e.message === "You cannot report your own post." ? e.message : e instanceof ApiError && e.status === 409 ? "You already reported this. Our team has it." : e instanceof ApiError && e.status === 0 ? "You are offline. Check your connection and try again." : "We could not send your report. Try again in a moment.");
     } finally {
+      sending.current = false;
       setBusy(null);
     }
   }
