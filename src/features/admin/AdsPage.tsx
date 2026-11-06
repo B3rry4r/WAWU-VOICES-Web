@@ -223,6 +223,28 @@ function Review({ ad, cats, onDone, onEdit }: { ad: AdminAd; cats: Record<string
   );
 }
 
+/** The fields of `next` that differ from the saved advert (same keys, same shapes as the saved one). */
+export function changedFields(ad: AdminAd, next: UpsertAdRequest): Partial<UpsertAdRequest> {
+  const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  const saved: Record<string, unknown> = {
+    brand: ad.brand,
+    kind: ad.kind,
+    headline: ad.headline,
+    body: ad.body,
+    linkUrl: ad.linkUrl,
+    ctaLabel: ad.ctaLabel,
+    categoryIds: ad.categoryIds ?? [],
+    states: ad.states ?? [],
+    startsOn: ad.startsOn,
+    endsOn: ad.endsOn,
+    frequencyCapPerDay: ad.frequencyCapPerDay,
+    priceKobo: ad.priceKobo,
+  };
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(next)) if (!same(v, saved[k])) out[k] = v;
+  return out as Partial<UpsertAdRequest>;
+}
+
 function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<string, string>; onClose: () => void; onSaved: (a: AdminAd) => void }) {
   const [f, setF] = useState({
     brand: ad?.brand ?? "",
@@ -256,7 +278,14 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
       ...(f.cap ? { frequencyCapPerDay: Number(f.cap) } : {}),
       ...(f.price ? { priceKobo: Math.round(Number(f.price) * 100) } : {}),
     };
-    const out = await act.run(() => (ad ? updateAd(ad.id, body) : createAd(body)));
+    // lead ruling WF, 6 Nov (C-M8): an edit sends ONLY what changed, because the API reads any content field it receives
+    // as "the words changed" and sends a paused advert back to approval. Changing only the dates keeps it paused.
+    const diff = ad ? changedFields(ad, body) : null;
+    if (ad && diff && Object.keys(diff).length === 0) {
+      onClose();
+      return;
+    }
+    const out = await act.run(() => (ad && diff ? updateAd(ad.id, diff) : createAd(body)));
     if (out) onSaved(out);
   }
 

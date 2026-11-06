@@ -175,7 +175,7 @@ function ModerationBody() {
       ) : items === null ? (
         <ListSkeleton />
       ) : items.length === 0 ? (
-        <EmptyState icon="shield-check" title="Nothing is waiting here" body="New items land here as people report them and screening flags them." />
+        <EmptyState icon="shield-check" title="Nothing is waiting here" body="New items land here as people report them." />
       ) : (
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">
@@ -276,6 +276,14 @@ function Panel(p: {
           <p className="m-0 text-body text-ink">{d.transcript ?? c.body}</p>
         </div>
       ) : null}
+
+      {(d.appeals ?? []).map((a) => (
+        <div key={a.id} className="rounded-l border border-line bg-surface p-4">
+          <Eyebrow className="mb-1">{a.status === "DECIDED" ? "Appeal (decided)" : "Appeal"}</Eyebrow>
+          <div className="mb-2 text-caption text-ink-2">{`${d.author ? `@${d.author.handle}` : "The poster"} · ${dayMonth(a.createdAt)}, ${clock(a.createdAt)}`}</div>
+          <p className="m-0 whitespace-pre-wrap text-body text-ink">{a.note}</p>
+        </div>
+      ))}
 
       {d.screening.length ? (
         <div className="flex flex-wrap gap-2">

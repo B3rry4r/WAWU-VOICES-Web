@@ -2,10 +2,29 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, EmptyState, Icon, TextField, TopicChip } from "@/components/vx";
-import { createTopic, getTopic, listTopics, updateQuestion, updateTopic } from "@/lib/api/admin";
+import { createTopic, getTopic, listTopics, moveQuestion, startFlashPoll, updateQuestion, updateTopic } from "@/lib/api/admin";
 import type { AdminQuestion, AdminTopic, AdminTopicList, CalendarWeek, TopicStatus } from "@/lib/api/admin";
 import { dayMonth, dayStringShort, dayStringWeekday, slot, weekRange } from "./time";
-import { Card, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, useAction, Gated } from "./ui";
+import { Card, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, refusalWords, useAction, Gated } from "./ui";
+import { ApiError } from "@/lib/api/client";
+
+/** The 7 days of a week from its first day, as "2026-11-12" strings (Lagos calendar days). */
+function weekDays(startsOn: string): string[] {
+  const a = new Date(startsOn + "T12:00:00+01:00").getTime();
+  return Array.from({ length: 7 }, (_, i) => new Date(a + i * 86400000).toISOString().slice(0, 10));
+}
+
+/** Plain words for a refused move (lead ruling WF, 6 Nov, RW6): a started question says so in five words. */
+function moveWords(e: unknown): string {
+  if (e instanceof ApiError && e.status === 409 && /started/i.test(e.message)) return /^that day/i.test(e.message) ? e.message : "This question has started.";
+  return refusalWords(e);
+}
+
+/** A FLASH question with no day yet: held until an editor starts it as a flash poll (RW5). */
+const isHeldFlash = (q: AdminQuestion) => q.kind === "FLASH" && !q.day && q.status !== "CLOSED" && q.status !== "LIVE";
+
+/** How long a flash poll stays open once started from the calendar (RW5). */
+const FLASH_HOURS = 24;
 
 const STATUS_WORDS: Record<TopicStatus, string> = { DRAFT: "Draft", IN_REVIEW: "In review", SCHEDULED: "Scheduled", LIVE: "Live", CLOSED: "Closed" };
 
@@ -197,8 +216,8 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
       </div>
 
       <ul className="m-0 mt-4 list-none p-0">
-        {d.questions.map((q) => (
-          <QuestionRow key={q.id} q={q} onSaved={() => { setN((x) => x + 1); onChanged("Question saved."); }} />
+        {d.questions.filter((q) => !isHeldFlash(q)).map((q) => (
+          <QuestionRow key={q.id} q={q} days={weekDays(t.startsOn)} week={d.questions} onSaved={(msg) => { setN((x) => x + 1); onChanged(msg ?? "Question saved."); }} />
         ))}
         {d.spare.length ? (
           <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 border-t border-line py-3 text-body">
@@ -206,6 +225,9 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
             <span className="text-ink-2">{`${d.spare.length} more ${d.spare.length === 1 ? "question" : "questions"} held for follow-ups and flash polls`}</span>
           </li>
         ) : null}
+        {[...d.questions, ...d.spare].filter(isHeldFlash).map((q) => (
+          <FlashRow key={q.id} q={q} topicId={t.id} onStarted={() => { setN((x) => x + 1); onChanged("Flash poll started."); }} />
+        ))}
       </ul>
 
       {d.poll ? (
@@ -220,10 +242,17 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
   );
 }
 
-function QuestionRow({ q, onSaved }: { q: AdminQuestion; onSaved: () => void }) {
+function QuestionRow({ q, days, week, onSaved }: { q: AdminQuestion; days: string[]; week: AdminQuestion[]; onSaved: (msg?: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(q.text);
+  const [target, setTarget] = useState<string | null>(null);
   const act = useAction();
+  const [mBusy, setMBusy] = useState(false);
+  const [mError, setMError] = useState<string | null>(null);
+  const moving = useRef(false);
+  // Only a scheduled daily question that has not started can change day.
+  const movable = !!q.day && q.kind === "DAILY" && q.status === "SCHEDULED";
+  const other = target ? week.find((x) => x.day === target && x.id !== q.id) : undefined;
   async function save() {
     const ok = await act.run(async () => {
       await updateQuestion(q.id, { kind: q.kind, text: text.trim() });
@@ -232,6 +261,36 @@ function QuestionRow({ q, onSaved }: { q: AdminQuestion; onSaved: () => void }) 
     if (ok) {
       setEditing(false);
       onSaved();
+    }
+  }
+  async function doMove(day: string) {
+    if (moving.current) return;
+    moving.current = true;
+    setMBusy(true);
+    setMError(null);
+    try {
+      const r = await moveQuestion(q.id, day);
+      setTarget(null);
+      onSaved(r.swappedWith ? "The two questions swapped days." : "Question moved.");
+    } catch (e) {
+      setMError(moveWords(e));
+      setTarget(null);
+    } finally {
+      moving.current = false;
+      setMBusy(false);
+    }
+  }
+  function choose(day: string) {
+    setMError(null);
+    if (day === q.day) {
+      setTarget(null);
+      return;
+    }
+    // A free day moves at once. A taken day asks first, because the other question moves too.
+    if (week.some((x) => x.day === day && x.id !== q.id)) setTarget(day);
+    else {
+      setTarget(null);
+      void doMove(day);
     }
   }
   return (
@@ -249,12 +308,73 @@ function QuestionRow({ q, onSaved }: { q: AdminQuestion; onSaved: () => void }) 
       ) : (
         <>
           <button type="button" onClick={() => setEditing(true)} aria-label={`Edit question: ${q.text}`} className="cursor-pointer border-0 bg-transparent p-0 text-left text-body text-ink">{q.text}</button>
-          <span className="flex gap-1">
+          <span className="flex items-center gap-1">
             {q.status === "LIVE" ? <Pill tone="red" dot>Live</Pill> : null}
             {q.pinned ? <Pill tone="green">Pinned</Pill> : null}
+            {movable ? (
+              <select aria-label={`Day for: ${q.text}`} className="rounded-s border border-line bg-surface px-2 py-1 text-caption text-ink" value={target ?? q.day ?? ""} disabled={mBusy} onChange={(e) => choose(e.target.value)}>
+                {days.map((d) => (
+                  <option key={d} value={d}>{dayStringWeekday(d)}</option>
+                ))}
+              </select>
+            ) : null}
           </span>
+          {target && other ? (
+            <div className="col-start-2 col-end-4 flex flex-col gap-2 rounded-l bg-surface-2 p-3" role="group" aria-label="Swap days">
+              <p className="m-0 text-body">{`This swaps with “${other.text}”.`}</p>
+              <p className="m-0 text-caption text-ink-2">{`Both questions change days: this one goes to ${dayStringWeekday(target)}, and that one goes to ${q.day ? dayStringWeekday(q.day) : "this day"}.`}</p>
+              <div className="flex gap-2">
+                <Button size="s" loading={mBusy} disabled={mBusy} onClick={() => void doMove(target)}>Swap</Button>
+                <Button size="s" variant="secondary" disabled={mBusy} onClick={() => { setTarget(null); setMError(null); }}>Cancel</Button>
+              </div>
+            </div>
+          ) : null}
+          {mError ? <div className="col-start-2 col-end-4"><ErrorLine>{mError}</ErrorLine></div> : null}
         </>
       )}
+    </li>
+  );
+}
+
+/** A held FLASH question: start it as a flash poll that opens now (RW5). The API refuses a second open flash poll in its own words. */
+function FlashRow({ q, topicId, onStarted }: { q: AdminQuestion; topicId: string; onStarted: () => void }) {
+  const [asking, setAsking] = useState(false);
+  const act = useAction();
+  async function start() {
+    const now = Date.now();
+    const r = await act.run(() =>
+      startFlashPoll({
+        kind: "FLASH",
+        questionId: q.id,
+        topicId,
+        title: q.text.slice(0, 200),
+        choiceMode: "SINGLE",
+        options: ["Yes", "No"],
+        startsAt: new Date(now).toISOString(),
+        endsAt: new Date(now + FLASH_HOURS * 3600000).toISOString(),
+      }),
+    );
+    if (r) {
+      setAsking(false);
+      onStarted();
+    }
+  }
+  return (
+    <li className="grid grid-cols-[72px_minmax(0,1fr)_auto] items-start gap-3 border-t border-line py-3">
+      <span className="text-count text-ink-2">Flash</span>
+      <span className="text-body text-ink">{q.text}</span>
+      <Button size="s" variant="secondary" onClick={() => setAsking(true)} disabled={asking}>Start as flash poll</Button>
+      {asking ? (
+        <div className="col-start-2 col-end-4 flex flex-col gap-2 rounded-l bg-surface-2 p-3" role="group" aria-label="Start flash poll">
+          <p className="m-0 text-body">{`Starts now and stays open for ${FLASH_HOURS} hours.`}</p>
+          <p className="m-0 text-caption text-ink-2">People who allow flash polls are told. Only one flash poll can be open at a time.</p>
+          <ErrorLine>{act.error}</ErrorLine>
+          <div className="flex gap-2">
+            <Button size="s" loading={act.busy} disabled={act.busy} onClick={() => void start()}>Start now</Button>
+            <Button size="s" variant="secondary" disabled={act.busy} onClick={() => { setAsking(false); act.clear(); }}>Cancel</Button>
+          </div>
+        </div>
+      ) : null}
     </li>
   );
 }

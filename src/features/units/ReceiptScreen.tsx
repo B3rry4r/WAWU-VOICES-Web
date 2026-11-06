@@ -36,7 +36,7 @@ export function ReceiptScreen({ paymentId }: { paymentId: string }) {
         (() => {
           const r = result.data;
           const rows: Array<[string, string]> = [
-            ["Receipt", r.receiptNo],
+            ["Receipt", r.reference ?? r.receiptNo],
             ["Item", r.title],
             ...(r.unitsMilli !== null ? ([["Units", units(r.unitsMilli)]] as Array<[string, string]>) : []),
             ["Paid", naira(r.amountKobo)],

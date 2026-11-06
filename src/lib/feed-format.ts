@@ -83,3 +83,8 @@ export function uniqueVoices<T extends { handle: string }>(voices: T[]): T[] {
   const seen = new Set<string>();
   return voices.filter((v) => (seen.has(v.handle) ? false : (seen.add(v.handle), true)));
 }
+
+/** The one voices count (lead ruling WF, 6 Nov, RW1): top-level answers, voice or text. voiceCount stays the number of voice clips and is never shown as "voices". */
+export function voicesOf(x: { voicesCount?: number | null; answerCount?: number; voiceCount: number }): number {
+  return x.voicesCount ?? x.answerCount ?? x.voiceCount;
+}

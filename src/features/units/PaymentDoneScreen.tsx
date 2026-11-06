@@ -26,9 +26,14 @@ function verifyOnce(id: string, key: string, txId?: string): Promise<Payment> {
   return p;
 }
 
-/** A raw payment reference (voices-<uuid>) is long: show its last 8 characters, and keep the whole value to copy. */
+/** A raw provider reference (voices-<uuid>) is long: show its last 8 characters, and keep the whole value to copy. The person's own VU- reference is short already and is shown whole. */
 export function shortRef(ref: string): string {
-  return ref.length > 12 ? ref.slice(-8) : ref;
+  return ref.startsWith("voices-") && ref.length > 12 ? ref.slice(-8) : ref;
+}
+
+/** The one reference a person sees and copies for a payment (lead ruling WF, 6 Nov, B-L2): VU-yymmdd-XXXXXXXX, the same on every screen. The provider reference only if the API sent none. */
+export function paymentRef(p: { reference?: string | null; receiptNo?: string | null; txRef: string }): string {
+  return p.reference ?? p.receiptNo ?? p.txRef;
 }
 
 function CopyRef({ full }: { full: string }) {
@@ -249,7 +254,7 @@ export function PaymentDoneScreen() {
     ];
     const m = methodLabel(p);
     if (m) rows.push(["Method", m]);
-    if (p.receiptNo) rows.push(["Reference", p.receiptNo]);
+    rows.push(["Reference", paymentRef(p)]);
     if (p.verifiedAt) rows.push(["Time", dateTimeLagos(p.verifiedAt)]);
     if (!isUnits) rows[0][0] = "Item";
     const posted = draft?.status === "posted" ? draft : null;
@@ -305,7 +310,7 @@ export function PaymentDoneScreen() {
     rows.push(["Pack", p.kind === "UNITS" ? `${p.title.replace(/ pack$/i, "")}, ${naira(p.amountKobo)}` : `${p.title}, ${naira(p.amountKobo)}`]);
     const m = methodLabel(p);
     if (m) rows.push(["Method", m]);
-    if (!p.receiptNo) rows.push(["Payment reference", <CopyRef key="ref" full={p.txRef} />]);
+    rows.push(["Payment reference", <CopyRef key="ref" full={paymentRef(p)} />]);
   }
   const qd = attemptRef.current?.draftQuestionId;
   const hold = !!qd && !!getDraft(qd);
@@ -316,7 +321,7 @@ export function PaymentDoneScreen() {
       {hold ? <Banner tone="info" title="Your draft is still saved">It posts as soon as your units arrive.</Banner> : null}
       {p && state.kind !== "refunded" && state.kind !== "cancelled" ? (
         <Banner tone="warning" title="Seeing a debit?">
-          If your bank shows one for this payment, it comes back to you. Support can trace it with reference {p.receiptNo ?? shortRef(p.txRef)}.
+          If your bank shows one for this payment, it comes back to you. Support can trace it with reference {shortRef(paymentRef(p))}.
         </Banner>
       ) : null}
       {rows.length ? <Details rows={rows} /> : null}

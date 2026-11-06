@@ -11,6 +11,7 @@ import { AppBar, nextOpening, useOpensAt, DeskBack, LoadFailed, Loading, PageHea
 import { DeskRail } from "./DeskRail";
 import { PollCard } from "./PollCard";
 import { pickPoll } from "./poll-pick";
+import { voicesOf } from "@/lib/feed-format";
 
 interface Data {
   question: Question;
@@ -62,7 +63,7 @@ export function VotePage({ questionId }: { questionId: string }) {
         questionId={questionId}
         active="vote"
         visited={["speak", "discuss"]}
-        counts={q ? { speak: shortCount(q.voiceCount), discuss: shortCount(q.answerCount), vote: main ? shortCount(main.totalVotes) : "0", next: shortCount(q.proposalCount) } : undefined}
+        counts={q ? { speak: shortCount(voicesOf(q)), discuss: shortCount(voicesOf(q)), vote: main ? shortCount(main.totalVotes) : "0", next: shortCount(q.proposalCount) } : undefined}
       />
       <DeskRail kind="vote" questionId={questionId} />
       {load.state === "loading" || signedIn === null ? <Loading /> : null}

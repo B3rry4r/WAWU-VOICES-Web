@@ -188,7 +188,9 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   if (!res.ok) {
     const err = await readError(res);
     // The API refuses every write from a suspended, banned or pending-deletion account: say so plainly, keep no session.
-    if (err.status === 403 && err.code === "ACCOUNT_SUSPENDED") {
+    // Only profile creation ends the session: a person who is already in and then suspended on VOICES stays signed in
+    // to read their notices and send an appeal (lead ruling WF, 6 Nov, RW2: suspension never blocks the appeal).
+    if (err.status === 403 && err.code === "ACCOUNT_SUSPENDED" && path === "/me" && (rest.method ?? "GET").toUpperCase() === "POST") {
       sessionStorage.clear();
       throw new AccountBlockedError();
     }

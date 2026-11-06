@@ -15,6 +15,7 @@ import { useMe } from "./useMe";
 import { unitsFigure } from "./format";
 import { QuestionRow } from "./SavedRow";
 import "./profile.css";
+import { voicesOf } from "@/lib/feed-format";
 
 function LinkRow({ href, icon, children, detail }: { href: string; icon: Parameters<typeof Icon>[0]["name"]; children: string; detail?: string }) {
   return (
@@ -81,7 +82,7 @@ export function MePage() {
       <ProfileCard
         own
         profile={profile}
-        stats={[{ label: "Voices", value: profile.voiceCount }, { label: "Reactions", value: me.reactionsReceived }, { label: "Saved", value: me.savedCount }]}
+        stats={[{ label: "Voices", value: voicesOf(profile) }, { label: "Reactions", value: me.reactionsReceived }, { label: "Saved", value: me.savedCount }]}
         unitsMilli={a.balanceMilli}
         freePosts={a.freePostsRemaining}
         referral={me.referralCode}
@@ -98,7 +99,7 @@ export function MePage() {
         label="Your posts"
         value={tab}
         onChange={(v) => setTab(v as "voices" | "saved")}
-        items={[{ id: "voices", label: "My voices", count: profile.voiceCount }, { id: "saved", label: "Saved", count: me.savedCount }]}
+        items={[{ id: "voices", label: "My voices", count: voicesOf(profile) }, { id: "saved", label: "Saved", count: me.savedCount }]}
       />
       <div role="tabpanel" className="pf-panelbody">
         {tab === "voices" ? (

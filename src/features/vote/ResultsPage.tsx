@@ -8,7 +8,7 @@ import { StageNav } from "@/features/stage/StageNav";
 import { ApiError } from "@/lib/api/client";
 import { explainMyVote, getPollResults, getQuestion, loadQuestionPolls, newKey } from "@/lib/api/vote";
 import type { Poll as PollT, PollResults, Question } from "@/lib/api/vote";
-import { closesIn } from "@/lib/feed-format";
+import { closesIn, voicesOf } from "@/lib/feed-format";
 import { AdBanner } from "./AdBanner";
 import { AppBar, nextOpening, useOpensAt, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
 import { DeskRail } from "./DeskRail";
@@ -86,7 +86,7 @@ export function ResultsPage({ questionId }: { questionId: string }) {
         questionId={questionId}
         active="vote"
         visited={["speak", "discuss"]}
-        counts={q ? { speak: shortCount(q.voiceCount), discuss: shortCount(q.answerCount), vote: poll ? shortCount(results?.totalVotes ?? poll.totalVotes) : "0", next: shortCount(q.proposalCount) } : undefined}
+        counts={q ? { speak: shortCount(voicesOf(q)), discuss: shortCount(voicesOf(q)), vote: poll ? shortCount(results?.totalVotes ?? poll.totalVotes) : "0", next: shortCount(q.proposalCount) } : undefined}
       />
       <DeskRail kind="results" questionId={questionId} />
       {load.state === "loading" || signedIn === null ? <Loading /> : null}

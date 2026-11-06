@@ -53,7 +53,8 @@ describe("weekly mapping", () => {
   it("links only screens that exist", () => {
     expect(targetHref({ targetType: "weekly_report", targetId: "r1" })).toBe("/weekly/r1");
     expect(targetHref({ targetType: "question", targetId: "q1" })).toBe("/q/q1");
-    expect(targetHref({ targetType: "wallet", targetId: "w" })).toBeNull();
+    // lead ruling WF, 6 Nov (RW7): Voice Units notices open the units screen.
+    expect(targetHref({ targetType: "wallet", targetId: "w" })).toBe("/units");
   });
 });
 

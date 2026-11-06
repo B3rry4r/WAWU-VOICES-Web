@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Avatar, Banner, Button, EmptyState, FreePosts, Icon, Sheet, Skeleton, Tabs } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, AnswerSort, Question } from "@/lib/api/talk";
-import { closesIn, uniqueVoices } from "@/lib/feed-format";
+import { closesIn, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
@@ -92,7 +92,7 @@ export function QuestionScreen({ id }: { id: string }) {
         <BarButton icon="bookmark" label="Save this question" pressed={!!saved} onClick={toggleSave} />
         <BarButton icon="share-2" label="Share this question" onClick={() => share("QUESTION", id)} />
       </AppBar>
-      <StageNav questionId={id} active="discuss" visited={["speak"]} counts={{ speak: short(question.voiceCount), discuss: short(question.answerCount), next: short(question.proposalCount) }} />
+      <StageNav questionId={id} active="discuss" visited={["speak"]} counts={{ speak: short(voicesOf(question)), discuss: short(voicesOf(question)), next: short(question.proposalCount) }} />
 
       <section aria-label="The question" className="flex flex-col gap-3 pb-2 pt-5">
         <div className="flex flex-wrap items-center gap-2">
@@ -103,7 +103,7 @@ export function QuestionScreen({ id }: { id: string }) {
         <h1 className="m-0 font-display text-display-l [text-wrap:balance] dt:text-display-2xl">{question.text}</h1>
         {question.hint ? <p className="m-0 text-body-l text-[var(--ink-2)]">{question.hint}</p> : null}
         <div className="hidden items-center gap-4 text-caption text-[var(--ink-2)] dt:flex">
-          <span className="inline-flex items-center gap-1"><Icon name="mic" size={14} />{`${question.voiceCount.toLocaleString("en-NG")} ${question.voiceCount === 1 ? "voice" : "voices"} so far`}</span>
+          <span className="inline-flex items-center gap-1"><Icon name="mic" size={14} />{`${voicesOf(question).toLocaleString("en-NG")} ${voicesOf(question) === 1 ? "voice" : "voices"} so far`}</span>
           {close && open ? <span className="inline-flex items-center gap-1"><Icon name="clock" size={14} />{`Closes in ${close}`}</span> : null}
         </div>
         <div className="flex items-center gap-[10px] dt:hidden">
@@ -114,7 +114,7 @@ export function QuestionScreen({ id }: { id: string }) {
               ))}
             </span>
           ) : null}
-          <span className="text-caption text-[var(--ink-2)]"><b className="text-[var(--ink)]">{short(question.voiceCount)} {question.voiceCount === 1 ? "voice" : "voices"}</b>{close && open ? ` · closes in ${close}` : ""}</span>
+          <span className="text-caption text-[var(--ink-2)]"><b className="text-[var(--ink)]">{short(voicesOf(question))} {voicesOf(question) === 1 ? "voice" : "voices"}</b>{close && open ? ` · closes in ${close}` : ""}</span>
         </div>
         {open ? (
           <>
@@ -142,14 +142,14 @@ export function QuestionScreen({ id }: { id: string }) {
       ) : null}
       <div className="mt-4 flex items-center justify-between border-b border-[var(--line)] pt-2 dt:border-0">
         <h2 className="m-0 font-display text-display-m dt:hidden">Voices</h2>
-        <span className="text-caption text-[var(--ink-2)] dt:hidden">{question.answerCount.toLocaleString("en-NG")}</span>
+        <span className="text-caption text-[var(--ink-2)] dt:hidden">{voicesOf(question).toLocaleString("en-NG")}</span>
       </div>
       <div className="my-3 flex items-center justify-between gap-3">
         <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--mint)] px-4 text-label text-[var(--green-text)] dt:hidden" aria-label={`Sort voices: ${SORTS.find((x) => x.id === sort)!.label}. Change`} onClick={() => setSortOpen(true)}>
           <Icon name="trending-up" size={18} />{SORTS.find((x) => x.id === sort)!.label}<Icon name="chevron-down" size={18} />
         </button>
         <div className="hidden dt:block"><Tabs label="Sort voices" items={SORTS} value={sort} onChange={(s) => setSort(s as AnswerSort)} /></div>
-        <span className="hidden text-caption text-[var(--ink-2)] dt:block">{`${question.answerCount.toLocaleString("en-NG")} ${question.answerCount === 1 ? "voice" : "voices"}`}</span>
+        <span className="hidden text-caption text-[var(--ink-2)] dt:block">{`${voicesOf(question).toLocaleString("en-NG")} ${voicesOf(question) === 1 ? "voice" : "voices"}`}</span>
       </div>
       {sortOpen ? (
         <Sheet title="Sort voices" onClose={() => setSortOpen(false)}>

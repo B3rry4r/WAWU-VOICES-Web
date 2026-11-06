@@ -11,6 +11,7 @@ import { AppBar, DeskBack, LoadFailed, Loading, shortCount, useLoadWhen, useSign
 import { DeskRail } from "./DeskRail";
 import { useWhatNextPrompt } from "./prompt";
 import { ProposalItem } from "./WhatNextPage";
+import { voicesOf } from "@/lib/feed-format";
 
 /** How long to wait after the last keystroke before looking for similar proposals. */
 const CHECK_DELAY_MS = 600;
@@ -111,7 +112,7 @@ export function ProposePage({ questionId }: { questionId: string }) {
       <AppBar href={`/q/${questionId}/next`} backLabel="Close without posting" title="Propose a next step" sub="What Next?" close />
       <DeskBack href={`/q/${questionId}/next`} label="Back to What Next?" />
       <div className="hidden dt:block">
-        <StageNav questionId={questionId} active="next" visited={["speak", "discuss", "vote"]} counts={q ? { speak: shortCount(q.voiceCount), discuss: shortCount(q.answerCount), next: shortCount(q.proposalCount) } : undefined} />
+        <StageNav questionId={questionId} active="next" visited={["speak", "discuss", "vote"]} counts={q ? { speak: shortCount(voicesOf(q)), discuss: shortCount(voicesOf(q)), next: shortCount(q.proposalCount) } : undefined} />
       </div>
       {load.state === "loading" || signedIn === null ? <Loading /> : null}
       {load.state === "error" ? <LoadFailed error={load.error} retry={load.retry} what="this question" /> : null}

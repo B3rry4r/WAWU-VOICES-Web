@@ -56,6 +56,10 @@ export const updateTopic = (id: string, body: Partial<UpsertTopicRequest>) => ap
 export const updateQuestion = (id: string, body: { kind: S["QuestionKind"]; text: string; scheduledFor?: string; pinned?: boolean }) => apiFetch<unknown>(`/admin/questions/${enc(id)}`, { ...A, method: "PATCH", body });
 
 // Override
+/** RW6: put a scheduled question on another day of its week. A taken day swaps the two (one transaction). */
+export const moveQuestion = (id: string, day: string) => apiFetch<S["MoveQuestionResult"]>(`/admin/questions/${enc(id)}/move`, { ...A, method: "POST", body: { day } });
+/** RW5: open a held FLASH question as a flash poll that starts now. The API allows one open flash poll at a time (409). */
+export const startFlashPoll = (body: S["UpsertPollRequest"]) => apiFetch<S["Poll"]>("/admin/polls", { ...A, method: "POST", body });
 export const listOverrides = () => apiFetch<AdminOverridePage>("/admin/overrides", A);
 export const previewOverride = (body: CreateOverrideRequest) => apiFetch<OverridePreview>("/admin/overrides/preview", { ...A, method: "POST", body });
 export const createOverride = (body: CreateOverrideRequest) => apiFetch<AdminOverride>("/admin/overrides", { ...A, method: "POST", body });
@@ -89,5 +93,5 @@ export const holdWeekly = (id: string, reason: string) => apiFetch<AdminWeeklyRe
 // Ads
 export const listAds = (status?: string) => apiFetch<AdminAdPage>(`/admin/ads${qs({ status })}`, A);
 export const createAd = (body: UpsertAdRequest) => apiFetch<AdminAd>("/admin/ads", { ...A, method: "POST", body });
-export const updateAd = (id: string, body: UpsertAdRequest) => apiFetch<AdminAd>(`/admin/ads/${enc(id)}`, { ...A, method: "PATCH", body });
+export const updateAd = (id: string, body: Partial<UpsertAdRequest>) => apiFetch<AdminAd>(`/admin/ads/${enc(id)}`, { ...A, method: "PATCH", body });
 export const decideAd = (id: string, body: AdDecision) => apiFetch<AdminAd>(`/admin/ads/${enc(id)}/decision`, { ...A, method: "POST", body });

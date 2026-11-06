@@ -3,13 +3,15 @@
 import { useRouter } from "next/navigation";
 import { signInHref } from "@/lib/auth/entry-draft";
 import { useCallback, useEffect, useState } from "react";
-import type { MouseEvent } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Button, EmptyState, NotificationRow, Skeleton, Tabs } from "@/components/vx";
 import type { NotificationRowProps } from "@/components/vx";
 import { listNotifications, markNotificationsRead } from "@/lib/api/reach";
+import { listResultThreads } from "@/lib/api/results";
 import type { Notification, NotificationFilter } from "@/lib/api/reach";
 import { announceUnread } from "@/components/shell/unread";
 import { AppBar, isToday, useSignedIn, whenLabel } from "@/features/reach/shared";
+import { APPEAL_SENT, AppealSheet } from "./AppealSheet";
 
 type Load = "loading" | "error" | "ready";
 
@@ -37,13 +39,44 @@ const ROW_TYPE: Record<Notification["type"], NonNullable<NotificationRowProps["t
   RESULT_CHECKED: "verified",
 };
 
-/** Where a notification opens. Only screens that exist are linked; a row with no screen yet just marks itself read. */
-export function targetHref(n: Pick<Notification, "targetType" | "targetId">): string | null {
-  if (!n.targetId) return null;
+/**
+ * Where a notification opens (lead ruling WF, 6 Nov, RW7): an answer or a reply opens its thread, a question its page,
+ * Voice Units their screen, the weekly report its page. A result post has no page of its own (resolved on tap, see
+ * resultsHref); a decision about someone's own post or account opens nothing, because the post is gone and the
+ * notice carries the Appeal action instead.
+ */
+export function targetHref(n: Pick<Notification, "targetType" | "targetId"> & { type?: Notification["type"]; questionId?: string | null }): string | null {
+  if (n.type === "MODERATION_NOTICE") return null;
   const t = (n.targetType ?? "").toLowerCase();
+  if (t === "wallet") return "/units";
+  if (!n.targetId) return null;
   if (t === "weekly_report") return `/weekly/${n.targetId}`;
   if (t === "question") return `/q/${n.targetId}`;
+  if (t === "poll" && n.type === "FLASH_POLL") return "/"; // the open flash poll sits on Home
+  if (t === "answer") return n.questionId ? `/q/${n.questionId}/a/${n.targetId}` : null;
   return null;
+}
+
+/** A result post opens the live results thread it belongs to: the open one, else the latest. */
+async function resultsHref(): Promise<string | null> {
+  try {
+    const page = await listResultThreads();
+    const t = page.items.find((x) => x.status === "OPEN") ?? page.items[0];
+    return t ? `/live/${t.id}` : null;
+  } catch {
+    return null;
+  }
+}
+
+/** "@kemi.b" is bold, the rest is plain, as the board draws. A reply carries its quote after a colon. */
+export function noticeWords(n: Pick<Notification, "type" | "title" | "body">): ReactNode {
+  const named = /^(@\S+)(.*)$/.exec(n.title);
+  if (named && (n.type === "REPLY" || n.type === "REACTIONS")) {
+    const quote = n.type === "REPLY" && n.body ? `: ${n.body}` : "";
+    return <><b>{named[1]}</b>{named[2] + quote}</>;
+  }
+  if (n.body) return <><b>{/[.!?:]$/.test(n.title) ? n.title : n.title + "."}</b>{" " + n.body}</>;
+  return <>{n.title}</>;
 }
 
 const EMPTY: Record<NotificationFilter, { title: string; body: string }> = {
@@ -65,6 +98,8 @@ export function NotificationsPage() {
   const [more, setMore] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [appealing, setAppealing] = useState<Notification | null>(null);
+  const [sent, setSent] = useState<string[]>([]);
 
   useEffect(() => {
     if (signedIn !== true) return;
@@ -113,7 +148,7 @@ export function NotificationsPage() {
 
   async function open(n: Notification, e: MouseEvent) {
     e.preventDefault();
-    const href = targetHref(n);
+    const href = n.targetType === "result_post" ? await resultsHref() : targetHref(n);
     if (!n.read) {
       setItems((old) => old.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
       try {
@@ -123,7 +158,6 @@ export function NotificationsPage() {
       } catch {
         setItems((old) => old.map((x) => (x.id === n.id ? { ...x, read: false } : x)));
         setNote("Could not mark it as read. Try again.");
-        return;
       }
     }
     if (href) router.push(href);
@@ -156,10 +190,21 @@ export function NotificationsPage() {
         </div>
         <div className="overflow-hidden rounded-l bg-surface shadow-1">
           {rows.map((n) => (
-            <div key={n.id} onClick={(e) => void open(n, e)}>
-              <NotificationRow type={ROW_TYPE[n.type]} unread={!n.read} time={whenLabel(n.createdAt)} href={targetHref(n) ?? "#"}>
-                {n.body ? <><b>{/[.!?:]$/.test(n.title) ? n.title : n.title + "."}</b>{" " + n.body}</> : <>{n.title}</>}
-              </NotificationRow>
+            <div key={n.id}>
+              <div onClick={(e) => void open(n, e)}>
+                <NotificationRow type={ROW_TYPE[n.type]} unread={!n.read} time={whenLabel(n.createdAt)} href={targetHref(n) ?? "#"}>
+                  {noticeWords(n)}
+                </NotificationRow>
+              </div>
+              {n.appeal ? (
+                <div className={`px-4 pb-3 pl-[calc(var(--space-4)+40px+var(--space-3))] ${n.read ? "" : "bg-[var(--mint)]"}`}>
+                  {n.appeal.state === "SENT" || sent.includes(n.id) ? (
+                    <p className="m-0 text-caption text-[var(--ink-2)]" role="status">{APPEAL_SENT}</p>
+                  ) : (
+                    <button type="button" className="vx-link" onClick={() => setAppealing(n)}>Appeal</button>
+                  )}
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -184,6 +229,9 @@ export function NotificationsPage() {
         </>
       )}
       {note ? <p className="m-0 text-caption text-danger" role="alert">{note}</p> : null}
+      {appealing && appealing.appeal ? (
+        <AppealSheet target={{ targetType: appealing.appeal.targetType, targetId: appealing.appeal.targetId }} onSent={() => setSent((old) => old.concat(appealing.id))} onClose={() => setAppealing(null)} />
+      ) : null}
       {next && load === "ready" ? (
         <div className="flex justify-center"><Button variant="secondary" loading={more} onClick={() => void loadMore()}>Show older</Button></div>
       ) : null}

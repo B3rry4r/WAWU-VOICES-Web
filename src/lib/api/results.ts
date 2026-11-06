@@ -6,10 +6,16 @@ export type ResultPost = components["schemas"]["ResultPost"];
 export type ResultPostPage = components["schemas"]["ResultPostPage"];
 export type CreateResultPostRequest = components["schemas"]["CreateResultPostRequest"];
 
+export type ResultThreadPage = components["schemas"]["ResultThreadPage"];
+
 export type ResultFilter = "all" | "verified";
 
 export function getResultThread(threadId: string): Promise<ResultThread> {
   return apiFetch<ResultThread>(`/result-threads/${encodeURIComponent(threadId)}`, { authed: true });
+}
+
+export function listResultThreads(): Promise<ResultThreadPage> {
+  return apiFetch<ResultThreadPage>("/result-threads", { authed: true });
 }
 
 export interface ListPostsOptions {

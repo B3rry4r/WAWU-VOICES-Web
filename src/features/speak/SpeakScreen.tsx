@@ -15,6 +15,7 @@ import { ExtraVoiceSheet } from "./ExtraVoiceSheet";
 import { durationLabel, limitSeconds, naira, peaksFromLevels, refusalText, tokenFor, uuidKey } from "./logic";
 import { BackLink, PassPanel, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
 import "./speak.css";
+import { voicesOf } from "@/lib/feed-format";
 
 /** Where a guest goes to sign in. The recording waits in this browser (IndexedDB) until they are back (V-19). */
 export const JOIN_PATH = "/join";
@@ -502,7 +503,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const help = micError ? MIC_HELP[micError] : null;
   const stepText = sending ? (sending.step === "upload" ? `Sending your voice, ${sending.pct}%` : sending.step === "process" ? "Getting your voice ready" : "Posting") : "";
   const sub = "Today’s question";
-  const counts = { speak: short(question.voiceCount), discuss: short(question.answerCount), next: short(question.proposalCount) };
+  const counts = { speak: short(voicesOf(question)), discuss: short(voicesOf(question)), next: short(question.proposalCount) };
   const eyebrow = [question.category?.name, question.topicTitle].filter(Boolean).join(" · ");
 
   const panel = (

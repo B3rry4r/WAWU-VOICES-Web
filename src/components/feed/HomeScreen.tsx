@@ -6,7 +6,7 @@ import { Rail } from "@/components/shell/ShellSlots";
 import { getHome, getMe, getTrendingQuestions, type Home } from "@/lib/api/feed";
 import { getAdPlacement, getFlashPolls, type AdPlacement, type Poll } from "@/lib/api/polls";
 import { isSignedIn } from "@/lib/api/auth";
-import { closesIn, shortCount, uniqueVoices } from "@/lib/feed-format";
+import { closesIn, shortCount, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
 import { Answers, Failed, Loading, NothingYet, Section, TextLink, Tiles, WeekCard } from "./parts";
@@ -51,15 +51,11 @@ export function HomeScreen() {
         <h1 className="order-1 m-0 mt-1 font-display text-display-l dt:text-display-xl">
           {!signedIn ? "What is Nigeria saying today?" : firstName ? `Hi ${firstName}, what is your take today?` : "What is your take today?"}
         </h1>
-        {/* lead ruling WF, 6 Nov (C-H5): a live override's message shows under the headline on Home. */}
-        {q?.override?.body?.trim() ? (
-          <p data-testid="override-message" className="order-1 m-0 text-body-l text-ink-2">{q.override.body.trim()}</p>
-        ) : null}
         {q ? (
           <div className="order-2">
             <QuestionHero
               question={q.text}
-              voices={q.voiceCount}
+              voices={voicesOf(q)}
               closesIn={closesIn(q.endsAt)}
               avatars={uniqueVoices(q.recentVoices).map((v) => v.handle)}
               speakLabel={signedIn ? undefined : "Add your voice"}
@@ -68,6 +64,10 @@ export function HomeScreen() {
               onDiscuss={talk}
               onVote={talk}
             />
+            {/* lead ruling WF, 6 Nov (C-H5, then the LOW "as drawn"): a live override's message sits right under its headline, the question. */}
+            {q.override?.body?.trim() ? (
+              <p data-testid="override-message" className="m-0 mt-3 text-body-l text-ink-2">{q.override.body.trim()}</p>
+            ) : null}
           </div>
         ) : (
           <div className="order-2"><NothingYet title="No question yet" body="Today’s question shows up here as soon as it opens." /></div>
@@ -93,8 +93,8 @@ export function HomeScreen() {
           aside={
             q ? (
               <TextLink href={`/q/${q.id}`}>
-                <span className={q.voiceCount > 0 ? "dt:hidden" : undefined}>See all</span>
-                {q.voiceCount > 0 ? <span className="hidden dt:inline">{`See all ${shortCount(q.voiceCount)}`}</span> : null}
+                <span className={voicesOf(q) > 0 ? "dt:hidden" : undefined}>See all</span>
+                {voicesOf(q) > 0 ? <span className="hidden dt:inline">{`See all ${shortCount(voicesOf(q))}`}</span> : null}
               </TextLink>
             ) : undefined
           }

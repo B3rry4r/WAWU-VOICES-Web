@@ -13,6 +13,7 @@ import { ProfileCard } from "./ProfileCard";
 import { LoadError, LoadingBlock, errorLine } from "./states";
 import { isUuid } from "./format";
 import "./profile.css";
+import { voicesOf } from "@/lib/feed-format";
 
 type Resolved = { status: "loading" } | { status: "missing" } | { status: "error"; error: unknown } | { status: "ok"; id: string };
 
@@ -124,7 +125,7 @@ export function PersonPage({ segment }: { segment: string }) {
 
   const back = (
     <header className="pf-bar">
-      <IconButton icon="arrow-left" label="Back" variant="ghost" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))} />
+      <IconButton icon="arrow-left" label="Back" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))} />
       <span className="pf-bar__sp" />
     </header>
   );
@@ -139,14 +140,14 @@ export function PersonPage({ segment }: { segment: string }) {
   return (
     <div className="pf-page">
       <header className="pf-bar">
-        <IconButton icon="arrow-left" label="Back" variant="ghost" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))} />
+        <IconButton icon="arrow-left" label="Back" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))} />
         <span className="pf-bar__sp" />
         {/* lead ruling WF, 6 Nov (B-M5): the share icon (390) and "Share profile" (1440), with PROFILE links. */}
-        {data.isBlockedByMe ? null : <IconButton className="pf-only-phone" icon="share-2" label={`Share ${handle}’s profile`} variant="ghost" onClick={() => setShare(true)} />}
+        {data.isBlockedByMe ? null : <IconButton className="pf-only-phone" icon="share-2" label={`Share ${handle}’s profile`} onClick={() => setShare(true)} />}
         {data.isBlockedByMe ? null : <Button className="pf-only-desk" variant="secondary" icon="share-2" onClick={() => setShare(true)}>Share profile</Button>}
-        {signedIn ? <IconButton icon="ellipsis" label={`More: report or block ${handle}`} variant="ghost" onClick={() => setMore(true)} /> : null}
+        {signedIn ? <IconButton icon="ellipsis" label={`More: report or block ${handle}`} onClick={() => setMore(true)} /> : null}
       </header>
-      <ProfileCard profile={profile} stats={[{ label: "Voices", value: profile.voiceCount }, { label: "Reactions", value: profile.reactionsReceived }, { label: "Replies", value: profile.replyCount }]} />
+      <ProfileCard profile={profile} stats={[{ label: "Voices", value: voicesOf(profile) }, { label: "Reactions", value: profile.reactionsReceived }, { label: "Replies", value: profile.replyCount }]} />
       {data.isBlockedByMe ? (
         <div className="pf-blocked" data-testid="blocked">
           <Banner tone="info" title={`You blocked ${handle}`}>You do not see their posts, and they do not see yours.</Banner>
@@ -154,7 +155,7 @@ export function PersonPage({ segment }: { segment: string }) {
         </div>
       ) : (
         <>
-          <Tabs label={`${handle}'s posts`} value={tab} onChange={(v) => setTab(v as "voices" | "replies")} items={[{ id: "voices", label: "Voices", count: profile.voiceCount }, { id: "replies", label: "Replies", count: profile.replyCount }]} />
+          <Tabs label={`${handle}'s posts`} value={tab} onChange={(v) => setTab(v as "voices" | "replies")} items={[{ id: "voices", label: "Voices", count: voicesOf(profile) }, { id: "replies", label: "Replies", count: profile.replyCount }]} />
           <div role="tabpanel" className="pf-panelbody">
             {tab === "voices"
               ? <PagedList load={loadVoices} reloadKey={String(version)} row={(a) => <PostRow a={a} />} empty={{ title: "No voices yet", body: `${handle} has not posted a voice yet.`, icon: "mic" }} />

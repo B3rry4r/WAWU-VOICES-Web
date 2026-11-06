@@ -7,7 +7,7 @@ import { useLoad } from "@/components/feed/useLoad";
 import { getPublicConfig, getTodaysQuestion } from "@/lib/api/feed";
 import { apiFetch } from "@/lib/api/client";
 import type { components } from "@/lib/api/types";
-import { closesIn, voicesLabel } from "@/lib/feed-format";
+import { closesIn, voicesLabel, voicesOf } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { holdReturn } from "@/lib/auth/entry-draft";
 import { fromPrice, textPostNaira } from "./format";
@@ -147,7 +147,7 @@ export function Onboarding() {
             <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">Today’s question</span>
             <p className="relative m-0 font-display text-display-xl">{q.text}</p>
             <Still><VoicePlayer duration={9} seed={4} tone="forest" progress={0.35} /></Still>
-            <span className="relative text-caption text-[var(--on-forest-2)]">{`${voicesLabel(q.voiceCount)} so far · Closes in ${closesIn(q.endsAt)}`}</span>
+            <span className="relative text-caption text-[var(--on-forest-2)]">{`${voicesLabel(voicesOf(q))} so far · Closes in ${closesIn(q.endsAt)}`}</span>
           </div>
           <div className="flex flex-col justify-center gap-5 p-10">
             <span className="vx-eyebrow text-green-text">Welcome</span>

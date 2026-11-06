@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { AnswerCard, Banner, Button, EmptyState, Skeleton, TopicOfWeek, TopicTile } from "@/components/vx";
 import { categoryLook } from "@/lib/categories";
 import type { Answer, Question, Topic } from "@/lib/api/feed";
-import { answerCardProps, voicesLabel, weekMeta } from "@/lib/feed-format";
+import { answerCardProps, voicesLabel, weekMeta, voicesOf } from "@/lib/feed-format";
 import type { Load } from "./useLoad";
 
 export function Loading() {
@@ -44,7 +44,7 @@ export function Tiles({ items }: { items: Question[] }) {
     <div className="vx-tiles">
       {items.map((q) => {
         const look = q.category ? categoryLook(q.category) : null;
-        return <TopicTile key={q.id} question={q.text} category={look?.label} voices={q.voiceCount} tone={look?.tone ?? "mint"} href={`/q/${q.id}`} />;
+        return <TopicTile key={q.id} question={q.text} category={look?.label} voices={voicesOf(q)} tone={look?.tone ?? "mint"} href={`/q/${q.id}`} />;
       })}
     </div>
   );

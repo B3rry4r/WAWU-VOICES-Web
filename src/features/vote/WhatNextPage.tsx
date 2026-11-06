@@ -8,7 +8,7 @@ import { StageNav } from "@/features/stage/StageNav";
 import { ApiError } from "@/lib/api/client";
 import { getWhatNext, listProposals, removeStance, setStance } from "@/lib/api/vote";
 import type { EditorialSummary, Proposal, ProposalGroup, ProposalSort, WhatNext } from "@/lib/api/vote";
-import { ago } from "@/lib/feed-format";
+import { ago, voicesOf } from "@/lib/feed-format";
 import { DeskRail } from "./DeskRail";
 import { useWhatNextPrompt } from "./prompt";
 import { AppBar, DeskBack, LoadFailed, Loading, ShareButton, shortCount, useLoadWhen, useSignedIn } from "./chrome";
@@ -155,7 +155,7 @@ export function WhatNextPage({ questionId }: { questionId: string }) {
         questionId={questionId}
         active="next"
         visited={["speak", "discuss", "vote"]}
-        counts={q ? { speak: shortCount(q.voiceCount), discuss: shortCount(q.answerCount), next: shortCount(d?.proposalTotal ?? q.proposalCount) } : undefined}
+        counts={q ? { speak: shortCount(voicesOf(q)), discuss: shortCount(voicesOf(q)), next: shortCount(d?.proposalTotal ?? q.proposalCount) } : undefined}
       />
       <DeskRail kind="next" questionId={questionId} question={q} />
       {load.state === "loading" || signedIn === null ? <Loading /> : null}

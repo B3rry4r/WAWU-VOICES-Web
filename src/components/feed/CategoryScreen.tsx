@@ -9,7 +9,7 @@ import { getCategory, getCurrentTopic, getMyCategories, getTodaysQuestion, getTr
 import { getAdPlacement } from "@/lib/api/polls";
 import { isSignedIn } from "@/lib/api/auth";
 import { categoryLook } from "@/lib/categories";
-import { closesIn, shortCount } from "@/lib/feed-format";
+import { closesIn, shortCount, voicesOf } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
 import { Answers, Failed, Loading, NothingYet, Section, WeekCard } from "./parts";
 import { trendItems } from "./trend";
@@ -28,7 +28,7 @@ const voices = (n: number) => `${shortCount(n)} ${n === 1 ? "voice" : "voices"}`
 /** One row of the phone list: the question, its voices, and what is open about it. */
 function Row({ q, today, tab }: { q: Question; today?: boolean; tab: Tab }) {
   const close = tab === "closed" ? undefined : closesIn(q.endsAt);
-  const meta = [voices(q.voiceCount), q.hasOpenPoll && tab !== "closed" ? "Poll open" : null, close ? `Closes in ${close}` : null].filter(Boolean).join(" · ");
+  const meta = [voices(voicesOf(q)), q.hasOpenPoll && tab !== "closed" ? "Poll open" : null, close ? `Closes in ${close}` : null].filter(Boolean).join(" · ");
   return (
     <Link href={`/q/${q.id}`} className="flex items-center gap-3 border-b border-[var(--line)] p-4 text-[var(--ink)] no-underline last:border-b-0">
       <span className="flex flex-1 flex-col gap-[6px]">
@@ -138,7 +138,7 @@ export function CategoryScreen({ slug }: { slug: string }) {
               {list.map((q) => {
                 const close = tab === "closed" ? undefined : closesIn(q.endsAt);
                 const eyebrow = q.id === today?.id ? "Today’s question" : q.hasOpenPoll && tab !== "closed" ? "Poll open" : close ? `Closes in ${close}` : undefined;
-                return <TopicTile key={q.id} question={q.text} category={eyebrow} voices={q.voiceCount} tone={q.id === today?.id ? "forest" : "sun"} href={`/q/${q.id}`} />;
+                return <TopicTile key={q.id} question={q.text} category={eyebrow} voices={voicesOf(q)} tone={q.id === today?.id ? "forest" : "sun"} href={`/q/${q.id}`} />;
               })}
             </div>
           </>

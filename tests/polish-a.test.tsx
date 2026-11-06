@@ -22,7 +22,8 @@ describe("polish A", () => {
   });
   it("shortens a long payment reference to its last 8 characters", () => {
     expect(shortRef("voices-0b1c2d3e-aaaa-bbbb-cccc-1234567890ab")).toBe("567890ab");
-    expect(shortRef("VU-261202-48213")).toBe("02-48213");
+    // lead ruling WF, 6 Nov (B-L2): the person's own VU- reference is shown whole, never cut.
+    expect(shortRef("VU-261202-48213")).toBe("VU-261202-48213");
     expect(shortRef("short")).toBe("short");
   });
 });

@@ -8,6 +8,7 @@ import { useAdmin } from "./AdminFrame";
 import { dayKey } from "@/lib/format/date";
 import { clock, dayClock, dayStringWeekday, fromLocalInput, longDate, toLocalInput, weekdayDay } from "./time";
 import { Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, PageHead, SavedLine, StatePill, Switch, useAction, Gated, DateTimeField } from "./ui";
+import { voicesOf } from "@/lib/feed-format";
 
 const HEADLINE_MAX = 120;
 
@@ -132,7 +133,7 @@ function OverrideBody() {
                 <Eyebrow>Paused by the override</Eyebrow>
                 <h2 className="m-0 mt-2 font-display text-display-m">{pausedQuestion.text}</h2>
                 <p className="m-0 mt-2 text-caption text-ink-2">
-                  {pausedQuestion.voiceCount > 0 ? `It had ${pausedQuestion.voiceCount.toLocaleString("en-NG")} ${pausedQuestion.voiceCount === 1 ? "voice" : "voices"}. ` : ""}It is not lost. The flow resumes by itself when the override ends.
+                  {voicesOf(pausedQuestion) > 0 ? `It had ${voicesOf(pausedQuestion).toLocaleString("en-NG")} ${voicesOf(pausedQuestion) === 1 ? "voice" : "voices"}. ` : ""}It is not lost. The flow resumes by itself when the override ends.
                 </p>
               </Card>
             ) : null
@@ -141,7 +142,7 @@ function OverrideBody() {
               <Eyebrow>Scheduled for today</Eyebrow>
               <h2 className="m-0 mt-2 font-display text-display-m">{q.text}</h2>
               <p className="m-0 mt-2 text-caption text-ink-2">
-                {`${q.startsAt ? `Live since ${clock(q.startsAt)} with ${q.voiceCount.toLocaleString("en-NG")} ${q.voiceCount === 1 ? "voice" : "voices"}. ` : ""}If you override, it is not lost: it moves to the next free slot.`}
+                {`${q.startsAt ? `Live since ${clock(q.startsAt)} with ${voicesOf(q).toLocaleString("en-NG")} ${voicesOf(q) === 1 ? "voice" : "voices"}. ` : ""}If you override, it is not lost: it moves to the next free slot.`}
               </p>
             </Card>
           ) : null}
@@ -264,7 +265,7 @@ function LogRow({ o, onChanged }: { o: AdminOverride; onChanged: () => void }) {
         <td className="whitespace-nowrap px-4 py-3">{dayClock(o.startsAt)}</td>
         <td className="px-4 py-3">{o.headline || o.body || "An override"}</td>
         <td className="px-4 py-3">{o.replaced ? `${o.replaced.weekNumber ? `Week ${o.replaced.weekNumber}: ` : ""}${o.replaced.text}` : "Nothing"}</td>
-        <td className="px-4 py-3">{o.by}</td>
+        <td className="px-4 py-3">{o.byName ?? o.by}</td>
         <td className="px-4 py-3">
           {resultWords(o)}
           {open ? (

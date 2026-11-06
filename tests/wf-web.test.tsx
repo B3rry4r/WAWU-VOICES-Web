@@ -47,7 +47,8 @@ describe("C-H5 override message on Home", () => {
     render(<HomeScreen />);
     const msg = await screen.findByTestId("override-message");
     expect(msg.textContent).toBe("Power is out in Lekki. Tell us what you see.");
-    expect(msg.previousElementSibling?.tagName).toBe("H1");
+    // lead ruling WF, 6 Nov (LOW "as drawn"): the message sits right under the override headline, the question in the hero.
+    expect(msg.previousElementSibling?.textContent).toContain("The normal question?");
   });
   it("shows nothing extra when no override is live", async () => {
     vi.stubGlobal("fetch", vi.fn(async (url: string) => (url.includes("/home") ? json({ topicOfWeek: topic, dailyQuestion: question(null), flashPoll: null, trending: [], newConversations: [], greetingName: null }) : json({ items: [] }))));

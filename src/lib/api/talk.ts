@@ -71,6 +71,9 @@ export const unsaveQuestion = (qid: string) => apiFetch<void>(`/questions/${id(q
 
 export const createReport = (body: { targetType: ReportTargetType; targetId: string; reason: ReportReason; note?: string; alsoBlock?: boolean }) =>
   apiFetch<ReportReceipt>("/reports", { method: "POST", authed: true, body });
+/** POST /appeals (RW2): one note, up to 500 characters. A suspended or banned person may still send it. */
+export const createAppeal = (body: { targetType: ReportTargetType; targetId: string; note: string }) =>
+  apiFetch<S["AppealReceipt"]>("/appeals", { method: "POST", authed: true, body });
 export const blockUser = (uid: string) => apiFetch<void>(`/me/blocks/${id(uid)}`, { method: "PUT", authed: true });
 export const unblockUser = (uid: string) => apiFetch<void>(`/me/blocks/${id(uid)}`, { method: "DELETE", authed: true });
 

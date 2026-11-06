@@ -5,7 +5,7 @@ import { Button, Icon, Logo, QuestionHero, Skeleton, type IconName } from "@/com
 import { Answers } from "@/components/feed/parts";
 import { useLoad } from "@/components/feed/useLoad";
 import { getPublicConfig, getTodaysQuestion, getTrending } from "@/lib/api/feed";
-import { closesIn } from "@/lib/feed-format";
+import { closesIn, voicesOf } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { fromPrice } from "./format";
 
@@ -70,7 +70,7 @@ export function Landing() {
       <section aria-label="Today’s question" className="mt-2 flex flex-col gap-3 dt:mt-0">
         <QuestionHero
           question={q.text}
-          voices={q.voiceCount}
+          voices={voicesOf(q)}
           closesIn={closesIn(q.endsAt)}
           speakLabel="Add your voice"
           onSpeak={() => router.push("/")}

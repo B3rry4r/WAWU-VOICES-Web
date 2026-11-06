@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Avatar, Icon, Tabs, TrendingList } from "@/components/vx";
 import { PhoneBar, Rail } from "@/components/shell/ShellSlots";
 import { getCurrentTopic, getTodaysQuestion, getTrendingQuestions, search, type Question } from "@/lib/api/feed";
-import { isOpen, voicesShort } from "@/lib/feed-format";
+import { isOpen, voicesShort, voicesOf } from "@/lib/feed-format";
 import { Answers, Failed, Loading, NothingYet, SearchBox, Section, WeekCard } from "./parts";
 import { trendItems } from "./trend";
 import { useLoad } from "./useLoad";
@@ -16,7 +16,7 @@ type Tab = "all" | "questions" | "voices" | "people";
 function questionMeta(x: Question): string {
   const whatNext = x.proposalCount > 0 && !x.category;
   const tail = whatNext ? `${x.proposalCount} ${x.proposalCount === 1 ? "proposal" : "proposals"}` : isOpen(x) ? "Open" : x.status === "CLOSED" || (x.endsAt && Date.parse(x.endsAt) <= Date.now()) ? "Closed" : "Opens soon";
-  return [whatNext ? "What Next?" : x.category?.name, voicesShort(x.voiceCount), tail].filter(Boolean).join(" · ");
+  return [whatNext ? "What Next?" : x.category?.name, voicesShort(voicesOf(x)), tail].filter(Boolean).join(" · ");
 }
 
 export function SearchScreen() {
@@ -105,7 +105,7 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
                   <Avatar name={p.displayName ?? p.handle} />
                   <span className="flex flex-1 flex-col">
                     <b className="text-title">{`@${p.handle}`}</b>
-                    <span className="text-caption text-[var(--ink-2)]">{[p.state, voicesShort(p.voiceCount)].filter(Boolean).join(" · ")}</span>
+                    <span className="text-caption text-[var(--ink-2)]">{[p.state, voicesShort(voicesOf(p))].filter(Boolean).join(" · ")}</span>
                   </span>
                   <Icon name="chevron-right" size={20} />
                 </>

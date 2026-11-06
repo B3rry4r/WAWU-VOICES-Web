@@ -11,6 +11,7 @@ import {
 import { PHOTO_MAX_BYTES, PHOTO_MIMES, photoUploadWords, uploadAvatar } from "@/lib/api/me";
 import { Rail } from "@/components/shell/ShellSlots";
 import { ClipPlayer } from "./ClipPlayer";
+import { voicesOf } from "@/lib/feed-format";
 import { DeletionPending } from "./DeletionPending";
 import { LoadError, LoadingBlock, NeedsProfileNotice, SignedOutNotice, errorLine } from "./states";
 import { HANDLE_REASON, handleProblem, joinedLabel, placeLabel } from "./format";
@@ -217,7 +218,7 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
             </div>
           </div>
           {clip ? <ClipPlayer clip={clip} label="Voice Card" /> : null}
-          <p className="pf-hint">{`${profile.voiceCount} ${profile.voiceCount === 1 ? "voice" : "voices"} · ${countText(me.reactionsReceived, "reaction")} · ${me.savedCount} saved`}</p>
+          <p className="pf-hint">{`${voicesOf(profile)} ${voicesOf(profile) === 1 ? "voice" : "voices"} · ${countText(me.reactionsReceived, "reaction")} · ${me.savedCount} saved`}</p>
           <p className="pf-hint">Your units, free posts and referral code stay private. Only you see them.</p>
         </section>
       </Rail>

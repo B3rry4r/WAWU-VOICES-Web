@@ -123,7 +123,8 @@ describe("C-M8, C-L5: adverts", () => {
     await u.type(headline, "Cold zobo");
     await u.click(screen.getByRole("button", { name: "Save advert" }));
     await waitFor(() => expect(sent.length).toBe(1));
-    expect(sent[0].body).toMatchObject({ brand: "Zobo", kind: "FEED_CARD", headline: "Cold zobo", linkUrl: "https://zobo.ng", frequencyCapPerDay: 3 });
+    // lead ruling WF, 6 Nov (C-M8): an edit sends only what changed.
+    expect(sent[0].body).toEqual({ headline: "Cold zobo" });
   });
   it("an approved advert has no Edit control (the API wants it paused first)", async () => {
     vi.stubGlobal("fetch", vi.fn(async (u: string) => {

@@ -12,6 +12,7 @@ import type { AdminPageId } from "./roles";
 import { dayKey, longSlot, weekday } from "@/lib/format/date";
 import { clock, dayClock, longDate, minutesWords, slot } from "./time";
 import { Card, Eyebrow, LoadFailed, PageHead, Pill, StatePill } from "./ui";
+import { voicesOf } from "@/lib/feed-format";
 
 const TARGET_WORDS: Record<string, string> = {
   WHATSAPP: "WhatsApp",
@@ -146,7 +147,7 @@ export function AdminTodayPage() {
               </div>
               <h2 className="m-0 mt-4 font-display text-display-l">{q.text}</h2>
               <p className="m-0 mt-4 text-count">
-                {[`${q.voiceCount.toLocaleString("en-NG")} ${q.voiceCount === 1 ? "voice" : "voices"}`, q.category?.name, q.sensitive ? "Sensitive topic: ads are kept away" : null].filter(Boolean).join("  ·  ")}
+                {[`${voicesOf(q).toLocaleString("en-NG")} ${voicesOf(q) === 1 ? "voice" : "voices"}`, q.category?.name, q.sensitive ? "Sensitive topic: ads are kept away" : null].filter(Boolean).join("  ·  ")}
               </p>
             </section>
           ) : (
