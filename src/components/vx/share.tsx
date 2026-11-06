@@ -95,8 +95,8 @@ export function ShareCard(p: ShareCardProps): ReactElement {
         {mid}
         <div className="vx-share__foot">
           <span className="vx-share__based">
-            <b>{p.summary || 'People are split so far.'}</b>
-            <br />
+            {/* lead ruling WF, 6 Nov (B-L4): "split" is said only when there are votes to split. */}
+            {p.summary || (p.poll || []).some((r) => r.pct > 0) ? <><b>{p.summary || 'People are split so far.'}</b><br /></> : null}
             {'Based on ' + voicesText(p.voices) + ' · updated ' + (p.updated || 'just now')}
             <br />
             {p.link || 'voices.wawuafrica.com'}

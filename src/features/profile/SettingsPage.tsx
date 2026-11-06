@@ -172,7 +172,8 @@ function SettingsBody({ me }: { me: Me }) {
   return (
     <div className="pf-page">
       <header className="pf-bar">
-        <IconButton icon="arrow-left" label="Back to profile" variant="ghost" onClick={() => router.push("/profile")} />
+        {/* lead ruling WF, 6 Nov (held, Settings 390): the back button sits in a circle, as drawn. */}
+        <span className="rounded-full bg-surface shadow-[inset_0_0_0_1px_var(--line)] dt:bg-transparent dt:shadow-none"><IconButton icon="arrow-left" label="Back to profile" variant="ghost" onClick={() => router.push("/profile")} /></span>
         <h1 className="pf-h1 pf-bar__h1">Settings</h1>
         <span className="pf-bar__sp pf-only-desk" />
         <span className="pf-signed pf-only-desk">{`Signed in as @${me.handle}`}</span>

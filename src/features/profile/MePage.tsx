@@ -41,7 +41,7 @@ function Aside({ me }: { me: Me }) {
     <>
       <section className="pf-panel" aria-label="Voice Units">
         <h2 className="vx-eyebrow pf-eyebrow">Voice Units</h2>
-        <p className="pf-big"><b>{unitsFigure(a.balanceMilli)}</b> <span>Voice Units</span></p>
+        <p className="pf-big"><b>{unitsFigure(a.balanceMilli)}</b> <span>{a.balanceMilli === 1000 ? "Voice Unit" : "Voice Units"}</span></p>
         <FreePosts left={a.freePostsRemaining} />
         <Link href="/units" className="vx-link pf-panel__link">Open Voice Units</Link>
       </section>

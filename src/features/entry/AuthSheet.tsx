@@ -5,7 +5,7 @@ import { ChartNoAxesColumn, Compass, House, Mic, Search, User } from "lucide-rea
 import { IconButton, QuestionHero, Sheet, StageBar, TrendingList } from "@/components/vx";
 import { getTodaysQuestion, getTrendingQuestions } from "@/lib/api/feed";
 import { trendItems } from "@/components/feed/trend";
-import { closesIn } from "@/lib/feed-format";
+import { closesIn, uniqueVoices } from "@/lib/feed-format";
 import { useLoad } from "@/components/feed/useLoad";
 import { EntryFrame } from "./ui";
 
@@ -50,7 +50,7 @@ function DeskBackdrop() {
           <span className="sh-signin">Sign in</span>
         </div>
         <main className="sh-main">
-          {q ? <QuestionHero question={q.text} voices={q.voiceCount} closesIn={closesIn(q.endsAt)} avatars={q.recentVoices.map((v) => v.handle)} speakLabel="Add your voice" /> : null}
+          {q ? <QuestionHero question={q.text} voices={q.voiceCount} closesIn={closesIn(q.endsAt)} avatars={uniqueVoices(q.recentVoices).map((v) => v.handle)} speakLabel="Add your voice" /> : null}
         </main>
       </div>
       <aside className="sh-desk sh-rail">{trend.state === "ready" && trend.data.length ? <TrendingList items={trend.data} /> : null}</aside>

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Avatar, Banner, Button, EmptyState, FreePosts, Icon, Sheet, Skeleton, Tabs } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, AnswerSort, Question } from "@/lib/api/talk";
-import { closesIn } from "@/lib/feed-format";
+import { closesIn, uniqueVoices } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
@@ -107,9 +107,9 @@ export function QuestionScreen({ id }: { id: string }) {
           {close && open ? <span className="inline-flex items-center gap-1"><Icon name="clock" size={14} />{`Closes in ${close}`}</span> : null}
         </div>
         <div className="flex items-center gap-[10px] dt:hidden">
-          {question.recentVoices.length ? (
+          {uniqueVoices(question.recentVoices).length ? (
             <span className="flex items-center" aria-hidden="true">
-              {question.recentVoices.slice(0, 3).map((v, i) => (
+              {uniqueVoices(question.recentVoices).slice(0, 3).map((v, i) => (
                 <span key={v.id} className={`inline-flex rounded-full shadow-[0_0_0_2px_var(--bg)] ${i ? "-ml-[10px]" : ""}`}><Avatar name={v.handle} src={v.avatarUrl ?? undefined} size="s" /></span>
               ))}
             </span>
@@ -189,7 +189,7 @@ export function QuestionScreen({ id }: { id: string }) {
           </div>
         </div>
       ) : null}
-      <TalkRail questionId={id} freeLeft={signedIn ? left : undefined} />
+      <TalkRail questionId={id} freeLeft={signedIn ? left : undefined} question={question} signedIn={!!signedIn} />
       {toast}
       {shareNode}
     </>

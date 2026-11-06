@@ -10,7 +10,7 @@ export function closesIn(endsAt: string | null | undefined, now = Date.now()): s
 /** "2h", "3d", "just now": time since an ISO instant. */
 export function ago(iso: string, now = Date.now()): string {
   const min = Math.max(0, Math.floor((now - Date.parse(iso)) / 60000));
-  if (min < 1) return "just now";
+  if (min < 1) return "Just now";
   if (min < 60) return `${min}m`;
   if (min < 1440) return `${Math.floor(min / 60)}h`;
   return `${Math.floor(min / 1440)}d`;
@@ -76,4 +76,10 @@ export function answerCardProps(a: Answer) {
     label: label ? LABEL[label] : undefined,
     tag: a.news ? NEWS[a.news.tag] : undefined,
   };
+}
+
+/** lead ruling WF, 6 Nov (A-L5): an avatar stack never shows the same person twice. Keeps the first of each handle. */
+export function uniqueVoices<T extends { handle: string }>(voices: T[]): T[] {
+  const seen = new Set<string>();
+  return voices.filter((v) => (seen.has(v.handle) ? false : (seen.add(v.handle), true)));
 }

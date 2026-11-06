@@ -48,10 +48,11 @@ export function PostedScreen({ qid }: { qid: string }) {
   const url = link?.url;
   async function copy() {
     if (!url || !link) return;
-    try { await navigator.clipboard.writeText(url); void api.shareEvent(link.code, "intent"); push("Link copied.", "success"); } catch (e) { push(failText(e), "danger"); }
+    try { await navigator.clipboard.writeText(url); void recordShareEvent(link.code, "intent", "COPY_LINK"); push("Link copied.", "success"); } catch (e) { push(failText(e), "danger"); }
   }
   const intent = (t: ShareTarget) => { if (link) void recordShareEvent(link.code, "intent", t); };
   /** WhatsApp Status cannot be posted from a web page: the link opens in WhatsApp, where the person picks Status or a chat. */
+  // lead ruling WF, 6 Nov (B-L9): "Share to WhatsApp" and "WhatsApp Status" send the same words.
   const statusHref = link ? `https://wa.me/?text=${encodeURIComponent(link.previewText || link.url)}` : undefined;
   /** Instagram Stories cannot be posted from a web page either: the 1080x1920 story card (the link's storyImageUrl) is saved to the phone and a short how-to shows. */
   async function saveStoryCard() {
@@ -88,7 +89,7 @@ export function PostedScreen({ qid }: { qid: string }) {
         {allow ? <FreePosts left={allow.freePostsRemaining} /> : null}
         <section className="grid gap-3" aria-label="Share">
           <span className="hidden text-body-strong dt:block">Now let people hear you</span>
-          <Button size="l" block icon="share-2" disabled={!url} href={url ? `https://wa.me/?text=${encodeURIComponent(url)}` : undefined} target="_blank" rel="noopener noreferrer" onClick={() => intent("WHATSAPP")}>Share to WhatsApp</Button>
+          <Button size="l" block icon="share-2" disabled={!url} href={statusHref} target="_blank" rel="noopener noreferrer" onClick={() => intent("WHATSAPP")}>Share to WhatsApp</Button>
           <div className="grid grid-cols-2 gap-3">
             <Button variant="secondary" disabled={!url} href={statusHref} target="_blank" rel="noopener noreferrer" onClick={() => intent("WHATSAPP_STATUS")}>WhatsApp Status</Button>
             <Button variant="secondary" disabled={!url} onClick={() => void saveStoryCard()}>Instagram Stories</Button>
@@ -108,14 +109,15 @@ export function PostedScreen({ qid }: { qid: string }) {
       </div>
       {storyHelp ? (
         <Sheet title="Your card is saved" onClose={() => setStoryHelp(false)} footer={<Button size="l" block onClick={() => setStoryHelp(false)}>Done</Button>}>
-          <ol className="m-0 grid gap-2 pl-5 text-body">
+          <ol className="m-0 grid list-decimal gap-2 pl-6 text-body marker:font-semibold">
             <li>Open Instagram and tap Your story.</li>
             <li>Pick the VOICES card from your photos.</li>
             <li>Add a link sticker with your link, then share.</li>
           </ol>
         </Sheet>
       ) : null}
-      {toast}
+      {/* lead ruling WF, 6 Nov (B-L3): no toast over the sheet. */}
+      {storyHelp ? null : toast}
       {shareNode}
     </>
   );

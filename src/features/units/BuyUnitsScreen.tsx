@@ -166,7 +166,7 @@ export function BuyUnitsScreen() {
         <h1 className="m-0 flex-1 font-display text-display-m dt:hidden">Get Voice Units</h1>
         {signedIn && result.state === "ready" ? (
           <span className="dt:hidden">
-            <a className="vx-units a-plain" href="/units" aria-label={`${units(result.data[0].balanceMilli)} Voice Units. Open Voice Units`}>
+            <a className="vx-units a-plain" href="/units" aria-label={`${units(result.data[0].balanceMilli)} ${result.data[0].balanceMilli === 1000 ? "Voice Unit" : "Voice Units"}. Open Voice Units`}>
               <span className="vx-units__coin" aria-hidden="true">
                 <Icon name="coins" size={18} strokeWidth={2.25} />
               </span>

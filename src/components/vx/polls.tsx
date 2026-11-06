@@ -142,7 +142,8 @@ export function Poll(p: PollProps): ReactElement {
         <ul className="vx-res">
           {opts.map((o) => {
             const pct = total ? Math.round(((o.votes || 0) * 100) / total) : 0;
-            const isLead = o.id === lead.id;
+            // lead ruling WF, 6 Nov (B-L4): nobody leads a poll with no votes (no "Leading 0%").
+            const isLead = (o.votes || 0) > 0 && o.id === lead.id;
             return (
               <li key={o.id} className={cx('vx-res__row', isLead && 'is-lead')}>
                 <span className="vx-res__label">
@@ -321,6 +322,8 @@ export interface WeeklyReportCardProps {
   week: string;
   title?: string;
   moodLine: string;
+  /** The approved summary text; drawn under the headline when there is one (lead ruling WF, 6 Nov, C-H4). */
+  summary?: string;
   mood: { label: string; pct: number; delta?: number }[];
   themes: { text: string; voices: number }[];
   poll?: { pct: number; text: string };
@@ -346,6 +349,7 @@ export function WeeklyReportCard(p: WeeklyReportCardProps): ReactElement {
             AI-assisted · Human-reviewed
           </span>
         </div>
+        {p.summary?.trim() ? <p className="m-0 text-body text-ink-2">{p.summary.trim()}</p> : null}
         <div className="vx-mood">
           <span className="vx-eyebrow vx-mood__eye">The mood</span>
           <p className="vx-mood__line">{p.moodLine}</p>
@@ -366,15 +370,20 @@ export function WeeklyReportCard(p: WeeklyReportCardProps): ReactElement {
           </ul>
         </div>
         <div className="vx-report__sec">
-          <h4 className="vx-eyebrow">Main arguments</h4>
-          <ol className="vx-themes">
-            {(p.themes || []).map((t, i) => (
-              <li key={i}>
-                {t.text}
-                <span>{voicesText(t.voices)}</span>
-              </li>
-            ))}
-          </ol>
+          {/* lead ruling WF, 6 Nov (C-H4): "Main arguments" only when there are arguments. */}
+          {(p.themes || []).length ? (
+            <>
+              <h4 className="vx-eyebrow">Main arguments</h4>
+              <ol className="vx-themes">
+                {(p.themes || []).map((t, i) => (
+                  <li key={i}>
+                    {t.text}
+                    <span>{voicesText(t.voices)}</span>
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : null}
           {p.poll ? (
             <div className="vx-report__poll">
               <b>{p.poll.pct + '%'}</b>

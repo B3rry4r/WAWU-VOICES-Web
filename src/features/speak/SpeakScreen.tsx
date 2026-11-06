@@ -324,10 +324,12 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       rec.current.stop();
     }
     void clearDraft();
-    router.push(qid ? `/q/${qid}` : "/");
+    // lead ruling WF, 6 Nov (A-L6): Close replaces the recorder in history, so Back never returns to it.
+    router.replace(qid ? `/q/${qid}` : "/");
   }
 
-  const joinHref = () => `${JOIN_PATH}?next=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}`;
+  // held=1: a recording is held in the browser, so the join steps say "Finish and post my voice" and return here (A-M4).
+  const joinHref = () => `${JOIN_PATH}?next=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}&held=1`;
 
   async function waitReady(clipId: string): Promise<void> {
     for (let i = 0; i < 90; i++) {

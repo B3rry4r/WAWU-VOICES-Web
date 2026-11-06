@@ -6,6 +6,7 @@ import { Banner, Button, EmptyState, Icon, IconButton, Sheet, Tabs } from "@/com
 import { ApiError } from "@/lib/api/client";
 import { isSignedIn } from "@/lib/api/auth";
 import { blockUser, createReport, getPerson, listPersonReplies, searchPeople, unblockUser, type PublicProfile, type ReportReason } from "@/lib/api/profile";
+import { ShareSheet } from "@/features/share";
 import { PagedList } from "./PostList";
 import { PostRow, ReplyRow } from "./PostRow";
 import { ProfileCard } from "./ProfileCard";
@@ -101,6 +102,7 @@ export function PersonPage({ segment }: { segment: string }) {
   const [error, setError] = useState<unknown>(null);
   const [tab, setTab] = useState<"voices" | "replies">("voices");
   const [more, setMore] = useState(false);
+  const [share, setShare] = useState(false);
   const [version, setVersion] = useState(0);
 
   const load = useCallback(() => {
@@ -139,6 +141,9 @@ export function PersonPage({ segment }: { segment: string }) {
       <header className="pf-bar">
         <IconButton icon="arrow-left" label="Back" variant="ghost" onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))} />
         <span className="pf-bar__sp" />
+        {/* lead ruling WF, 6 Nov (B-M5): the share icon (390) and "Share profile" (1440), with PROFILE links. */}
+        {data.isBlockedByMe ? null : <IconButton className="pf-only-phone" icon="share-2" label={`Share ${handle}’s profile`} variant="ghost" onClick={() => setShare(true)} />}
+        {data.isBlockedByMe ? null : <Button className="pf-only-desk" variant="secondary" icon="share-2" onClick={() => setShare(true)}>Share profile</Button>}
         {signedIn ? <IconButton icon="ellipsis" label={`More: report or block ${handle}`} variant="ghost" onClick={() => setMore(true)} /> : null}
       </header>
       <ProfileCard profile={profile} stats={[{ label: "Voices", value: profile.voiceCount }, { label: "Reactions", value: profile.reactionsReceived }, { label: "Replies", value: profile.replyCount }]} />
@@ -157,6 +162,7 @@ export function PersonPage({ segment }: { segment: string }) {
           </div>
         </>
       )}
+      {share ? <ShareSheet objectType="PROFILE" objectId={profile.id} onClose={() => setShare(false)} /> : null}
       {more ? <MoreSheet person={profile} onClose={() => setMore(false)} onBlocked={() => setVersion((v) => v + 1)} /> : null}
     </div>
   );

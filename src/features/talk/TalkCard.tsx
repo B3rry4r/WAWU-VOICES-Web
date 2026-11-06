@@ -65,6 +65,13 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   const [a, setA] = useState(answer);
   const [more, setMore] = useState(false);
   const [tray, setTray] = useState(false);
+  // lead ruling WF, 6 Nov (held): Escape closes the reaction tray.
+  useEffect(() => {
+    if (!tray) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setTray(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [tray]);
   const [playing, setPlaying] = useState(false);
   const [shareNode, share] = useShareSheet();
   const likeBusy = useRef(false);

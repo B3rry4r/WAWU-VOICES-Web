@@ -1,11 +1,10 @@
 import "@/features/reach/reach.css";
-import { countText } from "@/lib/format/plural";
+import { countText, leaderFirst } from "@/lib/format/plural";
 import { Avatar, Badge, Button, Logo, NewsTag, Poll } from "@/components/vx";
 import { fmt } from "@/components/vx/helpers";
 import type { SharePage } from "@/lib/api/reach";
-import { AddVoice, LinkOpened } from "./ShareActions";
+import { AddVoice, GuestOnly, LinkOpened, SignInOrOpen } from "./ShareActions";
 import { ClipPlayer } from "./ClipPlayer";
-import { signInHref } from "@/lib/auth/entry-draft";
 
 const NEWS_KIND = { VERIFIED_NEWS: "verified", UNVERIFIED_NEWS: "unverified", GOSSIP: "gossip" } as const;
 const LABEL_TEXT: Record<string, string> = {
@@ -43,7 +42,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
   const cta = (
     <>
       <AddVoice code={page.code} label={page.ctaLabel} block />
-      <p className="m-0 mx-auto text-center text-caption text-ink-2">Record here in your browser. Sign in only when you publish.</p>
+      <GuestOnly><p className="m-0 mx-auto text-center text-caption text-ink-2">Record here in your browser. Sign in only when you publish.</p></GuestOnly>
     </>
   );
 
@@ -54,7 +53,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
         <Logo height={36} />
         <span className="flex items-center gap-2">
           <span className="hidden dt:block"><Button variant="ghost" href="/welcome">What is VOICES?</Button></span>
-          <Button variant="secondary" href={signInHref(`/s/${page.code}`)}>Sign in</Button>
+          <SignInOrOpen code={page.code} />
         </span>
       </header>
       <div className="mx-auto grid max-w-[1100px] gap-6 px-4 pb-40 dt:grid-cols-[1fr_340px] dt:px-8 dt:pb-16">
@@ -104,7 +103,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
           {page.poll ? (
             <section className="flex flex-col gap-2" aria-label="The poll so far">
               <Eyebrow>The poll so far</Eyebrow>
-              <Poll question={page.question?.text ?? page.topicLine} options={page.poll.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes ?? 0 }))} total={page.poll.totalVotes} state="results" live={false} onExplain={false} />
+              <Poll question={page.question?.text ?? page.topicLine} options={leaderFirst(page.poll.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes ?? 0 })))} total={page.poll.totalVotes} state="results" live={false} onExplain={false} />
             </section>
           ) : null}
 
@@ -126,7 +125,7 @@ export function SharePageView({ page, now }: { page: SharePage; now: number }) {
         <aside className="hidden dt:block" aria-label="Add your voice">
           <div className="sticky top-6 flex flex-col gap-3 rounded-l bg-forest p-5 text-forest-on shadow-1">
             <h2 className="m-0 font-display text-display-m">What do you think?</h2>
-            <p className="m-0 text-body text-[color:var(--on-forest-2)]">Say it in 10 seconds, right here in your browser. You only sign in when you publish.</p>
+            <p className="m-0 text-body text-[color:var(--on-forest-2)]">Say it in 10 seconds, right here in your browser.<GuestOnly> You only sign in when you publish.</GuestOnly></p>
             <AddVoice code={page.code} label={page.ctaLabel} block />
           </div>
         </aside>

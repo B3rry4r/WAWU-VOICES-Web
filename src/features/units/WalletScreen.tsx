@@ -268,7 +268,7 @@ function SignedIn() {
               <span className="vx-eyebrow text-[color:var(--on-forest-2)]">Your balance</span>
               <span className="flex items-baseline gap-2">
                 <span className="font-display text-num-l tabular-nums" data-testid="balance">{units(wallet.balanceMilli)}</span>
-                <span className="text-body-strong">Voice Units</span>
+                <span className="text-body-strong">{wallet.balanceMilli === 1000 ? "Voice Unit" : "Voice Units"}</span>
               </span>
             </div>
           </div>

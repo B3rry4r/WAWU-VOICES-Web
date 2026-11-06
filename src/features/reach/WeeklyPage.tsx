@@ -1,5 +1,6 @@
 "use client";
 
+import { leaderFirst } from "@/lib/format/plural";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -105,6 +106,8 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
       <div>
         <WeeklyReportCard
           week={weekLine}
+          title={report.title}
+          summary={report.summary}
           moodLine={report.mood ?? ""}
           mood={moodRows(report)}
           themes={themes}
@@ -120,7 +123,7 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
         {poll ? (
           <section className="flex flex-col gap-2" aria-label="The poll in full">
             <h2 className="vx-eyebrow m-0 text-ink-2">The poll in full</h2>
-            <Poll question={summary?.title ?? "Poll results"} options={poll.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes ?? 0 }))} total={poll.totalVotes} state="results" live={false} onExplain={false} />
+            <Poll question={summary?.title ?? "Poll results"} options={leaderFirst(poll.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes ?? 0 })))} total={poll.totalVotes} state="results" live={false} onExplain={false} />
           </section>
         ) : null}
         {report.quotes.length ? (

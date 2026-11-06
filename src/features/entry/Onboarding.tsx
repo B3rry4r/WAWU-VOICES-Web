@@ -1,7 +1,7 @@
 "use client";
 import { countText } from "@/lib/format/plural";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ASSETS, Button, FreePosts, Icon, Logo, VoicePlayer } from "@/components/vx";
 import { useLoad } from "@/components/feed/useLoad";
 import { getPublicConfig, getTodaysQuestion } from "@/lib/api/feed";
@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api/client";
 import type { components } from "@/lib/api/types";
 import { closesIn, voicesLabel } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
+import { holdReturn } from "@/lib/auth/entry-draft";
 import { fromPrice, textPostNaira } from "./format";
 
 type Poll = components["schemas"]["Poll"];
@@ -27,6 +28,16 @@ function Still({ children }: { children: ReactNode }) {
 export function Onboarding() {
   const skipping = useSkipIfSignedIn();
   const [i, setI] = useState(0);
+  // lead ruling WF, 6 Nov (A-M4): /join?next=/speak (a held recording) keeps its way back through the join steps.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const next = q.get("next");
+      if (next) holdReturn(next, q.get("held") === "1" ? "post" : "page");
+    } catch {
+      /* no address to read: they land on Home */
+    }
+  }, []);
   const load = useLoad(() => Promise.all([getTodaysQuestion(), getPublicConfig(), getCurrentPoll()]), []);
   if (skipping) return null;
   const logo = <Link href="/welcome" className="flex" aria-label="VOICES"><Logo height={34} alt="VOICES" /></Link>;

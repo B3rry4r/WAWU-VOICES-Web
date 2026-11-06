@@ -10,6 +10,7 @@ import { getWhatNext, listProposals, removeStance, setStance } from "@/lib/api/v
 import type { EditorialSummary, Proposal, ProposalGroup, ProposalSort, WhatNext } from "@/lib/api/vote";
 import { ago } from "@/lib/feed-format";
 import { DeskRail } from "./DeskRail";
+import { useWhatNextPrompt } from "./prompt";
 import { AppBar, DeskBack, LoadFailed, Loading, ShareButton, shortCount, useLoadWhen, useSignedIn } from "./chrome";
 
 const fmt = (n: number) => n.toLocaleString("en-NG");
@@ -123,6 +124,7 @@ export function WhatNextPage({ questionId }: { questionId: string }) {
 
   const d = load.state === "ready" ? load.data : null;
   const q = d?.question ?? null;
+  const prompt = useWhatNextPrompt(q?.topicId);
   const groups = new Map((d?.groups ?? []).map((g) => [g.id, g]));
   const items = d ? [...d.proposals, ...(more?.items ?? [])] : [];
   const cursor = more ? more.cursor : d?.nextCursor ?? null;
@@ -161,7 +163,7 @@ export function WhatNextPage({ questionId }: { questionId: string }) {
       {d ? (
         <>
           {q?.topicTitle ? <p className="vx-eyebrow m-0 hidden text-green-text dt:block">{"What Next? "}<span className="font-medium normal-case tracking-normal text-ink-2">{q.weekNumber ? `Week ${q.weekNumber} · ${q.topicTitle}` : q.topicTitle}</span></p> : null}
-          <h1 className="vt-hero-q">{d.question.text}</h1>
+          <h1 className="vt-hero-q">{prompt === undefined ? "" : prompt ?? d.question.text}</h1>
           {d.summary ? <Summary s={d.summary} proposals={d.proposalTotal} groups={d.groupTotal} /> : null}
           <div className="hidden dt:block">{proposeBtn}</div>
           <div>

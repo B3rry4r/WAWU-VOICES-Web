@@ -62,15 +62,27 @@ describe("payment return rules", () => {
     expect((await harness([pay("INITIATED")], err(422, "PAYMENT_AMOUNT_MISMATCH")).run()).pop()!.kind).toBe("mismatch");
     expect((await harness([pay("INITIATED")], pay("FAILED")).run()).pop()!.kind).toBe("failed");
   });
-  it("says nothing of cancelling from the address: an unconfirmed payment stays unconfirmed (reconcile may still credit it)", async () => {
+  it("lead ruling WF (RW4): a cancelled return calls verify once and, when it says not verified, shows Cancelled at once (no polling)", async () => {
     const h = harness([pay("INITIATED")]);
     const seen = await h.run({ urlStatus: "cancelled" });
+    expect(h.d.verifyPayment).toHaveBeenCalledTimes(1);
+    expect(seen.pop()!.kind).toBe("cancelled");
+    expect(h.d.sleep).not.toHaveBeenCalled();
+  });
+  it("a cancelled return where verify has a network error is not shown as Cancelled (we do not know)", async () => {
+    const h = harness([pay("INITIATED")], new NetworkError("offline"));
+    const seen = await h.run({ urlStatus: "cancelled" });
     expect(seen.map((s) => s.kind)).not.toContain("cancelled");
-    expect(seen.pop()!.kind).toBe("slow");
   });
   it("cancelled in the address does not hide a payment that did go through", async () => {
     const seen = await harness([pay("INITIATED")], pay("SUCCEEDED")).run({ urlStatus: "cancelled" });
     expect(seen.pop()!.kind).toBe("success");
+  });
+  it("RW4: verify says success after a cancelled return: the person sees success, never Cancelled, and verify ran once", async () => {
+    const h = harness([pay("INITIATED")], pay("SUCCEEDED"));
+    const seen = await h.run({ urlStatus: "cancelled", transactionId: "777" });
+    expect(seen.map((s) => s.kind)).toEqual(["confirming", "success"]);
+    expect(h.d.verifyPayment).toHaveBeenCalledTimes(1);
   });
   it("a payment that is not this person's (404) or not an id is not found, and verify is never tried", async () => {
     const a = harness([err(404, "NOT_FOUND")]);

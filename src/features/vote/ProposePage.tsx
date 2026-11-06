@@ -9,6 +9,7 @@ import { createProposal, getPublicConfig, getQuestion, newKey, similarProposals 
 import type { Proposal, Question } from "@/lib/api/vote";
 import { AppBar, DeskBack, LoadFailed, Loading, shortCount, useLoadWhen, useSignedIn } from "./chrome";
 import { DeskRail } from "./DeskRail";
+import { useWhatNextPrompt } from "./prompt";
 import { ProposalItem } from "./WhatNextPage";
 
 /** How long to wait after the last keystroke before looking for similar proposals. */
@@ -102,6 +103,7 @@ export function ProposePage({ questionId }: { questionId: string }) {
   }
 
   const q: Question | null = load.state === "ready" ? load.data.question : null;
+  const prompt = useWhatNextPrompt(q?.topicId);
   const week = q?.topicTitle ? (q.weekNumber ? `Week ${q.weekNumber} · ${q.topicTitle}` : q.topicTitle) : null;
 
   return (
@@ -117,7 +119,7 @@ export function ProposePage({ questionId }: { questionId: string }) {
       {q ? (
         <>
           {week ? <p className="vx-eyebrow m-0 hidden text-green-text dt:block">{`What Next? `}<span className="font-medium normal-case tracking-normal text-ink-2">{week}</span></p> : null}
-          <h1 className="vt-hero-q">{q.text}</h1>
+          <h1 className="vt-hero-q">{prompt === undefined ? "" : prompt ?? q.text}</h1>
           <p className="vt-lead">Make it practical: who should do what, and by when. It shows as Proposed, and others can support, challenge or improve it.</p>
           {improves ? <Banner tone="info" title="You are improving a proposal">Your version will show as an improvement on it.</Banner> : null}
           {signNote ? <Banner tone="info" title="Sign in to post" onClose={() => setSignNote(false)}>Reading is open to everyone. Posting a proposal needs an account.</Banner> : null}

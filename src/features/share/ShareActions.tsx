@@ -1,9 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Icon } from "@/components/vx";
+import { Button } from "@/components/vx";
+import { isSignedIn } from "@/lib/api/auth";
 import { recordShareEvent } from "@/lib/api/reach";
+import { signInHref } from "@/lib/auth/entry-draft";
+
+/** null until the browser has said; the page is server rendered for no account, so the first paint is the guest one. */
+function useSignedInHere(): boolean | null {
+  const [v, setV] = useState<boolean | null>(null);
+  useEffect(() => setV(isSignedIn()), []);
+  return v;
+}
+
+/** lead ruling WF, 6 Nov (B-M1): a signed-in person is not asked to sign in on the share page; they get a way into VOICES instead. */
+export function SignInOrOpen({ code }: { code: string }) {
+  const signed = useSignedInHere();
+  if (signed === null) return <span className="inline-block min-h-[48px]" aria-hidden="true" />;
+  return signed ? <Button variant="secondary" href="/">Open VOICES</Button> : <Button variant="secondary" href={signInHref(`/s/${code}`)}>Sign in</Button>;
+}
+
+/** Words about signing in: shown to a guest, never to a signed-in person. */
+export function GuestOnly({ children }: { children: ReactNode }) {
+  return useSignedInHere() === true ? null : <>{children}</>;
+}
 
 /** Counts one open of the link (once per browser tab). Renders nothing. */
 export function LinkOpened({ code }: { code: string }) {

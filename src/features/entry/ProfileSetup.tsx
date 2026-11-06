@@ -5,7 +5,7 @@ import { Avatar, Button, Icon, TextField } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { isAccountBlocked } from "@/lib/api/auth";
 import { getPublicConfig } from "@/lib/api/feed";
-import { checkHandle, createMe, getMe, PHOTO_MAX_BYTES, PHOTO_MIMES, setCategories, updateProfile, uploadAvatar } from "@/lib/api/me";
+import { checkHandle, createMe, getMe, PHOTO_MAX_BYTES, PHOTO_MIMES, photoUploadWords, setCategories, updateProfile, uploadAvatar } from "@/lib/api/me";
 import { handleFromName, tokenName } from "@/lib/auth/claims";
 import { clearDraft, peekHeldPost, readDraft, takeReturn, type JoinDraft } from "@/lib/auth/entry-draft";
 import { BottomBar, DeskCard, DeskHeader, EntryFrame, EntryScroll, ErrorBanner, StepHeader, refusalWords, useNeedSession } from "./ui";
@@ -30,6 +30,7 @@ export function ProfileSetup() {
   const [posting, setPosting] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const made = useRef(false);
+  const photoNote = useRef<HTMLParagraphElement>(null);
   const [existing, setExisting] = useState<string | null>(null);
 
   useEffect(() => {
@@ -88,6 +89,7 @@ export function ProfileSetup() {
     if (busy || check.state === "taken" || check.state === "bad") return;
     setBusy(true);
     setFailure(null);
+    setPhotoErr(null);
     const h = handle.trim().toLowerCase().replace(/^@/, "");
     const topics = draft.topics ?? [];
     try {
@@ -110,7 +112,17 @@ export function ProfileSetup() {
       await setCategories(topics.map((t) => ({ categoryId: t.categoryId, alertsOn: t.alertsOn })));
       const patch: { displayName?: string; avatarFileId?: string } = {};
       if (name.trim()) patch.displayName = name.trim();
-      if (photo) patch.avatarFileId = await uploadAvatar(photo);
+      if (photo) {
+        // lead ruling WF, 6 Nov (A-M5): a photo that does not go up says so beside the photo, in plain words, and the form stays.
+        try {
+          patch.avatarFileId = await uploadAvatar(photo);
+        } catch (e) {
+          setPhotoErr(photoUploadWords(e));
+          photoNote.current?.scrollIntoView?.({ block: "center" });
+          setBusy(false);
+          return;
+        }
+      }
       if (patch.displayName || patch.avatarFileId) await updateProfile(patch);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409 && err.code === "HANDLE_TAKEN") setCheck({ state: "taken" });
@@ -151,7 +163,7 @@ export function ProfileSetup() {
             <div className="flex flex-col items-start gap-2">
               <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" className="vx-sr" tabIndex={-1} aria-hidden="true" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
               <Button variant="secondary" icon="plus" onClick={() => file.current?.click()}>{photo ? "Change photo" : "Add a photo"}</Button>
-              <p className={`m-0 text-caption ${photoErr ? "text-danger" : "text-ink-2"}`} role={photoErr ? "alert" : undefined}>{photoErr ?? "Optional. Photos never go on share cards."}</p>
+              <p ref={photoNote} className={`m-0 text-caption ${photoErr ? "text-danger" : "text-ink-2"}`} role={photoErr ? "alert" : undefined}>{photoErr ?? "Optional. Photos never go on share cards."}</p>
             </div>
           </div>
           <TextField label="Your name" value={name} onChange={setName} autoComplete="name" />

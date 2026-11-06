@@ -82,10 +82,14 @@ export const isOffline = (e: unknown): boolean => e instanceof NetworkError;
 
 const e403 = (e: unknown): boolean => e instanceof ApiError && e.code === "ACCOUNT_SUSPENDED";
 
+/** A refusal no second try can change (A-L7): a phone number another account already uses. */
+const cannotRetry = (e: unknown): boolean =>
+  e instanceof ApiError && e.status === 409 && (e.details as { reason?: string } | undefined)?.reason === "PHONE_IN_USE";
+
 export function ErrorBanner({ error, onRetry, fallback, title = "This did not work" }: { error: unknown; onRetry?: () => void; fallback: string; title?: string }) {
   const off = isOffline(error);
   return (
-    <Banner tone={off ? "offline" : "danger"} title={off ? "You are offline" : e403(error) ? "This account cannot be used" : title} action={onRetry && !e403(error) ? "Try again" : undefined} onAction={onRetry}>
+    <Banner tone={off ? "offline" : "danger"} title={off ? "You are offline" : e403(error) ? "This account cannot be used" : title} action={onRetry && !e403(error) && !cannotRetry(error) ? "Try again" : undefined} onAction={onRetry}>
       {refusalWords(error, fallback)}
     </Banner>
   );

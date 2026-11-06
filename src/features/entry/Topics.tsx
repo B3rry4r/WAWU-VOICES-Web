@@ -35,7 +35,7 @@ export function Topics() {
   const label = enough ? `Continue with ${have.length} topics` : `Pick ${MIN_TOPICS - have.length} more`;
   return (
     <EntryFrame>
-      <StepHeader step={1} />
+      <StepHeader step={1} back="/join/country" />
       <DeskHeader step={1} />
       <EntryScroll className="flex flex-col">
         <DeskCard wide="dt:max-w-[760px]">

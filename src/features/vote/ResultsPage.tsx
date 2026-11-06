@@ -12,6 +12,7 @@ import { closesIn } from "@/lib/feed-format";
 import { AdBanner } from "./AdBanner";
 import { AppBar, nextOpening, useOpensAt, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
 import { DeskRail } from "./DeskRail";
+import { leaderFirst } from "@/lib/format/plural";
 import { pickPoll } from "./poll-pick";
 import { useRouter } from "next/navigation";
 
@@ -111,7 +112,7 @@ export function ResultsPage({ questionId }: { questionId: string }) {
           <Poll
             key={poll.id + (results.myVote?.length ? "m" : "")}
             question={poll.title}
-            options={results.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes }))}
+            options={leaderFirst(results.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes })))}
             total={results.totalVotes}
             closesIn={status === "OPEN" ? closesIn(poll.endsAt) : undefined}
             state="results"

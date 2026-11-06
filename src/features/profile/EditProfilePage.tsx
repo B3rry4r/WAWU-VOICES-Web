@@ -8,7 +8,7 @@ import {
   checkHandle, deleteVoiceClip, getFollowedCategories, listCategories, setFollowedCategories, updateProfile,
   type Category, type CategoryFollow, type Me, type UpdateProfileRequest,
 } from "@/lib/api/profile";
-import { PHOTO_MAX_BYTES, PHOTO_MIMES, uploadAvatar } from "@/lib/api/me";
+import { PHOTO_MAX_BYTES, PHOTO_MIMES, photoUploadWords, uploadAvatar } from "@/lib/api/me";
 import { Rail } from "@/components/shell/ShellSlots";
 import { ClipPlayer } from "./ClipPlayer";
 import { DeletionPending } from "./DeletionPending";
@@ -112,13 +112,23 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
   }
 
   async function save() {
-    setSaving(true); setError(null); setFieldErr({});
+    setSaving(true); setError(null); setFieldErr({}); setPhotoErr(null);
     try {
       const body: UpdateProfileRequest = {};
       if (clean !== profile.handle) body.handle = clean;
       if (place.trim() !== place0) { body.state = place.trim() || null; body.city = null; }
       if ((clip?.id ?? null) !== (profile.voiceCard?.id ?? null)) body.voiceCardClipId = clip?.id ?? null;
-      if (photo) body.avatarFileId = await uploadAvatar(photo.file);
+      if (photo) {
+        // lead ruling WF, 6 Nov (A-M5): a photo that does not go up says so beside the photo, in plain words.
+        try {
+          body.avatarFileId = await uploadAvatar(photo.file);
+        } catch (e) {
+          setPhotoErr(photoUploadWords(e));
+          setSaving(false);
+          setTimeout(() => document.querySelector(".pf-note--err")?.scrollIntoView?.({ block: "center" }), 0);
+          return;
+        }
+      }
       if (Object.keys(body).length) await updateProfile(body);
       if (followChanged) await setFollowedCategories([...followed].map(([categoryId, alertsOn]) => ({ categoryId, alertsOn })));
       if (profile.voiceCard && clip?.id !== profile.voiceCard.id) deleteVoiceClip(profile.voiceCard.id).catch(() => undefined);
@@ -153,9 +163,10 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
 
         {(
           <section className="pf-form-sec pf-photo" aria-labelledby="ph-h">
-            <Avatar name={name} src={photo?.url ?? profile.avatarUrl ?? undefined} size="l" />
-            <div>
+            <Avatar name={name} src={photo?.url ?? profile.avatarUrl ?? undefined} size="xl" />
+            <div className="pf-photo__txt">
               <h2 id="ph-h" className="pf-label">Profile photo</h2>
+              {photoErr ? <p className="pf-note pf-note--err" role="alert">{photoErr}</p> : <p className="pf-hint">Optional. Without one, your initials show. Never used on share cards.</p>}
               <label className="pf-filebtn">
                 <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
                   const f = e.target.files?.[0];
@@ -168,7 +179,6 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
                 }} />
                 <Icon name="plus" size={18} />Add photo
               </label>
-              {photoErr ? <p className="pf-note pf-note--err" role="alert">{photoErr}</p> : <p className="pf-hint">Optional. Without one, your initials show. Never used on share cards.</p>}
             </div>
           </section>
         )}
@@ -198,10 +208,9 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
 
       <Rail>
         <section className="pf-panel" aria-label="Preview">
-          <h2 className="vx-eyebrow pf-eyebrow">Preview</h2>
-          <p className="pf-label">How others see you</p>
+          <h2 className="vx-eyebrow pf-eyebrow">How others see you</h2>
           <div className="pf-preview">
-            <Avatar name={name} src={photo?.url ?? profile.avatarUrl ?? undefined} />
+            <Avatar name={name} src={photo?.url ?? profile.avatarUrl ?? undefined} size="l" />
             <div>
               <b>{"@" + (hstate.kind === "bad" ? profile.handle : clean || profile.handle)}</b>
               <span>{[place.trim() || undefined, joinedLabel(profile.joinedAt)].filter(Boolean).join(" · ")}</span>

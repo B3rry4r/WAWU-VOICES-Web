@@ -176,12 +176,28 @@ describe("PaymentDone (the return page)", () => {
     expect(await screen.findByText("Your answer is posted")).toBeTruthy();
     expect(posts).toBe(1);
   });
-  it("an unconfirmed payment with cancelled in the address says it is being confirmed, not cancelled", async () => {
+  it("lead ruling WF (RW4): a cancelled return whose one verify says not verified shows Cancelled at once, with Try again, never \"do not pay again\"", async () => {
     search = `paymentId=${PID}&status=cancelled`;
-    api((m) => (m === `GET /payments/${PID}` ? json(payment("INITIATED")) : m === `POST /payments/${PID}/verify` ? err(409, "PAYMENT_NOT_VERIFIED", "x") : undefined));
+    const a = api((m) => (m === `GET /payments/${PID}` ? json(payment("INITIATED")) : m === `POST /payments/${PID}/verify` ? err(409, "PAYMENT_NOT_VERIFIED", "x") : undefined));
     render(<PaymentDoneScreen />);
-    expect(await screen.findByText("Confirming your payment")).toBeTruthy();
-    expect(screen.queryByText(/cancelled/i)).toBeNull();
+    expect(await screen.findByText("Payment cancelled")).toBeTruthy();
+    expect(screen.getByText("You were not charged.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Try again/ })).toBeTruthy();
+    expect(screen.queryByText(/do not pay again/i)).toBeNull();
+    expect(a.calls.filter((c) => c.endsWith("/verify")).length).toBe(1);
+  });
+  it("RW4: a cancelled return where verify says success shows success and credits once (one verify call)", async () => {
+    search = `paymentId=${PID}&status=cancelled&transaction_id=285959875`;
+    let first = true;
+    const a = api((m) => {
+      if (m === `GET /payments/${PID}`) { const p = first ? payment("INITIATED") : payment("SUCCEEDED"); first = false; return json(p); }
+      if (m === `POST /payments/${PID}/verify`) return json(payment("SUCCEEDED"));
+      return undefined;
+    });
+    render(<PaymentDoneScreen />);
+    expect(await screen.findByText("55 units added")).toBeTruthy();
+    expect(screen.queryByText("Payment cancelled")).toBeNull();
+    expect(a.calls.filter((c) => c.endsWith("/verify")).length).toBe(1);
   });
   it("a failed payment with no receipt number labels the reference", async () => {
     search = `paymentId=${PID}`;

@@ -13,6 +13,7 @@ export type ReturnState =
   | { kind: "success"; payment: Payment }
   | { kind: "failed"; payment: Payment }
   | { kind: "refunded"; payment: Payment }
+  | { kind: "cancelled"; payment: Payment }
   | { kind: "expired" }
   | { kind: "mismatch" }
   | { kind: "notfound" }
@@ -50,7 +51,7 @@ export function classify(p: Payment): ReturnState | null {
   }
 }
 
-const FINAL = new Set(["success", "failed", "refunded", "expired", "notfound", "mismatch"]);
+const FINAL = new Set(["success", "failed", "refunded", "expired", "cancelled", "notfound", "mismatch"]);
 export const isFinal = (s: ReturnState): boolean => FINAL.has(s.kind);
 
 /** Flutterwave's transaction id is digits; anything else is not sent. */
@@ -79,14 +80,18 @@ export async function runReturn(p: ReturnParams, deps: ReturnDeps, emit: (s: Ret
   if (done) return say(done);
   say({ kind: "confirming" });
 
-  // Step 2: verify, once.
+  // Step 2: verify, once. Even when the address says cancelled: the address alone decides nothing.
+  const cancelledReturn = /^cancel/i.test(p.urlStatus ?? "");
   try {
     const v = await deps.verifyPayment(p.paymentId, newKey(), cleanTxId(p.transactionId));
     const r = classify(v);
-    if (r) return say(r);
+    if (r) return say(cancelledReturn && r.kind === "failed" ? { kind: "cancelled", payment: first } : r);
   } catch (e) {
     if (e instanceof ApiError) {
       if (e.status === 404) return say({ kind: "notfound" });
+      // lead ruling WF, 6 Nov (RW4): the address said cancelled and the one verify call says the payment did not succeed:
+      // show Cancelled at once. A later webhook or reconcile success still credits (the server does that, not this page).
+      if (cancelledReturn && e.status === 409 && e.code === "PAYMENT_NOT_VERIFIED") return say({ kind: "cancelled", payment: first });
       if (e.code === "PAYMENT_EXPIRED") return say({ kind: "expired" });
       if (e.code === "PAYMENT_AMOUNT_MISMATCH") return say({ kind: "mismatch" });
       // PAYMENT_NOT_VERIFIED, 429, 5xx, offline: not final yet; keep polling the payment below.

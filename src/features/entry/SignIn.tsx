@@ -64,7 +64,8 @@ export function SignIn() {
       if (fullName.trim().length < 2) bad.fullName = "Tell us your name.";
       if (!EMAIL_RE.test(email.trim())) bad.email = "Enter an email address like name@example.com.";
       const national = nationalPhone(phone, DIAL);
-      if (national.length < 7 || national.length > 11) bad.phone = "Enter your phone number without the +234.";
+      if (national.length === 0) bad.phone = "Enter your phone number.";
+      else if (national.length < 7 || national.length > 11) bad.phone = "Enter your phone number without the +234.";
       if (password.length < 8) bad.password = "Use at least 8 characters.";
       if (!consent) bad.consent = "Confirm you are 18 or older and accept the rules.";
     } else if (needEmail) {

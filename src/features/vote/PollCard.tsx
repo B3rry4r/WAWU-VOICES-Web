@@ -1,5 +1,6 @@
 "use client";
 
+import { leaderFirst } from "@/lib/format/plural";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { Banner, Poll } from "@/components/vx";
@@ -66,7 +67,8 @@ export function PollCard({
   const cur = fresh ?? poll;
   const mine = voted ? voted.vote.optionIds[0] : cur.myVote?.[0];
   const mode = voted || cur.myVote || cur.status === "CLOSED" ? "results" : "vote";
-  const options = (voted ? voted.results.options : cur.options).map((o) => ({ id: o.id, label: o.label, votes: o.votes }));
+  const mapped = (voted ? voted.results.options : cur.options).map((o) => ({ id: o.id, label: o.label, votes: o.votes }));
+  const options = mode === "results" ? leaderFirst(mapped) : mapped;
   const total = voted ? voted.results.totalVotes : cur.totalVotes;
   const lines = costLines(cur, allowance, config);
 

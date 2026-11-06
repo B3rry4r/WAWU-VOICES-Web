@@ -80,7 +80,7 @@ function Round({ children, label, onClick, href, tone, disabled }: { children: R
       <span className="text-label text-ink">{label}</span>
     </>
   );
-  const cls = "flex w-[72px] flex-col items-center gap-1 border-0 bg-transparent p-0 text-center no-underline disabled:opacity-50";
+  const cls = "flex w-[76px] flex-col items-center gap-1 border-0 bg-transparent p-0 text-center no-underline disabled:opacity-50";
   return href ? (
     <a className={cls} href={href} target="_blank" rel="noreferrer noopener" onClick={onClick} aria-label={label}>{body}</a>
   ) : (
@@ -179,7 +179,7 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
         ) : (
           <p className="m-0 rounded-m bg-surface-2 p-3 text-caption text-ink-2">{text}</p>
         )}
-        <div className="flex flex-wrap justify-center gap-x-1 gap-y-4" role="group" aria-label="Share to">
+        <div className="flex flex-wrap justify-center gap-x-2 gap-y-4" role="group" aria-label="Share to">
           {ROWS.map((r) => (
             <Round key={r.id} label={r.label} disabled={!link} href={link && r.href ? r.href(link.url, text, body) : undefined} onClick={link ? () => intent(r.target) : undefined}>
               {r.icon ? <Icon name={r.icon} size={24} /> : r.abbr}
