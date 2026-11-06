@@ -107,12 +107,12 @@ export function WriteScreen({ qid }: { qid: string }) {
       <div className="hidden dt:block"><StageNav questionId={qid} active="speak" /></div>
       <div className="mt-4 grid gap-4 dt:max-w-[640px]">
         {replyTo ? (
-          <p className="m-0 text-[15px] text-[var(--ink-2)]">{`Replying to ${whoLabel}: ${parent?.body ?? "a voice"}`.slice(0, 160)}</p>
+          <p className="m-0 text-body text-[var(--ink-2)]">{`Replying to ${whoLabel}: ${parent?.body ?? "a voice"}`.slice(0, 160)}</p>
         ) : (
           <div>
             <span className="vx-eyebrow text-[var(--green-text)]">Answering</span>
-            <h1 className="m-0 mt-1 font-display text-[26px] font-normal leading-[32px]">{q.text}</h1>
-            {q.hint ? <p className="m-0 mt-2 text-[15px] leading-5 text-[var(--ink-2)]">{q.hint}</p> : null}
+            <h1 className="m-0 mt-1 font-display text-display-l">{q.text}</h1>
+            {q.hint ? <p className="m-0 mt-2 text-body text-[var(--ink-2)]">{q.hint}</p> : null}
           </div>
         )}
         <div>
@@ -142,9 +142,9 @@ export function WriteScreen({ qid }: { qid: string }) {
         <div className="hidden rounded-[var(--radius-l)] bg-[var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--line)] dt:block">
           <b className="mb-2 block">Your free posts</b>
           <FreePosts left={left} />
-          {c ? <p className="m-0 mt-2 text-[14px] leading-5 text-[var(--ink-2)]">{`Text and voice both count, and deleting a post does not give one back. After your free posts, a text post uses ${unitsText(c.textPostMilli)} (${nairaText}) and a voice up to ${allow?.maxVoiceSeconds} seconds uses ${unitsText(c.voicePostMilli)} (${voiceNaira}).`}</p> : null}
+          {c ? <p className="m-0 mt-2 text-caption text-[var(--ink-2)]">{`Text and voice both count, and deleting a post does not give one back. After your free posts, a text post uses ${unitsText(c.textPostMilli)} (${nairaText}) and a voice up to ${allow?.maxVoiceSeconds} seconds uses ${unitsText(c.voicePostMilli)} (${voiceNaira}).`}</p> : null}
         </div>
-        <p className="m-0 text-center text-[13px] text-[var(--ink-2)]">Reading, listening, liking and sharing are always free.</p>
+        <p className="m-0 mx-auto text-center text-caption text-[var(--ink-2)]">Reading, listening, liking and sharing are always free.</p>
       </div>
     </>
   );

@@ -30,8 +30,8 @@ function inline(text: string): ReactNode[] {
     const at = m.index ?? 0;
     if (at > last) out.push(text.slice(last, at));
     if (m[1]) out.push(<b key={k++}>{m[1]}</b>);
-    else if (m[2]) out.push(<a key={k++} href={m[3]}>{m[2]}</a>);
-    else out.push(<a key={k++} href={"mailto:" + m[4]}>{m[4]}</a>);
+    else if (m[2]) out.push(<a key={k++} href={m[3]} className="link">{m[2]}</a>);
+    else out.push(<a key={k++} href={"mailto:" + m[4]} className="link">{m[4]}</a>);
     last = at + m[0].length;
   }
   if (last < text.length) out.push(text.slice(last));

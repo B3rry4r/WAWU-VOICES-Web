@@ -65,7 +65,7 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
         onSeek={seek}
         onSpeedChange={(s) => { speed.current = s; if (audio.current) audio.current.playbackRate = s; }}
       />
-      {failed ? <p className="m-0 text-[13px] leading-4 text-danger" role="alert">{failMessage}</p> : null}
+      {failed ? <p className="m-0 text-caption text-danger" role="alert">{failMessage}</p> : null}
     </div>
   );
 }

@@ -67,7 +67,7 @@ export function NewsCard({ post, signedIn, repliesHref, open }: { post: NewsAnsw
 
   return (
     <div className="flex flex-col gap-2">
-      {post.categoryName ? <span className="text-[12px] font-bold uppercase leading-4 tracking-wide text-ink-2">{post.categoryName}</span> : null}
+      {post.categoryName ? <span className="text-eyebrow uppercase text-ink-2">{post.categoryName}</span> : null}
       <article className="vx-answer" aria-label={"News from " + (a ? a.handle : "an anonymous poster")}>
         <div className="vx-answer__head">
           <Avatar name={a ? a.displayName ?? a.handle : "Anonymous"} src={a?.avatarUrl ?? undefined} />
@@ -126,7 +126,7 @@ export function NewsCard({ post, signedIn, repliesHref, open }: { post: NewsAnsw
             Share
           </button>
         </div>
-        {note ? <p className="m-0 text-[13px] leading-4 text-danger" role="alert">{note}</p> : null}
+        {note ? <p className="m-0 text-caption text-danger" role="alert">{note}</p> : null}
       </article>
       {sharing ? <ShareSheet objectType="ANSWER" objectId={post.id} onClose={() => setSharing(false)} /> : null}
       {post.news?.tag === "VERIFIED_NEWS" && post.news.sourceName ? (

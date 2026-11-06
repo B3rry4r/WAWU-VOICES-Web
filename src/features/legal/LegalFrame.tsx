@@ -22,7 +22,7 @@ export function LegalFrame({ tab, children }: { tab: LegalTab; children: ReactNo
     <div className="pf-page">
       <header className="pf-bar pf-only-phone">
         <IconButton icon="arrow-left" label="Back to settings" variant="ghost" onClick={() => router.push("/settings")} />
-        <h1 className="pf-h1 pf-bar__h1">Help and legal</h1>
+        <h1 className="t-bar-title pf-bar__t">Help and legal</h1>
       </header>
       <Tabs items={LEGAL_TABS} value={tab} label="Legal pages" onChange={(id) => { if (id !== tab) router.push(legalHref(id as LegalTab)); }} />
       <article className="pf-rules">{children}</article>
@@ -40,9 +40,9 @@ export function LegalFrame({ tab, children }: { tab: LegalTab; children: ReactNo
 export function LegalHead({ title, updated, lead }: { title: string; updated?: string; lead?: string }) {
   return (
     <>
-      <h2 className="pf-h1 pf-rules__h">{title}</h2>
+      <h2 className="pf-h1">{title}</h2>
       {updated ? <p className="lg-date">Last updated {updated}</p> : null}
-      {lead ? <p className="pf-body">{lead}</p> : null}
+      {lead ? <p className="pf-lead">{lead}</p> : null}
     </>
   );
 }

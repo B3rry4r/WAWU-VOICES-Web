@@ -121,11 +121,11 @@ export function PostResultPage({ threadId }: { threadId: string }) {
         onSubmit={(ev) => { ev.preventDefault(); void submit(); }}
         aria-label="Post the numbers you see"
       >
-        <h1 className="m-0 hidden font-display text-[32px] font-normal leading-9 dt:block">Post the numbers you see</h1>
-        <p className="m-0 text-[16px] leading-6 text-ink-2">Copy exactly what is written on the result sheet at your polling unit.</p>
+        <h1 className="m-0 hidden font-display text-display-xl dt:block">Post the numbers you see</h1>
+        <p className="m-0 text-body text-ink-2">Copy exactly what is written on the result sheet at your polling unit.</p>
 
         <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
-          <legend className="mb-3 p-0 font-display text-[18px] font-normal leading-6">Where</legend>
+          <legend className="mb-3 p-0 font-display text-display-s">Where</legend>
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             <TextField label="State" value={form.state} onChange={set("state")} error={errors.state} autoComplete="off" />
             <TextField label="Local government" value={form.lga} onChange={set("lga")} error={errors.lga} autoComplete="off" />
@@ -135,7 +135,7 @@ export function PostResultPage({ threadId }: { threadId: string }) {
         </fieldset>
 
         <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
-          <legend className="mb-3 p-0 font-display text-[18px] font-normal leading-6">The numbers on the sheet</legend>
+          <legend className="mb-3 p-0 font-display text-display-s">The numbers on the sheet</legend>
           <div className="grid grid-cols-3 gap-x-3">
             <TextField label="Accredited" value={form.accredited} onChange={set("accredited")} error={errors.accredited} inputMode="numeric" autoComplete="off" />
             <TextField label="Votes cast" value={form.votesCast} onChange={set("votesCast")} error={errors.votesCast} inputMode="numeric" autoComplete="off" />
@@ -144,7 +144,7 @@ export function PostResultPage({ threadId }: { threadId: string }) {
         </fieldset>
 
         {SERVED.photoUpload ? <div className="flex flex-col gap-2">
-          <span className="text-[14px] font-semibold leading-5" id="photo-label">Photo of the result sheet (optional)</span>
+          <span className="text-label" id="photo-label">Photo of the result sheet (optional)</span>
           <input
             ref={fileInput}
             type="file"
@@ -162,25 +162,25 @@ export function PostResultPage({ threadId }: { threadId: string }) {
           >
             <span className="flex h-12 w-12 flex-none items-center justify-center rounded-pill bg-mint text-green-text"><Icon name={photo ? "check" : "plus"} size={24} /></span>
             <span className="flex min-w-0 flex-col">
-              <b className="truncate text-[16px] leading-5">{photo ? photo.name : "Add a photo"}</b>
-              <span className="text-[13px] leading-4 text-ink-2">It helps the WAWU team check faster. Only the team sees it.</span>
+              <b className="truncate text-body-strong">{photo ? photo.name : "Add a photo"}</b>
+              <span className="text-caption text-ink-2">It helps the WAWU team check faster. Only the team sees it.</span>
             </span>
           </button>
           {photo ? <button type="button" className="vx-link self-start" onClick={() => setPhoto(null)}>Remove the photo</button> : null}
-          {photoError ? <p className="m-0 text-[13px] leading-4 text-danger" role="alert">{photoError}</p> : null}
+          {photoError ? <p className="m-0 text-caption text-danger" role="alert">{photoError}</p> : null}
         </div> : null}
 
         <Banner title="The WAWU team checks every post">Until it is checked, your post shows Not verified. Post only what is written on the sheet.</Banner>
 
         <section className="flex flex-col gap-2" aria-label="How it will look">
-          <h2 className="m-0 font-display text-[18px] font-normal leading-6">How it will look</h2>
+          <h2 className="m-0 font-display text-display-s">How it will look</h2>
           {preview}
         </section>
 
         <div className="fixed inset-x-0 bottom-0 z-sticky flex flex-col gap-2 bg-surface px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3 shadow-[0_-1px_0_var(--line)] dt:static dt:bg-transparent dt:p-0 dt:shadow-none">
-          {formError ? <p className="m-0 text-center text-[14px] leading-5 text-danger" role="alert">{formError}</p> : null}
+          {formError ? <p className="m-0 mx-auto text-center text-caption text-danger" role="alert">{formError}</p> : null}
           <Button type="submit" size="l" block icon="send" loading={busy}>Post these numbers</Button>
-          <p className="m-0 text-center text-[13px] leading-4 text-ink-2">Posting results is free. It does not use your free posts or units.</p>
+          <p className="m-0 mx-auto text-center text-caption text-ink-2">Posting results is free. It does not use your free posts or units.</p>
         </div>
       </form>
       <Rail>

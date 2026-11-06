@@ -76,8 +76,8 @@ export async function cardIsReady(code: string): Promise<boolean> {
 function Round({ children, label, onClick, href, tone, disabled }: { children: ReactNode; label: string; onClick?: () => void; href?: string; tone?: "mint"; disabled?: boolean }) {
   const body = (
     <>
-      <span className={"flex h-14 w-14 items-center justify-center rounded-pill border border-line text-[16px] font-extrabold text-ink " + (tone === "mint" ? "bg-mint text-green-text" : "bg-surface-2")}>{children}</span>
-      <span className="text-[14px] font-semibold leading-5 text-ink">{label}</span>
+      <span className={"flex h-14 w-14 items-center justify-center rounded-pill border border-line text-body-strong text-ink " + (tone === "mint" ? "bg-mint text-green-text" : "bg-surface-2")}>{children}</span>
+      <span className="text-label text-ink">{label}</span>
     </>
   );
   const cls = "flex w-[72px] flex-col items-center gap-1 border-0 bg-transparent p-0 text-center no-underline disabled:opacity-50";
@@ -170,14 +170,14 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
     <Sheet title={copy.title} subtitle={copy.subtitle} variant={desktop ? "dialog" : "sheet"} onClose={onClose}>
       <div className="flex flex-col gap-4">
         {failed ? (
-          <p className="m-0 rounded-m bg-danger-bg p-3 text-[14px] leading-5 text-danger" role="alert">We could not make your link. Close this and try again.</p>
+          <p className="m-0 rounded-m bg-danger-bg p-3 text-caption text-danger" role="alert">We could not make your link. Close this and try again.</p>
         ) : card.state === "ready" ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={card.url} alt="The card that goes out with your link" width={1200} height={630} className="block h-auto w-full rounded-m border border-line" />
         ) : card.state === "making" ? (
-          <div className="vx-skel flex aspect-[1200/630] w-full items-center justify-center rounded-m bg-surface-2 text-[14px] text-ink-2" aria-busy="true">Making your card</div>
+          <div className="vx-skel flex aspect-[1200/630] w-full items-center justify-center rounded-m bg-surface-2 text-caption text-ink-2" aria-busy="true">Making your card</div>
         ) : (
-          <p className="m-0 rounded-m bg-surface-2 p-3 text-[14px] leading-5 text-ink-2">{text}</p>
+          <p className="m-0 rounded-m bg-surface-2 p-3 text-caption text-ink-2">{text}</p>
         )}
         <div className="flex flex-wrap justify-center gap-x-1 gap-y-4" role="group" aria-label="Share to">
           {ROWS.map((r) => (
@@ -194,7 +194,7 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
             </Round>
           ) : null}
         </div>
-        <p className="m-0 text-center text-[14px] leading-5 text-ink-2">
+        <p className="m-0 mx-auto text-center text-caption text-ink-2">
           {signedIn.current ? "Sharing is free. Your link carries your referral code." : "Sharing is free."}
         </p>
       </div>

@@ -77,13 +77,13 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
     >
       <div className="grid justify-items-center gap-4 text-center">
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--mint)] text-[var(--green-text)]"><Icon name="shield-check" size={32} /></span>
-        <p className="m-0 text-[16px] leading-6">{`Our moderators will look at this ${noun}${handle ? ` from @${handle}` : ""} and act if it breaks the community rules.${handle ? ` @${handle} is not told who reported it.` : ""}`}</p>
+        <p className="m-0 text-body">{`Our moderators will look at this ${noun}${handle ? ` from @${handle}` : ""} and act if it breaks the community rules.${handle ? ` @${handle} is not told who reported it.` : ""}`}</p>
         {handle && (blocked || block) ? (
           <div className="flex w-full items-center gap-3 rounded-[var(--radius-m)] bg-[var(--surface-2)] p-3 text-left">
             <Icon name="user-check" size={24} />
             <span className="min-w-0 flex-1">
-              <b className="block text-[15px]">{blocked ? `You blocked @${handle}` : `You unblocked @${handle}`}</b>
-              {blocked ? <span className="text-[13px] text-[var(--ink-2)]">You will not see their voices or replies.</span> : null}
+              <b className="block text-label">{blocked ? `You blocked @${handle}` : `You unblocked @${handle}`}</b>
+              {blocked ? <span className="text-caption text-[var(--ink-2)]">You will not see their voices or replies.</span> : null}
             </span>
             {blocked ? <Button variant="ghost" size="s" onClick={undo}>Undo</Button> : null}
           </div>
@@ -98,7 +98,7 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
     <>
       {header}
       <div className="mt-4 grid gap-4 pb-6 dt:max-w-[560px]">
-        <p className="m-0 text-[17px] leading-6 text-[var(--ink-2)]">Strong opinions are welcome. We act on harassment, threats, scams and private details.</p>
+        <p className="m-0 text-body-l text-[var(--ink-2)]">Strong opinions are welcome. We act on harassment, threats, scams and private details.</p>
         <div role="radiogroup" aria-label="Why are you reporting this voice?" className="grid gap-3">
           {REASONS.map((r) => {
             const on = reason === r.id;
@@ -109,7 +109,7 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
                 role="radio"
                 aria-checked={on}
                 onClick={() => setReason(r.id)}
-                className={`flex min-h-14 items-center gap-3 rounded-[var(--radius-m)] border px-4 text-left text-[16px] font-bold ${on ? "border-[var(--green-text)] bg-[var(--mint)] text-[var(--ink)] shadow-[inset_0_0_0_1px_var(--green-text)]" : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--ink)]"}`}
+                className={`flex min-h-14 items-center gap-3 rounded-[var(--radius-m)] border px-4 text-left text-body-strong ${on ? "border-[var(--green-text)] bg-[var(--mint)] text-[var(--ink)] shadow-[inset_0_0_0_1px_var(--green-text)]" : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--ink)]"}`}
               >
                 <span className={`flex h-6 w-6 flex-none items-center justify-center rounded-full ${on ? "bg-[var(--green)] text-[var(--on-green)]" : "border-2 border-[var(--line-strong)]"}`}>{on ? <Icon name="check" size={16} strokeWidth={3} /> : null}</span>
                 {r.label}
@@ -119,15 +119,15 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
         </div>
         <TextField label="Add a note (optional)" multiline maxLength={280} placeholder="What should our team look at?" value={note} onChange={setNote} />
         {handle ? (
-          <label className="flex items-start gap-3 text-[15px]">
+          <label className="flex items-start gap-3 text-body">
             <input type="checkbox" className="mt-1 h-5 w-5 accent-[var(--green)]" checked={block} onChange={(e) => setBlock(e.target.checked)} />
             <span><b className="block">{`Also block @${handle}`}</b><span className="text-[var(--ink-2)]">You will not see their voices or replies.</span></span>
           </label>
         ) : null}
-        {msg ? <p role="alert" className="m-0 text-[14px] font-semibold text-[var(--danger)]">{msg}</p> : null}
+        {msg ? <p role="alert" className="m-0 text-label text-[var(--danger)]">{msg}</p> : null}
         <div className="sticky bottom-0 -mx-4 grid gap-2 bg-[var(--bg)] px-4 pb-3 pt-2 dt:static dt:mx-0 dt:px-0">
           <Button size="l" block icon="flag" disabled={!reason} loading={busy} onClick={send}>Send report</Button>
-          <p className="m-0 text-center text-[13px] text-[var(--ink-2)]">The person is not told who reported them.</p>
+          <p className="m-0 mx-auto text-center text-caption text-[var(--ink-2)]">The person is not told who reported them.</p>
         </div>
       </div>
       {dialog}
