@@ -19,12 +19,12 @@ export interface paths {
         put?: never;
         /**
          * Create my VOICES profile after WAWU ID sign-in
-         * @description Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and 3 or more categories. Creates the Voice Units balance, free allowance (10 posts) and settings. Records the referral if a code is sent. Auth: WAWU ID token; works before the VOICES profile exists.
+         * @description Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and 3 or more categories. Creates the tokens balance, free allowance (10 posts) and settings. Records the referral if a code is sent. Auth: WAWU ID token; works before the VOICES profile exists.
          */
         post: operations["createMe"];
         /**
          * Delete my account
-         * @description Starts a 14 day grace period (cancelled only by the person's own Undo, POST /me/deletion/cancel; signing in or a refreshed token never cancels it), then removes the profile, posts, clips and Voice Units balance. Unspent Voice Units are lost (they are never cashed out, V-9) and the delete screen says so plainly. Auth: signed in with a finished profile.
+         * @description Starts a 14 day grace period (cancelled only by the person's own Undo, POST /me/deletion/cancel; signing in or a refreshed token never cancels it), then removes the profile, posts, clips and tokens balance. Unspent tokens are lost (they are never cashed out, V-9) and the delete screen says so plainly. Auth: signed in with a finished profile.
          */
         delete: operations["deleteAccount"];
         options?: never;
@@ -379,7 +379,7 @@ export interface paths {
         put?: never;
         /**
          * Ask for an export of my data
-         * @description Posts, transcripts and Voice Units history. Built in the background; poll GET /me/export. Auth: signed in with a finished profile.
+         * @description Posts, transcripts and tokens history. Built in the background; poll GET /me/export. Auth: signed in with a finished profile.
          */
         post: operations["requestExport"];
         delete?: never;
@@ -477,7 +477,7 @@ export interface paths {
         };
         /**
          * Prices, costs and free posts for guests
-         * @description Landing, Onboarding and the Voice Units screens read this. Nothing is typed into a client. Auth: none (public). Rate limit: 300 per minute per IP or account.
+         * @description Landing, Onboarding and the token screens read this. Nothing is typed into a client. Auth: none (public). Rate limit: 300 per minute per IP or account.
          */
         get: operations["getPublicConfig"];
         put?: never;
@@ -1928,7 +1928,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Download my Voice Units statement (CSV)
+         * Download my tokens statement (CSV)
          * @description Not a PDF (V-10). Auth: signed in with a finished profile.
          */
         get: operations["exportLedger"];
@@ -1948,7 +1948,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * My Voice Units history
+         * My tokens history
          * @description Auth: signed in with a finished profile.
          */
         get: operations["listLedger"];
@@ -3024,6 +3024,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/text/fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fix the spelling, typos and grammar of my text (5 tokens)
+         * @description Only spelling, typos and grammar are corrected, never what the text means: the server checks every change and refuses a fix that changes more. Costs 5 tokens (config textfix.cost_milli), charged once per Idempotency-Key and only when a fix comes back: an AI failure (502 TEXT_FIX_FAILED), a refused fix and a text with nothing to fix cost nothing. The text is sent to the AI provider to be corrected and used for nothing else. The person sees the changes and chooses to use the fix or keep their own text. Auth: signed in with a finished profile. Rate limit: 10 per 10 minutes per account.
+         */
+        post: operations["fixText"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3103,7 +3123,7 @@ export interface components {
         /** @enum {string} */
         ProposalStanceKind: "SUPPORT" | "CHALLENGE";
         /** @enum {string} */
-        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "QUESTION_CLOSED" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL";
+        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL";
         /** @description The one error shape. Every non-2xx response is this. */
         Error: {
             error: components["schemas"]["ErrorBody"];
@@ -3119,35 +3139,37 @@ export interface components {
         AllowanceQuote: {
             /** @enum {string} */
             action: "POST_TEXT" | "POST_VOICE" | "REACTION" | "VOTE";
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             costMilli: number;
             freeLeft: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
         };
         /** @description What the person can do right now and what it costs. The screens show this before any tap. */
         Allowances: {
             freePostsRemaining: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
             maxVoiceSeconds: number;
+            messagesLeftToday?: number;
             freeReactionsLeftToday: number;
             freeVotesLeftToday: number;
             costs: components["schemas"]["ActionCosts"];
             extraVoiceTokens: components["schemas"]["ExtraVoiceToken"][];
         };
+        /** @description Prices in tokens (V-36). textPostMilli is the price of textPriceChars characters, charged in proportion (5 tokens per 150 characters, rounded to the hundredth). The voice prices are extraVoice30Kobo (up to voiceTier1Seconds) and extraVoice60Kobo (up to voiceMaxSeconds), in kobo: 1 token is 100 kobo. A free post covers a voice of freeVoiceSeconds or a text of freePostTextChars; longer pays in full. */
         ActionCosts: {
             freeReactionsPerDay: number;
             freeVotesPerDay: number;
             /** @description Naira in kobo (32-bit integer). */
             baseKoboPerUnit: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             textPostMilli: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             voicePostMilli: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             reactionAfterFreeMilli: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             voteAfterFreeMilli: number;
             /** @description Naira in kobo (32-bit integer). */
             minPackKobo: number;
@@ -3157,6 +3179,13 @@ export interface components {
             extraVoice60Kobo: number;
             textMaxChars: number;
             freeVoiceSeconds: number;
+            textPriceChars?: number;
+            freePostTextChars?: number;
+            messagesPerDay?: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            textFixMilli?: number;
+            voiceTier1Seconds?: number;
+            voiceMaxSeconds?: number;
         };
         /** @description deletionScheduledFor (RW9) is the day the pending deletion will run: requested-at plus 14 days; null when none is pending. */
         Me: {
@@ -3484,7 +3513,7 @@ export interface components {
             explainsVote?: boolean;
             mood?: components["schemas"]["Mood"] | null;
         };
-        /** @description Guest-readable prices and limits for Landing, Onboarding and the Voice Units screens. Same values as config, never typed into a client. */
+        /** @description Guest-readable prices and limits for Landing, Onboarding and the token screens. Same values as config, never typed into a client. */
         PublicConfig: {
             /** @enum {string} */
             currency: "NGN";
@@ -3657,11 +3686,11 @@ export interface components {
             allowances: components["schemas"]["Allowances"];
         };
         ChargeSummary: {
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             costMilli: number;
             usedFreePost: boolean;
             usedFreeDaily: boolean;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
         };
         Reply: {
@@ -3796,7 +3825,7 @@ export interface components {
             totalVotes: number;
             options: components["schemas"]["PollOption"][];
             myVote: string[] | null;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             costToVoteMilli: number;
             label?: string;
         };
@@ -4160,9 +4189,9 @@ export interface components {
             name: string;
             /** @description Naira in kobo (32-bit integer). */
             priceKobo: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             unitsMilli: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             bonusMilli: number;
             effectiveKoboPerUnit: number;
             baseKoboPerUnit: number;
@@ -4192,7 +4221,7 @@ export interface components {
             createdAt: string;
         };
         Wallet: {
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
             freePostsRemaining: number;
             freePostsUsed: number;
@@ -4209,9 +4238,9 @@ export interface components {
             id: string;
             kind: components["schemas"]["LedgerTxnKind"];
             title: string;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             deltaMilli: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceAfterMilli: number | null;
             free: boolean;
             /** Format: uuid */
@@ -4244,7 +4273,7 @@ export interface components {
             amountKobo: number;
             /** @enum {string} */
             currency: "NGN";
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             unitsMilli: number | null;
             checkoutUrl: string;
             /** Format: date-time */
@@ -4260,15 +4289,15 @@ export interface components {
             txRef: string;
             reference?: string;
             title: string;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             unitsMilli: number | null;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             bonusMilli: number | null;
             method: string | null;
             cardLast4: string | null;
             receiptNo: string | null;
             failureReason: string | null;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number | null;
             /** Format: date-time */
             createdAt: string;
@@ -4287,7 +4316,7 @@ export interface components {
             title: string;
             /** @description Naira in kobo (32-bit integer). */
             amountKobo: number;
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             unitsMilli: number | null;
             method: string | null;
             cardLast4: string | null;
@@ -4837,7 +4866,7 @@ export interface components {
         };
         AdminWallet: {
             user: components["schemas"]["Profile"];
-            /** @description Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
             freePostsRemaining: number;
             ledger: components["schemas"]["LedgerItem"][];
@@ -4895,6 +4924,29 @@ export interface components {
             reason: string | null;
             before: unknown;
             after: unknown;
+        };
+        /** @description The person's own text, 1 to 5,000 characters (counted as Unicode characters, an emoji is one). */
+        TextFixRequest: {
+            text: string;
+        };
+        /** @description One change: the words that were there, the words that replace them, and where `from` starts in the original text, in characters. */
+        TextFixChange: {
+            from: string;
+            to: string;
+            start: number;
+        };
+        TextFixCharge: {
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            costMilli: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number;
+        };
+        /** @description The corrected text and the changes, for the person to use or keep their own. changed is false (and nothing is charged) when there was nothing to fix. */
+        TextFixResult: {
+            fixedText: string;
+            changes: components["schemas"]["TextFixChange"][];
+            changed: boolean;
+            charge: components["schemas"]["TextFixCharge"];
         };
         BlockedUserPage: {
             items: components["schemas"]["BlockedUser"][];
@@ -5052,8 +5104,17 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description RATE_LIMITED */
+        /** @description RATE_LIMITED or DAILY_LIMIT_REACHED (20 messages a day) */
         E429: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description TEXT_FIX_FAILED */
+        E502: {
             headers: {
                 [name: string]: unknown;
             };
@@ -9819,6 +9880,39 @@ export interface operations {
             401: components["responses"]["E401"];
             403: components["responses"]["E403"];
             429: components["responses"]["E429"];
+        };
+    };
+    fixText: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TextFixRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TextFixResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            402: components["responses"]["E402"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+            502: components["responses"]["E502"];
+            503: components["responses"]["E503"];
         };
     };
 }

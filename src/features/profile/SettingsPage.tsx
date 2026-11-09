@@ -105,7 +105,7 @@ function ExportRow() {
   const ready = exp?.status === "READY" && exp.downloadUrl;
   return (
     <>
-      <RowButton icon="file-down" label="Export my data" detail={busy ? "Getting your data ready…" : "Your posts, transcripts and Voice Units history"} onClick={start} trailing={<span />} />
+      <RowButton icon="file-down" label="Export my data" detail={busy ? "Getting your data ready…" : "Your posts, transcripts and tokens history"} onClick={start} trailing={<span />} />
       {ready ? <a className="pf-row-item pf-dl" href={exp.downloadUrl!} download>Download my data</a> : null}
       {error ? <p className="pf-note pf-note--err pf-pad" role="alert">{error}</p> : null}
     </>
@@ -129,7 +129,7 @@ function DeleteSheet({ me, onClose, onDone }: { me: Me; onClose: () => void; onD
         <p className="pf-body">{DELETE_WORDS.grace}</p>
         <p className="pf-body"><b>{DELETE_WORDS.lost}</b></p>
         <p className="pf-body">{DELETE_WORDS.keep}</p>
-        <label className="pf-radio"><input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} />I understand my unspent Voice Units will be lost.</label>
+        <label className="pf-radio"><input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} />I understand my unspent tokens will be lost.</label>
         <TextField label={`Type @${handle} to confirm`} value={typed} onChange={setTyped} autoComplete="off" />
         {error ? <p className="pf-note pf-note--err" role="alert">{error}</p> : null}
         <Button variant="destructive" block loading={busy} disabled={!ok || !match} onClick={go}>Delete my account</Button>
@@ -215,7 +215,7 @@ function SettingsBody({ me }: { me: Me }) {
           <Link href="/settings/legal/rules" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Community rules</b></span><Icon name="chevron-right" size={20} /></Link>
           <Link href="/settings/legal/terms" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Terms of use</b></span><Icon name="chevron-right" size={20} /></Link>
           <Link href="/settings/legal/privacy" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Privacy notice</b></span><Icon name="chevron-right" size={20} /></Link>
-          <Link href="/settings/legal/refunds" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Units, refunds and expiry</b></span><Icon name="chevron-right" size={20} /></Link>
+          <Link href="/settings/legal/refunds" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Tokens, refunds and expiry</b></span><Icon name="chevron-right" size={20} /></Link>
         </div>
       </Section>
 

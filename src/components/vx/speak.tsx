@@ -1,6 +1,6 @@
 'use client';
 import { useId, useState } from 'react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { Button, IconButton } from './actions';
 import { VoicePlayer } from './conversation';
 import { useTicker } from './hooks';
@@ -60,6 +60,16 @@ export interface ComposerProps {
   cost?: string;
   costShort?: string;
   balance?: string;
+  /** How a character is counted (and the limit applied). The default counts UTF-16 units; the Write screen counts Unicode characters, as the server does. */
+  countChars?: (text: string) => number;
+  /** Something between the text box and the tags, like the Fix my text panel. */
+  extra?: ReactNode;
+  /** The Post button's words when they are not the default ("Post · 3.33 tokens"). */
+  postLabel?: string;
+  /** This post is paid although free posts remain (too long for a free post): the cost line shows. */
+  paid?: boolean;
+  /** Holds the Post button without the spinner (for example, the daily limit is reached). */
+  postDisabled?: boolean;
   onSend?: () => void;
   /** Called with the text when the person taps Post (the same tap as `onSend`). */
   onSubmit?: (text: string) => void;
@@ -80,7 +90,8 @@ export function Composer(p: ComposerProps): ReactElement {
   const tag = p.onTagChange ? p.newsTag || null : innerTag;
   const pickIntent = (v: IntentKind | null) => (p.onIntentChange ? p.onIntentChange(v) : setIntent(v));
   const pickTag = (v: ComposerTag) => (p.onTagChange ? p.onTagChange(v) : setTag(v));
-  const n = text.length;
+  const count = p.countChars || ((t: string) => t.length);
+  const n = count(text);
   const free = p.noFree ? 0 : p.freeLeft === undefined ? 7 : p.freeLeft;
   const meter = p.meter !== false;
   const intents: [IntentKind, string, 'check' | 'circle-x' | 'user'][] = [
@@ -107,17 +118,21 @@ export function Composer(p: ComposerProps): ReactElement {
           className="vx-compose__ta"
           placeholder={p.placeholder || 'Say it in your own words'}
           value={text}
-          maxLength={max}
+          maxLength={p.countChars ? undefined : max}
           rows={4}
           readOnly={p.busy}
           aria-describedby={countId}
           onChange={(e) => {
-            setText(e.target.value);
-            if (p.onChange) p.onChange(e.target.value);
+            let v = e.target.value;
+            // With a character counter of its own, the limit is applied here (a native maxLength counts an emoji as two).
+            if (p.countChars && count(v) > max) v = [...v].slice(0, max).join('');
+            setText(v);
+            if (p.onChange) p.onChange(v);
           }}
         />
         <span id={countId} className={cx('vx-compose__count', n >= max ? 'is-over' : n >= max * 0.9 && 'is-near')}>{fmt(n) + ' / ' + fmt(max)}</span>
       </div>
+      {p.extra}
       {p.showTags ? (
         <div className="vx-tagpick" role="group" aria-label="Is this news?">
           <span className="vx-caption">Is this news? Pick a tag so readers know.</span>
@@ -129,12 +144,12 @@ export function Composer(p: ComposerProps): ReactElement {
           </div>
         </div>
       ) : null}
-      {free > 0 || !meter ? null : (
+      {(free > 0 && !p.paid) || !meter ? null : (
         <div className="vx-compose__cost">
           <Icon name="coins" size={18} />
           <span>
-            This post uses <b>{p.cost || '0.5 units (₦6.90)'}</b>
-            {'. Balance: ' + (p.balance || '12.5 units') + '.'}
+            This post uses <b>{p.cost || '5 tokens (₦5)'}</b>
+            {'. Balance: ' + (p.balance || '12.5 tokens') + '.'}
           </span>
         </div>
       )}
@@ -142,14 +157,14 @@ export function Composer(p: ComposerProps): ReactElement {
         {!meter ? null : free > 0 ? <FreePosts left={free} /> : <span className="vx-caption" style={{ marginRight: 'auto' }}>Free posts used</span>}
         <Button
           icon="send"
-          disabled={n === 0}
+          disabled={n === 0 || p.postDisabled}
           loading={p.busy}
           onClick={() => {
             if (p.onSubmit) p.onSubmit(text);
             if (p.onSend) p.onSend();
           }}
         >
-          {free > 0 || !meter ? 'Post' : 'Post for ' + (p.costShort || '0.5 units')}
+          {p.postLabel || (free > 0 || !meter ? 'Post' : 'Post for ' + (p.costShort || '5 tokens'))}
         </Button>
       </div>
     </section>
@@ -216,7 +231,7 @@ export function Recorder(p: RecorderProps): ReactElement {
     hint = (
       <p className="vx-rec__hint">
         Tap to record. You have <b>{limit + ' seconds'}</b>
-        {free > 0 ? ' on a free post.' : ' for 1 unit (₦13.80).'}
+        {free > 0 ? ' on a free post.' : ' for 78 tokens (₦78).'}
       </p>
     );
   } else if (state === 'recording') {
@@ -229,7 +244,7 @@ export function Recorder(p: RecorderProps): ReactElement {
   } else {
     hint = <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>;
   }
-  const passes = p.passes || [{ name: 'Voice 30', detail: '10.5 units · ₦145' }, { name: 'Voice 60', detail: '14.5 units · ₦200' }];
+  const passes = p.passes || [{ name: 'Voice 30', detail: '78 tokens · ₦78' }, { name: 'Voice 60', detail: '100 tokens · ₦100' }];
   return (
     <section className={cx('vx-rec', p.className)} aria-label="Voice recorder">
       <div className="vx-rec__top">
@@ -278,7 +293,7 @@ export function Recorder(p: RecorderProps): ReactElement {
         <div className="vx-rec__actions">
           <Button variant="onforest" icon="rotate-ccw" onClick={() => { setT(0); setState('idle'); if (p.onRetry) p.onRetry(); }}>Re-record</Button>
           <Button variant="onforest" icon="trash-2" onClick={() => { setT(0); setState('idle'); if (p.onDiscard) p.onDiscard(); }}>Delete</Button>
-          <Button size="l" icon="send" onClick={p.onSend}>{free > 0 ? 'Send' : 'Send for 1 unit'}</Button>
+          <Button size="l" icon="send" onClick={p.onSend}>{free > 0 ? 'Send' : 'Send for 78 tokens'}</Button>
         </div>
       ) : null}
       {state === 'idle' && p.passes !== false ? (

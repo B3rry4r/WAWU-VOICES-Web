@@ -1,7 +1,8 @@
 import { clock, date, dateTime, dayKey, dayMonth } from "@/lib/format/date";
 import type { ActionCosts, LedgerItem, Payment, UnitTier } from "@/lib/api/units";
+import { tokensLabel } from "@/lib/shared/text-price";
 
-/* Display helpers for money and units. Money is kobo, units are milli-units (1 unit = 1000), never floats on the wire. */
+/* Display helpers for money and tokens. Money is kobo, tokens are milli-tokens (1 token = 1000), never floats on the wire. */
 
 const MINUS = "−"; // a minus sign, not an em-dash
 
@@ -16,17 +17,17 @@ export function nairaExact(kobo: number): string {
   return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-/** Milli-units as a count: 12500 -> "12.5", 55000 -> "55", 500 -> "0.5". */
+/** Milli-tokens as a count, up to 2 decimals: 12500 -> "12.5", 732000 -> "732", 16670 -> "16.67". */
 export function units(milli: number): string {
-  return (milli / 1000).toLocaleString("en-NG", { maximumFractionDigits: 3 });
+  return (milli < 0 ? "-" : "") + tokensLabel(Math.abs(milli));
 }
 
-/** "1 unit", "0.5 units", "12.5 units", "0 units": plural for every value except exactly 1. */
+/** "1 token", "0.5 tokens", "16.67 tokens", "0 tokens": plural for every value except exactly 1. */
 export function unitsLabel(milli: number): string {
-  return `${units(milli)} ${Math.abs(milli) === 1000 ? "unit" : "units"}`;
+  return `${units(milli)} ${Math.abs(milli) === 1000 ? "token" : "tokens"}`;
 }
 
-/** What an amount of units is worth in naira at the base rate, for display only: 500 milli at 1380 kobo -> "₦6.90". */
+/** What an amount of tokens is worth in naira at the base rate, for display only: 5000 milli at 100 kobo -> "₦5". */
 export function nairaOfUnits(milli: number, baseKoboPerUnit: number): string {
   return naira(Math.round((milli * baseKoboPerUnit) / 1000));
 }
@@ -65,7 +66,7 @@ export function whenLong(iso: string, now: Date = new Date()): string {
   return `${dayLabel(iso, now)}, ${clockLagos(new Date(iso))}`;
 }
 
-/** The right-hand figure of a history row: "Free", "₦200" (an extra voice token is naira, not units), "-0.2" or "+26". */
+/** The right-hand figure of a history row: "Free", "₦200" (an extra voice token is naira, not tokens), "-0.2" or "+366". */
 export function ledgerFigure(i: LedgerItem): { text: string; tone: "free" | "plus" | "plain" } {
   if (i.free) return { text: "Free", tone: "free" };
   if (i.deltaMilli === 0 && i.amountKobo !== null) return { text: naira(i.amountKobo), tone: "plain" };
@@ -90,7 +91,7 @@ export function methodLabel(p: Pick<Payment, "method" | "cardLast4">): string | 
   return p.method ? p.method : null;
 }
 
-/** The pack line on a result: "Buzz, 55 units (5 bonus)". Tokens keep their own title. */
+/** The pack line on a result: "Standard, 732 tokens". An extra voice token keeps its own title. */
 export function packLine(p: Payment): string {
   if (p.kind !== "UNITS" || p.unitsMilli === null) return p.title;
   const name = p.title.replace(/ pack$/i, "");
@@ -112,9 +113,13 @@ export function smallestPack(tiers: UnitTier[]): UnitTier | undefined {
 }
 
 export function costRows(c: ActionCosts): Array<{ label: string; value: string }> {
+  const per = c.textPriceChars ?? 150;
+  const t1 = c.voiceTier1Seconds ?? 30;
+  const max = c.voiceMaxSeconds ?? 60;
   return [
-    { label: "Text answer or reply", value: `${unitsLabel(c.textPostMilli)} (${nairaOfUnits(c.textPostMilli, c.baseKoboPerUnit)})` },
-    { label: `Voice, up to ${c.freeVoiceSeconds} seconds`, value: `${unitsLabel(c.voicePostMilli)} (${nairaOfUnits(c.voicePostMilli, c.baseKoboPerUnit)})` },
+    { label: "Text", value: `${unitsLabel(c.textPostMilli)} per ${per} characters` },
+    { label: `Voice, up to ${t1} seconds`, value: unitsLabel(c.extraVoice30Kobo * 10) },
+    { label: `Voice, ${t1 + 1} to ${max} seconds`, value: unitsLabel(c.extraVoice60Kobo * 10) },
     { label: `Reaction after ${c.freeReactionsPerDay} free a day`, value: unitsLabel(c.reactionAfterFreeMilli) },
     { label: `Vote after ${c.freeVotesPerDay} free a day`, value: unitsLabel(c.voteAfterFreeMilli) },
   ];

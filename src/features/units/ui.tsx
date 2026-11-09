@@ -48,9 +48,9 @@ export function ErrorBlock({ error, onRetry }: { error: unknown; onRetry: () => 
   return <Banner tone="danger" title="Could not load this" action="Try again" actionIcon="refresh-cw" onAction={onRetry}>{readErrorText(error)}</Banner>;
 }
 
-/** Signed out: Voice Units belong to an account. */
+/** Signed out: tokens belong to an account. */
 export function SignInNeeded() {
-  return <EmptyState icon="coins" title="Sign in to see your Voice Units" body="Voice Units belong to your VOICES account." />;
+  return <EmptyState icon="coins" title="Sign in to see your tokens" body="Tokens belong to your VOICES account." />;
 }
 
 export function BackRow({ label, onClick }: { label: string; onClick: () => void }) {

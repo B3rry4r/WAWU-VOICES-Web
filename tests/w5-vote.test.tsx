@@ -55,11 +55,11 @@ async function pickAndConfirm() {
 }
 
 describe("helpers", () => {
-  it("says units and stages", () => {
-    expect(unitsText(200)).toBe("0.2 units");
-    expect(unitsText(0)).toBe("0 units");
-    expect(unitsText(1000)).toBe("1 unit");
-    expect(unitsText(12500)).toBe("12.5 units");
+  it("says tokens and stages", () => {
+    expect(unitsText(200)).toBe("0.2 tokens");
+    expect(unitsText(0)).toBe("0 tokens");
+    expect(unitsText(1000)).toBe("1 token");
+    expect(unitsText(12500)).toBe("12.5 tokens");
     expect(stageHref("q1", "vote")).toBe("/q/q1/vote");
     expect(stageHref("q1", "next")).toBe("/q/q1/next");
     expect(updatedAgo("2026-11-05T10:00:00Z", Date.parse("2026-11-05T12:00:00Z"))).toBe("2 hours ago");
@@ -70,8 +70,8 @@ describe("helpers", () => {
     expect(pickPoll([closed])?.id).toBe("c1");
   });
   it("reads the cost line from the allowance and config, never from the page", () => {
-    expect(costLines(poll(), allowance(), null).confirm).toBe("Free: you have 3 free votes left today. After that a vote uses 0.2 units.");
-    expect(costLines(poll({ costToVoteMilli: 200 }), allowance({ freeVotesLeftToday: 0, balanceMilli: 0 }), null).confirm).toBe("This vote uses 0.2 units. You have 0 units.");
+    expect(costLines(poll(), allowance(), null).confirm).toBe("Free: you have 3 free votes left today. After that a vote uses 0.2 tokens.");
+    expect(costLines(poll({ costToVoteMilli: 200 }), allowance({ freeVotesLeftToday: 0, balanceMilli: 0 }), null).confirm).toBe("This vote uses 0.2 tokens. You have 0 tokens.");
     expect(costLines(poll({ publicInterest: true }), allowance(), null).confirm).toContain("always free");
   });
 });
@@ -92,7 +92,7 @@ describe("PollCard: the vote flow", () => {
   });
 
   it("402: a paid vote that is refused shows the error, never a result, and nothing is charged", async () => {
-    routes = (url, init) => (url.endsWith("/votes") && init.method === "POST" ? json({ error: { code: "INSUFFICIENT_UNITS", message: "You need 0.2 unit to vote.", details: { costMilli: 200, balanceMilli: 0, minPackKobo: 13800 } } }, 402) : null);
+    routes = (url, init) => (url.endsWith("/votes") && init.method === "POST" ? json({ error: { code: "INSUFFICIENT_UNITS", message: "You need 0.2 token to vote.", details: { costMilli: 200, balanceMilli: 0, minPackKobo: 13800 } } }, 402) : null);
     const onVoted = vi.fn();
     render(<PollCard poll={poll({ costToVoteMilli: 200 })} signedIn allowance={allowance({ freeVotesLeftToday: 0 })} config={null} onVoted={onVoted} />);
     await pickAndConfirm();
@@ -104,10 +104,10 @@ describe("PollCard: the vote flow", () => {
   });
 
   it("402 shows the API's own message and that nothing was charged", async () => {
-    routes = (url, init) => (url.endsWith("/votes") && init.method === "POST" ? json({ error: { code: "INSUFFICIENT_UNITS", message: "You need 0.2 unit to vote." } }, 402) : null);
+    routes = (url, init) => (url.endsWith("/votes") && init.method === "POST" ? json({ error: { code: "INSUFFICIENT_UNITS", message: "You need 0.2 token to vote." } }, 402) : null);
     render(<PollCard poll={poll({ costToVoteMilli: 200 })} signedIn allowance={allowance({ freeVotesLeftToday: 0 })} config={null} />);
     await pickAndConfirm();
-    expect(await screen.findByText("You need 0.2 unit to vote. Nothing was charged.")).toBeTruthy();
+    expect(await screen.findByText("You need 0.2 token to vote. Nothing was charged.")).toBeTruthy();
   });
 
   it("409 REQUEST_IN_PROGRESS says the vote is still being sent and keeps the key", async () => {

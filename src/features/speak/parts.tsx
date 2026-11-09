@@ -5,7 +5,8 @@ import { Button, FreePosts, Icon, IconButton } from "@/components/vx";
 import { clock } from "@/components/vx/helpers";
 import { barHeights } from "@/lib/audio-ref/player";
 import type { ExtraVoiceOffer } from "@/lib/api/speak";
-import { durationLabel, naira } from "./logic";
+import { tokensLabel } from "@/lib/shared/text-price";
+import { durationLabel } from "./logic";
 
 /** Phone app bar: close, "Speak", "Today's question" (the Record boards). Hidden on desktop, where the page has its own header. */
 export function PhoneBar({ onClose, sub }: { onClose: () => void; sub: string }) {
@@ -60,24 +61,6 @@ export function RecordStage(p: {
 
 export function Pill({ left, total }: { left: number; total: number }) {
   return <FreePosts left={left} total={total} pill />;
-}
-
-/** "Need more time?" panel inside the idle recorder. One button per offer, prices from the API. */
-export function PassPanel({ offers, onPick }: { offers: ExtraVoiceOffer[]; onPick: (o: ExtraVoiceOffer) => void }) {
-  if (offers.length === 0) return null;
-  return (
-    <div className="vx-rec__more">
-      <p>Need more time?</p>
-      <div className="vx-rec__pass">
-        {[...offers].sort((a, b) => a.maxSeconds - b.maxSeconds).map((o) => (
-          <Button key={o.kind} variant="onforest" onClick={() => onPick(o)}>
-            {`Up to ${durationLabel(o.maxSeconds)}`}
-            <small>{`${naira(o.priceKobo)} for one message`}</small>
-          </Button>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 const SPEEDS = [1, 1.5, 2];
@@ -149,10 +132,10 @@ export function RecordingTimeCard({ freeLeft, total, freeSeconds, offers }: { fr
       <dl className="sp-card__rows">
         <div><dt>Free post</dt><dd>{freeSeconds} seconds</dd></div>
         {[...offers].sort((a, b) => a.maxSeconds - b.maxSeconds).map((o) => (
-          <div key={o.kind}><dt>{`Extra voice, ${durationLabel(o.maxSeconds)}`}</dt><dd>{naira(o.priceKobo)}</dd></div>
+          <div key={o.kind}><dt>{`Voice, up to ${durationLabel(o.maxSeconds)}`}</dt><dd>{`${tokensLabel(o.priceKobo * 10)} tokens`}</dd></div>
         ))}
       </dl>
-      <p className="sp-card__fine">{`Extra time is a one-off token for one message, not a subscription. Your first ${total} posts stay free.`}</p>
+      <p className="sp-card__fine">{`Charged when you send. A recording you cancel costs nothing. Your first ${total} posts stay free.`}</p>
     </section>
   );
 }

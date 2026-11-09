@@ -41,11 +41,11 @@ function Aside({ me }: { me: Me }) {
   const a = me.allowances;
   return (
     <>
-      <section className="pf-panel" aria-label="Voice Units">
-        <h2 className="vx-eyebrow pf-eyebrow">Voice Units</h2>
-        <p className="pf-big"><b>{unitsFigure(a.balanceMilli)}</b> <span>{a.balanceMilli === 1000 ? "Voice Unit" : "Voice Units"}</span></p>
+      <section className="pf-panel" aria-label="Tokens">
+        <h2 className="vx-eyebrow pf-eyebrow">Tokens</h2>
+        <p className="pf-big"><b>{unitsFigure(a.balanceMilli)}</b> <span>{a.balanceMilli === 1000 ? "token" : "tokens"}</span></p>
         <FreePosts left={a.freePostsRemaining} />
-        <Link href="/units" className="vx-link pf-panel__link">Open Voice Units</Link>
+        <Link href="/units" className="vx-link pf-panel__link">Open your tokens</Link>
       </section>
       <section className="pf-panel" aria-label="Your referral code">
         <h2 className="vx-eyebrow pf-eyebrow">Your referral code</h2>
@@ -92,7 +92,7 @@ export function MePage() {
       />
       <div className="pf-phone-only">
         <div className="pf-linkpanel">
-          <LinkRow href="/units" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} ${a.balanceMilli === 1000 ? "unit" : "units"} · ${a.freePostsRemaining} free posts left`}>Voice Units</LinkRow>
+          <LinkRow href="/units" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} ${a.balanceMilli === 1000 ? "token" : "tokens"} · ${a.freePostsRemaining} free posts left`}>Tokens</LinkRow>
           <LinkRow href="/settings" icon="settings">Settings</LinkRow>
           <LinkRow href="/settings/legal/rules" icon="shield-check">Community rules</LinkRow>
         </div>

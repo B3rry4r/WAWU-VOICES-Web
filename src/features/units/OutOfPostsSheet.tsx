@@ -9,7 +9,7 @@ import { useDesktop, useLoad, useSignedIn } from "./hooks";
 import { ErrorBlock, LoadingBlock, SignInNeeded } from "./ui";
 
 /** "Out of free posts" (V-19). The Write screen opens this on a 402 FREE_POSTS_EXHAUSTED or INSUFFICIENT_UNITS, after saving the
- *  draft with saveDraft(). The draft stays in this browser and posts after a purchase; "Get Voice Units" marks it as waiting. */
+ *  draft with saveDraft(). The draft stays in this browser and posts after a purchase; "Get tokens" marks it as waiting. */
 export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { questionId: string; onKeep: () => void; variant?: "sheet" | "dialog" }) {
   const signedIn = useSignedIn();
   const desktop = useDesktop();
@@ -27,18 +27,18 @@ export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { quest
   useEffect(() => setDraft(getDraft(questionId)?.body ?? null), [questionId]);
 
   if (signedIn === false) {
-    return <Sheet title="Voice Units" className={rest} variant={variant} onClose={onKeep}><SignInNeeded /></Sheet>;
+    return <Sheet title="Tokens" className={rest} variant={variant} onClose={onKeep}><SignInNeeded /></Sheet>;
   }
   if (signedIn === null || result.state === "loading") {
     return (
-      <Sheet title="Voice Units" className={rest} variant={variant} onClose={onKeep}>
+      <Sheet title="Tokens" className={rest} variant={variant} onClose={onKeep}>
         <LoadingBlock rows={1} />
       </Sheet>
     );
   }
   if (result.state === "error") {
     return (
-      <Sheet title="Voice Units" className={rest} variant={variant} onClose={onKeep}>
+      <Sheet title="Tokens" className={rest} variant={variant} onClose={onKeep}>
         <ErrorBlock error={result.error} onRetry={reload} />
       </Sheet>
     );
@@ -59,7 +59,7 @@ export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { quest
       footer={
         <div className="vx-sheet__foot">
           <Button size="l" block icon="coins" href={href} onClick={() => setAwaiting(questionId, true)}>
-            {min ? `Get Voice Units from ${naira(min.priceKobo)}` : "Get Voice Units"}
+            {min ? `Get tokens from ${naira(min.priceKobo)}` : "Get tokens"}
           </Button>
           <Button size="l" block variant="secondary" onClick={onKeep}>
             Keep my draft for later
@@ -75,7 +75,7 @@ export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { quest
         </div>
       ) : null}
       <p className="m-0 text-body text-ink-2">
-        To post it, get Voice Units. A text post uses {unitsLabel(c.textPostMilli)} ({nairaOfUnits(c.textPostMilli, c.baseKoboPerUnit)}).
+        To post it, get tokens. Text costs {unitsLabel(c.textPostMilli)} ({nairaOfUnits(c.textPostMilli, c.baseKoboPerUnit)}) for every {c.textPriceChars ?? 150} characters.
         {min ? ` The smallest pack is ${unitsLabel(min.unitsMilli)} for ${naira(min.priceKobo)}.` : ""}
       </p>
     </Sheet>

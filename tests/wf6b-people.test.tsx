@@ -179,15 +179,15 @@ describe("RX5 and B-N1: /s counts, poll title, updated just now", () => {
 });
 
 describe("B-N4: no free post line for a person with none left", () => {
-  const allow = (free: number, balanceMilli: number) => ({ freePostsRemaining: free, balanceMilli, maxVoiceSeconds: 10, freeReactionsLeftToday: 0, freeVotesLeftToday: 0, costs: { voicePostMilli: 1000, textPostMilli: 500 }, extraVoiceTokens: [] }) as never;
+  const allow = (free: number, balanceMilli: number) => ({ freePostsRemaining: free, balanceMilli, maxVoiceSeconds: 10, freeReactionsLeftToday: 0, freeVotesLeftToday: 0, costs: { voicePostMilli: 78000, textPostMilli: 5000, extraVoice30Kobo: 7800, extraVoice60Kobo: 10000 }, extraVoiceTokens: [] }) as never;
   it("with free posts it says so", () => {
-    expect(postingLine(10, allow(3, 0))).toBe("You have 10 seconds on a free post. Reading and listening are always free.");
+    expect(postingLine(60, allow(3, 0))).toBe("You have 10 seconds on a free post. Longer is charged when you send. Reading and listening are always free.");
     expect(postingLine(10, null)).toContain("on a free post");
   });
   it("with none left it says what they have: units, or Out of free posts", () => {
-    expect(postingLine(10, allow(0, 4500))).toBe("You have 4.5 units. A voice post of up to 10 seconds uses 1 unit. Reading and listening are always free.");
-    expect(postingLine(10, allow(0, 0))).toBe("Out of free posts. Get Voice Units to post. Reading and listening are always free.");
-    expect(postingLine(10, allow(0, 4500))).not.toContain("free post.");
+    expect(postingLine(60, allow(0, 100000))).toBe("You have 100 tokens. A voice message of up to 30 seconds is 78 tokens, up to 60 seconds is 100 tokens. Reading and listening are always free.");
+    expect(postingLine(10, allow(0, 0))).toBe("Out of free posts. Get tokens to post. Reading and listening are always free.");
+    expect(postingLine(60, allow(0, 100000))).not.toContain("free post.");
   });
 });
 

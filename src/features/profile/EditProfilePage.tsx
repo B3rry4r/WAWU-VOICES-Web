@@ -219,7 +219,7 @@ function Form({ me, categories, followed0 }: { me: Me; categories: Category[]; f
           </div>
           {clip ? <ClipPlayer clip={clip} label="Voice Card" /> : null}
           <p className="pf-hint">{`${voicesOf(profile)} ${voicesOf(profile) === 1 ? "voice" : "voices"} · ${countText(me.reactionsReceived, "reaction")} · ${me.savedCount} saved`}</p>
-          <p className="pf-hint">Your units, free posts and referral code stay private. Only you see them.</p>
+          <p className="pf-hint">Your tokens, free posts and referral code stay private. Only you see them.</p>
         </section>
       </Rail>
     </>

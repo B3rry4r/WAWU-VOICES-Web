@@ -14,7 +14,7 @@ import { failText, isOutOfPosts, outOfPostsHref, unitsText, useClipPlayback, uui
 function outOfReactionsText(e: unknown): string {
   const d = (e instanceof ApiError ? e.details : undefined) as { costMilli?: number; balanceMilli?: number } | undefined;
   const cost = typeof d?.costMilli === "number" ? ` Another reaction costs ${unitsText(d.costMilli)}${typeof d.balanceMilli === "number" ? `, and your balance is ${unitsText(d.balanceMilli)}` : ""}.` : "";
-  return `You have used your free reactions today.${cost} Get Voice Units to react.`;
+  return `You have used your free reactions today.${cost} Get tokens to react.`;
 }
 
 const kindOf = (name: string): ReactionKind => name.toUpperCase().replace(/[ -]/g, "_") as ReactionKind;
