@@ -52,7 +52,7 @@ export function WriteScreen({ qid }: { qid: string }) {
   const close = replyTo ? `/q/${qid}/a/${replyTo}` : `/q/${qid}`;
   const header = <><AppBar title={replyTo ? "Your reply" : "Your answer"} sub="Today’s question" close={close} /></>;
   if (signedIn === false) {
-    return <>{header}<div className="mt-4"><SignInNote>Reading and listening are free. Sign in to post your answer.</SignInNote></div></>;
+    return <>{header}<div className="mt-4"><SignInNote from={`/q/${qid}/write${sp.toString() ? `?${sp.toString()}` : ""}`}>Reading and listening are free. Sign in to post your answer.</SignInNote></div></>;
   }
   if (loadErr) {
     const gone = loadErr instanceof ApiError && loadErr.status === 404;
