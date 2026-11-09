@@ -6,16 +6,12 @@ type S = components["schemas"];
 export type Allowances = S["Allowances"];
 export type ExtraVoiceToken = S["ExtraVoiceToken"];
 export type ExtraVoiceOffer = S["ExtraVoiceOffer"];
-export type ExtraVoiceTokenKind = S["ExtraVoiceTokenKind"];
 export type PublicConfig = S["PublicConfig"];
 export type VoiceClip = S["VoiceClip"];
 export type VoiceUpload = S["VoiceUpload"];
 export type PostReceipt = S["PostReceipt"];
-export type Payment = S["Payment"];
-export type PaymentInit = S["PaymentInit"];
 export type Question = S["Question"];
 export type TiersResponse = S["TiersResponse"];
-export type PaymentMethod = "card" | "banktransfer" | "ussd";
 
 const guestHeaders = () => {
   const g = guestId();
@@ -42,7 +38,3 @@ export const createVoiceAnswer = (questionId: string, clipId: string, key: strin
     body: { kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}), ...(mood ? { mood } : {}) },
   });
 
-export const initExtraVoicePayment = (tokenKind: ExtraVoiceTokenKind, method: PaymentMethod, returnPath: string, key: string) =>
-  apiFetch<PaymentInit>("/payments", { method: "POST", authed: true, idempotencyKey: key, body: { kind: "EXTRA_VOICE", tokenKind, method, returnPath } });
-export const verifyPayment = (paymentId: string, providerTxId: string | undefined, key: string) =>
-  apiFetch<Payment>(`/payments/${paymentId}/verify`, { method: "POST", authed: true, idempotencyKey: key, body: providerTxId ? { providerTxId } : {} });

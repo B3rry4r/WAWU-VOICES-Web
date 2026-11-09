@@ -18,12 +18,13 @@ export interface UnitTier {
 
 /* Reference tiers drawn in the design. The real ones come from the API (PRICES.md). */
 export const TIERS: UnitTier[] = [
-  { id: 'spark', name: 'Spark', price: 138, units: 10, bonus: 0 },
-  { id: 'chat', name: 'Chat', price: 345, units: 26, bonus: 1 },
-  { id: 'buzz', name: 'Buzz', price: 690, units: 55, bonus: 5 },
-  { id: 'loud', name: 'Loud', price: 1380, units: 115, bonus: 15 },
-  { id: 'mega', name: 'Mega', price: 3450, units: 310, bonus: 60 },
-  { id: 'boss', name: 'Boss', price: 6900, units: 650, bonus: 150 },
+  { id: 'entry', name: 'Entry', price: 183, units: 183, bonus: 0 },
+  { id: 'starter', name: 'Starter', price: 366, units: 366, bonus: 0 },
+  { id: 'standard', name: 'Standard', price: 732, units: 732, bonus: 0 },
+  { id: 'plus', name: 'Plus', price: 1464, units: 1464, bonus: 0 },
+  { id: 'pro', name: 'Pro', price: 3660, units: 3660, bonus: 0 },
+  { id: 'premium', name: 'Premium', price: 7320, units: 7320, bonus: 0 },
+  { id: 'ultimate', name: 'Ultimate', price: 14640, units: 14640, bonus: 0 },
 ];
 
 function naira(n: number): string {
@@ -36,7 +37,7 @@ export interface PackOption {
   name: string;
   units: string;
   price: string;
-  per: string;
+  per?: string;
   bonus?: string;
 }
 
@@ -45,9 +46,11 @@ export interface PackPickerProps {
   selected: string;
   onSelect: (id: string) => void;
   className?: string;
+  /** The Get tokens board: name, then the price large, then "183 tokens". Without it, the tokens are the large figure. */
+  priceFirst?: boolean;
 }
 
-/** The radio group of unit packs. Arrow keys move between them (the chosen one is the only tab stop). */
+/** The radio group of token packs. Arrow keys move between them (the chosen one is the only tab stop). */
 export function PackPicker(p: PackPickerProps): ReactElement {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const at = Math.max(0, p.packs.findIndex((x) => x.id === p.selected));
@@ -60,7 +63,7 @@ export function PackPicker(p: PackPickerProps): ReactElement {
     refs.current[n]?.focus();
   }
   return (
-    <div className={cx('vx-tiers', p.className)} role="radiogroup" aria-label="Unit packs">
+    <div className={cx('vx-tiers', p.priceFirst && 'vx-tiers--price', p.className)} role="radiogroup" aria-label="Token packs">
       {p.packs.map((x, i) => {
         const on = x.id === p.selected;
         return (
@@ -76,9 +79,18 @@ export function PackPicker(p: PackPickerProps): ReactElement {
             onKeyDown={key}
           >
             <span className="vx-tier__name">{x.name}</span>
-            <span className="vx-tier__units">{x.units}<small>units</small></span>
-            <span className="vx-tier__price">{x.price}</span>
-            <span className="vx-tier__per">{x.per}</span>
+            {p.priceFirst ? (
+              <>
+                <span className="vx-tier__price">{x.price}</span>
+                <span className="vx-tier__units">{x.units + (x.units === '1' ? ' token' : ' tokens')}</span>
+              </>
+            ) : (
+              <>
+                <span className="vx-tier__units">{x.units}<small>tokens</small></span>
+                <span className="vx-tier__price">{x.price}</span>
+                <span className="vx-tier__per">{x.per}</span>
+              </>
+            )}
             {x.bonus ? <span className="vx-tier__bonus"><Badge tone="sun">{x.bonus}</Badge></span> : null}
             {on ? <span className="vx-tier__check" aria-hidden="true"><Icon name="check" size={14} strokeWidth={3.5} /></span> : null}
           </button>
@@ -108,7 +120,7 @@ export interface BuyUnitsSheetProps {
   methods?: PayMethodOption[];
   method?: string;
   onMethod?: (id: string) => void;
-  /** The pay button's words (with the price). Defaults to "Pay ₦X for N units" from `tiers`. */
+  /** The pay button's words (with the price). Defaults to "Pay ₦X for N tokens" from `tiers`. */
   payLabel?: string;
   onPay?: (packId: string, method: string) => void;
   busy?: boolean;
@@ -126,10 +138,10 @@ export function BuyUnitsSheet(p: BuyUnitsSheetProps): ReactElement {
     name: x.name,
     units: fmt(x.units),
     price: naira(x.price),
-    per: '₦' + (x.price / x.units).toFixed(2) + ' a unit',
+    per: '₦' + (x.price / x.units).toFixed(2) + ' a token',
     bonus: x.bonus ? '+' + x.bonus + ' bonus' : undefined,
   }));
-  const [innerSel, setSel] = useState(p.selected || 'buzz');
+  const [innerSel, setSel] = useState(p.selected || 'standard');
   const [innerMethod, setMethod] = useState('card');
   const sel = p.onSelect ? p.selected || packs[0]?.id || '' : innerSel;
   const method = p.onMethod ? p.method || 'card' : innerMethod;
@@ -140,7 +152,7 @@ export function BuyUnitsSheet(p: BuyUnitsSheetProps): ReactElement {
       {p.paywall ? (
         <div className="vx-paywall" role="status">
           <Icon name="triangle-alert" size={20} />
-          <span>{p.paywall === true ? 'You have used your 10 free posts. Get Voice Units from ₦138. Your draft is saved and posts when your units arrive.' : p.paywall}</span>
+          <span>{p.paywall === true ? 'You have used your 10 free posts. Get tokens from ₦183. Your draft is saved and posts when your tokens arrive.' : p.paywall}</span>
         </div>
       ) : null}
       <PackPicker packs={packs} selected={sel} onSelect={(id) => (p.onSelect ? p.onSelect(id) : setSel(id))} />
@@ -166,13 +178,13 @@ export function BuyUnitsSheet(p: BuyUnitsSheetProps): ReactElement {
   const foot = (
     <div className="vx-sheet__foot">
       <Button size="l" block icon="lock" loading={p.busy} onClick={() => p.onPay && p.onPay(sel, method)}>
-        {p.payLabel || (t ? 'Pay ' + naira(t.price) + ' for ' + fmt(t.units) + ' units' : 'Pay')}
+        {p.payLabel || (t ? 'Pay ' + naira(t.price) + ' for ' + fmt(t.units) + ' tokens' : 'Pay')}
       </Button>
-      <p className="vx-sheet__fine">You see the full price before you pay. Units cannot be cashed out or sent to others. Reading, listening, liking and sharing stay free.</p>
+      <p className="vx-sheet__fine">You see the full price before you pay. Tokens cannot be cashed out or sent to others. Reading, listening, liking and sharing stay free.</p>
     </div>
   );
   return (
-    <Sheet title="Get Voice Units" subtitle={p.balance ? 'Balance: ' + p.balance : undefined} variant={p.variant} inline={p.inline} footer={foot} onClose={p.onClose}>
+    <Sheet title="Get tokens" subtitle={p.balance ? 'Balance: ' + p.balance : undefined} variant={p.variant} inline={p.inline} footer={foot} onClose={p.onClose}>
       {content}
     </Sheet>
   );

@@ -9,7 +9,7 @@ export type DraftOutcome =
   | { status: "kept"; questionId: string; message: string }
   | { status: "retry"; questionId: string };
 
-/** After a Voice Units purchase succeeds: post THE draft this purchase was made for, once.
+/** After a tokens purchase succeeds: post THE draft this purchase was made for, once.
  *  - No draft id (a token purchase, a refresh of an old page whose attempt is gone): nothing is posted.
  *  - A draft that already posted for this payment (another tab won): reported as posted, never posted twice.
  *  - A draft older than 24 hours is only offered (`force` posts it when the person taps the offer).

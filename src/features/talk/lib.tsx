@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { countChars, textCostMilli, tokensLabel } from "@/lib/shared/text-price";
+import type { Allowances } from "@/lib/api/talk";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Banner, Icon, IconButton, NotFoundState } from "@/components/vx";
@@ -52,6 +54,7 @@ export function failText(e: unknown): string {
   if (!(e instanceof ApiError)) return "Something went wrong. Try again in a moment.";
   if (e.status === 0) return "You are offline. Check your connection and try again.";
   switch (e.code) {
+    case "DAILY_LIMIT_REACHED": return "You have sent the most messages one day allows. Come back after midnight.";
     case "RATE_LIMITED": return "You are going fast. Wait a moment and try again.";
     case "QUESTION_CLOSED": return "This question has closed.";
     case "ACCOUNT_SUSPENDED": return "Your account is suspended, so you cannot post right now.";
@@ -100,14 +103,31 @@ export function outOfPostsHref(questionId: string): string {
   return `/units/out-of-posts?question=${encodeURIComponent(questionId)}`;
 }
 
-/** 402 codes that mean "no free post and not enough units". */
+/** 402 codes that mean "no free post and not enough tokens". */
 export function isOutOfPosts(e: unknown): boolean {
   return e instanceof ApiError && e.status === 402 && (e.code === "FREE_POSTS_EXHAUSTED" || e.code === "INSUFFICIENT_UNITS");
 }
 
+/** Tokens as the screens say them: "5 tokens", "1 token", "3.33 tokens" (up to 2 decimals). */
 export function unitsText(milli: number): string {
-  const u = milli / 1000;
-  return `${Number.isInteger(u) ? u : u.toFixed(1)} ${u === 1 ? "unit" : "units"}`;
+  return `${tokensLabel(milli)} ${milli === 1000 ? "token" : "tokens"}`;
+}
+/** What this text costs to post, with the same character count and rounding as the server (LCH-10). */
+export function postPrice(text: string, allow: Allowances) {
+  const c = allow.costs;
+  const chars = countChars(text.trim());
+  const cost = textCostMilli(chars, c.textPostMilli, c.textPriceChars ?? 150);
+  const covered = allow.freePostsRemaining > 0 && chars <= (c.freePostTextChars ?? 500);
+  return {
+    chars,
+    cost,
+    covered,
+    /** Free posts remain, but this text is too long for one: it pays in full. */
+    paid: allow.freePostsRemaining > 0 && !covered,
+    text: `${unitsText(cost)} (${nairaOfMilli(cost, c.baseKoboPerUnit)})`,
+    short: unitsText(cost),
+    label: covered || chars === 0 ? "Post" : `Post · ${unitsText(cost)}`,
+  };
 }
 export function nairaOfMilli(milli: number, baseKoboPerUnit: number): string {
   const kobo = (milli * baseKoboPerUnit) / 1000;

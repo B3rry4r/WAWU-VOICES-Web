@@ -14,7 +14,7 @@ const MAX_AGE_MS = 20 * 60 * 1000; // under the 30 minute payment expiry, well i
 export interface Attempt {
   key: string;
   createdAt: number;
-  /** A Voice Units screen the person came from, a path inside VOICES (never an address). */
+  /** A tokens screen the person came from, a path inside VOICES (never an address). */
   from?: string;
   /** The question whose held draft this purchase is for. Only this draft may post when this purchase succeeds. */
   draftQuestionId?: string;
@@ -81,8 +81,8 @@ export function safePath(p: string | null | undefined): string | undefined {
   return p;
 }
 
-export function choiceId(spec: { kind: "UNITS"; tierId: string; method: string } | { kind: "EXTRA_VOICE"; tokenKind: string }): string {
-  return spec.kind === "UNITS" ? `UNITS:${spec.tierId}:${spec.method}` : `EXTRA_VOICE:${spec.tokenKind}`;
+export function choiceId(spec: { kind: "UNITS"; tierId: string; method?: string } | { kind: "EXTRA_VOICE"; tokenKind: string }): string {
+  return spec.kind === "UNITS" ? `UNITS:${spec.tierId}:${spec.method ?? "any"}` : `EXTRA_VOICE:${spec.tokenKind}`;
 }
 
 function fresh(a: Attempt, now: number): boolean {

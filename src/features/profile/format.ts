@@ -1,3 +1,4 @@
+import { tokensLabel } from "@/lib/shared/text-price";
 import type { Profile } from "@/lib/api/profile";
 
 import { dayMonth, monthYear } from "@/lib/format/date";
@@ -22,10 +23,9 @@ export function ago(iso: string, now: number = Date.now()): string {
   return dayMonth(iso);
 }
 
-/** Milli-units to the figure shown: 12500 -> "12.5", 12000 -> "12", 100 -> "0.1". */
+/** Milli-tokens to the figure shown: 12500 -> "12.5", 12000 -> "12", 100 -> "0.1", 16670 -> "16.67". */
 export function unitsFigure(milli: number): string {
-  const v = Math.round(milli / 100) / 10;
-  return String(v);
+  return tokensLabel(milli);
 }
 
 /** The words the screen uses for a clock given as minutes after midnight, e.g. 480 -> "8am", 510 -> "8:30am". */

@@ -25,12 +25,12 @@ describe("Me", () => {
     render(<MePage />);
     expect(await screen.findByText("Sign in to see this")).toBeTruthy();
   });
-  it("shows the figures from the API and no link to Voice Units until it is built", async () => {
+  it("shows the figures from the API and no link to tokens until it is built", async () => {
     signIn(); mockApi(meRoutes);
     render(<MePage />);
     expect(await screen.findByText("@ada.okafor")).toBeTruthy();
     expect(screen.getByText("1,240")).toBeTruthy(); // reactions received
-    expect(screen.getAllByText(/12\.5 units/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/12\.5 tokens/).length).toBeGreaterThan(0);
     expect(document.querySelector('a[href="/wallet"]')).toBeNull();
     expect(document.querySelector('a[href="/profile/edit"]')).toBeTruthy();
     expect(await screen.findByText("No voices yet")).toBeTruthy();
@@ -46,7 +46,7 @@ describe("Me", () => {
     render(<MePage />);
     expect(await screen.findByTestId("deletion-pending")).toBeTruthy();
     expect(screen.getAllByText(/14 days/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/unspent Voice Units are gone/)).toBeTruthy();
+    expect(screen.getByText(/unspent tokens are gone/)).toBeTruthy();
   });
   it("a load failure offers Try again", async () => {
     signIn(); mockApi({ "GET /me": () => apiError(500, "INTERNAL", "Something broke.") });
@@ -138,12 +138,12 @@ describe("Settings", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Delete account/ }));
     const dlg = within(await screen.findByRole("dialog"));
     expect(dlg.getAllByText(/14 days/).length).toBeGreaterThan(0);
-    expect(dlg.getByText(/unspent Voice Units are gone/)).toBeTruthy();
+    expect(dlg.getByText(/unspent tokens are gone/)).toBeTruthy();
     const go = dlg.getByRole("button", { name: "Delete my account" }) as HTMLButtonElement;
     expect(go.disabled).toBe(true);
     await userEvent.type(dlg.getByLabelText(/Type @ada.okafor to confirm/), "ada.okafor");
     expect(go.disabled).toBe(true);
-    await userEvent.click(dlg.getByLabelText(/I understand my unspent Voice Units will be lost/));
+    await userEvent.click(dlg.getByLabelText(/I understand my unspent tokens will be lost/));
     expect(go.disabled).toBe(false);
     await userEvent.click(go);
     await waitFor(() => expect(calls.find((c) => c.method === "DELETE" && c.path === "/me")?.body).toEqual({ confirmHandle: "ada.okafor", understandUnitsForfeited: true }));

@@ -39,7 +39,7 @@ const err = (status: number, code: string, message: string) => json({ error: { c
 let calls: { url: string; method: string; body: unknown; headers: Headers }[];
 let api: (url: string, method: string, body: unknown) => Response | null;
 
-const CONFIG = { currency: "NGN", freePosts: 10, unitBaseKobo: 1380, costs: { baseKoboPerUnit: 1380, textPostMilli: 500, voicePostMilli: 1000, minPackKobo: 13800, freeReactionsPerDay: 3, freeVotesPerDay: 1, reactionAfterFreeMilli: 500, voteAfterFreeMilli: 500, extraVoice30Kobo: 0 }, tiers: [], extraVoice: [], voiceFreeSeconds: 10 };
+const CONFIG = { currency: "NGN", freePosts: 10, unitBaseKobo: 1380, costs: { baseKoboPerUnit: 1380, textPostMilli: 5000, voicePostMilli: 78000, minPackKobo: 13800, freeReactionsPerDay: 3, freeVotesPerDay: 1, reactionAfterFreeMilli: 500, voteAfterFreeMilli: 500, extraVoice30Kobo: 0 }, tiers: [], extraVoice: [], voiceFreeSeconds: 10 };
 const QUESTION = { id: "q1", text: "When salary arrives, how many hours pass before it disappears?", voiceCount: 12480, endsAt: new Date(Date.now() + 9 * 3600e3 + 60e3).toISOString(), category: null, recentVoices: [] };
 const CATS = ["Money", "Work", "Power", "Family", "Love", "Faith"].map((name, i) => ({ id: `c${i}`, slug: name.toLowerCase(), name, blurb: null, voicesThisWeek: 0, questionCount: 0 }));
 const ME_NEW = { id: "u1", wawuId: "w1", handle: null, profileComplete: false };
@@ -99,7 +99,7 @@ describe("Landing", () => {
     expect(await screen.findByText("Nigeria is talking. Add your voice.")).toBeTruthy();
     expect(screen.getByText("Every topic, four steps. Join at any one.")).toBeTruthy();
     expect(screen.getByText("Your first 10 posts are free.")).toBeTruthy();
-    expect(screen.getByText(/Voice Units from ₦138\. Every price shows before you tap\. Ads are always labelled/)).toBeTruthy();
+    expect(screen.getByText(/tokens start at ₦138\. Every price shows before you tap\. Ads are always labelled/)).toBeTruthy();
     const href = (name: string) => screen.getAllByRole("link", { name }).map((a) => a.getAttribute("href"));
     expect(href("Sign in")).toContain("/sign-in");
     expect(href("Join VOICES")).toContain("/join");
@@ -127,7 +127,7 @@ describe("Onboarding and Country", () => {
     expect(screen.getAllByText("Hear the country").length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: /Next/ }));
     expect(screen.getByText("Your first 10 posts are free")).toBeTruthy();
-    expect(screen.getByText("Then Voice Units from ₦138. A text post uses 0.5 units (₦6.90).")).toBeTruthy();
+    expect(screen.getByText("Then tokens from ₦138. Text costs 5 tokens for every 150 characters.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Start" }).getAttribute("href")).toBe("/join/country");
     expect(screen.getAllByRole("link", { name: "Skip" })[0].getAttribute("href")).toBe("/join/country");
   });

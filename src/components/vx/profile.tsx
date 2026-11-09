@@ -22,12 +22,12 @@ export function UnitsChip(p: UnitsChipProps): ReactElement {
   const u = parseFloat(p.units);
   const state = p.state === 'plain' ? '' : p.state || (u === 0 ? 'empty' : u < 2 ? 'low' : '');
   const cls = cx('vx-units', state && 'vx-units--' + state, p.href === false && 'vx-units--static', p.className);
-  const label = state === 'empty' ? 'No Voice Units. Get units' : p.units + (p.href === false ? ' Voice Units' : ' Voice Units. Open Voice Units');
+  const label = state === 'empty' ? 'No tokens. Get tokens' : p.units + (p.href === false ? ' tokens' : ' tokens. Open your tokens');
   const body = (
     <>
       <span className="vx-units__coin" aria-hidden="true"><Icon name="coins" size={18} strokeWidth={2.25} /></span>
       {state === 'empty' ? (
-        'Get Voice Units'
+        'Get tokens'
       ) : (
         <>
           {p.units + ' units'}

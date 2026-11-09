@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { OutOfPostsPage } from "@/features/units/OutOfPostsPage";
 
-export const metadata = { title: "Voice Units" };
+export const metadata = { title: "Tokens" };
 
 export default function OutOfPostsRoute() {
   return (

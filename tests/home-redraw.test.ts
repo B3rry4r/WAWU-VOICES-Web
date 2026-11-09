@@ -13,9 +13,9 @@ describe("home redraw helpers", () => {
     expect(voicesShort(3100)).toBe("3,100 voices");
   });
   it("units", () => {
-    expect(unitsLabel(200)).toBe("0.2 units");
-    expect(unitsLabel(1000)).toBe("1 unit");
-    expect(unitsLabel(12500)).toBe("12.5 units");
+    expect(unitsLabel(200)).toBe("0.2 tokens");
+    expect(unitsLabel(1000)).toBe("1 token");
+    expect(unitsLabel(12500)).toBe("12.5 tokens");
   });
   it("a question is open by its dates (V-27)", () => {
     const base = { status: "SCHEDULED", startsAt: "2026-11-12T00:00:00Z", endsAt: "2026-11-13T00:00:00Z" };

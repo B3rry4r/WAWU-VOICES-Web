@@ -109,8 +109,8 @@ export function Landing() {
             <div className="relative flex flex-col gap-[14px]">
               <span className="vx-eyebrow text-sun">Fair from the first tap</span>
               <h2 id="h-free" className="m-0 font-display text-display-l dt:text-display-xl">{`Your first ${cfg.freePosts} posts are free.`}</h2>
-              <p className="m-0 text-body text-[var(--on-forest-2)] dt:hidden">{`After that, posting uses Voice Units from ₦${from}. Every price shows before you tap. Ads are always labelled, and your raw audio is never downloadable.`}</p>
-              <p className="m-0 hidden text-body text-[var(--on-forest-2)] dt:block">{`After that, posting uses Voice Units from ₦${from}. Every price shows before you tap.`}</p>
+              <p className="m-0 text-body text-[var(--on-forest-2)] dt:hidden">{`After that, tokens start at ₦${from}. Every price shows before you tap. Ads are always labelled, and your raw audio is never downloadable.`}</p>
+              <p className="m-0 hidden text-body text-[var(--on-forest-2)] dt:block">{`After that, tokens start at ₦${from}. Every price shows before you tap.`}</p>
             </div>
             <ul className="relative m-0 hidden list-none flex-col gap-3 p-0 dt:flex">
               {TRUST.map((t) => (

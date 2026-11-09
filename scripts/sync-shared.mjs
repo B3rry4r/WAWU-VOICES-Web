@@ -20,6 +20,7 @@ const FILES = [
   ["docs/contract/openapi.yaml", "contract/openapi.yaml"],
   ["api/src/audio-ref/normalise.ts", "e2e/vendor/normalise.ts"],
   ["api/src/audio-ref/limits.ts", "e2e/vendor/limits.ts"],
+  ["api/src/units/text-price.ts", "src/lib/shared/text-price.ts"],
 ];
 
 if (!existsSync(path.join(backend, "api"))) {

@@ -11,7 +11,7 @@ import "./profile.css";
 
 export const DELETE_WORDS = {
   grace: "Your account is set to be deleted. For 14 days nothing is removed.",
-  lost: "After that, your posts, recordings and any unspent Voice Units are gone. Voice Units are never paid back as cash.",
+  lost: "After that, your posts, recordings and any unspent tokens are gone. tokens are never paid back as cash.",
   keep: "To keep your account, tap Undo before the 14 days end.",
 };
 

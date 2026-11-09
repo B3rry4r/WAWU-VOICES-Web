@@ -3,7 +3,7 @@ import { API_BASE, REQUEST_TIMEOUT_MS } from "./config";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import type { components } from "./types";
 
-/* Voice Units routes (contract tag voice-units), plus the three neighbours the Voice Units screens read:
+/* tokens routes (contract tag voice-units), plus the three neighbours the tokens screens read:
  * GET /config/public, GET /ads/placement and POST /questions/{id}/answers (a held draft posts after a purchase, V-19).
  * Paths are written as the contract writes them; the client adds the /api/v1 base (V-26). */
 

@@ -1,5 +1,16 @@
 import type { ExtraVoiceToken } from "@/lib/api/speak";
 import { ApiError } from "@/lib/api/client";
+import { voiceCostMilli, voiceFreeCovers } from "@/lib/shared/text-price";
+
+/** lead ruling LF, 9 Nov: the price on the Send button is the shared function the server charges with, on the recording length in ms. */
+export function voicePriceMilli(seconds: number, c: { extraVoice30Kobo: number; extraVoice60Kobo: number; voiceTier1Seconds?: number }): number {
+  return voiceCostMilli(Math.round(seconds * 1000), c.extraVoice30Kobo * 10, c.extraVoice60Kobo * 10, c.voiceTier1Seconds ?? 30);
+}
+
+/** Does a free post cover this recording? The same grace as the server. */
+export function freeCovers(seconds: number, freeSeconds: number): boolean {
+  return voiceFreeCovers(Math.round(seconds * 1000), freeSeconds);
+}
 
 /** The bars drawn for a take: the loudest level in each slice of what the microphone really heard, scaled 0..255. */
 export function peaksFromLevels(levels: number[], bars = 48): number[] {
@@ -22,16 +33,6 @@ export function tokenFor(tokens: ExtraVoiceToken[], seconds: number, freeSeconds
   return tokens
     .filter((t) => t.status === "AVAILABLE" && t.maxSeconds + 0.5 >= seconds)
     .sort((a, b) => a.maxSeconds - b.maxSeconds)[0];
-}
-
-/** Seconds of recording this person may take now: the free seconds, or the longest token they own. */
-export function limitSeconds(freeSeconds: number, tokens: ExtraVoiceToken[]): number {
-  return Math.max(freeSeconds, ...tokens.filter((t) => t.status === "AVAILABLE").map((t) => t.maxSeconds));
-}
-
-export function naira(kobo: number): string {
-  const n = kobo / 100;
-  return "₦" + (Number.isInteger(n) ? String(n) : n.toFixed(2));
 }
 
 export function durationLabel(seconds: number): string {

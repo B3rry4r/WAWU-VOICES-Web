@@ -13,7 +13,7 @@ const KIND_WORDS: Record<AdminAd["kind"], string> = {
   FEED_CARD: "Ad · feed card",
   BANNER: "Ad · banner",
   AUDIO_SLOT: "Ad · audio slot in the feed",
-  WALLET_OFFER: "Voice Units offer · buy-units sheet",
+  WALLET_OFFER: "Tokens offer · get-tokens sheet",
 };
 const KIND_VARIANT: Record<AdminAd["kind"], "card" | "audio" | "banner"> = { FEED_CARD: "card", BANNER: "banner", AUDIO_SLOT: "audio", WALLET_OFFER: "banner" };
 

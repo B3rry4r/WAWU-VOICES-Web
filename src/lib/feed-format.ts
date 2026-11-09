@@ -1,3 +1,4 @@
+import { tokensLabel } from "@/lib/shared/text-price";
 import type { Answer } from "@/lib/api/feed";
 import { countdown } from "@/lib/format/date";
 
@@ -36,10 +37,9 @@ export function isOpen(q: { status: string; startsAt: string | null; endsAt: str
   return true;
 }
 
-/** "0.2 units", "1 unit", "12.5 units": Voice Units from milli-units. */
+/** "0.2 tokens", "1 token", "16.67 tokens": tokens from milli-tokens. */
 export function unitsLabel(milli: number): string {
-  const u = milli / 1000;
-  return `${Number.isInteger(u) ? u : u.toFixed(1).replace(/\.0$/, "")} ${u === 1 ? "unit" : "units"}`;
+  return `${tokensLabel(milli)} ${milli === 1000 ? "token" : "tokens"}`;
 }
 
 export function voicesLabel(n: number): string {
