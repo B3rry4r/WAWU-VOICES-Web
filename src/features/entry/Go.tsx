@@ -3,10 +3,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
-import { Button, Icon, Logo, QuestionHero, Skeleton } from "@/components/vx";
+import { Avatar, Button, Icon, Logo, QuestionHero, Skeleton } from "@/components/vx";
 import { useLoad } from "@/components/feed/useLoad";
 import { getTodaysQuestion } from "@/lib/api/feed";
 import { isSignedIn } from "@/lib/api/auth";
+import { getInviter } from "@/lib/api/invite";
+import { keptInviteCode } from "@/lib/invite";
 import { closesIn, voicesOf } from "@/lib/feed-format";
 import { TONE, isMoodQuestion, pickHref, writePick } from "@/features/mood/mood";
 import type { Mood } from "@/lib/api/mood";
@@ -18,14 +20,22 @@ import { LANDING_EYEBROW, LANDING_HEADLINE, LANDING_INTRO } from "./landing-word
  * (a mood question) or as Home shows it (any other), "Listen as a guest", "Add your voice" and the bottom bar.
  * Everyone may open it, signed in or not. A word tap writes the pick the way the pick screen does and opens that screen,
  * so a guest who signs up from there comes back to the same word.
- * The "@name asked how you feel." line of the board is not drawn here yet: it needs bundle C's invite code and a way to
- * turn that code into a name, and neither is merged.
+ * A visitor who arrived by a friend's link (the kept invite cookie) sees "@name asked how you feel." with the inviter's
+ * avatar: the server turns the code into the handle and nothing else, and a code it does not know draws no line.
  */
 export function Go() {
   const router = useRouter();
   const load = useLoad(() => getTodaysQuestion(), []);
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => setSignedIn(isSignedIn()), []);
+  const [inviter, setInviter] = useState<string | null>(null);
+  useEffect(() => {
+    const code = keptInviteCode();
+    if (!code) return;
+    let live = true;
+    getInviter(code).then((r) => { if (live && r?.handle) setInviter(r.handle); }, () => undefined);
+    return () => { live = false; };
+  }, []);
 
   const addHref = load.state === "ready" && isMoodQuestion(load.data) ? pickHref(load.data.id) : "/speak";
   const header = (
@@ -57,6 +67,11 @@ export function Go() {
     const pick = (m: Mood) => { writePick(q.id, m); router.push(`${pickHref(q.id)}?mood=${m}`); };
     body = (
       <div className="mx-auto flex w-full max-w-[560px] flex-col gap-[18px] px-4 pb-6 pt-1 dt:px-8 dt:pb-16 dt:pt-8">
+        {inviter ? (
+          <p data-testid="go-inviter" className="m-0 flex items-center gap-[10px] rounded-m bg-mint px-3 py-[10px] text-[14px] font-semibold leading-5 text-green-text">
+            <Avatar name={inviter.replace(/[._]+/g, " ")} size="s" tone="sun" />{`@${inviter} asked how you feel.`}
+          </p>
+        ) : null}
         <section className="flex flex-col gap-3">
           <span className="vx-eyebrow text-green-text">{LANDING_EYEBROW}</span>
           <h1 className="m-0 font-display text-[38px] leading-[42px] tracking-[-0.01em]">{LANDING_HEADLINE}</h1>

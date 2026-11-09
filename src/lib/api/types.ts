@@ -176,6 +176,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/invites/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who sent this invite link (handle only)
+         * @description LCH-A2: for the 'asked how you feel' line on /go. Returns the owner's handle and nothing else. A code with the wrong shape, an unknown code or an owner who is not an active account all answer handle null, so the page shows no line. Never cached. Limited to 60 a minute per network address (429). Auth: none (public).
+         */
+        get: operations["getInviter"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/categories": {
         parameters: {
             query?: never;
@@ -3350,6 +3370,9 @@ export interface components {
         ClaimInviteRequest: {
             code: string;
         };
+        InviterHandle: {
+            handle: string | null;
+        };
         Friend: {
             handle: string;
             displayName: string | null;
@@ -5520,6 +5543,29 @@ export interface operations {
             400: components["responses"]["E400"];
             401: components["responses"]["E401"];
             403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getInviter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviterHandle"];
+                };
+            };
             429: components["responses"]["E429"];
         };
     };

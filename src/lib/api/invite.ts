@@ -20,3 +20,8 @@ export const listFriends = (cursor?: string, limit?: number) => {
 
 /** LCH-06: count me as the friend of whoever's link I arrived by. Always answers 204. */
 export const claimInvite = (code: string) => apiFetch<void>("/me/invite/claim", { method: "POST", authed: true, body: { code } });
+
+export type InviterHandle = S["InviterHandle"];
+
+/** LCH-A2: the handle of whoever owns a kept invite code, for the "asked how you feel" line on /go. Public, handle only; null when the code is not good. */
+export const getInviter = (code: string) => apiFetch<InviterHandle>(`/invites/${encodeURIComponent(code)}`);

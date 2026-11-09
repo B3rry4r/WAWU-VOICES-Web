@@ -4,7 +4,8 @@ import { countChars, textCostMilli, tokensLabel } from "@/lib/shared/text-price"
 import type { Allowances } from "@/lib/api/talk";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Banner, Icon, IconButton, NotFoundState } from "@/components/vx";
+import { Banner, Button, Icon, IconButton, NotFoundState } from "@/components/vx";
+import { signInHref } from "@/lib/auth/entry-draft";
 import { ApiError } from "@/lib/api/client";
 import { isSignedIn } from "@/lib/api/auth";
 import { getPlayUrl } from "@/lib/api/talk";
@@ -78,11 +79,15 @@ export function Problem({ error, onRetry }: { error: unknown; onRetry?: () => vo
   );
 }
 
-export function SignInNote({ children }: { children: ReactNode }) {
+/** `from` (the page to come back to) adds a Sign in button under the note, so a guest on a phone has a way in (the header link is desktop only). */
+export function SignInNote({ children, from }: { children: ReactNode; from?: string }) {
   return (
-    <Banner tone="info" title="Sign in to continue.">
-      {children}
-    </Banner>
+    <>
+      <Banner tone="info" title="Sign in to continue.">
+        {children}
+      </Banner>
+      {from ? <div className="mt-3"><Button size="l" block href={signInHref(from)}>Sign in</Button></div> : null}
+    </>
   );
 }
 

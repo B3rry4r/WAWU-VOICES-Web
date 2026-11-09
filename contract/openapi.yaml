@@ -281,8 +281,8 @@ paths:
       summary: My personal invite link
       security:
       - wawuId: []
-      description: 'LCH-06: my one invite code, made the first time it is asked for and never changed, the link built from PUBLIC_WEB_BASE
-        (url is PUBLIC_WEB_BASE/go/code), and how many friends have answered through it. Auth: signed in with a finished profile.'
+      description: 'LCH-06: my one invite code, made the first time it is asked for and never changed, the link built from PUBLIC_WEB_BASE (url
+        is PUBLIC_WEB_BASE/go/code), and how many friends have answered through it. Auth: signed in with a finished profile.'
       responses:
         '200':
           description: OK
@@ -304,9 +304,10 @@ paths:
       summary: Count me as the friend of the person whose link brought me
       security:
       - wawuId: []
-      description: 'LCH-06: the web sends the code it kept for the visitor (30 days, first link wins) after the person has posted an answer.
-        Always 204; it never says whether the code was valid. Ignored when the code is unknown or my own, when I already have an inviter, when my
-        account is older than 30 days, when I have no published named (not anonymous) answer, or when either of us blocked the other. Limited to 10 a minute per signed-in person (429 with Retry-After), with a high per-address ceiling as an abuse guard. Auth: signed in with a finished
+      description: 'LCH-06: the web sends the code it kept for the visitor (30 days, first link wins) after the person has posted an answer. Always
+        204; it never says whether the code was valid. Ignored when the code is unknown or my own, when I already have an inviter, when my account
+        is older than 30 days, when I have no published named (not anonymous) answer, or when either of us blocked the other. Limited to 10 a
+        minute per signed-in person (429 with Retry-After), with a high per-address ceiling as an abuse guard. Auth: signed in with a finished
         profile.'
       requestBody:
         required: true
@@ -334,8 +335,9 @@ paths:
       security:
       - wawuId: []
       description: 'LCH-06: the count and a cursor page of the people who came through my link and answered, newest first. A friend''s word is
-        returned only to me, only if the friend''s Share my word is on at this moment (else word is null and wordShared is false); the friend still
-        counts. A friend counts and shows only through a published, named (not anonymous) answer. Never in a public response. Auth: signed in with a finished profile.'
+        returned only to me, only if the friend''s Share my word is on at this moment (else word is null and wordShared is false); the friend
+        still counts. A friend counts and shows only through a published, named (not anonymous) answer. Never in a public response. Auth: signed
+        in with a finished profile.'
       parameters:
       - name: cursor
         in: query
@@ -362,6 +364,31 @@ paths:
           $ref: '#/components/responses/E401'
         '403':
           $ref: '#/components/responses/E403'
+        '429':
+          $ref: '#/components/responses/E429'
+  /invites/{code}:
+    get:
+      operationId: getInviter
+      tags:
+      - me-profile
+      summary: Who sent this invite link (handle only)
+      security: []
+      description: 'LCH-A2: for the ''asked how you feel'' line on /go. Returns the owner''s handle and nothing else. A code with the wrong shape,
+        an unknown code or an owner who is not an active account all answer handle null, so the page shows no line. Never cached. Limited to 60
+        a minute per network address (429). Auth: none (public).'
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviterHandle'
         '429':
           $ref: '#/components/responses/E429'
   /me/categories:
@@ -7125,6 +7152,16 @@ components:
       additionalProperties: false
       required:
       - code
+    InviterHandle:
+      type: object
+      properties:
+        handle:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      required:
+      - handle
     Friend:
       type: object
       properties:
