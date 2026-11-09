@@ -32,7 +32,7 @@ VOICES runs on DigitalOcean. Voice recordings, photos and share-card images are 
 
 ## Who else handles it
 - Flutterwave handles payments. They tell us whether a payment worked.
-- Google Gemini turns voice recordings into transcripts, helps draft the weekly report from posts, and corrects your text when you use Fix my text. For Fix my text, only the text you ask to have fixed is sent, to be corrected. It is used for nothing else. For the weekly report, handles and phone numbers are removed from the text before it is sent, and the draft is told never to name or quote a person.
+- Google Gemini turns voice recordings into transcripts, helps draft the weekly report from posts, and corrects your text when you use Fix my text. For Fix my text, only the text you ask to have fixed is sent, to be corrected. It is used for nothing else. We keep the corrected text for up to 10 minutes only, so that a retried request is not charged twice, and then delete it. It is also deleted if you delete your account. For the weekly report, handles and phone numbers are removed from the text before it is sent, and the draft is told never to name or quote a person.
 - WAWU ID, run by WAWU, signs you in.
 - We may share information with the authorities where the law requires it.
 
@@ -41,7 +41,7 @@ A photo of a result sheet is never public. Only the WAWU team can see it, to che
 
 ## How long we keep it
 - Your account data and posts stay while your account is open. A post you delete disappears from the app, and its text is blanked when your account is deleted.
-- When you delete your account we keep it for 14 days. Then every post and reply is blanked, including ones you deleted yourself. Your profile details, likes, reactions, saves, the record of which voices you played, blocks, notifications and settings are deleted. Your link is removed from support messages and from share, advert and usage events. Transcripts are wiped. Unspent Voice Units are lost.
+- When you delete your account we keep it for 14 days. Then every post and reply is blanked, including ones you deleted yourself. Your profile details, likes, reactions, saves, the record of which voices you played, blocks, notifications and settings are deleted. Your link is removed from support messages and from share, advert and usage events. Transcripts are wiped. Unspent tokens are lost.
 - Recordings, profile photos, result sheet photos, data download files and share images are deleted from storage by a regular clean-up. Uploads that were never finished are deleted after 24 hours.
 - Some records stay without your name on them: votes, which keep the one-way code made from your phone number so that one phone votes once; result totals, which stay as a public record; payment records, so that our accounts add up; and moderation records. [OWNER: confirm how long payment records must be kept under Nigerian law.]
 - Nightly database copies are kept for 7 days.

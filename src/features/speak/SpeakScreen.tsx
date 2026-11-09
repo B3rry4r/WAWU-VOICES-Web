@@ -11,9 +11,9 @@ import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { clearDraft, loadDraft, saveDraft, type Draft } from "./draft";
-import { peaksFromLevels, refusalText, tokenFor, uuidKey } from "./logic";
+import { freeCovers, peaksFromLevels, refusalText, tokenFor, uuidKey, voicePriceMilli } from "./logic";
 import { BackLink, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
-import { tokensLabel, voiceCostMilli } from "@/lib/shared/text-price";
+import { tokensLabel } from "@/lib/shared/text-price";
 import "./speak.css";
 import { voicesOf } from "@/lib/feed-format";
 
@@ -434,10 +434,9 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const t1 = costs?.voiceTier1Seconds ?? 30;
   const priceFor = (seconds: number): string => {
     if (!costs) return "";
-    const milli = voiceCostMilli(Math.ceil(seconds * 1000 - 500), costs.extraVoice30Kobo * 10, costs.extraVoice60Kobo * 10, t1);
-    return `${tokensLabel(milli)} tokens`;
+    return `${tokensLabel(voicePriceMilli(seconds, costs))} tokens`;
   };
-  const covered = (seconds: number) => freeLeft > 0 && seconds <= freeSeconds + 0.5;
+  const covered = (seconds: number) => freeLeft > 0 && freeCovers(seconds, freeSeconds);
   const idleHint = (
     <p className="vx-rec__hint">
       {"Tap to record. You have "}

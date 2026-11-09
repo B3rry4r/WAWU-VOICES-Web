@@ -260,7 +260,7 @@ describe("Tokens screen", () => {
 
 describe("Get tokens screen", () => {
   it("lists the packs from the API as the board draws them, and the Pay button names the selected pack", async () => {
-    search = "pack=standard";
+    search = "";
     api();
     render(<BuyUnitsScreen />);
     expect(await screen.findByRole("button", { name: /Pay ₦732 for 732 tokens/ })).toBeTruthy();
@@ -295,6 +295,9 @@ describe("Get tokens screen", () => {
     const a = api((m) => (m === "POST /payments" ? json({ paymentId: PID, txRef: "voices-4", amountKobo: 18300, currency: "NGN", unitsMilli: 183000, checkoutUrl: "https://checkout.flutterwave.com/v3/hosted/pay/m", expiresAt: new Date(Date.now() + 1.8e6).toISOString() }, 201) : undefined));
     search = "";
     render(<BuyUnitsScreen />);
+    // the board preselects Standard
+    expect((await screen.findByRole("radio", { name: /Standard/ })).getAttribute("aria-checked")).toBe("true");
+    await userEvent.click(await screen.findByRole("radio", { name: /Entry/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Pay ₦183 for 183 tokens/ }));
     await waitFor(() => expect(loc.assign).toHaveBeenCalled());
     const post = a.f.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST")!;

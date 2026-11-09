@@ -15,9 +15,15 @@ export function diffView(original: string, changes: TextFixChange[]): ReactNode[
   let at = 0;
   changes.forEach((c, i) => {
     out.push(chars.slice(at, c.start).join(""));
-    if (c.from) out.push(<del key={`d${i}`}>{c.from}</del>);
-    if (c.from && c.to) out.push(" ");
-    if (c.to) out.push(<ins key={`i${i}`}>{c.to}</ins>);
+    // A comma or full stop that stays the same is not part of the change (the board strikes "cna", not "cna,").
+    const tail = /[.,;:!?]+$/.exec(c.from)?.[0] ?? "";
+    const same = tail !== "" && c.to.endsWith(tail);
+    const from = same ? c.from.slice(0, -tail.length) : c.from;
+    const to = same ? c.to.slice(0, -tail.length) : c.to;
+    if (from) out.push(<del key={`d${i}`}>{from}</del>);
+    if (from && to) out.push(" ");
+    if (to) out.push(<ins key={`i${i}`}>{to}</ins>);
+    if (same) out.push(tail);
     at = c.start + [...c.from].length;
   });
   out.push(chars.slice(at).join(""));

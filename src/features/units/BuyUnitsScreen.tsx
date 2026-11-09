@@ -59,7 +59,7 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
   const from = safePath(params.get("from"));
   const sorted = useMemo(() => [...tiers.tiers].sort((a, b) => a.priceKobo - b.priceKobo), [tiers.tiers]);
   const wanted = params.get("pack");
-  const [sel, setSel] = useState<string>(() => (sorted.find((t) => t.slug === wanted || t.name.toLowerCase() === wanted) ?? sorted[0])?.id ?? "");
+  const [sel, setSel] = useState<string>(() => (sorted.find((t) => t.slug === wanted || t.name.toLowerCase() === wanted) ?? sorted.find((t) => t.slug === "standard") ?? sorted[0])?.id ?? "");
   const [holdsDraft, setHoldsDraft] = useState(false);
   useEffect(() => setHoldsDraft(awaitingDrafts().length > 0), []);
   const qFrom = /^\/q\/([^/?]+)/.exec(from ?? "")?.[1];
@@ -116,7 +116,6 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
         >
           {`Pay ${naira(tier.priceKobo)} for ${unitsLabel(tier.unitsMilli)}`}
         </Button>
-        <Note className="text-center">You see the full price before you pay. Tokens cannot be cashed out or sent to others.</Note>
       </div>
 
       <CostList costs={tiers.costs} className="dt:hidden" />

@@ -2,7 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { peaksFromLevels, tokenFor, refusalText, durationLabel } from "@/features/speak/logic";
+import { peaksFromLevels, tokenFor, refusalText, durationLabel, voicePriceMilli, freeCovers } from "@/features/speak/logic";
+import { voiceCostMilli } from "@/lib/shared/text-price";
 import { clearDraft, loadDraft, saveDraft } from "@/features/speak/draft";
 import { SpeakScreen } from "@/features/speak/SpeakScreen";
 import { ApiError } from "@/lib/api/client";
@@ -32,6 +33,15 @@ describe("speak logic", () => {
     expect(tokenFor(tokens, 12, 10)?.id).toBe("b");
     expect(tokenFor(tokens, 45, 10)?.id).toBe("a");
     expect(tokenFor(tokens, 70, 10)).toBeUndefined();
+  });
+  it("lead ruling LF: the price on the Send button is the price the server charges, with the 500 ms grace on both edges", () => {
+    const costs = { extraVoice30Kobo: 7800, extraVoice60Kobo: 10000, voiceTier1Seconds: 30 };
+    for (const [ms, want] of [[30_000, 78000], [30_400, 78000], [30_500, 78000], [30_501, 100000], [60_500, 100000]] as const) {
+      expect(voicePriceMilli(ms / 1000, costs)).toBe(want);
+      expect(voiceCostMilli(ms, 78000, 100000)).toBe(want); // the function the server's charge calls
+    }
+    expect(freeCovers(10.5, 10)).toBe(true);
+    expect(freeCovers(10.501, 10)).toBe(false);
   });
   it("formats durations", () => {
     expect(durationLabel(60)).toBe("1 minute");

@@ -62,8 +62,8 @@ describe("Fix my text", () => {
     const diff = await screen.findByTestId("fix-diff");
     expect(screen.getByText("Suggested fix")).toBeTruthy();
     expect(screen.getByText("2 changes")).toBeTruthy();
-    expect(Array.from(diff.querySelectorAll("del")).map((d) => d.textContent)).toEqual(["cna,", "cna"]);
-    expect(Array.from(diff.querySelectorAll("ins")).map((d) => d.textContent)).toEqual(["can,", "can"]);
+    expect(Array.from(diff.querySelectorAll("del")).map((d) => d.textContent)).toEqual(["cna", "cna"]);
+    expect(Array.from(diff.querySelectorAll("ins")).map((d) => d.textContent)).toEqual(["can", "can"]);
     expect(screen.getByText("Only spelling and typos change, never what you mean.")).toBeTruthy();
     const post = calls.find((c) => c.url.endsWith("/text/fix"))!;
     expect(post.method).toBe("POST");
@@ -172,7 +172,7 @@ describe("the Write screen as FixText-390 draws it", () => {
   it("at 20 messages a day the Post button is held and the page says why", async () => {
     const box = await open(allowance({}, 0) && { ...(allowance() as object), messagesLeftToday: 0 });
     await userEvent.type(box, "hello");
-    expect(screen.getByText("That is today’s limit")).toBeTruthy();
+    expect(screen.getByText("You have reached the daily limit")).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Post/ }).hasAttribute("disabled")).toBe(true);
   });
 });

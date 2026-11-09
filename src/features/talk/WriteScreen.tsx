@@ -143,7 +143,7 @@ export function WriteScreen({ qid }: { qid: string }) {
             onSubmit={() => void send()}
           />
         </div>
-        {dayLeft === 0 ? <Banner tone="info" title="That is today’s limit">{`You can send ${c?.messagesPerDay ?? 20} messages a day. Come back after midnight, Lagos time. Reading, listening, likes, shares and reactions never count.`}</Banner> : null}
+        {dayLeft === 0 ? <Banner tone="info" title="You have reached the daily limit">{`You can send ${c?.messagesPerDay ?? 20} messages a day. Come back after midnight, Lagos time. Reading, listening, likes, shares and reactions never count.`}</Banner> : null}
         {sending ? <Banner tone="info">Posting your answer.</Banner> : null}
         {msg ? <Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner> : null}
         {left === 1 && c ? (

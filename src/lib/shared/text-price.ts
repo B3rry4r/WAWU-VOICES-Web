@@ -27,14 +27,33 @@ export function textCostMilli(
   return hundredths * 10;
 }
 
-/** Milli-tokens for a voice message of this length: the up-to-30-second price, or the longer one. */
+/** Grace, in ms, for the recorder's stop latency: applied to every voice length check on the server and on the web. */
+export const VOICE_GRACE_MS = 500;
+
+/**
+ * lead ruling LF, 9 Nov: the ONE voice price, used by the server's charge and by the web's button. Up to
+ * tier1Seconds plus the 500 ms grace is the first price (30,500 ms is 78 tokens), above that the second price.
+ * The caller refuses a length over `voiceTooLong`.
+ */
 export function voiceCostMilli(
   durationMs: number,
   tier1Milli: number,
   tier2Milli: number,
   tier1Seconds = 30,
 ): number {
-  return durationMs <= tier1Seconds * 1000 ? tier1Milli : tier2Milli;
+  return durationMs <= tier1Seconds * 1000 + VOICE_GRACE_MS
+    ? tier1Milli
+    : tier2Milli;
+}
+
+/** A voice longer than the longest message (60 s plus the grace) is refused, never priced. */
+export function voiceTooLong(durationMs: number, maxSeconds = 60): boolean {
+  return durationMs > maxSeconds * 1000 + VOICE_GRACE_MS;
+}
+
+/** A free post covers a voice of up to `freeSeconds` plus the grace. */
+export function voiceFreeCovers(durationMs: number, freeSeconds = 10): boolean {
+  return durationMs <= freeSeconds * 1000 + VOICE_GRACE_MS;
 }
 
 /** Tokens as people read them: up to 2 decimals, no trailing zeros ("3.33", "16.67", "78"). */
