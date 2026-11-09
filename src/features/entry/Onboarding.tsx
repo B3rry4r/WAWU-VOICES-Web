@@ -11,6 +11,7 @@ import { closesIn, voicesLabel, voicesOf } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { holdReturn } from "@/lib/auth/entry-draft";
 import { fromPrice, textPostNaira } from "./format";
+import { LANDING_HEADLINE, LANDING_INTRO } from "./landing-words";
 
 type Poll = components["schemas"]["Poll"];
 
@@ -63,8 +64,8 @@ export function Onboarding() {
 
   const slides = [
     {
-      title: "Nigeria is talking",
-      body: "One question from our editors every day. Speak for 10 seconds or write a few lines.",
+      title: LANDING_HEADLINE,
+      body: LANDING_INTRO,
       art: (
         <>
           <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">Today’s question</span>
