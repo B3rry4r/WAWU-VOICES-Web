@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Button, Logo } from "@/components/vx";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Link not found", robots: { index: false, follow: false } };
 
 /** What /s/<unknown code> shows (rewritten here by middleware, status 404). Rendered through the root layout: saved theme, no app chrome. */

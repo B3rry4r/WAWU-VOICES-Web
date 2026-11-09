@@ -1,4 +1,5 @@
 "use client";
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -81,6 +82,7 @@ export function PostedScreen({ qid }: { qid: string }) {
   const [invite, setInvite] = useState<MyInvite | null>(null);
   const [inviteFailed, setInviteFailed] = useState(false);
   const [inviteTries, setInviteTries] = useState(0);
+  const [inviteBusy, setInviteBusy] = useState(false);
   const [firstFriend, setFirstFriend] = useState<string | null>(null);
   useEffect(() => {
     if (!signedIn || !mood) return undefined;
@@ -90,7 +92,7 @@ export function PostedScreen({ qid }: { qid: string }) {
       if (!live) return;
       setInvite(i);
       if (i.friendsAnswered > 0) listFriends(undefined, 1).then((f) => { if (live && f.items[0]) setFirstFriend(f.items[0].displayName || f.items[0].handle); }, () => undefined);
-    }, () => { if (live) setInviteFailed(true); });
+    }, (e) => { if (live) { setInviteBusy(isBusy(e)); setInviteFailed(true); } });
     return () => { live = false; };
   }, [signedIn, mood, inviteTries, settled]);
   useEffect(() => {
@@ -168,7 +170,7 @@ export function PostedScreen({ qid }: { qid: string }) {
           {sit ? <WhereYouSitCard key={sit.updatedAt} sit={sit} /> : null}
           <InviteShare word={mood} url={invite?.url ?? null} onIntent={intentOf} onCopied={() => push("Link copied.", "success")} onFail={() => push("We could not copy that. Try again.", "danger")} />
           {inviteFailed ? (
-            <Banner tone="danger" title="We could not get your link" action="Try again" onAction={() => setInviteTries((n) => n + 1)}>Check your connection and try again.</Banner>
+            <Banner tone="danger" title={inviteBusy ? BUSY_TITLE : "We could not get your link"} action="Try again" onAction={() => setInviteTries((n) => n + 1)}>{inviteBusy ? BUSY_TEXT : "Check your connection and try again."}</Banner>
           ) : null}
           {sit ? (
             <section aria-label="Your share card" className="grid gap-3">
