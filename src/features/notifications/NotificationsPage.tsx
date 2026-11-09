@@ -37,6 +37,7 @@ const ROW_TYPE: Record<Notification["type"], NonNullable<NotificationRowProps["t
   UNITS_ADDED: "units",
   EXTRA_VOICE_ADDED: "units",
   RESULT_CHECKED: "verified",
+  VIDEO_READY: "verified",
 };
 
 /**
@@ -53,6 +54,8 @@ export function targetHref(n: Pick<Notification, "targetType" | "targetId"> & { 
   if (t === "weekly_report") return `/weekly/${n.targetId}`;
   if (t === "question") return `/q/${n.targetId}`;
   if (t === "poll" && n.type === "FLASH_POLL") return "/"; // the open flash poll sits on Home
+  // LCH-07: a video notice opens that answer's share screen, where the video is
+  if (t === "answer" && n.type === "VIDEO_READY") return n.questionId ? `/q/${n.questionId}/posted?a=${n.targetId}` : null;
   if (t === "answer") return n.questionId ? `/q/${n.questionId}/a/${n.targetId}` : null;
   return null;
 }

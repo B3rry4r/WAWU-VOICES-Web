@@ -41,7 +41,12 @@ export function VoiceVideoPanel({ answerId, onNote }: { answerId: string; onNote
   const working = (videos ?? []).some((v) => v.status === "QUEUED" || v.status === "MAKING");
   useEffect(() => {
     if (!working) return undefined;
-    const t = setInterval(() => void load(), POLL_MS);
+    // at most about ten minutes of asking; the server re-queues a stuck build, and a reload asks again
+    let n = 0;
+    const t = setInterval(() => {
+      if (++n > 200) clearInterval(t);
+      else void load();
+    }, POLL_MS);
     return () => clearInterval(t);
   }, [working, load]);
   // told when it is ready, once per video

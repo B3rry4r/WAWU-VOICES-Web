@@ -86,3 +86,10 @@ describe("LCH-07: Make a video on the share screen", () => {
     expect(screen.queryByRole("button", { name: "Make a video" })).toBeNull();
   });
 });
+
+import { targetHref } from "@/features/notifications/NotificationsPage";
+describe("LCH-07: the ready notice", () => {
+  it("opens that answer's share screen", () => {
+    expect(targetHref({ type: "VIDEO_READY", targetType: "answer", targetId: "a1", questionId: "q1" })).toBe("/q/q1/posted?a=a1");
+  });
+});
