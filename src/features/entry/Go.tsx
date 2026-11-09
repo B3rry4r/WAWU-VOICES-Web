@@ -27,6 +27,7 @@ export function Go() {
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => setSignedIn(isSignedIn()), []);
 
+  const addHref = load.state === "ready" && isMoodQuestion(load.data) ? pickHref(load.data.id) : "/speak";
   const header = (
     <>
       <header className="flex h-[107px] flex-none items-center gap-2 px-4 pt-[47px] dt:hidden">
@@ -39,19 +40,20 @@ export function Go() {
       </header>
       <header className="mx-auto hidden w-full max-w-[1176px] items-center gap-8 px-8 py-5 dt:flex">
         <Link href="/welcome" className="mr-auto flex" aria-label="VOICES home"><Logo height={40} alt="VOICES home" /></Link>
-        {signedIn ? <Button variant="secondary" href="/">Home</Button> : <Button variant="secondary" href="/sign-in">Sign in</Button>}
+        <span className="flex gap-3">
+          {signedIn ? <Button variant="secondary" href="/">Home</Button> : <Button variant="secondary" href="/sign-in">Sign in</Button>}
+          <Button icon="mic" href={addHref}>Add your voice</Button>
+        </span>
       </header>
     </>
   );
 
   let body;
-  let addHref = "/speak";
   if (load.state === "loading") body = <div className="grid gap-4 p-4" aria-busy="true"><Skeleton variant="tile" /><Skeleton variant="answer" /></div>;
   else if (load.state === "error") body = <div className="p-4"><ErrorBanner error={load.error} onRetry={load.retry} fallback="Something went wrong on our side. Try again in a moment." title="This did not load" /></div>;
   else {
     const q = load.data;
     const mood = isMoodQuestion(q);
-    if (mood) addHref = pickHref(q.id);
     const pick = (m: Mood) => { writePick(q.id, m); router.push(`${pickHref(q.id)}?mood=${m}`); };
     body = (
       <div className="mx-auto flex w-full max-w-[560px] flex-col gap-[18px] px-4 pb-6 pt-1 dt:px-8 dt:pb-16 dt:pt-8">
@@ -101,13 +103,15 @@ export function Go() {
     <EntryFrame>
       {header}
       <EntryScroll>{body}</EntryScroll>
-      <BottomBar>
-        <div className={signedIn ? "grid grid-cols-1" : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-[10px]"}>
-          {signedIn ? null : <Button size="l" variant="secondary" block href="/sign-in">Sign in</Button>}
-          <Button size="l" icon="mic" block href={addHref}>Add your voice</Button>
-        </div>
-        {signedIn ? null : <p className="m-0 mx-auto text-center text-caption text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="link">Community rules</Link>, <Link href="/settings/legal/terms" className="link">Terms</Link> and <Link href="/settings/legal/privacy" className="link">Privacy</Link>.</p>}
-      </BottomBar>
+      <div className="dt:hidden">
+        <BottomBar>
+          <div className={signedIn ? "grid grid-cols-1" : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-[10px]"}>
+            {signedIn ? null : <Button size="l" variant="secondary" block href="/sign-in">Sign in</Button>}
+            <Button size="l" icon="mic" block href={addHref}>Add your voice</Button>
+          </div>
+          {signedIn ? null : <p className="m-0 mx-auto text-center text-caption text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="link">Community rules</Link>, <Link href="/settings/legal/terms" className="link">Terms</Link> and <Link href="/settings/legal/privacy" className="link">Privacy</Link>.</p>}
+        </BottomBar>
+      </div>
     </EntryFrame>
   );
 }

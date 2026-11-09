@@ -54,7 +54,7 @@ export function Landing() {
     const from = fromPrice(cfg);
     const voice = trending.items[0]?.answer;
     const hero = (
-      <section className="flex flex-col gap-[14px] pt-1">
+      <section className="flex flex-col gap-[14px] pt-1 dt:gap-6">
         <span className="vx-eyebrow text-green-text">{LANDING_EYEBROW}</span>
         <h1 className="m-0 font-display text-[40px] leading-[44px] tracking-[-0.01em] dt:text-[72px] dt:leading-[74px]">{LANDING_HEADLINE}</h1>
         <p className="m-0 text-body-l text-ink-2 dt:max-w-[420px]">{LANDING_INTRO}</p>

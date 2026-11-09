@@ -80,7 +80,7 @@ describe("LCH-08 /go", () => {
     expect(screen.getByRole("heading", { level: 2, name: MOOD_Q.text })).toBeTruthy();
     for (const w of ["ANGRY", "TIRED", "PROUD", "HOPEFUL"]) expect(screen.getByRole("button", { name: w })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Listen as a guest" }).getAttribute("href")).toBe("/q/q9");
-    expect(screen.getByRole("link", { name: "Add your voice" }).getAttribute("href")).toBe("/q/q9/mood");
+    expect(screen.getAllByRole("link", { name: "Add your voice" }).every((a) => a.getAttribute("href") === "/q/q9/mood")).toBe(true);
     expect(screen.getAllByRole("link", { name: "Sign in" }).every((a) => a.getAttribute("href") === "/sign-in")).toBe(true);
     expect(screen.queryByText(/asked how you feel/)).toBeNull();
   });
@@ -89,7 +89,7 @@ describe("LCH-08 /go", () => {
     render(<Go />);
     expect(await screen.findByRole("heading", { level: 1, name: LANDING_HEADLINE })).toBeTruthy();
     await waitFor(() => expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull());
-    expect(screen.getByRole("link", { name: "Add your voice" })).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: "Add your voice" }).length).toBeGreaterThan(0);
     expect(replace).not.toHaveBeenCalled();
   });
   it("a word tap opens the pick screen with that word kept for the sign-up round trip", async () => {
@@ -105,7 +105,7 @@ describe("LCH-08 /go", () => {
     render(<Go />);
     expect(await screen.findByText(PLAIN_Q.text)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "ANGRY" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Add your voice" }).getAttribute("href")).toBe("/speak");
+    expect(screen.getAllByRole("link", { name: "Add your voice" }).every((a) => a.getAttribute("href") === "/speak")).toBe(true);
     await user.click(screen.getAllByRole("button", { name: /Add your voice/ })[0]);
     expect(push).toHaveBeenCalledWith("/speak");
   });
