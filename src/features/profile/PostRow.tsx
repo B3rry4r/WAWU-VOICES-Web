@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Avatar, Badge, Icon, NewsTag, REACTIONS } from "@/components/vx";
 import type { Answer, Reply } from "@/lib/api/profile";
+import { MoodChip } from "@/features/mood/MoodChip";
 import { ClipPlayer } from "./ClipPlayer";
 import { ago, placeLabel } from "./format";
 
@@ -45,6 +46,7 @@ export function PostRow({ a }: { a: Answer }) {
   return (
     <div className="pf-post">
       {a.questionText ? <Link className="pf-on" href={`/q/${a.questionId}`}>On: {a.questionText}</Link> : null}
+      {a.mood ? <MoodChip mood={a.mood} className="mb-[6px]" /> : null}
       <article className="vx-answer" aria-label={`Voice from ${who?.handle ?? "this person"}`}>
         <div className="vx-answer__head">
           <Avatar name={who?.displayName || who?.handle} src={who?.avatarUrl ?? undefined} />

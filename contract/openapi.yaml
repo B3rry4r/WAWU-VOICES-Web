@@ -1213,6 +1213,12 @@ paths:
         schema:
           type: string
         description: Filter by NewsTag
+      - name: mood
+        in: query
+        required: false
+        schema:
+          type: string
+        description: 'LCH-02: only answers that carry this word (ANGRY, TIRED, PROUD or HOPEFUL); any other value is a 422'
       responses:
         '200':
           description: OK
@@ -1224,6 +1230,8 @@ paths:
           $ref: '#/components/responses/E401'
         '404':
           $ref: '#/components/responses/E404'
+        '422':
+          $ref: '#/components/responses/E422'
         '429':
           $ref: '#/components/responses/E429'
     post:
@@ -1530,6 +1538,106 @@ paths:
           $ref: '#/components/responses/E429'
         '503':
           $ref: '#/components/responses/E503'
+  /questions/{questionId}/moods:
+    get:
+      operationId: getQuestionMoods
+      tags:
+      - answers
+      summary: Counts per mood word (How Nigeria feels so far)
+      security: []
+      description: 'LCH-02: valid answers per word, everyone, whole percents. Valid is one per person (their latest), published, not deleted,
+        not by a suspended, banned or deleted person. Read from stored counts (Redis) that a background job refreshes, never counted per request.
+        404 for a question with no words or one that has not opened. Auth: none (public).'
+      parameters:
+      - name: questionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoodCounts'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+  /answers/{answerId}/where-you-sit:
+    get:
+      operationId: getWhereYouSit
+      tags:
+      - answers
+      summary: Where my word sits, in Nigeria and the World
+      security:
+      - wawuId: []
+      description: 'LCH-04: the share of valid answers with the same word, in Nigeria (people whose country is Nigeria) and in the World. A percentage
+        only when the group holds at least 50 valid answers, else null and the line is You are one of the first. Counts are stored and refreshed
+        in the background; the person''s own new answer is added at once. 404 unless it is the signed-in person''s own published mood answer.
+        Auth: signed in with a finished profile.'
+      parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhereYouSit'
+        '401':
+          $ref: '#/components/responses/E401'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+  /answers/{answerId}/card:
+    patch:
+      operationId: setAnswerCardName
+      tags:
+      - answers
+      summary: Show my name on the share card
+      security:
+      - wawuId: []
+      description: 'LCH-03: the author turns Show my name on the card on or off for a mood answer. Off by default. Call POST /share/links again
+        after it so the card is drawn again. Auth: signed in with a finished profile.'
+      parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardNameRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardNameResult'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
   /answers/{answerId}:
     get:
       operationId: getAnswer
@@ -3366,6 +3474,33 @@ paths:
       security: []
       description: 'The 1080x1920 Stories card: same words and colours as the card, stacked for a tall frame. Text and brand only. Drawn on request,
         never stored. 404 for an unknown link, a deleted person''s card or a failed card. Auth: none (public).'
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+  /share/{code}/square:
+    get:
+      operationId: getShareSquareImage
+      tags:
+      - share
+      summary: The square card image (mood card)
+      security: []
+      description: 'LCH-03: the 1080x1080 mood card for WhatsApp and feeds. Drawn on request and cached. Only a mood answer''s link has one, any
+        other link is a 404, and so is a deleted, removed or leaving person''s card. Auth: none (public).'
       parameters:
       - name: code
         in: path
@@ -5939,6 +6074,13 @@ components:
       - VERIFIED_NEWS
       - UNVERIFIED_NEWS
       - GOSSIP
+    Mood:
+      type: string
+      enum:
+      - ANGRY
+      - TIRED
+      - PROUD
+      - HOPEFUL
     ReactionKind:
       type: string
       enum:
@@ -6927,6 +7069,10 @@ components:
           type:
           - string
           - 'null'
+        moodOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mood'
         category:
           oneOf:
           - $ref: '#/components/schemas/Category'
@@ -6994,8 +7140,9 @@ components:
       - answerCount
       - hasOpenPoll
       - proposalCount
-      description: 'voicesCount (lead ruling WF, 6 Nov, RW1) is the one voices count for every screen and card: top-level answers, voice or text,
-        not removed or deleted. It equals answerCount. voiceCount stays the number of voice clips.'
+      description: 'moodOptions (LCH-02) lists the words the question offers: empty on an ordinary question; when it is not empty every answer
+        carries one of them. voicesCount (lead ruling WF, 6 Nov, RW1) is the one voices count for every screen and card: top-level answers, voice
+        or text, not removed or deleted. It equals answerCount. voiceCount stays the number of voice clips.'
     OverrideContent:
       type: object
       properties:
@@ -7296,6 +7443,10 @@ components:
           - 'null'
         explainsVote:
           type: boolean
+        mood:
+          oneOf:
+          - $ref: '#/components/schemas/Mood'
+          - type: 'null'
       additionalProperties: false
       required:
       - id
@@ -7317,6 +7468,7 @@ components:
       - iSaved
       - isMine
       - labels
+      description: mood (LCH-02) is the one word of an answer to a mood question, null on any other.
     PublicConfig:
       type: object
       properties:
@@ -7628,11 +7780,135 @@ components:
           type: string
         anonymous:
           type: boolean
+        mood:
+          $ref: '#/components/schemas/Mood'
+        showNameOnCard:
+          type: boolean
       additionalProperties: false
       required:
       - kind
       description: Text answers carry body. Voice answers carry clipId of a READY clip. A clip over the free length also needs an extra voice
-        token. isNews requires newsTag; VERIFIED_NEWS needs an editor or admin role and a source.
+        token. isNews requires newsTag; VERIFIED_NEWS needs an editor or admin role and a source. On a question with moodOptions every answer,
+        voice or text, carries one of them in mood (422 "Pick one word before you post." otherwise); on any other question mood is refused. showNameOnCard
+        (LCH-03) is off unless true and ignored on an anonymous answer.
+    MoodCountItem:
+      type: object
+      properties:
+        mood:
+          $ref: '#/components/schemas/Mood'
+        count:
+          type: integer
+        percent:
+          type: integer
+      additionalProperties: false
+      required:
+      - mood
+      - count
+      - percent
+    MoodCounts:
+      type: object
+      properties:
+        questionId:
+          type: string
+          format: uuid
+        total:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MoodCountItem'
+      additionalProperties: false
+      required:
+      - questionId
+      - total
+      - updatedAt
+      - items
+      description: 'LCH-02: valid answers per word, everyone, whole percents.'
+    WhereYouSitGroup:
+      type: object
+      properties:
+        percent:
+          type:
+          - integer
+          - 'null'
+        voices:
+          type:
+          - integer
+          - 'null'
+      additionalProperties: false
+      required:
+      - percent
+      - voices
+      description: percent is a whole percent and voices the valid answers in the group, both null while the group holds fewer than 50.
+    WhereYouSit:
+      type: object
+      properties:
+        answerId:
+          type: string
+          format: uuid
+        questionId:
+          type: string
+          format: uuid
+        mood:
+          $ref: '#/components/schemas/Mood'
+        showNameOnCard:
+          type: boolean
+        nigeria:
+          $ref: '#/components/schemas/WhereYouSitGroup'
+        world:
+          $ref: '#/components/schemas/WhereYouSitGroup'
+        defaultScope:
+          type: string
+          enum:
+          - NIGERIA
+          - WORLD
+        showSwitch:
+          type: boolean
+        line:
+          type: string
+        cardLine:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+      required:
+      - answerId
+      - questionId
+      - mood
+      - showNameOnCard
+      - nigeria
+      - world
+      - defaultScope
+      - showSwitch
+      - line
+      - cardLine
+      - updatedAt
+      description: LCH-04. showSwitch is false until a group has a percentage (no Nigeria / World switch before 50). line is the sentence for
+        the default scope; cardLine is the same sentence as the share card draws it.
+    CardNameRequest:
+      type: object
+      properties:
+        showName:
+          type: boolean
+      additionalProperties: false
+      required:
+      - showName
+    CardNameResult:
+      type: object
+      properties:
+        answerId:
+          type: string
+          format: uuid
+        showNameOnCard:
+          type: boolean
+      additionalProperties: false
+      required:
+      - answerId
+      - showNameOnCard
     EditAnswerRequest:
       type: object
       properties:
@@ -8924,8 +9200,9 @@ components:
       - url
       - cardStatus
       - previewText
-      description: 'imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story),
-        null only where that route would 404. squareImageUrl is not drawn: null at launch.'
+      description: imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story),
+        null only where that route would 404. squareImageUrl is the 1080x1080 mood card (GET /share/{code}/square) for a mood answer and null
+        for every other link.
     ShareEventRequest:
       type: object
       properties:

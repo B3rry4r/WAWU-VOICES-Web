@@ -4,6 +4,7 @@ import { Avatar, Badge, Button, Logo, NewsTag, Poll } from "@/components/vx";
 import { fmt } from "@/components/vx/helpers";
 import type { SharePage } from "@/lib/api/reach";
 import { AddVoice, GuestOnly, LinkOpened, SignInOrOpen } from "./ShareActions";
+import { MoodChip } from "@/features/mood/MoodChip";
 import { ClipPlayer } from "./ClipPlayer";
 
 const NEWS_KIND = { VERIFIED_NEWS: "verified", UNVERIFIED_NEWS: "unverified", GOSSIP: "gossip" } as const;
@@ -119,7 +120,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
                     <span className="vx-answer__time">{agoShort(voice.createdAt, now) + (voice.author?.state ? " · " + voice.author.state : "")}</span>
                   </div>
                 </div>
-                {voice.labels?.length ? <div className="vx-answer__labels"><Badge tone="green">{LABEL_TEXT[voice.labels[0]] ?? voice.labels[0]}</Badge></div> : null}
+                {voice.labels?.length || voice.mood ? <div className="vx-answer__labels">{voice.mood ? <MoodChip mood={voice.mood} /> : null}{voice.labels?.length ? <Badge tone="green">{LABEL_TEXT[voice.labels[0]] ?? voice.labels[0]}</Badge> : null}</div> : null}
                 {voice.clip ? <ClipPlayer answerId={voice.id} clipId={voice.clip.id} durationMs={voice.clip.durationMs} peaks={voice.clip.peaks} /> : null}
                 {voice.body ? <p className="vx-answer__text">{voice.body}</p> : null}
                 {transcript ? <p className="vx-answer__transcript"><b>Transcript</b>{transcript}</p> : null}

@@ -15,6 +15,8 @@ import { ExtraVoiceSheet } from "./ExtraVoiceSheet";
 import { durationLabel, limitSeconds, naira, peaksFromLevels, refusalText, tokenFor, uuidKey } from "./logic";
 import { BackLink, PassPanel, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
 import "./speak.css";
+import { MoodWordNote } from "@/features/mood/MoodChip";
+import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { voicesOf } from "@/lib/feed-format";
 
 /** Where a guest goes to sign in. The recording waits in this browser (IndexedDB) until they are back (V-19). */
@@ -103,6 +105,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }, []);
 
   const question = info?.question;
+  // LCH-02: a mood question needs its one word before recording; without one the person is sent to pick it.
+  const mood = useMoodWord(question);
   const config = info?.config;
   const allowance = info?.allowance ?? null;
   const freeSeconds = allowance?.costs.freeVoiceSeconds ?? config?.voiceFreeSeconds ?? 10;
@@ -408,8 +412,9 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId);
+      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word);
       await clearDraft();
+      writePick(qid, null);
       sendState.current = null;
       router.push(`/q/${qid}/posted?a=${r.answer.id}`);
     } catch (e) {
@@ -487,7 +492,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       </div>
     );
   }
-  if (!info || !question || !config || !qid) {
+  if (!info || !question || !config || !qid || (open && !mood.ready)) {
     return (
       <div className="sp-page" aria-busy="true">
         <div className="sp-loading"><Skeleton variant="tile" /></div>
@@ -541,6 +546,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         </Banner>
       ))}
       <p className="vx-rec__q">{question.text}</p>
+      {mood.word && qid ? <div className="sp-mood"><MoodWordNote mood={mood.word} changeHref={pickHref(qid)} /></div> : null}
 
       {phase !== "preview" && help ? (
         <div className="sp-help" role="alert">

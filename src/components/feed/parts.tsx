@@ -5,6 +5,7 @@ import { AnswerCard, Banner, Button, EmptyState, Skeleton, TopicOfWeek, TopicTil
 import { categoryLook } from "@/lib/categories";
 import type { Answer, Question, Topic } from "@/lib/api/feed";
 import { answerCardProps, voicesLabel, weekMeta, voicesOf } from "@/lib/feed-format";
+import { MoodChip } from "@/features/mood/MoodChip";
 import type { Load } from "./useLoad";
 
 export function Loading() {
@@ -31,6 +32,7 @@ export function Answers({ items, unfolded }: { items: Answer[]; unfolded?: boole
     <div className="grid gap-3">
       {items.map((a) => (
         <Link key={a.id} href={`/q/${a.questionId}`} className="block no-underline">
+          {a.mood ? <MoodChip mood={a.mood} className="mb-[6px]" /> : null}
           <AnswerCard {...answerCardProps(a)} unfolded={unfolded && a.kind === "VOICE" ? true : undefined} />
         </Link>
       ))}
