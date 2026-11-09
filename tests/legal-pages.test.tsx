@@ -6,7 +6,7 @@ import { Markdown, ownerGaps, parseDoc } from "@/features/legal/markdown";
 import { LEGAL_TABS } from "@/features/legal/LegalFrame";
 import { loadLegal } from "@/features/legal/load";
 
-const DIR = path.join(__dirname, "..", "..", "docs", "legal");
+const DIR = path.join(__dirname, "..", "content", "legal");
 
 describe("legal texts", () => {
   it("has the three texts and parses each", () => {

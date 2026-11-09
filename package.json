@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "shoot": "node scripts/shoot.mjs",
-    "api:types": "openapi-typescript ../docs/contract/openapi.yaml -o src/lib/api/types.ts"
+    "api:types": "openapi-typescript contract/openapi.yaml -o src/lib/api/types.ts",
+    "sync:shared": "node scripts/sync-shared.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.31.0",

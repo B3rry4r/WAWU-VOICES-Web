@@ -1,0 +1,73 @@
+name: Deploy VOICES web
+
+# Auto-deploys main to the VOICES droplet, the same way the backend repo deploys the API:
+# a push that fails the tests never reaches the droplet, one deploy at a time,
+# the SSH host key is pinned, and a smoke test turns the run red if the box is broken.
+# The droplet layout is unchanged from the single repo: this repo goes to /srv/voices/web,
+# and /srv/voices/deploy/deploy.sh (placed there by the backend repo's deploy) builds and restarts it.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-voices-web
+  cancel-in-progress: false
+
+jobs:
+  test-web:
+    name: Test web
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_BASE_URL: /api/v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    name: Deploy to droplet
+    needs: [test-web]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load SSH key
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VOICES_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.VOICES_HOST_KEY }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Rsync source to droplet
+        run: |
+          rsync -az --delete \
+            --exclude '.git' --exclude '.github' --exclude 'node_modules' \
+            --exclude '.next' --exclude '.env' --exclude '.env.*' \
+            -e "ssh -i ~/.ssh/id_ed25519" \
+            ./ "voices@${{ secrets.VOICES_HOST }}:/srv/voices/web/"
+
+      - name: Install, build, restart
+        run: |
+          ssh -i ~/.ssh/id_ed25519 voices@${{ secrets.VOICES_HOST }} \
+            "test -f /srv/voices/deploy/deploy.sh || { echo 'Deploy the backend repo first: it places deploy.sh.' >&2; exit 1; }; bash /srv/voices/deploy/deploy.sh web"
+
+      - name: Smoke test the live site
+        run: |
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://${{ secrets.VOICES_DOMAIN }}/" || true)
+            echo "attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 4
+          done
+          echo "Site did not answer after the deploy." >&2
+          exit 1

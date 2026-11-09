@@ -2,7 +2,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
-import { normalise, probe } from '../../api/src/audio-ref/normalise.js';
+import { normalise, probe } from './vendor/normalise.js';
 
 const PORT = 14060;
 const out = await build({ entryPoints: [new URL('./page.ts', import.meta.url).pathname], bundle: true, write: false, format: 'iife', target: 'es2022' });
