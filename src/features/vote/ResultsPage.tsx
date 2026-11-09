@@ -15,6 +15,8 @@ import { DeskRail } from "./DeskRail";
 import { leaderFirst } from "@/lib/format/plural";
 import type { Mood } from "@/lib/api/mood";
 import { MoodWordPicker } from "@/features/mood/MoodChip";
+import { readPick } from "@/features/mood/mood";
+import { listMyAnswers } from "@/lib/api/profile";
 import { pickPoll } from "./poll-pick";
 import { useRouter } from "next/navigation";
 
@@ -141,6 +143,22 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
   // LCH-02: on a mood question the reason is an answer, so it carries one word, picked here as on the pick screen.
   const [word, setWord] = useState<Mood | null>(null);
   const needsWord = !!moodOptions?.length;
+  // G9: the person already gave a word on this question; ask for it again only if it cannot be found. First the one kept in
+  // this browser, else their own answer to the question.
+  useEffect(() => {
+    if (!needsWord || !signedIn) return;
+    const kept = readPick(questionId);
+    if (kept && moodOptions!.includes(kept)) { setWord(kept); return; }
+    let live = true;
+    listMyAnswers()
+      .then((page) => {
+        const mine = page.items.find((x) => x.answer?.questionId === questionId && x.answer.mood && moodOptions!.includes(x.answer.mood));
+        if (live && mine?.answer?.mood) setWord((w) => w ?? mine.answer!.mood!);
+      })
+      .catch(() => undefined);
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsWord, signedIn, questionId]);
   const [writing, setWriting] = useState(false);
   const [reason, setReason] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | { error: string }>("idle");
@@ -177,7 +195,12 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
       ) : writing ? (
         <div className="vt-explain">
           {typeof state === "object" ? <Banner tone="danger" title="Not posted">{state.error}</Banner> : null}
-          {needsWord ? <MoodWordPicker words={moodOptions!} value={word} onChange={setWord} /> : null}
+          {needsWord ? (
+            <>
+              <p className="m-0 text-caption text-ink-2">{word ? "Your word goes with your reason. Tap another to change it." : "Pick one word to go with your reason."}</p>
+              <MoodWordPicker words={moodOptions!} value={word} onChange={setWord} />
+            </>
+          ) : null}
           <Composer label="Your reason" placeholder="Say why you voted this way" meter={false} value={reason} onChange={setReason} busy={state === "sending"} onSubmit={(t) => void send(t)} onVoice={false} />
         </div>
       ) : (

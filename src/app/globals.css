@@ -47,3 +47,9 @@ p, li { text-wrap: pretty; }
 }
 /* One focus ring everywhere: the token shadow, never an inset variant */
 :focus-visible { outline: 2px solid transparent; box-shadow: var(--shadow-focus); }
+
+/* G9: on the Go page the four word buttons sit on the forest card. In dark the PROUD fill is almost the card's own colour,
+   so each word gets a hairline in the forest line colour (nothing in light, where the fills already stand out). */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .go-word { box-shadow: inset 0 0 0 1.5px var(--forest-line); } }
+:root[data-theme="dark"] .go-word { box-shadow: inset 0 0 0 1.5px var(--forest-line); }
+:root .go-word:focus-visible { box-shadow: var(--shadow-focus); }

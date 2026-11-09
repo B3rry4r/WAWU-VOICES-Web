@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Banner, Icon, NotFoundState, Skeleton } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import "./vote.css";
 
@@ -77,9 +78,10 @@ export function LoadFailed({ error, retry, what }: { error: unknown; retry: () =
     return <NotFoundState />;
   }
   const offline = error instanceof ApiError && error.status === 0;
+  const busy = isBusy(error);
   return (
-    <Banner tone={offline ? "offline" : "danger"} title={offline ? "You are offline" : "This did not load"} action="Try again" onAction={retry}>
-      {offline ? "Check your connection and try again." : "Something went wrong on our side. Try again in a moment."}
+    <Banner tone={offline ? "offline" : "danger"} title={offline ? "You are offline" : busy ? BUSY_TITLE : "This did not load"} action="Try again" onAction={retry}>
+      {offline ? "Check your connection and try again." : busy ? BUSY_TEXT : "Something went wrong on our side. Try again in a moment."}
     </Banner>
   );
 }

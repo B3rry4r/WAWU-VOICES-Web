@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { ShareUnavailable } from "@/features/share/ShareUnavailable";
 import { SharePageView } from "@/features/share/SharePageView";
 import type { ShareExtras } from "@/features/share/SharePageView";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, NetworkError } from "@/lib/api/client";
+import { isBusy } from "@/lib/api/busy";
 import { getPollTitle, getProfileVoices, getSharePage } from "@/lib/api/reach";
 import type { SharePage } from "@/lib/api/reach";
 import { requestForward } from "@/lib/api/forward-server";
@@ -17,7 +18,8 @@ async function load(code: string): Promise<SharePage | null | "unreachable" | "b
   } catch (e) {
     if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
     // The API is full (its own busy answer, or nginx's 503 for it): say so, instead of "we could not open that link".
-    if (e instanceof ApiError && e.status === 503) return "busy";
+    // G1: so is an API that cannot be reached at all (this runs on the server, where "offline" cannot be the visitor's own phone).
+    if (isBusy(e) || e instanceof NetworkError) return "busy";
     return "unreachable";
   }
 }

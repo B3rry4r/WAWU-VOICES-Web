@@ -11,7 +11,7 @@ import { closesIn, voicesLabel, voicesOf } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { holdReturn } from "@/lib/auth/entry-draft";
 import { fromPrice, textPostNaira } from "./format";
-import { LANDING_HEADLINE, LANDING_INTRO } from "./landing-words";
+import { LANDING_EYEBROW, LANDING_HEADLINE, LANDING_INTRO } from "./landing-words";
 
 type Poll = components["schemas"]["Poll"];
 
@@ -124,7 +124,7 @@ export function Onboarding() {
         <header className="flex flex-none items-center gap-2 px-4 h-[107px] pt-[47px]">{logo}<span className="flex-1" />{skip}</header>
         <EntryScroll>
           <section aria-roledescription="carousel" aria-label="Welcome to VOICES" className="flex flex-col gap-5 px-4 pt-2">
-            <div className="relative flex h-[400px] flex-col justify-center gap-[18px] overflow-hidden rounded-[28px] bg-forest px-6 py-7 text-forest-on">
+            <div className="relative flex h-[clamp(300px,calc(100dvh-490px),400px)] flex-col justify-center gap-[18px] overflow-hidden rounded-[28px] bg-forest px-6 py-7 text-forest-on">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={ASSETS.markWhite} alt="" aria-hidden="true" className="pointer-events-none absolute -right-[70px] -top-[60px] w-[260px] opacity-[0.08]" />
               {s.art}
@@ -151,8 +151,9 @@ export function Onboarding() {
             <span className="relative text-caption text-[var(--on-forest-2)]">{`${voicesLabel(voicesOf(q))} so far · Closes in ${closesIn(q.endsAt)}`}</span>
           </div>
           <div className="flex flex-col justify-center gap-5 p-10">
-            <span className="vx-eyebrow text-green-text">Welcome</span>
-            <h1 className="m-0 font-display text-display-xl">Nigeria’s national conversation</h1>
+            <span className="vx-eyebrow text-green-text">{LANDING_EYEBROW}</span>
+            <h1 className="m-0 font-display text-display-xl">{LANDING_HEADLINE}</h1>
+            <p className="m-0 text-body-l text-ink-2">{LANDING_INTRO}</p>
             <ul className="m-0 flex list-none flex-col gap-4 p-0">
               {[
                 ["mic", "One question a day", "Speak for 10 seconds or write a few lines."],

@@ -123,7 +123,7 @@ describe("Onboarding and Country", () => {
   it("walks three slides and reads the prices from config", async () => {
     const user = userEvent.setup();
     render(<Onboarding />);
-    expect(await screen.findByText(LANDING_HEADLINE)).toBeTruthy();
+    expect(await screen.findAllByText(LANDING_HEADLINE)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /Next/ }));
     expect(screen.getAllByText("Hear the country").length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: /Next/ }));
@@ -737,7 +737,7 @@ describe("round 1: refused sign-ins, redirects, two tabs, reloads", () => {
     expect(row.className).not.toMatch(/row-reverse/);
     cleanup();
     render(<Onboarding />);
-    await screen.findByText(LANDING_HEADLINE);
+    await screen.findAllByText(LANDING_HEADLINE);
     expect(screen.getAllByRole("link", { name: "Skip" })[0].className).toMatch(/link-more/);
   });
   it("the photo cap is the API's 5,000,000 bytes", async () => {
@@ -807,7 +807,7 @@ describe("round 1: refused sign-ins, redirects, two tabs, reloads", () => {
   });
   it("Onboarding at 1440 links the Community rules", async () => {
     render(<Onboarding />);
-    await screen.findByText(LANDING_HEADLINE);
+    await screen.findAllByText(LANDING_HEADLINE);
     expect(screen.getAllByRole("link", { name: "Community rules" })[0].getAttribute("href")).toBe("/settings/legal/rules");
   });
 });

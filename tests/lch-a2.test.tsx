@@ -104,8 +104,8 @@ describe("LCH-A2 fix 3: a guest on Write", () => {
 describe("LCH-A2 fix 4: the onboarding slide", () => {
   it("slide one carries the landing words, not 'Nigeria is talking'", async () => {
     const { container } = render(<Onboarding />);
-    expect(await screen.findByRole("heading", { level: 1, name: LANDING_HEADLINE })).toBeTruthy();
-    expect(screen.getByText(LANDING_INTRO)).toBeTruthy();
+    expect(await screen.findAllByRole("heading", { level: 1, name: LANDING_HEADLINE })).toBeTruthy();
+    expect(screen.getAllByText(LANDING_INTRO)).toBeTruthy();
     const text = container.textContent ?? "";
     expect(text).not.toContain("Nigeria is talking");
     expect(text).not.toContain("One question from our editors");
