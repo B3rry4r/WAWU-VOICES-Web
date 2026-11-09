@@ -199,6 +199,11 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   return res;
 }
 
+/** A binary answer (a zip or a picture) from a signed-in route. Errors are the same ApiError as apiFetch. */
+export async function apiBlob(path: string, opts: RequestOptions = {}): Promise<Blob> {
+  return (await raw(path, opts)).blob();
+}
+
 /** The only place raw fetch lives. Components call domain modules in src/lib/api, never fetch. */
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const res = await raw(path, opts);

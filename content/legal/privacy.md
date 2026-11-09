@@ -13,6 +13,7 @@ lead: What VOICES collects, why, who helps us handle it, and what you can ask us
 - Listen counts: we count how many times each voice is played and how many people listen to the end.
 - We record which voices you play and how much of each, to rank answers. Nobody else sees this. It is deleted with your account; for visitors who are not signed in, 90 days after their last listen.
 - Reports you file, and the decisions and appeals that follow.
+- Videos: only when you ask for one, we make a short video of your own voice answer (the question, a moving waveform of your voice, captions from its transcript, and your name only if you chose to show it on your card). Only you can see it or save it. We do not publish it. If you delete the answer, or we remove it, the video is deleted too.
 - Referral codes: you get a code of your own, and if you joined with someone’s code we keep who invited you.
 - Invite links: you get a personal invite link. If you open someone’s link, then join and answer, we keep that they invited you. They see how many of their friends have answered and each friend’s handle. They see a friend’s word only if that friend keeps “Share my word” on. It is on unless you turn it off, in Settings or when you pick your word, and turning it off takes effect straight away. Nobody else sees it through this. An answer you post anonymously never counts and never shows to the person who invited you.
 - Support messages: the text, the topic, any payment you point to, and the email you may add so we can reply. If you were signed in, the message is linked to your account.
@@ -29,7 +30,7 @@ To run VOICES: sign you in, show your posts, count votes once per person, take p
 Adverts are chosen by the state on your profile, if you have set one, and by the topic of the question you are looking at. Adverts are not shown on sensitive topics.
 
 ## Where it is stored
-VOICES runs on DigitalOcean. Voice recordings, photos and share-card images are kept in DigitalOcean Spaces, in a bucket used only by VOICES. Nightly database copies are kept for 7 days.
+VOICES runs on DigitalOcean. Voice recordings, photos, share-card images and the videos you ask us to make are kept in DigitalOcean Spaces, in a bucket used only by VOICES. Nightly database copies are kept for 7 days.
 
 ## Who else handles it
 - Flutterwave handles payments. They tell us whether a payment worked.
@@ -43,7 +44,7 @@ A photo of a result sheet is never public. Only the WAWU team can see it, to che
 ## How long we keep it
 - Your account data and posts stay while your account is open. A post you delete disappears from the app, and its text is blanked when your account is deleted.
 - When you delete your account we keep it for 14 days. Then every post and reply is blanked, including ones you deleted yourself. Your profile details, likes, reactions, saves, the record of which voices you played, blocks, notifications, settings and invite links (the one you sent and the one that brought you) are deleted. Your link is removed from support messages and from share, advert and usage events. Transcripts are wiped. Unspent tokens are lost.
-- Recordings, profile photos, result sheet photos, data download files and share images are deleted from storage by a regular clean-up. Uploads that were never finished are deleted after 24 hours.
+- Recordings, profile photos, result sheet photos, data download files, share images and videos you asked us to make are deleted from storage by a regular clean-up. A video is deleted when its answer is deleted or removed, and when your account is deleted. Uploads that were never finished are deleted after 24 hours.
 - Some records stay without your name on them: votes, which keep the one-way code made from your phone number so that one phone votes once; result totals, which stay as a public record; payment records, so that our accounts add up; and moderation records. [OWNER: confirm how long payment records must be kept under Nigerian law.]
 - Nightly database copies are kept for 7 days.
 

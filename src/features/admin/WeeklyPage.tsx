@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, EmptyState, Icon, TextField, TopicChip, WeeklyReportCard } from "@/components/vx";
-import { approveWeekly, editWeekly, holdWeekly, listWeekly } from "@/lib/api/admin";
+import { approveWeekly, editWeekly, holdWeekly, listWeekly, weeklyInstagramZip } from "@/lib/api/admin";
 import type { AdminWeeklyReport } from "@/lib/api/admin";
 import { readPollSummary, readThemes } from "@/features/reach/weekly-map";
 import { useAdmin } from "./AdminFrame";
@@ -124,6 +124,19 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
       setSaved(`Approved. It goes out ${slot(out.publishAt ?? fromLocalInput(at))}.`);
     }
   }
+  async function downloadPictures() {
+    setSaved(null);
+    const blob = await act.run(() => weeklyInstagramZip(r.id));
+    if (!blob) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `voices-week-${r.weekNumber}-instagram.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    setSaved("The pictures are saved. Nothing has been posted.");
+  }
   async function hold() {
     const out = await act.run(() => holdWeekly(r.id, why.trim()));
     if (out) {
@@ -195,6 +208,16 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
         </Card>
 
         {saved ? <SavedLine>{saved}</SavedLine> : null}
+
+        {r.status === "PUBLISHED" ? (
+          <div className="flex flex-col gap-2">
+            <ErrorLine>{act.error}</ErrorLine>
+            <div>
+              <Button icon="share-2" variant="secondary" loading={act.busy} disabled={act.busy} onClick={downloadPictures}>Download Instagram pictures</Button>
+            </div>
+            <p className="m-0 text-caption text-ink-2">A set of pictures drawn from the approved report: the posts at 1080 by 1350 and a Story at 1080 by 1920. You post them yourself.</p>
+          </div>
+        ) : null}
 
         {open ? (
           <>

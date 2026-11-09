@@ -1056,6 +1056,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/answers/{answerId}/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My videos of my answer
+         * @description LCH-07: the author's newest video of each shape with its state (QUEUED, MAKING, READY, FAILED). Empty once the answer is removed or deleted. Anyone else gets a 404. Auth: signed in with a finished profile.
+         */
+        get: operations["listAnswerVideos"];
+        put?: never;
+        /**
+         * Make a video of my own voice answer
+         * @description LCH-07: only when the person asks. Builds an MP4 in the background (9x16 is 1080x1920, 1x1 is 1080x1080, at most 15 seconds: discrete bars from the voice's own levels, the played part highlighted as it plays, a running clock, captions from the stored transcript, the question, the mood word on a mood question, the logo; no photos). Answers 202 with the video as QUEUED. Asking again for a shape that is queued, being made or ready returns that video. Only the answer's author can ask (403 for anyone else); a text answer is a 422; a removed or deleted answer is a 404. A person may ask for 5 videos a Lagos day, every build counted whatever its outcome, then 429 RATE_LIMITED with resetsAt and retryAfterSeconds (Lagos midnight). A failed build can be asked for again (a new build); an answer that was removed and restored can too, its old video stays deleted. Until it is READY the share uses the audio link. The person gets an in-app notice (type VIDEO_READY) when it is ready or could not be made. Auth: signed in with a finished profile.
+         */
+        post: operations["makeAnswerVideo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/voice-videos/{videoId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The MP4 of my video
+         * @description LCH-07: the video file, for its author only, while the answer is published. Never cached, never a public link. A removed or deleted answer's video, a video that is not READY and anyone else's video are a 404. Auth: signed in with a finished profile.
+         */
+        get: operations["getVoiceVideoFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/answers/{answerId}/replies": {
         parameters: {
             query?: never;
@@ -2780,6 +2824,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/weekly-reports/{reportId}/instagram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Instagram pictures of a published report, as a zip
+         * @description LCH-13: the carousel (1080x1350) and the Story (1080x1920) drawn from the approved text of a PUBLISHED report. Nothing is posted anywhere; a draft, held or approved report is a 409. Auth: signed in with role EDITOR or ADMIN.
+         */
+        get: operations["adminWeeklyInstagramZip"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/weekly-reports/{reportId}/instagram/{file}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One Instagram picture
+         * @description LCH-13: one picture of the set, a PNG: carousel-1.png and so on, or story.png. Auth: signed in with role EDITOR or ADMIN.
+         */
+        get: operations["adminWeeklyInstagramPicture"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/weekly-reports/{reportId}/hold": {
         parameters: {
             query?: never;
@@ -3113,7 +3197,7 @@ export interface components {
         /** @enum {string} */
         ExtraVoiceTokenStatus: "AVAILABLE" | "RESERVED" | "USED" | "REFUNDED";
         /** @enum {string} */
-        NotificationType: "DAILY_QUESTION" | "REPLY" | "REACTIONS" | "POLL_CLOSED" | "FLASH_POLL" | "CATEGORY_ALERT" | "TAG_FOLLOW" | "TAG_CHANGED" | "UNITS_ADDED" | "EXTRA_VOICE_ADDED" | "RESULT_CHECKED" | "WEEKLY_REPORT" | "OVERRIDE_ALERT" | "MODERATION_NOTICE";
+        NotificationType: "DAILY_QUESTION" | "REPLY" | "REACTIONS" | "POLL_CLOSED" | "FLASH_POLL" | "CATEGORY_ALERT" | "TAG_FOLLOW" | "TAG_CHANGED" | "UNITS_ADDED" | "EXTRA_VOICE_ADDED" | "RESULT_CHECKED" | "WEEKLY_REPORT" | "OVERRIDE_ALERT" | "MODERATION_NOTICE" | "VIDEO_READY";
         /** @enum {string} */
         AdKind: "FEED_CARD" | "BANNER" | "AUDIO_SLOT" | "WALLET_OFFER";
         /** @enum {string} */
@@ -3693,6 +3777,30 @@ export interface components {
         };
         CardNameRequest: {
             showName: boolean;
+        };
+        MakeVideoRequest: {
+            /** @enum {string} */
+            shape: "9x16" | "1x1";
+        };
+        /** @description LCH-07: url is the file route, only when READY. */
+        VoiceVideo: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            answerId: string;
+            /** @enum {string} */
+            shape: "9x16" | "1x1";
+            /** @enum {string} */
+            status: "QUEUED" | "MAKING" | "READY" | "FAILED";
+            durationMs: number | null;
+            url: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readyAt: string | null;
+        };
+        VoiceVideoList: {
+            items: components["schemas"]["VoiceVideo"][];
         };
         CardNameResult: {
             /** Format: uuid */
@@ -6801,6 +6909,87 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
+    listAnswerVideos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                answerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceVideoList"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    makeAnswerVideo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                answerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MakeVideoRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceVideo"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getVoiceVideoFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                videoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "video/mp4": string;
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
     listReplies: {
         parameters: {
             query?: {
@@ -9499,6 +9688,61 @@ export interface operations {
             404: components["responses"]["E404"];
             409: components["responses"]["E409"];
             422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminWeeklyInstagramZip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminWeeklyInstagramPicture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: string;
+                file: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
             429: components["responses"]["E429"];
         };
     };
