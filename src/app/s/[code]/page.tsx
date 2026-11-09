@@ -11,11 +11,13 @@ import { requestForward } from "@/lib/api/forward-server";
 export const dynamic = "force-dynamic";
 
 /** The page, null for a link that does not exist, "unreachable" when the API cannot be reached or fails (never a 500 for the visitor). */
-async function load(code: string): Promise<SharePage | null | "unreachable"> {
+async function load(code: string): Promise<SharePage | null | "unreachable" | "busy"> {
   try {
     return await getSharePage(code, requestForward());
   } catch (e) {
     if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
+    // The API is full (its own busy answer, or nginx's 503 for it): say so, instead of "we could not open that link".
+    if (e instanceof ApiError && e.status === 503) return "busy";
     return "unreachable";
   }
 }
@@ -24,6 +26,7 @@ async function load(code: string): Promise<SharePage | null | "unreachable"> {
 export async function generateMetadata({ params }: { params: { code: string } }): Promise<Metadata> {
   // A link that cannot be read (unknown code, API trouble) is never indexed and never throws from the metadata step.
   const page = await load(params.code);
+  if (page === "busy") return { title: "We are busy", robots: { index: false, follow: false } };
   if (page === "unreachable") return { title: "Link not available", robots: { index: false, follow: false } };
   if (!page) return { title: "Link not found", robots: { index: false, follow: false } };
   const og = page.openGraph;
@@ -37,6 +40,7 @@ export async function generateMetadata({ params }: { params: { code: string } })
 
 export default async function Page({ params }: { params: { code: string } }) {
   const page = await load(params.code);
+  if (page === "busy") return <ShareUnavailable busy />;
   if (page === "unreachable") return <ShareUnavailable />;
   if (!page) notFound();
   // lead ruling WF-6, 6 Nov (RX5): the poll's own title on a question page, the person's voicesCount on a profile page.
