@@ -103,7 +103,7 @@ export function Onboarding() {
           </div>
           <div className="relative flex items-center gap-3">
             <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-sun text-[var(--on-sun)]"><Icon name="coins" size={20} /></span>
-            <span className="text-label">{`Then Voice Units from ₦${from}. A text post uses ${text.units} ${text.units === "1" ? "unit" : "units"} (₦${text.naira}).`}</span>
+            <span className="text-label">{`Then tokens from ₦${from}. Text costs ${text.units} ${text.units === "1" ? "token" : "tokens"} for every ${cfg.costs.textPriceChars ?? 150} characters.`}</span>
           </div>
         </>
       ),
@@ -156,7 +156,7 @@ export function Onboarding() {
               {[
                 ["mic", "One question a day", "Speak for 10 seconds or write a few lines."],
                 ["headphones", "Hear the country", "Listen, react and vote in open polls. Listening is always free."],
-                ["coins", `${cfg.freePosts} free posts to start`, `Then Voice Units from ₦${from}. Every price shows before you tap.`],
+                ["coins", `${cfg.freePosts} free posts to start`, `Then tokens from ₦${from}. Every price shows before you tap.`],
               ].map(([ic, t, b]) => (
                 <li key={t} className="flex items-start gap-4">
                   <span className="flex h-12 w-12 flex-none items-center justify-center rounded-[14px] bg-mint text-green-text"><Icon name={ic as "mic"} size={22} /></span>

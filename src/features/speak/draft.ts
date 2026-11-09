@@ -105,16 +105,3 @@ export async function clearDraft(): Promise<void> {
     /* nothing to clear */
   }
 }
-
-/** A payment sent away to checkout: where to come back and which payment to verify. */
-const PAY = "voices-speak-pending-payment";
-export interface PendingPayment { paymentId: string; questionId: string; key: string }
-export function setPendingPayment(p: PendingPayment): void {
-  try { window.localStorage.setItem(PAY, JSON.stringify(p)); } catch { /* ignore */ }
-}
-export function getPendingPayment(): PendingPayment | null {
-  try { const v = JSON.parse(window.localStorage.getItem(PAY) ?? "null"); return v && typeof v.paymentId === "string" ? v : null; } catch { return null; }
-}
-export function clearPendingPayment(): void {
-  try { window.localStorage.removeItem(PAY); } catch { /* ignore */ }
-}

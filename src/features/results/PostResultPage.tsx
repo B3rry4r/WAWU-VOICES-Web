@@ -190,7 +190,7 @@ export function PostResultPage({ threadId }: { threadId: string }) {
         <div className="fixed inset-x-0 bottom-0 z-sticky flex flex-col gap-2 bg-surface px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3 shadow-[0_-1px_0_var(--line)] dt:static dt:bg-transparent dt:p-0 dt:shadow-none">
           {formError ? <p className="m-0 mx-auto text-center text-caption text-danger" role="alert">{formError}</p> : null}
           <Button type="submit" size="l" block icon="send" loading={busy}>Post these numbers</Button>
-          <p className="m-0 mx-auto text-center text-caption text-ink-2">Posting results is free. It does not use your free posts or units.</p>
+          <p className="m-0 mx-auto text-center text-caption text-ink-2">Posting results is free. It does not use your free posts or tokens.</p>
         </div>
       </form>
       <Rail>

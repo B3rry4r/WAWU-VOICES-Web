@@ -32,7 +32,7 @@ VOICES runs on DigitalOcean. Voice recordings, photos and share-card images are 
 
 ## Who else handles it
 - Flutterwave handles payments. They tell us whether a payment worked.
-- Google Gemini turns voice recordings into transcripts, and helps draft the weekly report from posts. For the weekly report, handles and phone numbers are removed from the text before it is sent, and the draft is told never to name or quote a person.
+- Google Gemini turns voice recordings into transcripts, helps draft the weekly report from posts, and corrects your text when you use Fix my text. For Fix my text, only the text you ask to have fixed is sent, to be corrected. It is used for nothing else. For the weekly report, handles and phone numbers are removed from the text before it is sent, and the draft is told never to name or quote a person.
 - WAWU ID, run by WAWU, signs you in.
 - We may share information with the authorities where the law requires it.
 

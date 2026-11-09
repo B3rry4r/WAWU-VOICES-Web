@@ -159,7 +159,7 @@ export function PaymentDoneScreen() {
     },
     [paymentId],
   );
-  // Only a Voice Units purchase posts a draft, only the one it was made for, once. A token purchase never does.
+  // Only a tokens purchase posts a draft, only the one it was made for, once. A token purchase never does.
   useEffect(() => {
     if (state.kind !== "success" || postedFor.current === paymentId) return;
     postedFor.current = paymentId;
@@ -215,10 +215,10 @@ export function PaymentDoneScreen() {
   if (state.kind === "slow") {
     return (
       <Shell onClose={close}>
-        <Hero tone="wait" title="Still confirming" body="Your bank has not confirmed this payment yet. If you were charged, your units arrive as soon as it does. Please do not pay again." />
+        <Hero tone="wait" title="Still confirming" body="Your bank has not confirmed this payment yet. If you were charged, your tokens arrive as soon as it does. Please do not pay again." />
         <Actions>
           <Button icon="refresh-cw" onClick={() => setRun((n) => n + 1)}>Check again</Button>
-          <Button variant="secondary" href={home}>Back to Voice Units</Button>
+          <Button variant="secondary" href={home}>Back to your tokens</Button>
         </Actions>
       </Shell>
     );
@@ -239,7 +239,7 @@ export function PaymentDoneScreen() {
       <Shell onClose={close}>
         <Hero tone="bad" title="We could not find that payment" body="It is not on this account. Check that you are signed in to the account you paid with." />
         <Actions>
-          <Button href={home}>Back to Voice Units</Button>
+          <Button href={home}>Back to your tokens</Button>
         </Actions>
       </Shell>
     );
@@ -267,14 +267,14 @@ export function PaymentDoneScreen() {
           title={isUnits ? `${unitsLabel(p.unitsMilli as number)} added` : "Extra voice token added"}
           body={
             isUnits ? (
-              <>Payment received.{p.balanceMilli !== null ? <> Your balance is now <b className="text-ink">{units(p.balanceMilli)} {p.balanceMilli === 1000 ? "Voice Unit" : "Voice Units"}</b>.</> : null}</>
+              <>Payment received.{p.balanceMilli !== null ? <> Your balance is now <b className="text-ink">{units(p.balanceMilli)} {p.balanceMilli === 1000 ? "token" : "tokens"}</b>.</> : null}</>
             ) : (
               <>Payment received. Use it on one message{p.token ? ` of up to ${p.token.maxSeconds} seconds` : ""}. It does not renew.</>
             )
           }
         />
         {posted ? (
-          <Banner tone="success" title="Your answer is posted">We kept your draft and sent it the moment your units arrived.</Banner>
+          <Banner tone="success" title="Your answer is posted">We kept your draft and sent it the moment your tokens arrived.</Banner>
         ) : draft?.status === "offer" ? (
           <Banner tone="info" title="You have a saved draft" action="Post it now" actionIcon="send" onAction={() => postDraft(true)}>
             You wrote it a while ago, so it was not posted on its own.
@@ -288,7 +288,7 @@ export function PaymentDoneScreen() {
         ) : null}
         <Details rows={rows} />
         <Actions>
-          <Button icon={posted ? "message-circle" : undefined} href={target}>{posted ? "Back to the conversation" : from ? "Back" : "Back to Voice Units"}</Button>
+          <Button icon={posted ? "message-circle" : undefined} href={target}>{posted ? "Back to the conversation" : from ? "Back" : "Back to your tokens"}</Button>
           <Button variant={desktop ? "secondary" : "ghost"} icon="file-down" href={`/units/receipt/${p.id}`}><span className="dt:hidden">Download receipt</span><span className="hidden dt:inline">Receipt</span></Button>
         </Actions>
       </Shell>
@@ -298,9 +298,9 @@ export function PaymentDoneScreen() {
   // The payment did not complete: failed, refunded, expired, or the amount did not match.
   const p = "payment" in state ? state.payment : undefined;
   const copy = {
-    failed: { title: "Payment did not go through", body: `${failureText(p?.failureReason ?? null)} No units were added.` },
-    refunded: { title: "This payment was refunded", body: "The money went back to you. No units were added." },
-    expired: { title: "This payment expired", body: "You did not pay in time. No units were added. You can start again." },
+    failed: { title: "Payment did not go through", body: `${failureText(p?.failureReason ?? null)} No tokens were added.` },
+    refunded: { title: "This payment was refunded", body: "The money went back to you. No tokens were added." },
+    expired: { title: "This payment expired", body: "You did not pay in time. No tokens were added. You can start again." },
     // lead ruling WF, 6 Nov (RW4): a cancelled checkout says so plainly, never "do not pay again".
     cancelled: { title: "Payment cancelled", body: "You were not charged." },
     mismatch: { title: "We could not confirm this payment", body: "The amount paid does not match this payment. Nothing was added." },
@@ -318,7 +318,7 @@ export function PaymentDoneScreen() {
   return (
     <Shell onClose={close}>
       <Hero tone="bad" title={copy.title} body={copy.body} />
-      {hold ? <Banner tone="info" title="Your draft is still saved">It posts as soon as your units arrive.</Banner> : null}
+      {hold ? <Banner tone="info" title="Your draft is still saved">It posts as soon as your tokens arrive.</Banner> : null}
       {p && state.kind !== "refunded" && state.kind !== "cancelled" ? (
         <Banner tone="warning" title="Seeing a debit?">
           If your bank shows one for this payment, it comes back to you. Support can trace it with reference {shortRef(paymentRef(p))}.

@@ -15,7 +15,7 @@ export function ReceiptScreen({ paymentId }: { paymentId: string }) {
   return (
     <div className="flex flex-col gap-4 pb-6">
       <header className="-ml-2 flex items-center gap-1">
-        <IconButton icon="arrow-left" label="Back to Voice Units" variant="ghost" onClick={() => router.push("/units")} />
+        <IconButton icon="arrow-left" label="Back to your tokens" variant="ghost" onClick={() => router.push("/units")} />
         <h1 className="m-0 flex-1 font-display text-display-m dt:text-display-l">Receipt</h1>
       </header>
       {signedIn === null ? (
@@ -56,7 +56,7 @@ export function ReceiptScreen({ paymentId }: { paymentId: string }) {
               </dl>
               <div>
                 <Button variant="secondary" href="/units">
-                  Back to Voice Units
+                  Back to your tokens
                 </Button>
               </div>
             </>

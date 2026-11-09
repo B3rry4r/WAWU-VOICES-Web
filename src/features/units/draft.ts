@@ -1,6 +1,6 @@
 /* A held draft (V-19): the words a person wrote when they ran out of free posts and units. They stay in this browser
  * (no server drafts) and post after a successful purchase. The Write screen saves a draft with `saveDraft` and opens the
- * out-of-posts sheet on a 402 FREE_POSTS_EXHAUSTED or INSUFFICIENT_UNITS; the Voice Units return page posts it. */
+ * out-of-posts sheet on a 402 FREE_POSTS_EXHAUSTED or INSUFFICIENT_UNITS; the tokens return page posts it. */
 
 const STORE = "voices-held-drafts";
 
@@ -10,7 +10,7 @@ export interface HeldDraft {
   /** Idempotency-Key for the post: a refresh never posts the draft twice. */
   key: string;
   savedAt: number;
-  /** The person tapped "Get Voice Units": post this draft when the units arrive. */
+  /** The person tapped "Get tokens": post this draft when the units arrive. */
   awaitingUnits: boolean;
   /** The id of the payment whose units posted this draft. A posted draft is kept as a record (a second tab shows the right banner) and is never posted again. */
   posted?: string;

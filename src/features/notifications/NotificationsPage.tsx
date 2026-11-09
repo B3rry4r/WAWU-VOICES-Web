@@ -41,7 +41,7 @@ const ROW_TYPE: Record<Notification["type"], NonNullable<NotificationRowProps["t
 
 /**
  * Where a notification opens (lead ruling WF, 6 Nov, RW7): an answer or a reply opens its thread, a question its page,
- * Voice Units their screen, the weekly report its page. A result post has no page of its own (resolved on tap, see
+ * tokens their screen, the weekly report its page. A result post has no page of its own (resolved on tap, see
  * resultsHref); a decision about someone's own post or account opens nothing, because the post is gone and the
  * notice carries the Appeal action instead.
  */

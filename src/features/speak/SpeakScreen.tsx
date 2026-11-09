@@ -10,10 +10,10 @@ import * as api from "@/lib/api/speak";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
-import { clearDraft, clearPendingPayment, getPendingPayment, loadDraft, saveDraft, setPendingPayment, type Draft } from "./draft";
-import { ExtraVoiceSheet } from "./ExtraVoiceSheet";
-import { durationLabel, limitSeconds, naira, peaksFromLevels, refusalText, tokenFor, uuidKey } from "./logic";
-import { BackLink, PassPanel, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
+import { clearDraft, loadDraft, saveDraft, type Draft } from "./draft";
+import { peaksFromLevels, refusalText, tokenFor, uuidKey } from "./logic";
+import { BackLink, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
+import { tokensLabel, voiceCostMilli } from "@/lib/shared/text-price";
 import "./speak.css";
 import { voicesOf } from "@/lib/feed-format";
 
@@ -51,9 +51,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const [take, setTake] = useState<Take | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [sending, setSending] = useState<Step | null>(null);
-  const [sheet, setSheet] = useState<{ kind?: api.ExtraVoiceTokenKind; hasTake: boolean } | null>(null);
-  const [paying, setPaying] = useState(false);
-  const [sheetErr, setSheetErr] = useState<string | null>(null);
 
   const rec = useRef<VoiceRecorder | null>(null);
   const levelsRef = useRef<number[]>([]);
@@ -61,13 +58,11 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const interrupted = useRef(false);
   const starting = useRef(false);
   const startedAt = useRef(0);
-  const payBusy = useRef(false);
   const [nudge, setNudge] = useState(false);
   const alive = useRef(true);
   const trapped = useRef(false);
   const ignorePop = useRef(false);
   const sendState = useRef<{ key: string; clipId?: string; putUrl?: string; tokenId?: string; uploaded?: boolean; completed?: boolean } | null>(null);
-  const payKey = useRef(uuidKey());
 
   useEffect(() => setSignedIn(isSignedIn()), []);
 
@@ -107,7 +102,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const allowance = info?.allowance ?? null;
   const freeSeconds = allowance?.costs.freeVoiceSeconds ?? config?.voiceFreeSeconds ?? 10;
   const tokens = allowance?.extraVoiceTokens ?? [];
-  const limit = limitSeconds(freeSeconds, tokens);
+  // V-36: anyone may record up to the longest voice message; the price follows the length when it is sent.
+  const limit = allowance?.maxVoiceSeconds ?? allowance?.costs.voiceMaxSeconds ?? 60;
   const freeTotal = config?.freePosts ?? 10;
   const freeLeft = allowance?.freePostsRemaining ?? freeTotal;
   const offers = config?.extraVoice ?? [];
@@ -140,45 +136,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signedIn, phase, take, info, qid]);
 
-  // Back from checkout: verify the payment (the server checks it with Flutterwave itself).
-  useEffect(() => {
-    if (!signedIn || !qid) return;
-    const pending = getPendingPayment();
-    const paymentId = params.get("paymentId") ?? pending?.paymentId;
-    const status = params.get("status");
-    if (!paymentId || (!params.has("paymentId") && !pending)) return;
-    if (!params.has("paymentId") && !params.has("status") && !params.has("transaction_id")) return;
-    let live = true;
-    const back = () => router.replace(pathname + (qParam && !questionId ? `?q=${qParam}` : ""));
-    if (status === "cancelled") {
-      clearPendingPayment();
-      pushNote({ tone: "info", text: "The payment was not completed. Nothing was charged, and your recording is kept." });
-      back();
-      return;
-    }
-    (async () => {
-      try {
-        const p = await api.verifyPayment(paymentId, params.get("transaction_id") ?? undefined, pending?.key ?? uuidKey());
-        if (!live) return;
-        if (p.status === "SUCCEEDED") {
-          clearPendingPayment();
-          await refreshAllowance();
-          pushNote({ tone: "success", title: "Extra time added.", text: `You can record up to ${p.token?.maxSeconds ?? 30} seconds for your next message.` });
-        } else if (p.status === "PENDING" || p.status === "INITIATED") {
-          pushNote({ tone: "info", text: "Your payment is still being confirmed. Give it a moment, then check again.", action: "Check again", onAction: () => setReload((n) => n + 1) });
-        } else {
-          clearPendingPayment();
-          pushNote({ tone: "danger", text: p.failureReason ?? "The payment did not go through. You were not charged." });
-        }
-      } catch (e) {
-        if (live) pushNote({ tone: "danger", text: refusalText(e) });
-      }
-      if (live) back();
-    })();
-    return () => { live = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signedIn, qid]);
-
   const untrap = useCallback(() => {
     if (!trapped.current) return;
     trapped.current = false;
@@ -203,19 +160,14 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     setTake(t);
     setPhase("preview");
     if (qid) void saveDraft({ ...t, questionId: qid, savedAt: Date.now() } satisfies Draft);
-    if (r.overLimit && offers.length > 0) {
+    if (r.overLimit) {
       interrupted.current = false;
-      pushNote({ tone: "info", text: `That recording ran past ${wasLimit} seconds, so it cannot be sent as it is. Add extra time, or record it again.` });
-      setSheetErr(null);
-      setSheet({ hasTake: true });
+      pushNote({ tone: "info", text: `That recording ran past ${wasLimit} seconds, so it cannot be sent as it is. Record it again.` });
     } else if (interrupted.current) {
       interrupted.current = false;
       pushNote({ tone: "info", text: "Your recording stopped when you left the page. Listen back, then send it or record again." });
-    } else if (r.stoppedBy === "limit" && wasLimit === freeSeconds && offers.length > 0) {
-      setSheetErr(null);
-      setSheet({ hasTake: true });
     }
-  }, [freeSeconds, offers.length, qid, untrap]);
+  }, [qid, untrap]);
 
   async function startRecording() {
     if (!qid || phase === "recording" || starting.current || rec.current) return;
@@ -369,14 +321,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       window.location.assign(joinHref());
       return;
     }
-    if (take.seconds > freeSeconds + 0.5 && !tokenFor(tokens, take.seconds, freeSeconds)) {
-      pushNote({ tone: "danger", text: "A longer voice needs an extra voice token." });
-      if (offers.length > 0) {
-        setSheetErr(null);
-        setSheet({ hasTake: true });
-      }
-      return;
-    }
     clearNotes();
     setSending({ step: "upload", pct: 0 });
     let st = sendState.current;
@@ -427,13 +371,16 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         pushNote({ tone: "info", text: "Your voice is still being prepared. Tap Send again in a moment.", action: "Send", onAction: () => void send() });
         return;
       }
-      if (e instanceof ApiError && e.code === "EXTRA_VOICE_REQUIRED") {
-        sendState.current = null;
-        pushNote({ tone: "danger", text: refusalText(e) });
-        if (offers.length > 0) {
-          setSheetErr(null);
-          setSheet({ hasTake: true });
-        }
+      if (e instanceof ApiError && e.status === 402) {
+        // Not enough tokens (or the free posts are used): the recording is kept, and the person goes to get tokens.
+        pushNote({
+          tone: "danger",
+          text: refusalText(e),
+          action: "Get tokens",
+          onAction: () => {
+            void saveDraft({ ...take, questionId: qid, savedAt: Date.now() }).finally(() => router.push(`/units/buy?from=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}`));
+          },
+        });
         return;
       }
       if (e instanceof ApiError && (e.code === "UNAUTHENTICATED" || e.code === "TOKEN_EXPIRED")) {
@@ -443,29 +390,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       }
       const retryable = !(e instanceof ApiError) || e.status === 0 || e.status >= 500;
       pushNote({ tone: e instanceof ApiError && e.status === 0 ? "offline" : "danger", text: refusalText(e), action: retryable ? "Try again" : undefined, onAction: retryable ? () => void send() : undefined });
-    }
-  }
-
-  async function pay(offer: api.ExtraVoiceOffer, method: api.PaymentMethod) {
-    if (!qid || paying || payBusy.current) return;
-    payBusy.current = true;
-    if (take) await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
-    if (!signedIn) {
-      window.location.assign(joinHref());
-      return;
-    }
-    setPaying(true);
-    setSheetErr(null);
-    try {
-      const back = pathname + (qParam && !questionId ? `?q=${qParam}` : "");
-      const init = await api.initExtraVoicePayment(offer.kind, method, back, payKey.current);
-      setPendingPayment({ paymentId: init.paymentId, questionId: qid, key: uuidKey() });
-      window.location.assign(init.checkoutUrl);
-    } catch (e) {
-      setSheetErr(refusalText(e));
-      payBusy.current = false;
-      setPaying(false);
-      payKey.current = uuidKey();
     }
   }
 
@@ -506,14 +430,21 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }
 
   const live = phase === "recording";
-  const costs = allowance?.costs;
-  const unitText = costs ? `${costs.voicePostMilli / 1000} unit${costs.voicePostMilli === 1000 ? "" : "s"}` : "1 unit";
-  const unitNaira = costs ? naira(Math.round((costs.voicePostMilli * costs.baseKoboPerUnit) / 1000)) : "";
+  const costs = allowance?.costs ?? config?.costs;
+  const t1 = costs?.voiceTier1Seconds ?? 30;
+  const priceFor = (seconds: number): string => {
+    if (!costs) return "";
+    const milli = voiceCostMilli(Math.ceil(seconds * 1000 - 500), costs.extraVoice30Kobo * 10, costs.extraVoice60Kobo * 10, t1);
+    return `${tokensLabel(milli)} tokens`;
+  };
+  const covered = (seconds: number) => freeLeft > 0 && seconds <= freeSeconds + 0.5;
   const idleHint = (
     <p className="vx-rec__hint">
       {"Tap to record. You have "}
       <b>{`${limit} seconds`}</b>
-      {limit > freeSeconds ? " with your extra voice." : freeLeft > 0 ? " on a free post." : ` for ${unitText}${unitNaira ? ` (${unitNaira})` : ""}.`}
+      {". "}
+      {freeLeft > 0 ? `A free post covers ${freeSeconds} seconds. ` : ""}
+      {costs ? `Up to ${t1} seconds is ${priceFor(t1)}, longer is ${priceFor(limit)}, charged when you send.` : null}
     </p>
   );
   const liveHint = (
@@ -523,7 +454,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       {nudge ? <span className="sp-nudge" role="status">{" Keep talking, a little longer."}</span> : null}
     </p>
   );
-  const feeNote = `Extra time is a one-off token for one message: ${[...offers].sort((a, b) => a.maxSeconds - b.maxSeconds).map((o) => `${naira(o.priceKobo)} for up to ${durationLabel(o.maxSeconds)}`).join(", ")}. Your first ${freeTotal} posts stay free.`;
   const help = micError ? MIC_HELP[micError] : null;
   const stepText = sending ? (sending.step === "upload" ? `Sending your voice, ${sending.pct}%` : sending.step === "process" ? "Getting your voice ready" : "Posting") : "";
   const sub = "Today’s question";
@@ -557,8 +487,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       {phase !== "preview" && !help ? (
         <>
           <RecordStage live={live} limit={limit} left={left} levels={levels} freeLeft={freeLeft} hint={live ? liveHint : idleHint} onToggle={live ? stopRecording : () => void startRecording()} />
-          {!live && limit === freeSeconds ? <PassPanel offers={offers} onPick={(o) => { setSheetErr(null); setSheet({ kind: o.kind, hasTake: false }); }} /> : null}
-          {!live && limit === freeSeconds && offers.length > 0 ? <p className="sp-fine sp-fine--phone">{feeNote}</p> : null}
         </>
       ) : null}
 
@@ -576,7 +504,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           <div className="vx-rec__actions">
             <Button variant="onforest" icon="rotate-ccw" disabled={!!sending} onClick={() => dropTake(true)}>Re-record</Button>
             <Button variant="onforest" icon="trash-2" disabled={!!sending} onClick={() => dropTake(true)}>Delete</Button>
-            <Button size="l" icon="send" loading={!!sending} onClick={() => void send()}>{freeLeft > 0 ? "Send" : `Send for ${unitText}`}</Button>
+            <Button size="l" icon="send" loading={!!sending} onClick={() => void send()}>{covered(take.seconds) ? "Send" : `Send for ${priceFor(take.seconds)}`}</Button>
           </div>
         </>
       ) : null}
@@ -602,9 +530,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         ) : null}
       </div>
       <Rail><RecordingTimeCard freeLeft={freeLeft} total={freeTotal} freeSeconds={freeSeconds} offers={offers} /></Rail>
-      {sheet && offers.length > 0 ? (
-        <ExtraVoiceSheet offers={offers} freeSeconds={freeSeconds} initial={sheet.kind} hasTake={sheet.hasTake} takeSeconds={take?.seconds} onRerecord={() => { setSheet(null); dropTake(true); }} paying={paying} error={sheetErr} onPay={(o, m) => void pay(o, m)} onClose={() => { setSheet(null); setSheetErr(null); }} />
-      ) : null}
     </div>
   );
 }

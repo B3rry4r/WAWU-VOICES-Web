@@ -22,6 +22,8 @@ export type ReportTargetType = S["ReportTargetType"];
 export type ShareLink = S["ShareLink"];
 export type ReplyStance = S["ReplyStance"];
 export type NewsTag = S["NewsTag"];
+export type TextFixResult = S["TextFixResult"];
+export type TextFixChange = S["TextFixChange"];
 export type AnswerSort = "TOP" | "NEW" | "DEBATED";
 
 const guestHeaders = () => {
@@ -50,6 +52,8 @@ export const getAnswer = (aid: string) => apiFetch<Answer>(`/answers/${id(aid)}`
 export const listReplies = (aid: string, stance?: ReplyStance, cursor?: string) =>
   apiFetch<ReplyPage>(`/answers/${id(aid)}/replies${qs({ stance, cursor, limit: 20 })}`, read());
 export const getAllowance = () => apiFetch<Allowances>("/me/allowance", { authed: true });
+/** LCH-12: the AI fixes spelling, typos and grammar. 5 tokens, charged once per key and only when a fix comes back. */
+export const fixText = (text: string, key: string) => apiFetch<TextFixResult>("/text/fix", { method: "POST", authed: true, idempotencyKey: key, body: { text } });
 export const listReactionKinds = () => apiFetch<{ items: ReactionKindInfo[] }>("/reactions");
 
 export const likeAnswer = (aid: string) => apiFetch<LikeState>(`/answers/${id(aid)}/like`, { method: "PUT", ...read() });

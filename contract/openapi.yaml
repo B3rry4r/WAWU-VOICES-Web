@@ -2,9 +2,9 @@ openapi: 3.1.0
 info:
   title: VOICES API
   version: 1.0.0
-  description: 'The VOICES API (launch scope). Rulings V-1 to V-13 apply. Money in kobo, Voice Units in milli-units (1 unit = 1000), times ISO
-    8601 UTC, ids UUIDv7, cursor pages, one error shape. See docs/contract/CONVENTIONS.md. After-launch items (V-10) are not here: Messages, AI
-    prompts and credits, sponsored surveys, brand pages, push, weekly PDF, ad-free pass.'
+  description: 'The VOICES API (launch scope). Rulings V-1 to V-13 apply. Money in kobo, tokens in milli-tokens (1 token = 1000), times ISO 8601
+    UTC, ids UUIDv7, cursor pages, one error shape. See docs/contract/CONVENTIONS.md. After-launch items (V-10) are not here: Messages, AI prompts
+    and credits, sponsored surveys, brand pages, push, weekly PDF, ad-free pass.'
   license:
     name: Proprietary
     identifier: LicenseRef-Proprietary
@@ -49,7 +49,7 @@ tags:
 - name: share
   description: Share links, cards and the public share page
 - name: voice-units
-  description: Voice Units balance, packs, payments, extra voice tokens, receipts
+  description: Token balance, packs, payments, extra voice tokens, receipts
 - name: ads
   description: Labelled advert placements and events
 - name: system
@@ -59,6 +59,8 @@ tags:
 - name: admin
   description: 'The admin console: roles, today, calendar, override, moderation, news review, results queue, weekly approval, adverts, config,
     wallets, audit'
+- name: text-fix
+  description: The paid AI text fix
 paths:
   /me:
     post:
@@ -69,8 +71,8 @@ paths:
       security:
       - wawuId: []
       description: 'Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and
-        3 or more categories. Creates the Voice Units balance, free allowance (10 posts) and settings. Records the referral if a code is sent.
-        Auth: WAWU ID token; works before the VOICES profile exists.'
+        3 or more categories. Creates the tokens balance, free allowance (10 posts) and settings. Records the referral if a code is sent. Auth:
+        WAWU ID token; works before the VOICES profile exists.'
       requestBody:
         required: true
         content:
@@ -120,8 +122,8 @@ paths:
       security:
       - wawuId: []
       description: 'Starts a 14 day grace period (cancelled only by the person''s own Undo, POST /me/deletion/cancel; signing in or a refreshed
-        token never cancels it), then removes the profile, posts, clips and Voice Units balance. Unspent Voice Units are lost (they are never
-        cashed out, V-9) and the delete screen says so plainly. Auth: signed in with a finished profile.'
+        token never cancels it), then removes the profile, posts, clips and tokens balance. Unspent tokens are lost (they are never cashed out,
+        V-9) and the delete screen says so plainly. Auth: signed in with a finished profile.'
       requestBody:
         required: true
         content:
@@ -652,8 +654,7 @@ paths:
       summary: Ask for an export of my data
       security:
       - wawuId: []
-      description: 'Posts, transcripts and Voice Units history. Built in the background; poll GET /me/export. Auth: signed in with a finished
-        profile.'
+      description: 'Posts, transcripts and tokens history. Built in the background; poll GET /me/export. Auth: signed in with a finished profile.'
       responses:
         '202':
           description: Accepted
@@ -810,8 +811,8 @@ paths:
       - topics-calendar
       summary: Prices, costs and free posts for guests
       security: []
-      description: 'Landing, Onboarding and the Voice Units screens read this. Nothing is typed into a client. Auth: none (public). Rate limit:
-        300 per minute per IP or account.'
+      description: 'Landing, Onboarding and the token screens read this. Nothing is typed into a client. Auth: none (public). Rate limit: 300
+        per minute per IP or account.'
       responses:
         '200':
           description: OK
@@ -3464,7 +3465,7 @@ paths:
       operationId: exportLedger
       tags:
       - voice-units
-      summary: Download my Voice Units statement (CSV)
+      summary: Download my tokens statement (CSV)
       security:
       - wawuId: []
       description: 'Not a PDF (V-10). Auth: signed in with a finished profile.'
@@ -3485,7 +3486,7 @@ paths:
       operationId: listLedger
       tags:
       - voice-units
-      summary: My Voice Units history
+      summary: My tokens history
       security:
       - wawuId: []
       description: 'Auth: signed in with a finished profile.'
@@ -5823,6 +5824,46 @@ paths:
           $ref: '#/components/responses/E403'
         '429':
           $ref: '#/components/responses/E429'
+  /text/fix:
+    post:
+      operationId: fixText
+      tags:
+      - text-fix
+      summary: Fix the spelling, typos and grammar of my text (5 tokens)
+      security:
+      - wawuId: []
+      description: 'Only spelling, typos and grammar are corrected, never what the text means: the server checks every change and refuses a fix
+        that changes more. Costs 5 tokens (config textfix.cost_milli), charged once per Idempotency-Key and only when a fix comes back: an AI
+        failure (502 TEXT_FIX_FAILED), a refused fix and a text with nothing to fix cost nothing. The text is sent to the AI provider to be corrected
+        and used for nothing else. The person sees the changes and chooses to use the fix or keep their own text. Auth: signed in with a finished
+        profile. Rate limit: 10 per 10 minutes per account.'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextFixRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextFixResult'
+        '401':
+          $ref: '#/components/responses/E401'
+        '402':
+          $ref: '#/components/responses/E402'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+        '502':
+          $ref: '#/components/responses/E502'
+        '503':
+          $ref: '#/components/responses/E503'
 components:
   securitySchemes:
     wawuId:
@@ -5920,7 +5961,13 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     E429:
-      description: RATE_LIMITED
+      description: RATE_LIMITED or DAILY_LIMIT_REACHED (20 messages a day)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    E502:
+      description: TEXT_FIX_FAILED
       content:
         application/json:
           schema:
@@ -6230,6 +6277,8 @@ components:
       - FREE_POSTS_EXHAUSTED
       - VOICE_TOO_LONG
       - EXTRA_VOICE_REQUIRED
+      - DAILY_LIMIT_REACHED
+      - TEXT_FIX_FAILED
       - QUESTION_CLOSED
       - POLL_CLOSED
       - POLL_NOT_STARTED
@@ -6293,14 +6342,14 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         freeLeft:
           type: integer
         balanceMilli:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
       additionalProperties: false
       required:
       - action
@@ -6317,8 +6366,10 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         maxVoiceSeconds:
+          type: integer
+        messagesLeftToday:
           type: integer
         freeReactionsLeftToday:
           type: integer
@@ -6356,22 +6407,22 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         voicePostMilli:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         reactionAfterFreeMilli:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         voteAfterFreeMilli:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         minPackKobo:
           type: integer
           minimum: 0
@@ -6391,6 +6442,21 @@ components:
           type: integer
         freeVoiceSeconds:
           type: integer
+        textPriceChars:
+          type: integer
+        freePostTextChars:
+          type: integer
+        messagesPerDay:
+          type: integer
+        textFixMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        voiceTier1Seconds:
+          type: integer
+        voiceMaxSeconds:
+          type: integer
       additionalProperties: false
       required:
       - freeReactionsPerDay
@@ -6405,6 +6471,9 @@ components:
       - extraVoice60Kobo
       - textMaxChars
       - freeVoiceSeconds
+      description: 'Prices in tokens (V-36). textPostMilli is the price of textPriceChars characters, charged in proportion (5 tokens per 150
+        characters, rounded to the hundredth). The voice prices are extraVoice30Kobo (up to voiceTier1Seconds) and extraVoice60Kobo (up to voiceMaxSeconds),
+        in kobo: 1 token is 100 kobo. A free post covers a voice of freeVoiceSeconds or a text of freePostTextChars; longer pays in full.'
     Me:
       type: object
       properties:
@@ -7352,8 +7421,7 @@ components:
       - tiers
       - extraVoice
       - voiceFreeSeconds
-      description: Guest-readable prices and limits for Landing, Onboarding and the Voice Units screens. Same values as config, never typed into
-        a client.
+      description: Guest-readable prices and limits for Landing, Onboarding and the token screens. Same values as config, never typed into a client.
     Country:
       type: object
       properties:
@@ -7663,7 +7731,7 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         usedFreePost:
           type: boolean
         usedFreeDaily:
@@ -7672,7 +7740,7 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
       additionalProperties: false
       required:
       - costMilli
@@ -8015,7 +8083,7 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         label:
           type: string
       additionalProperties: false
@@ -9076,12 +9144,12 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         bonusMilli:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         effectiveKoboPerUnit:
           type: integer
         baseKoboPerUnit:
@@ -9175,7 +9243,7 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         freePostsRemaining:
           type: integer
         freePostsUsed:
@@ -9221,14 +9289,14 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         balanceAfterMilli:
           type:
           - integer
           - 'null'
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         free:
           type: boolean
         paymentId:
@@ -9321,7 +9389,7 @@ components:
           - 'null'
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         checkoutUrl:
           type: string
         expiresAt:
@@ -9364,14 +9432,14 @@ components:
           - 'null'
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         bonusMilli:
           type:
           - integer
           - 'null'
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         method:
           type:
           - string
@@ -9394,7 +9462,7 @@ components:
           - 'null'
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         createdAt:
           type: string
           format: date-time
@@ -9454,7 +9522,7 @@ components:
           - 'null'
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         method:
           type:
           - string
@@ -11024,7 +11092,7 @@ components:
           type: integer
           minimum: -2000000000
           maximum: 2000000000
-          description: Voice Units as integer milli-units, 1 unit = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
         freePostsRemaining:
           type: integer
         ledger:
@@ -11210,6 +11278,68 @@ components:
       - reason
       - before
       - after
+    TextFixRequest:
+      type: object
+      properties:
+        text:
+          type: string
+      additionalProperties: false
+      required:
+      - text
+      description: The person's own text, 1 to 5,000 characters (counted as Unicode characters, an emoji is one).
+    TextFixChange:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        start:
+          type: integer
+      additionalProperties: false
+      required:
+      - from
+      - to
+      - start
+      description: 'One change: the words that were there, the words that replace them, and where `from` starts in the original text, in characters.'
+    TextFixCharge:
+      type: object
+      properties:
+        costMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        balanceMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+      additionalProperties: false
+      required:
+      - costMilli
+      - balanceMilli
+    TextFixResult:
+      type: object
+      properties:
+        fixedText:
+          type: string
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TextFixChange'
+        changed:
+          type: boolean
+        charge:
+          $ref: '#/components/schemas/TextFixCharge'
+      additionalProperties: false
+      required:
+      - fixedText
+      - changes
+      - changed
+      - charge
+      description: The corrected text and the changes, for the person to use or keep their own. changed is false (and nothing is charged) when
+        there was nothing to fix.
     BlockedUserPage:
       type: object
       properties:

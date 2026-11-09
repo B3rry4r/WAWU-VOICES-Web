@@ -4,13 +4,14 @@ import { Banner, Composer } from "@/components/vx";
 import type { IntentKind } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
-import { failText, isOutOfPosts, nairaOfMilli, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
+import { countChars } from "@/lib/shared/text-price";
+import { failText, isOutOfPosts, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
 
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 
-/** The reply box drawn inside the Thread at 1440. A reply spends a free post or units like an answer, so a 402 keeps the words in this browser
- *  and sends the person to buy units, then back here. */
+/** The reply box drawn inside the Thread at 1440. A reply spends a free post or tokens like an answer, so a 402 keeps the words in this browser
+ *  and sends the person to buy tokens, then back here. */
 export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy }: {
   aid: string; qid: string; who: string; stance?: ReplyStance; allow: Allowances; onPosted: () => void; onBuy: (href: string) => void;
 }) {
@@ -22,6 +23,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy }:
   const [text, setText] = useState(() => typedDraft(slot));
   const [intent, setIntent] = useState<IntentKind | null>(stance ? INTENT_OF[stance] : null);
   const c = allow.costs;
+  const price = postPrice(text, allow);
   async function send() {
     if (busy.current) return;
     const body = text.trim();
@@ -52,13 +54,17 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy }:
       <Composer
         freeLeft={allow.freePostsRemaining}
         maxChars={c.textMaxChars}
+        countChars={countChars}
         value={text}
         onChange={(t) => { setText(t); saveTyped(slot, t); }}
         replyTo={who}
         intent={intent ?? undefined}
         onIntentChange={setIntent}
-        cost={`${unitsText(c.textPostMilli)} (${nairaOfMilli(c.textPostMilli, c.baseKoboPerUnit)})`}
-        costShort={unitsText(c.textPostMilli)}
+        cost={price.text}
+        costShort={price.short}
+        postLabel={price.label}
+        paid={price.paid}
+        postDisabled={allow.messagesLeftToday === 0}
         balance={unitsText(allow.balanceMilli)}
         onVoice={false}
         onSubmit={() => void send()}

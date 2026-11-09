@@ -6,7 +6,7 @@ import { initPayment, type ExtraVoiceTokenKind, type PayMethod } from "@/lib/api
 import { attemptFor, choiceId, dropAttempt, safePath, saveAttempt } from "./attempt";
 
 export type CheckoutSpec =
-  | { kind: "UNITS"; tierId: string; method: PayMethod }
+  | { kind: "UNITS"; tierId: string; method?: PayMethod }
   | { kind: "EXTRA_VOICE"; tokenKind: ExtraVoiceTokenKind; method?: PayMethod };
 
 export const RETURN_PATH = "/units/done";
@@ -34,7 +34,7 @@ function checkoutHref(url: string): string | null {
 /** Begin a payment and go to the hosted checkout. One Idempotency-Key per choice, kept across retries (see attempt.ts). */
 export function startCheckout(spec: CheckoutSpec, from?: string, go: (url: string) => void = (u) => window.location.assign(u), draftQuestionId?: string): Promise<void> {
   const choice = choiceId(spec.kind === "UNITS" ? spec : { kind: "EXTRA_VOICE", tokenKind: spec.tokenKind });
-  // Only a Voice Units purchase carries a draft: a token purchase never posts one.
+  // Only a token purchase carries a draft: a token purchase never posts one.
   const attempt = attemptFor(choice, safePath(from), Date.now(), spec.kind === "UNITS" ? draftQuestionId : undefined);
   const known = attempt.checkoutUrl && attempt.expiresAt && attempt.expiresAt > Date.now() ? checkoutHref(attempt.checkoutUrl) : null;
   if (known) {
@@ -43,7 +43,7 @@ export function startCheckout(spec: CheckoutSpec, from?: string, go: (url: strin
   }
   const body =
     spec.kind === "UNITS"
-      ? { kind: "UNITS" as const, tierId: spec.tierId, method: spec.method, returnPath: RETURN_PATH }
+      ? { kind: "UNITS" as const, tierId: spec.tierId, ...(spec.method ? { method: spec.method } : {}), returnPath: RETURN_PATH }
       : { kind: "EXTRA_VOICE" as const, tokenKind: spec.tokenKind, ...(spec.method ? { method: spec.method } : {}), returnPath: RETURN_PATH };
   return initPayment(body, attempt.key).then(
     (r) => {

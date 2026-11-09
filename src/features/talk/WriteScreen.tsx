@@ -8,7 +8,9 @@ import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
 import { clearDraft, saveDraft } from "@/features/units/draft";
 import { StageNav } from "@/features/stage/StageNav";
-import { AppBar, Problem, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
+import { countChars } from "@/lib/shared/text-price";
+import { FixPanel } from "./FixPanel";
+import { AppBar, Problem, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -58,9 +60,11 @@ export function WriteScreen({ qid }: { qid: string }) {
   const whoLabel = parent?.author ? `@${parent.author.handle}` : "Anonymous";
   const left = allow?.freePostsRemaining ?? 0;
   const c = allow?.costs;
-  const nairaText = c ? nairaOfMilli(c.textPostMilli, c.baseKoboPerUnit) : "";
-  const voiceNaira = c ? nairaOfMilli(c.voicePostMilli, c.baseKoboPerUnit) : "";
-  const textCost = c ? `${unitsText(c.textPostMilli)} (${nairaText})` : undefined;
+  const price = allow ? postPrice(text, allow) : null;
+  const voice30 = c ? unitsText(c.extraVoice30Kobo * 10) : "";
+  const voiceNaira = c ? nairaOfMilli(c.extraVoice30Kobo * 10, c.baseKoboPerUnit) : "";
+  const dayLeft = allow?.messagesLeftToday ?? null;
+  const buyHref = `/units/buy?from=${encodeURIComponent(close)}`;
 
   async function send() {
     if (busy.current) return;
@@ -119,6 +123,7 @@ export function WriteScreen({ qid }: { qid: string }) {
           <Composer
             freeLeft={left}
             maxChars={c?.textMaxChars}
+            countChars={countChars}
             value={text}
             onChange={(t) => { setText(t); saveTyped(slot, t); }}
             replyTo={replyTo ? whoLabel : undefined}
@@ -127,22 +132,27 @@ export function WriteScreen({ qid }: { qid: string }) {
             showTags={!replyTo}
             newsTag={tag}
             onTagChange={setTag}
-            cost={textCost}
-            costShort={c ? unitsText(c.textPostMilli) : undefined}
+            cost={price?.text}
+            costShort={price?.short}
+            postLabel={price?.label}
+            paid={price?.paid}
+            postDisabled={dayLeft === 0}
+            extra={signedIn && c ? <FixPanel text={text} costMilli={c.textFixMilli ?? 5000} buyHref={buyHref} onUse={(fixed) => { setText(fixed); saveTyped(slot, fixed); }} /> : undefined}
             balance={allow ? unitsText(allow.balanceMilli) : undefined}
             onVoice={false}
             onSubmit={() => void send()}
           />
         </div>
+        {dayLeft === 0 ? <Banner tone="info" title="That is today’s limit">{`You can send ${c?.messagesPerDay ?? 20} messages a day. Come back after midnight, Lagos time. Reading, listening, likes, shares and reactions never count.`}</Banner> : null}
         {sending ? <Banner tone="info">Posting your answer.</Banner> : null}
         {msg ? <Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner> : null}
         {left === 1 && c ? (
-          <Banner tone="warning" title="Last free post">{`This post is free. After it, a text post uses ${unitsText(c.textPostMilli)} (${nairaText}) and a voice uses ${unitsText(c.voicePostMilli)} (${voiceNaira}).`}</Banner>
+          <Banner tone="warning" title="Last free post">{`This post is free if it is up to ${c.freePostTextChars ?? 500} characters. After it, text costs ${unitsText(c.textPostMilli)} for every ${c.textPriceChars ?? 150} characters and a voice message up to ${c.voiceTier1Seconds ?? 30} seconds costs ${voice30} (${voiceNaira}).`}</Banner>
         ) : null}
         <div className="hidden rounded-[var(--radius-l)] bg-[var(--surface)] p-4 shadow-[inset_0_0_0_1px_var(--line)] dt:block">
           <b className="mb-2 block">Your free posts</b>
           <FreePosts left={left} />
-          {c ? <p className="m-0 mt-2 text-caption text-[var(--ink-2)]">{`Text and voice both count, and deleting a post does not give one back. After your free posts, a text post uses ${unitsText(c.textPostMilli)} (${nairaText}) and a voice up to ${allow?.maxVoiceSeconds} seconds uses ${unitsText(c.voicePostMilli)} (${voiceNaira}).`}</p> : null}
+          {c ? <p className="m-0 mt-2 text-caption text-[var(--ink-2)]">{`Text and voice both count, and deleting a post does not give one back. After your free posts, text costs ${unitsText(c.textPostMilli)} for every ${c.textPriceChars ?? 150} characters and a voice message up to ${c.voiceTier1Seconds ?? 30} seconds costs ${voice30} (${voiceNaira}).`}</p> : null}
         </div>
         <p className="m-0 mx-auto text-center text-caption text-[var(--ink-2)]">Reading, listening, liking and sharing are always free.</p>
       </div>

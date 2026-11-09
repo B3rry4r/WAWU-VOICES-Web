@@ -103,7 +103,7 @@ async function writeAnswer(text: string) {
 }
 
 describe("Write: posting spends free posts and units", () => {
-  it("402 out of free posts keeps the draft and hands off to Voice Units with the same key on retry", async () => {
+  it("402 out of free posts keeps the draft and hands off to tokens with the same key on retry", async () => {
     let n = 0;
     stub((c) => {
       if (c.url.endsWith("/questions/q1") ) return json(question);
@@ -245,7 +245,7 @@ describe("TalkCard: like and voices", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Funny/ }));
     await waitFor(() => expect(push2).toHaveBeenCalled());
     const t = String(push2.mock.calls[0][0]);
-    expect(t).toMatch(/0\.[23] units/);
+    expect(t).toMatch(/0\.25 tokens/); // up to 2 decimals now
     expect(t).not.toMatch(/0\.1/);
   });
 });
@@ -285,7 +285,13 @@ describe("Write: keys and double sends", () => {
       return undefined;
     });
     render(<WriteScreen qid="q1" />);
-    expect((await screen.findByRole("textbox")).getAttribute("maxlength")).toBe("120");
+    const box = (await screen.findByRole("textbox")) as HTMLTextAreaElement;
+    // the limit is applied by the page, counting Unicode characters as the server does (an emoji is one)
+    expect(box.getAttribute("maxlength")).toBeNull();
+    await userEvent.click(box);
+    await userEvent.paste("😀".repeat(130));
+    expect([...box.value].length).toBe(120);
+    expect(screen.getByText("120 / 120")).toBeTruthy();
   });
 });
 
@@ -356,10 +362,10 @@ describe("TalkCard: reactions under latency end equal to the database", () => {
 
 import { unitsText } from "@/features/talk/lib";
 describe("unitsText", () => {
-  it("says 0 units, 0.5 units, 1 unit, 12.5 units", () => {
-    expect(unitsText(0)).toBe("0 units");
-    expect(unitsText(500)).toBe("0.5 units");
-    expect(unitsText(1000)).toBe("1 unit");
-    expect(unitsText(12500)).toBe("12.5 units");
+  it("says 0 tokens, 0.5 tokens, 1 token, 12.5 tokens", () => {
+    expect(unitsText(0)).toBe("0 tokens");
+    expect(unitsText(500)).toBe("0.5 tokens");
+    expect(unitsText(1000)).toBe("1 token");
+    expect(unitsText(12500)).toBe("12.5 tokens");
   });
 });

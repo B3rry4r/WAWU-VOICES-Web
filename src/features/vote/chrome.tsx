@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { tokensLabel } from "@/lib/shared/text-price";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Banner, Icon, NotFoundState, Skeleton } from "@/components/vx";
@@ -83,11 +84,9 @@ export function LoadFailed({ error, retry, what }: { error: unknown; retry: () =
   );
 }
 
-/** Units as the screens say them: 0.2 units, 1 unit, 12.5 units. Milli-units in, never naira (V-9). */
+/** Tokens as the screens say them: 0.2 tokens, 1 token, 12.5 tokens. Milli-tokens in, never naira (V-9). */
 export function unitsText(milli: number): string {
-  const u = milli / 1000;
-  const s = Number.isInteger(u) ? String(u) : String(Math.round(u * 100) / 100);
-  return `${s} ${u === 1 ? "unit" : "units"}`;
+  return `${tokensLabel(milli)} ${milli === 1000 ? "token" : "tokens"}`;
 }
 
 /** The question's page title line the boards print under the app bar title, e.g. "Week 4 poll". */

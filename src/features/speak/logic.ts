@@ -24,16 +24,6 @@ export function tokenFor(tokens: ExtraVoiceToken[], seconds: number, freeSeconds
     .sort((a, b) => a.maxSeconds - b.maxSeconds)[0];
 }
 
-/** Seconds of recording this person may take now: the free seconds, or the longest token they own. */
-export function limitSeconds(freeSeconds: number, tokens: ExtraVoiceToken[]): number {
-  return Math.max(freeSeconds, ...tokens.filter((t) => t.status === "AVAILABLE").map((t) => t.maxSeconds));
-}
-
-export function naira(kobo: number): string {
-  const n = kobo / 100;
-  return "₦" + (Number.isInteger(n) ? String(n) : n.toFixed(2));
-}
-
 export function durationLabel(seconds: number): string {
   if (seconds === 60) return "1 minute";
   return seconds + " seconds";
