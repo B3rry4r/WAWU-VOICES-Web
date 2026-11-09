@@ -104,6 +104,93 @@ export async function normalise(
   }
 }
 
+/** What one ffmpeg pass gives for a recording: the stored file, the waveform source and the length. */
+export interface OnePass {
+  audio: Buffer;
+  /** 8 kHz mono signed 16-bit little-endian samples of the same levelled sound that was encoded (for the waveform). */
+  pcm: Buffer;
+  /** The length ffprobe would report for `audio` (the movie header of the written file). */
+  durationSeconds: number;
+}
+
+/**
+ * LCH-09 one-pass: converts a recording AND makes its waveform samples in a single ffmpeg run, where the pipeline used to
+ * run ffprobe, ffmpeg, ffprobe and ffmpeg again (four processes, and the sound decoded three times). The stored file is made by
+ * exactly the same chain as `normalise` (loudnorm=I=-16:TP=-1.5:LRA=11, aresample, mono, 24 kHz, AAC 32 kbps, faststart); the
+ * levelled sound is split after the chain, once to the encoder and once down to 8 kHz for the waveform, so loudnorm still
+ * runs once. The length is read from the written file's movie header, which is what ffprobe reads. Nothing is probed first:
+ * a file ffmpeg cannot read as audio fails here (the caller says "not_audio"), and an over-long file is cut at maxSeconds
+ * plus headroom and is then seen as too long by its measured length, the same answer as before.
+ */
+export async function convertOnePass(
+  input: Buffer,
+  maxSeconds: number,
+): Promise<OnePass> {
+  const dir = await mkdtemp(join(tmpdir(), "voices-norm-"));
+  const outFile = join(dir, "out.m4a");
+  try {
+    const t = String(maxSeconds + 0.5);
+    const { out } = await run(
+      "ffmpeg",
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        "pipe:0",
+        "-filter_complex",
+        "[0:a:0]loudnorm=I=-16:TP=-1.5:LRA=11,aresample=" +
+          OUTPUT.sampleRate +
+          ",aformat=channel_layouts=mono,asplit=2[enc][wav];[wav]aresample=8000[pcm]",
+        "-map",
+        "[enc]",
+        "-map_metadata",
+        "-1",
+        "-t",
+        t,
+        "-c:a",
+        "aac",
+        "-b:a",
+        String(OUTPUT.bitrate),
+        "-movflags",
+        "+faststart",
+        "-f",
+        "mp4",
+        outFile,
+        "-map",
+        "[pcm]",
+        "-t",
+        t,
+        "-f",
+        "s16le",
+        "pipe:1",
+      ],
+      input,
+    );
+    const audio = await readFile(outFile);
+    return { audio, pcm: out, durationSeconds: mp4Duration(audio) };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/** The length in seconds from the `mvhd` box of an MP4 (what ffprobe reports as the format duration). */
+export function mp4Duration(mp4: Buffer): number {
+  const moov = mp4.indexOf("moov");
+  const at = moov < 0 ? -1 : mp4.indexOf("mvhd", moov);
+  if (at < 0) throw new Error("no movie header");
+  const v = mp4[at + 4];
+  const base = at + 8; // after the type, version and flags
+  if (v === 1) {
+    const scale = mp4.readUInt32BE(base + 16);
+    const dur = Number(mp4.readBigUInt64BE(base + 20));
+    return dur / scale;
+  }
+  const scale = mp4.readUInt32BE(base + 8);
+  return mp4.readUInt32BE(base + 12) / scale;
+}
+
 export interface Probe {
   codec: string;
   channels: number;
