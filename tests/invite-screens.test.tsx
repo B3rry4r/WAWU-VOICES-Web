@@ -14,6 +14,7 @@ import { PostedScreen } from "@/features/talk/PostedScreen";
 import { FriendsScreen } from "@/features/friends/FriendsScreen";
 import { MoodPickScreen } from "@/features/mood/MoodPickScreen";
 import { hidesTabBar } from "@/components/shell/nav";
+import { ShellSlotsContext } from "@/components/shell/ShellSlots";
 import { INVITE_COOKIE } from "@/lib/invite";
 import { inviteMessage, whatsappHref, smsHref } from "@/features/share/invite-share";
 import { qrMatrix, qrSvgPath } from "@/lib/qr";
@@ -26,12 +27,15 @@ const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { sta
 const ans = { id: "a1", questionId: "q1", author: { id: "u1", handle: "me", displayName: "Me", state: null, avatarUrl: null }, kind: "TEXT", body: "Hopeful.", clip: null, createdAt: new Date().toISOString(), editedAt: null, status: "PUBLISHED", news: null, likeCount: 0, replyCount: 0, agreeCount: 0, disagreeCount: 0, reactionCount: 0, reactionBreakdown: [], myReaction: null, iLiked: false, iSaved: false, isMine: true, labels: [], mood: "HOPEFUL" };
 const sit = { answerId: "a1", questionId: "q1", mood: "HOPEFUL", showNameOnCard: false, defaultScope: "NIGERIA", showSwitch: false, nigeria: { percent: null, count: 3 }, world: { percent: null, count: 3 }, cardLine: "You’re one of the first.", updatedAt: "x" };
 let shareWord = true;
+let claim429 = 0;
 function stub() {
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     const c: Call = { url: String(url), method: init?.method ?? "GET", body: init?.body ? JSON.parse(String(init.body)) : undefined };
     calls.push(c);
     const u = c.url;
     if (u.endsWith("/answers/a1")) return json(ans);
+    if (u.endsWith("/answers/a2")) return json({ ...ans, id: "a2", mood: null });
+    if (u.endsWith("/me/invite/claim") && claim429 > 0) { claim429--; return new Response(JSON.stringify({ error: { code: "RATE_LIMITED", message: "Too many tries.", details: { retryAfterSeconds: 1 } } }), { status: 429, headers: { "Retry-After": "1" } }); }
     if (u.endsWith("/where-you-sit")) return json(sit);
     if (u.includes("/me/allowance")) return json({ freePostsRemaining: 5 });
     if (u.endsWith("/share/links")) return json({ code: "c1", url: "x", cardStatus: "PENDING" });
@@ -48,7 +52,7 @@ const opened = vi.fn();
 const shared = vi.fn(async () => undefined);
 const written = vi.fn(async () => undefined);
 beforeEach(() => {
-  calls = []; friends = []; shareWord = true; search = "a=a1";
+  calls = []; friends = []; shareWord = true; claim429 = 0; search = "a=a1";
   window.localStorage.clear();
   window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" }));
   document.cookie = `${INVITE_COOKIE}=; Max-Age=0; Path=/`;
@@ -94,7 +98,6 @@ describe("You’re live (LCH-05)", () => {
     expect(qr.querySelector("path")?.getAttribute("d")).toBe(qrSvgPath(qrMatrix(LINK)));
     await screen.findByText("2 of your friends have answered");
     expect(screen.getByText("Ask the person next to you, then compare")).toBeTruthy();
-    expect(hidesTabBar("/q/q1/posted")).toBe(true);
     expect(hidesTabBar("/friends")).toBe(true);
   });
   it("counts the link the person arrived by, once, then forgets the code", async () => {
@@ -153,5 +156,31 @@ describe("Share my word on the pick screen", () => {
     await userEvent.click(sw);
     expect(window.localStorage.getItem("voices-share-word")).toBe("off");
     expect(calls.some((c) => c.method === "PATCH")).toBe(false);
+  });
+});
+
+describe("tab bar and retries (lead ruling LC, 9 Nov)", () => {
+  const slots = (hideTabs: () => () => void) => ({ railEl: null, barEl: null, claimBar: () => () => undefined, hideTabs });
+  it("only the mood Posted screen hides the tab bar; an ordinary Posted screen keeps it", async () => {
+    const hide = vi.fn(() => () => undefined);
+    const { unmount } = render(<ShellSlotsContext.Provider value={slots(hide)}><PostedScreen qid="q1" /></ShellSlotsContext.Provider>);
+    await screen.findByText("Send it to 3 people.");
+    expect(hide).toHaveBeenCalled();
+    unmount();
+    const hide2 = vi.fn(() => () => undefined);
+    search = "a=a2";
+    render(<ShellSlotsContext.Provider value={slots(hide2)}><PostedScreen qid="q1" /></ShellSlotsContext.Provider>);
+    await screen.findByText("Your voice is live");
+    expect(hide2).not.toHaveBeenCalled();
+    expect(hidesTabBar("/q/q1/posted")).toBe(false);
+  });
+  it("a 429 on the claim keeps the code and tries again after Retry-After", async () => {
+    document.cookie = `${INVITE_COOKIE}=zz11yy2; Path=/`;
+    claim429 = 1;
+    render(<PostedScreen qid="q1" />);
+    await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/me/invite/claim"))).toHaveLength(1));
+    expect(document.cookie).toContain(`${INVITE_COOKIE}=zz11yy2`);
+    await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/me/invite/claim"))).toHaveLength(2), { timeout: 4000 });
+    await waitFor(() => expect(document.cookie).not.toContain(`${INVITE_COOKIE}=zz11yy2`));
   });
 });

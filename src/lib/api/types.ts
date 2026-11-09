@@ -147,7 +147,7 @@ export interface paths {
         put?: never;
         /**
          * Count me as the friend of the person whose link brought me
-         * @description LCH-06: the web sends the code it kept for the visitor (30 days, first link wins) after the person has posted an answer. Always 204; it never says whether the code was valid. Ignored when the code is unknown or my own, when I already have an inviter, when my account is older than 30 days, when I have no published answer, or when either of us blocked the other. Auth: signed in with a finished profile.
+         * @description LCH-06: the web sends the code it kept for the visitor (30 days, first link wins) after the person has posted an answer. Always 204; it never says whether the code was valid. Ignored when the code is unknown or my own, when I already have an inviter, when my account is older than 30 days, when I have no published named (not anonymous) answer, or when either of us blocked the other. Limited to 10 a minute per signed-in person (429 with Retry-After), with a high per-address ceiling as an abuse guard. Auth: signed in with a finished profile.
          */
         post: operations["claimInvite"];
         delete?: never;
@@ -165,7 +165,7 @@ export interface paths {
         };
         /**
          * Friends who answered through my link
-         * @description LCH-06: the count and a cursor page of the people who came through my link and answered, newest first. A friend's word is returned only to me, only if the friend's Share my word is on at this moment (else word is null and wordShared is false); the friend still counts. Never in a public response. Auth: signed in with a finished profile.
+         * @description LCH-06: the count and a cursor page of the people who came through my link and answered, newest first. A friend's word is returned only to me, only if the friend's Share my word is on at this moment (else word is null and wordShared is false); the friend still counts. A friend counts and shows only through a published, named (not anonymous) answer. Never in a public response. Auth: signed in with a finished profile.
          */
         get: operations["listMyFriends"];
         put?: never;

@@ -18,16 +18,21 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
   const [railEl, setRailEl] = useState<HTMLElement | null>(null);
   const [barEl, setBarEl] = useState<HTMLElement | null>(null);
   const [claims, setClaims] = useState(0);
+  const [bareClaims, setBareClaims] = useState(0);
+  const hideTabs = useCallback(() => {
+    setBareClaims((n) => n + 1);
+    return () => setBareClaims((n) => n - 1);
+  }, []);
   const claimBar = useCallback(() => {
     setClaims((n) => n + 1);
     return () => setClaims((n) => n - 1);
   }, []);
   // The same element every render, so the ref callbacks' state updates never re-render the search row's Suspense boundary.
   const deskSearch = useMemo(() => <DeskSearch />, []);
-  const slots = useMemo(() => ({ railEl, barEl, claimBar }), [railEl, barEl, claimBar]);
+  const slots = useMemo(() => ({ railEl, barEl, claimBar, hideTabs }), [railEl, barEl, claimBar, hideTabs]);
   const pathname = usePathname() ?? "/";
   const active = activeNav(pathname);
-  const bare = hidesTabBar(pathname);
+  const bare = hidesTabBar(pathname) || bareClaims > 0;
   const weekly = onWeekly(pathname);
   const logoBar = showsLogoBar(pathname);
   if (isChromeless(pathname)) return <>{children}</>;

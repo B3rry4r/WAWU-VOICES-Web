@@ -68,7 +68,7 @@ export function FriendsScreen() {
                 </span>
                 {f.word && isMood(f.word) ? (
                   <span className={`inline-flex h-7 flex-none items-center rounded-full px-[10px] text-[12px] font-extrabold leading-4 tracking-[0.06em] ${TONE[f.word].chip}`}>{f.word}</span>
-                ) : (
+                ) : f.wordShared ? null : (
                   <span className="inline-flex h-7 flex-none items-center gap-[6px] rounded-full bg-[var(--surface-2)] px-[10px] text-[12px] font-bold leading-4 text-[var(--ink-2)]"><Icon name="lock" size={14} />Word kept private</span>
                 )}
               </li>

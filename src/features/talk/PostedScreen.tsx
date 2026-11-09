@@ -2,10 +2,12 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useHideTabBar } from "@/components/shell/ShellSlots";
 import { Banner, Button, FreePosts, Icon, Sheet, Skeleton } from "@/components/vx";
 import { recordShareEvent, type ShareTarget } from "@/lib/api/reach";
 import * as api from "@/lib/api/talk";
 import { API_BASE } from "@/lib/api/config";
+import { ApiError } from "@/lib/api/client";
 import type { Allowances, Answer, ShareLink } from "@/lib/api/talk";
 import { useLoad } from "@/components/feed/useLoad";
 import { AppBar, Problem, SignInNote, failText, useSignedIn } from "./lib";
@@ -18,6 +20,9 @@ import { updateSettings } from "@/lib/api/profile";
 import { forgetInviteCode, keptInviteCode } from "@/lib/invite";
 import { readPendingShareWord, writePendingShareWord } from "@/features/mood/share-word";
 import { FriendsRow, InviteQr, InviteShare } from "@/features/share/InviteShare";
+
+/** The mood Posted screen is a full-screen task (YoureLive boards draw no tab bar); an ordinary Posted screen keeps it. */
+function NoTabBar() { useHideTabBar(); return null; }
 
 export function PostedScreen({ qid }: { qid: string }) {
   const aid = useSearchParams().get("a");
@@ -49,16 +54,27 @@ export function PostedScreen({ qid }: { qid: string }) {
   useEffect(() => {
     if (!signedIn || !aid) return undefined;
     let live = true;
-    (async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let tries = 0;
+    const run = async () => {
       try {
         const pending = readPendingShareWord();
         if (pending !== null) { await updateSettings({ shareMyWord: pending }); writePendingShareWord(null); }
         const code = keptInviteCode();
         if (code) { await claimInvite(code); forgetInviteCode(); }
-      } catch { /* kept for the next visit to this screen */ }
+      } catch (e) {
+        // lead ruling LC, 9 Nov: the kept code is never dropped silently. On a 429 it is tried again after Retry-After
+        // (and on the next load of this screen); any other trouble leaves it for the next load too.
+        if (live && e instanceof ApiError && e.status === 429 && tries++ < 3) {
+          const secs = Number((e.details as { retryAfterSeconds?: number } | undefined)?.retryAfterSeconds);
+          timer = setTimeout(() => { void run(); }, Math.min(Math.max(secs || 5, 1), 120) * 1000);
+          return;
+        }
+      }
       if (live) setSettled(true);
-    })();
-    return () => { live = false; };
+    };
+    void run();
+    return () => { live = false; if (timer) clearTimeout(timer); };
   }, [signedIn, aid]);
   // LCH-05 / LCH-06: this person's own invite link and how many friends have answered through it.
   const [invite, setInvite] = useState<MyInvite | null>(null);
@@ -138,6 +154,7 @@ export function PostedScreen({ qid }: { qid: string }) {
     // YoureLive boards: no tab bar, "You’re live", where you sit, Send it to 3 people, the card, the friends row, the QR.
     return (
       <>
+        <NoTabBar />
         {header}
         <div className="mt-4 grid gap-4 dt:max-w-[640px]">
           <div className="flex items-center gap-[14px]">
