@@ -8,6 +8,8 @@ import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
 import { clearDraft, saveDraft } from "@/features/units/draft";
 import { StageNav } from "@/features/stage/StageNav";
+import { MoodWordNote } from "@/features/mood/MoodChip";
+import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { AppBar, Problem, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
@@ -33,6 +35,8 @@ export function WriteScreen({ qid }: { qid: string }) {
   const key = useRef<{ text: string; k: string } | null>(null);
   const slot = replyTo ? `r:${replyTo}` : `q:${qid}`;
   const [initial, setInitial] = useState<string | null>(null);
+  // LCH-02: a mood question needs its one word before anything is written; without one the person is sent to pick it.
+  const mood = useMoodWord(replyTo ? null : q);
 
   useEffect(() => {
     if (signedIn === null) return;
@@ -52,7 +56,7 @@ export function WriteScreen({ qid }: { qid: string }) {
     const gone = loadErr instanceof ApiError && loadErr.status === 404;
     return <>{header}<div className="mt-4">{gone ? <NotFoundState /> : <Problem error={loadErr} onRetry={() => setTries((n) => n + 1)} />}</div></>;
   }
-  if (!q || initial === null || (signedIn && !allow)) return <>{header}<div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="tile" /><Skeleton variant="answer" /></div></>;
+  if (!q || initial === null || (signedIn && !allow) || (!replyTo && !mood.ready)) return <>{header}<div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="tile" /><Skeleton variant="answer" /></div></>;
   if (q.status !== "LIVE") return <>{header}<div className="mt-4"><Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner></div></>;
 
   const whoLabel = parent?.author ? `@${parent.author.handle}` : "Anonymous";
@@ -80,9 +84,10 @@ export function WriteScreen({ qid }: { qid: string }) {
         saveTyped(slot, "");
         router.push(`/q/${qid}/a/${replyTo}`);
       } else {
-        const r = await api.createAnswer(qid, body, { isNews: tag === "unverified" || tag === "gossip", newsTag: tag === "unverified" ? "UNVERIFIED_NEWS" : tag === "gossip" ? "GOSSIP" : undefined }, key.current.k);
+        const r = await api.createAnswer(qid, body, { isNews: tag === "unverified" || tag === "gossip", newsTag: tag === "unverified" ? "UNVERIFIED_NEWS" : tag === "gossip" ? "GOSSIP" : undefined }, key.current.k, mood.word);
         saveTyped(slot, "");
         clearDraft(qid);
+        writePick(qid, null);
         router.push(`/q/${qid}/posted?a=${r.answer.id}`);
       }
     } catch (e) {
@@ -113,6 +118,7 @@ export function WriteScreen({ qid }: { qid: string }) {
             <span className="vx-eyebrow text-[var(--green-text)]">Answering</span>
             <h1 className="m-0 mt-1 font-display text-display-l">{q.text}</h1>
             {q.hint ? <p className="m-0 mt-2 text-body text-[var(--ink-2)]">{q.hint}</p> : null}
+            {mood.word ? <div className="mt-3"><MoodWordNote mood={mood.word} changeHref={pickHref(qid)} /></div> : null}
           </div>
         )}
         <div>

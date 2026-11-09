@@ -7,6 +7,7 @@ import { answerCardProps } from "@/lib/feed-format";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, ReactionKind } from "@/lib/api/talk";
+import { MoodChip } from "@/features/mood/MoodChip";
 import { failText, isOutOfPosts, outOfPostsHref, unitsText, useClipPlayback, uuidKey } from "./lib";
 
 /** The 402 on a reaction: the price and balance come from the server's details, never from this file. */
@@ -171,8 +172,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   for (const r of a.reactionBreakdown) { const n = nameOf(r.kind); if (n) counts[n] = r.count; }
   const handle = a.author?.handle;
   if (authorBlocked) return null;
-  return (
-    <>
+  const cardEl = (
       <AnswerCard
         key={clip.rev}
         {...card}
@@ -199,6 +199,11 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
         compact={compact}
         className={className}
       />
+  );
+  return (
+    <>
+      {/* LCH-02: the word sits above the card, as the MoodAnswers board draws it. */}
+      {a.mood ? <div className="grid gap-[6px]"><MoodChip mood={a.mood} />{cardEl}</div> : cardEl}
       {shareNode}
       {more ? (
         <Sheet title="This voice" onClose={() => setMore(false)}>

@@ -36,6 +36,7 @@ export const CHROMELESS_PREFIXES = ["/s", "/welcome", "/sign-in", "/join", "/adm
 export const FULLSCREEN_PREFIXES = [
   "/speak",
   "/q/*/write",
+  "/q/*/mood",
   "/q/*/propose",
   "/report",
   "/live/*/post",

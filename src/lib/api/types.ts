@@ -796,6 +796,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/questions/{questionId}/moods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Counts per mood word (How Nigeria feels so far)
+         * @description LCH-02: valid answers per word, everyone, whole percents. Valid is one per person (their latest), published, not deleted, not by a suspended, banned or deleted person. Read from stored counts (Redis) that a background job refreshes, never counted per request. 404 for a question with no words or one that has not opened. Auth: none (public).
+         */
+        get: operations["getQuestionMoods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/answers/{answerId}/where-you-sit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where my word sits, in Nigeria and the World
+         * @description LCH-04: the share of valid answers with the same word, in Nigeria (people whose country is Nigeria) and in the World. A percentage only when the group holds at least 50 valid answers, else null and the line is You are one of the first. Counts are stored and refreshed in the background; the person's own new answer is added at once. 404 unless it is the signed-in person's own published mood answer. Auth: signed in with a finished profile.
+         */
+        get: operations["getWhereYouSit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/answers/{answerId}/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Show my name on the share card
+         * @description LCH-03: the author turns Show my name on the card on or off for a mood answer. Off by default. Call POST /share/links again after it so the card is drawn again. Auth: signed in with a finished profile.
+         */
+        patch: operations["setAnswerCardName"];
+        trace?: never;
+    };
     "/answers/{answerId}": {
         parameters: {
             query?: never;
@@ -1712,6 +1772,26 @@ export interface paths {
          * @description The 1080x1920 Stories card: same words and colours as the card, stacked for a tall frame. Text and brand only. Drawn on request, never stored. 404 for an unknown link, a deleted person's card or a failed card. Auth: none (public).
          */
         get: operations["getShareStoryImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/share/{code}/square": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The square card image (mood card)
+         * @description LCH-03: the 1080x1080 mood card for WhatsApp and feeds. Drawn on request and cached. Only a mood answer's link has one, any other link is a 404, and so is a deleted, removed or leaving person's card. Auth: none (public).
+         */
+        get: operations["getShareSquareImage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2893,6 +2973,8 @@ export interface components {
         /** @enum {string} */
         NewsTag: "VERIFIED_NEWS" | "UNVERIFIED_NEWS" | "GOSSIP";
         /** @enum {string} */
+        Mood: "ANGRY" | "TIRED" | "PROUD" | "HOPEFUL";
+        /** @enum {string} */
         ReactionKind: "POWERFUL" | "WILD" | "RELATABLE" | "FUNNY" | "SURPRISING" | "SAD" | "WELL_SAID" | "THOUGHT_PROVOKING" | "EXACTLY" | "DISAGREE";
         /** @enum {string} */
         ReplyStance: "AGREE" | "DISAGREE" | "EXPERIENCE";
@@ -3191,7 +3273,7 @@ export interface components {
             startsOn: string;
             status: components["schemas"]["TopicStatus"];
         };
-        /** @description voicesCount (lead ruling WF, 6 Nov, RW1) is the one voices count for every screen and card: top-level answers, voice or text, not removed or deleted. It equals answerCount. voiceCount stays the number of voice clips. */
+        /** @description moodOptions (LCH-02) lists the words the question offers: empty on an ordinary question; when it is not empty every answer carries one of them. voicesCount (lead ruling WF, 6 Nov, RW1) is the one voices count for every screen and card: top-level answers, voice or text, not removed or deleted. It equals answerCount. voiceCount stays the number of voice clips. */
         Question: {
             iSaved: boolean;
             recentVoices: components["schemas"]["AvatarRef"][];
@@ -3201,6 +3283,7 @@ export interface components {
             status: components["schemas"]["QuestionStatus"];
             text: string;
             hint?: string | null;
+            moodOptions?: components["schemas"]["Mood"][];
             category?: components["schemas"]["Category"] | null;
             /** Format: uuid */
             topicId?: string | null;
@@ -3285,6 +3368,7 @@ export interface components {
             /** Format: date-time */
             chosenAt: string;
         };
+        /** @description mood (LCH-02) is the one word of an answer to a mood question, null on any other. */
         Answer: {
             categoryName?: string | null;
             /** Format: uuid */
@@ -3314,6 +3398,7 @@ export interface components {
             labels: ("TRENDING" | "MOST_RELATABLE" | "MOST_THOUGHT_PROVOKING" | "MOST_DEBATED" | "MOST_SUPPORTED" | "MOST_SURPRISING")[];
             questionText?: string | null;
             explainsVote?: boolean;
+            mood?: components["schemas"]["Mood"] | null;
         };
         /** @description Guest-readable prices and limits for Landing, Onboarding and the Voice Units screens. Same values as config, never typed into a client. */
         PublicConfig: {
@@ -3417,7 +3502,7 @@ export interface components {
             answer?: components["schemas"]["Answer"];
             ad?: components["schemas"]["AdPlacement"];
         };
-        /** @description Text answers carry body. Voice answers carry clipId of a READY clip. A clip over the free length also needs an extra voice token. isNews requires newsTag; VERIFIED_NEWS needs an editor or admin role and a source. */
+        /** @description Text answers carry body. Voice answers carry clipId of a READY clip. A clip over the free length also needs an extra voice token. isNews requires newsTag; VERIFIED_NEWS needs an editor or admin role and a source. On a question with moodOptions every answer, voice or text, carries one of them in mood (422 "Pick one word before you post." otherwise); on any other question mood is refused. showNameOnCard (LCH-03) is off unless true and ignored on an anonymous answer. */
         CreateAnswerRequest: {
             kind: components["schemas"]["PostKind"];
             body?: string;
@@ -3430,6 +3515,53 @@ export interface components {
             newsSourceName?: string;
             newsSourceUrl?: string;
             anonymous?: boolean;
+            mood?: components["schemas"]["Mood"];
+            showNameOnCard?: boolean;
+        };
+        MoodCountItem: {
+            mood: components["schemas"]["Mood"];
+            count: number;
+            percent: number;
+        };
+        /** @description LCH-02: valid answers per word, everyone, whole percents. */
+        MoodCounts: {
+            /** Format: uuid */
+            questionId: string;
+            total: number;
+            /** Format: date-time */
+            updatedAt: string;
+            items: components["schemas"]["MoodCountItem"][];
+        };
+        /** @description percent is a whole percent and voices the valid answers in the group, both null while the group holds fewer than 50. */
+        WhereYouSitGroup: {
+            percent: number | null;
+            voices: number | null;
+        };
+        /** @description LCH-04. showSwitch is false until a group has a percentage (no Nigeria / World switch before 50). line is the sentence for the default scope; cardLine is the same sentence as the share card draws it. */
+        WhereYouSit: {
+            /** Format: uuid */
+            answerId: string;
+            /** Format: uuid */
+            questionId: string;
+            mood: components["schemas"]["Mood"];
+            showNameOnCard: boolean;
+            nigeria: components["schemas"]["WhereYouSitGroup"];
+            world: components["schemas"]["WhereYouSitGroup"];
+            /** @enum {string} */
+            defaultScope: "NIGERIA" | "WORLD";
+            showSwitch: boolean;
+            line: string;
+            cardLine: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CardNameRequest: {
+            showName: boolean;
+        };
+        CardNameResult: {
+            /** Format: uuid */
+            answerId: string;
+            showNameOnCard: boolean;
         };
         /** @description Text only, within 5 minutes of posting. */
         EditAnswerRequest: {
@@ -3613,6 +3745,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        /** @description LCH-02: on a mood question the explanation is an answer and carries one of its words in mood, as POST /questions/{id}/answers does; on any other question mood is refused. */
         ExplainVoteRequest: {
             kind: components["schemas"]["PostKind"];
             body?: string;
@@ -3620,6 +3753,7 @@ export interface components {
             clipId?: string;
             /** Format: uuid */
             extraVoiceTokenId?: string;
+            mood?: components["schemas"]["Mood"];
         };
         /** @description label is always PROPOSED. A proposal is never shown as accepted. */
         Proposal: {
@@ -3884,7 +4018,7 @@ export interface components {
             objectId: string;
             language?: string;
         };
-        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story), null only where that route would 404. squareImageUrl is not drawn: null at launch. */
+        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story), null only where that route would 404. squareImageUrl is the 1080x1080 mood card (GET /share/{code}/square) for a mood answer and null for every other link. */
         ShareLink: {
             code: string;
             url: string;
@@ -5795,6 +5929,8 @@ export interface operations {
                 sort?: string;
                 /** @description Filter by NewsTag */
                 tag?: string;
+                /** @description LCH-02: only answers that carry this word (ANGRY, TIRED, PROUD or HOPEFUL); any other value is a 422 */
+                mood?: string;
             };
             header?: never;
             path: {
@@ -5815,6 +5951,7 @@ export interface operations {
             };
             401: components["responses"]["E401"];
             404: components["responses"]["E404"];
+            422: components["responses"]["E422"];
             429: components["responses"]["E429"];
         };
     };
@@ -6067,6 +6204,86 @@ export interface operations {
             422: components["responses"]["E422"];
             429: components["responses"]["E429"];
             503: components["responses"]["E503"];
+        };
+    };
+    getQuestionMoods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                questionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MoodCounts"];
+                };
+            };
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getWhereYouSit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                answerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhereYouSit"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    setAnswerCardName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                answerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardNameRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardNameResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
         };
     };
     getAnswer: {
@@ -7562,6 +7779,30 @@ export interface operations {
         };
     };
     getShareStoryImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getShareSquareImage: {
         parameters: {
             query?: never;
             header?: never;
