@@ -17,13 +17,30 @@ export const OUTPUT = {
   ext: "m4a",
 } as const;
 
+/**
+ * LCH-09: ffmpeg and ffprobe run at a lower priority than the API, the web server and the database (FFMPEG_NICE, 10 in
+ * production, off elsewhere; 0 turns it off). On the two CPUs of the launch droplet a crowd of recordings otherwise takes
+ * CPU from every page and read while it works; at a lower priority the pages stay quick and only the recordings wait.
+ */
+export function niceCommand(
+  cmd: string,
+  args: string[],
+  env: NodeJS.ProcessEnv = process.env,
+): [string, string[]] {
+  const n = Number(env.FFMPEG_NICE ?? (env.NODE_ENV === "production" ? 10 : 0));
+  return n > 0 && n <= 19
+    ? ["nice", ["-n", String(Math.floor(n)), cmd, ...args]]
+    : [cmd, args];
+}
+
 function run(
   cmd: string,
   args: string[],
   input?: Buffer,
 ): Promise<{ out: Buffer; err: string }> {
   return new Promise((resolve, reject) => {
-    const p = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
+    const [c, a] = niceCommand(cmd, args);
+    const p = spawn(c, a, { stdio: ["pipe", "pipe", "pipe"] });
     const out: Buffer[] = [];
     let err = "";
     p.stdout.on("data", (d) => out.push(d));
