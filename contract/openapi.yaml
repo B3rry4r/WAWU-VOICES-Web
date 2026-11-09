@@ -9,7 +9,7 @@ info:
     name: Proprietary
     identifier: LicenseRef-Proprietary
 servers:
-- url: https://voices.wawuafrica.com/api/v1
+- url: https://usevoices.com/api/v1
   description: production
 - url: http://localhost:14000/api/v1
   description: local
@@ -4009,7 +4009,7 @@ paths:
       security: []
       description: 'Served at /api/health, outside /api/v1. 503 with the one error shape when the database is down. Auth: none (public).'
       servers:
-      - url: https://voices.wawuafrica.com/api
+      - url: https://usevoices.com/api
       - url: http://localhost:14000/api
       responses:
         '200':

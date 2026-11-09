@@ -101,7 +101,7 @@ export function ShareCard(p: ShareCardProps): ReactElement {
             {p.summary || (p.poll || []).some((r) => r.pct > 0) ? <><b>{p.summary || 'People are split so far.'}</b><br /></> : null}
             {'Based on ' + (kind === 'poll' ? votesCount(p.voices) : voicesText(p.voices)) + ' · updated ' + (p.updated || 'just now')}
             <br />
-            {p.link || 'voices.wawuafrica.com'}
+            {p.link || 'usevoices.com'}
           </span>
           <span className="vx-share__cta">
             <Icon name="mic" size={32} strokeWidth={2.5} />
