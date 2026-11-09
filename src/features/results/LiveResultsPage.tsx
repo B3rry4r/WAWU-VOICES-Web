@@ -113,7 +113,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
       <>
         <AppBar href="/" backLabel="Back" title="Live results" />
         <DesktopBack href="/" label="Back" />
-        {load.missing ? <NotFoundState /> : <EmptyState icon={load.busy ? "triangle-alert" : "wifi-off"} title={load.busy ? BUSY_TITLE : "Could not load the results"} body={load.busy ? BUSY_TEXT : "Check your connection and try again."} action="Try again" actionIcon="refresh-cw" onAction={() => { setLoad({ kind: "loading" }); fetchFirst(filter, false).catch(() => setLoad({ kind: "error", missing: false })); }} />}
+        {load.missing ? <NotFoundState /> : <EmptyState icon={load.busy ? "triangle-alert" : "wifi-off"} title={load.busy ? BUSY_TITLE : "Could not load the results"} body={load.busy ? BUSY_TEXT : "Check your connection and try again."} action="Try again" actionIcon="refresh-cw" onAction={() => { setLoad({ kind: "loading" }); fetchFirst(filter, false).catch((e: unknown) => setLoad({ kind: "error", missing: false, busy: isBusy(e) })); }} />}
       </>
     );
   }

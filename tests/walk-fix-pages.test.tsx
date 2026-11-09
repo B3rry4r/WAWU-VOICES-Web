@@ -48,3 +48,31 @@ describe("G1: the pages that load say the busy words when the API is down or bus
     }
   });
 });
+
+describe("G1 round 2: the gaps", () => {
+  it("a news post that cannot load says the busy words on a 503", async () => {
+    vi.stubGlobal("fetch", down(503));
+    const { NewsPostPage } = await import("@/features/news/NewsPostPage");
+    render(<NewsPostPage answerId="a1" />);
+    expect(await screen.findByText("We are busy.", {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.getByText("Try again in a minute.")).toBeTruthy();
+  });
+  it("live results keep the busy words after Try again", async () => {
+    vi.stubGlobal("fetch", down(503));
+    const { LiveResultsPage } = await import("@/features/results/LiveResultsPage");
+    render(<LiveResultsPage threadId="t1" />);
+    await screen.findByText("We are busy.", {}, { timeout: 3000 });
+    (await import("@testing-library/react")).fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("We are busy.", {}, { timeout: 3000 })).toBeTruthy();
+    expect(document.body.textContent).not.toContain("Check your connection");
+  });
+  it("'Could not load more' says the busy words on a 503", async () => {
+    const { ApiError } = await import("@/lib/api/client");
+    const { PagedList } = await import("@/features/profile/PostList");
+    let n = 0;
+    const load = async () => { if (n++ === 0) return { items: ["a"], nextCursor: "c" }; throw new ApiError(503, "UNAVAILABLE", "x", false); };
+    render(<PagedList load={load as never} row={(x: string) => <span>{x}</span>} empty={{ title: "none" }} />);
+    (await import("@testing-library/react")).fireEvent.click(await screen.findByRole("button", { name: /Show more/ }));
+    expect(await screen.findByText("We are busy. Try again in a minute.")).toBeTruthy();
+  });
+});
