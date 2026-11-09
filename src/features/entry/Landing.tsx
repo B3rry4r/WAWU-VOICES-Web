@@ -8,6 +8,7 @@ import { getPublicConfig, getTodaysQuestion, getTrending } from "@/lib/api/feed"
 import { closesIn, voicesOf } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { fromPrice } from "./format";
+import { LANDING_EYEBROW, LANDING_HEADLINE, LANDING_INTRO } from "./landing-words";
 
 const STEPS: { icon: IconName; title: string; phone: string; desk: string }[] = [
   { icon: "mic", title: "Speak", phone: "Record up to 10 seconds or write up to 500 characters.", desk: "Record up to 10 seconds or write up to 500 characters. Hear it back before you post." },
@@ -54,11 +55,9 @@ export function Landing() {
     const voice = trending.items[0]?.answer;
     const hero = (
       <section className="flex flex-col gap-[14px] pt-1">
-        <span className="vx-eyebrow text-green-text">Nigeria’s national conversation</span>
-        <h1 className="m-0 font-display text-display-xl dt:text-display-2xl">Nigeria is talking. Add your voice.</h1>
-        <p className="m-0 text-body-l text-ink-2 dt:max-w-[420px]">
-          Every day our editors ask one question. Answer with a 10 second voice or a few lines of text, hear what others said, and vote in open polls.
-        </p>
+        <span className="vx-eyebrow text-green-text">{LANDING_EYEBROW}</span>
+        <h1 className="m-0 font-display text-[40px] leading-[44px] tracking-[-0.01em] dt:text-[72px] dt:leading-[74px]">{LANDING_HEADLINE}</h1>
+        <p className="m-0 text-body-l text-ink-2 dt:max-w-[420px]">{LANDING_INTRO}</p>
         <div className="flex flex-col gap-[14px] dt:flex-row">
           <span className="hidden dt:block"><Button size="l" icon="mic" href="/">Add your voice</Button></span>
           <Button size="l" variant="secondary" icon="headphones" href="/" className="max-dt:w-full">Listen as a guest</Button>
