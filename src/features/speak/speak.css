@@ -83,3 +83,7 @@
 @media (min-width: 1024px) { .sp-dtonly { display: inline; } }
 
 .sp-nudge { color: var(--on-forest-2); font-weight: 500; }
+
+/* LCH-02: "Your word" line under the question on the recorder (the panel is on forest, so the text is the on-forest colour). */
+.sp-mood { color: var(--on-forest); }
+.sp-mood a { color: var(--on-forest); }

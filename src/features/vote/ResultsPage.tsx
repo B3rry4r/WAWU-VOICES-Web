@@ -13,6 +13,8 @@ import { AdBanner } from "./AdBanner";
 import { AppBar, nextOpening, useOpensAt, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
 import { DeskRail } from "./DeskRail";
 import { leaderFirst } from "@/lib/format/plural";
+import type { Mood } from "@/lib/api/mood";
+import { MoodWordPicker } from "@/features/mood/MoodChip";
 import { pickPoll } from "./poll-pick";
 import { useRouter } from "next/navigation";
 
@@ -121,7 +123,7 @@ export function ResultsPage({ questionId }: { questionId: string }) {
             closed={status === "CLOSED"}
             onExplain={false}
           />
-          {voted && mineLabel ? <Explain pollId={poll.id} label={mineLabel} questionId={questionId} signedIn={!!signedIn} /> : null}
+          {voted && mineLabel ? <Explain pollId={poll.id} label={mineLabel} questionId={questionId} signedIn={!!signedIn} moodOptions={load.data.question.moodOptions} /> : null}
           <div className="vt-btnrow">
             <Button variant="secondary" icon="message-circle" href={`/q/${questionId}`}>Back to the discussion</Button>
             <Button variant="ghost" icon="share-2" onClick={() => setShare(true)}><span className="dt:hidden">Share</span><span className="hidden dt:inline">Share the result</span></Button>
@@ -135,7 +137,10 @@ export function ResultsPage({ questionId }: { questionId: string }) {
 }
 
 /** Explain my vote (free, V-15). By voice waits for the recorder (W4); In words writes the reason into the discussion. */
-function Explain({ pollId, label, questionId, signedIn }: { pollId: string; label: string; questionId: string; signedIn: boolean }) {
+function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId: string; label: string; questionId: string; signedIn: boolean; moodOptions?: readonly Mood[] }) {
+  // LCH-02: on a mood question the reason is an answer, so it carries one word, picked here as on the pick screen.
+  const [word, setWord] = useState<Mood | null>(null);
+  const needsWord = !!moodOptions?.length;
   const [writing, setWriting] = useState(false);
   const [reason, setReason] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | { error: string }>("idle");
@@ -145,11 +150,12 @@ function Explain({ pollId, label, questionId, signedIn }: { pollId: string; labe
   async function send(typed: string) {
     const text = typed.trim();
     if (!text || busy.current) return;
+    if (needsWord && !word) { setState({ error: "Pick one word first." }); return; }
     busy.current = true;
     setState("sending");
     key.current ??= newKey();
     try {
-      await explainMyVote(pollId, text, key.current);
+      await explainMyVote(pollId, text, key.current, needsWord ? word : null);
       key.current = null;
       setState("done");
     } catch (e) {
@@ -171,6 +177,7 @@ function Explain({ pollId, label, questionId, signedIn }: { pollId: string; labe
       ) : writing ? (
         <div className="vt-explain">
           {typeof state === "object" ? <Banner tone="danger" title="Not posted">{state.error}</Banner> : null}
+          {needsWord ? <MoodWordPicker words={moodOptions!} value={word} onChange={setWord} /> : null}
           <Composer label="Your reason" placeholder="Say why you voted this way" meter={false} value={reason} onChange={setReason} busy={state === "sending"} onSubmit={(t) => void send(t)} onVoice={false} />
         </div>
       ) : (

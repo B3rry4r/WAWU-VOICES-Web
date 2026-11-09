@@ -12,6 +12,10 @@ import { StageNav } from "@/features/stage/StageNav";
 import { AppBar, BarButton, Problem, failText, unitsText, useSignedIn } from "./lib";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 import { TalkRail } from "./TalkRail";
+import { MoodChip } from "@/features/mood/MoodChip";
+import { MoodFilter, MoodSplit } from "@/features/mood/MoodSplit";
+import { isMoodQuestion, pickHref } from "@/features/mood/mood";
+import type { Mood } from "@/lib/api/mood";
 import "./talk.css";
 
 const short = (n: number) => (n >= 1e4 ? `${Math.round(n / 100) / 10}K` : n.toLocaleString("en-NG"));
@@ -44,6 +48,7 @@ export function QuestionScreen({ id }: { id: string }) {
   useEffect(() => { if (q.state === "ready") setSaved(q.data.iSaved); }, [q]);
 
   const [sort, setSort] = useState<AnswerSort>("TOP");
+  const [mood, setMood] = useState<Mood | null>(null);
   const [items, setItems] = useState<Answer[]>([]);
   const [next, setNext] = useState<string | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "more">("loading");
@@ -51,7 +56,7 @@ export function QuestionScreen({ id }: { id: string }) {
   const loadPage = useCallback(async (cursor?: string) => {
     setState(cursor ? "more" : "loading");
     try {
-      const p = await api.listAnswers(id, sort, cursor);
+      const p = await api.listAnswers(id, sort, cursor, mood ?? undefined);
       const got = p.items.filter((x) => x.type === "answer" && x.answer).map((x) => x.answer as Answer);
       setItems((cur) => (cursor ? [...cur, ...got] : got));
       setNext(p.nextCursor);
@@ -60,7 +65,7 @@ export function QuestionScreen({ id }: { id: string }) {
       setErr(e);
       setState("error");
     }
-  }, [id, sort]);
+  }, [id, sort, mood]);
   useEffect(() => { void loadPage(); }, [loadPage, signedIn]);
 
   if (q.state === "loading" || signedIn === null) return <><AppBar title="Question" back="/" /><div className="mt-4 grid gap-4" aria-busy="true"><Skeleton variant="tile" /><Skeleton variant="answer" /></div></>;
@@ -89,7 +94,10 @@ export function QuestionScreen({ id }: { id: string }) {
     try { await (was ? api.unsaveQuestion(id) : api.saveQuestion(id)); push(was ? "Removed from saved." : "Saved.", "success"); } catch (e) { setSaved(was); push(failText(e), "danger"); }
   }
 
-  const writeHref = `/q/${id}/write`;
+  // LCH-02: on a mood question the word is picked first, before Record or Write.
+  const moody = isMoodQuestion(question);
+  const writeHref = moody ? pickHref(id) : `/q/${id}/write`;
+  const speakHref = moody ? pickHref(id) : "/speak";
   return (
     <>
       
@@ -128,7 +136,7 @@ export function QuestionScreen({ id }: { id: string }) {
         {open ? (
           <>
             <div className="grid grid-cols-[1fr_1fr] gap-3 dt:hidden">
-              <Button size="l" icon="mic" block href="/speak">Speak</Button>
+              <Button size="l" icon="mic" block href={speakHref}>Speak</Button>
               <Button size="l" variant="secondary" block href={writeHref}>Write instead</Button>
             </div>
             {seconds ? <p className="m-0 text-caption dt:hidden text-[var(--ink-2)]">{postingLine(seconds, allow)}</p> : null}
@@ -143,11 +151,17 @@ export function QuestionScreen({ id }: { id: string }) {
           <h2 className="m-0 text-title">Add your voice</h2>
           <p className="m-0 mt-2 text-caption text-[var(--ink-2)]">{`Speak for up to ${seconds} seconds, or write up to ${allow.costs.textMaxChars} characters.`}</p>
           <div className="mt-4 flex items-center gap-3">
-            <Button size="l" icon="mic" href="/speak">Speak</Button>
+            <Button size="l" icon="mic" href={speakHref}>Speak</Button>
             <Button size="l" variant="secondary" href={writeHref}>Write instead</Button>
             <span className="ml-auto"><FreePosts left={allow.freePostsRemaining} /></span>
           </div>
         </section>
+      ) : null}
+      {moody ? (
+        <div className="mt-4 grid gap-3">
+          <MoodSplit qid={id} />
+          <MoodFilter value={mood} onChange={setMood} />
+        </div>
       ) : null}
       <div className="mt-4 flex items-center justify-between border-b border-[var(--line)] pt-2 dt:border-0">
         <h2 className="m-0 font-display text-display-m dt:hidden">Voices</h2>

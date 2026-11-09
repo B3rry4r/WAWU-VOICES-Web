@@ -46,8 +46,8 @@ function qs(p: Record<string, string | number | undefined>): string {
 const id = encodeURIComponent;
 
 export const getQuestion = (qid: string) => apiFetch<Question>(`/questions/${id(qid)}`, read());
-export const listAnswers = (qid: string, sort: AnswerSort, cursor?: string) =>
-  apiFetch<AnswerPage>(`/questions/${id(qid)}/answers${qs({ sort, cursor, limit: 10 })}`, read());
+export const listAnswers = (qid: string, sort: AnswerSort, cursor?: string, mood?: S["Mood"]) =>
+  apiFetch<AnswerPage>(`/questions/${id(qid)}/answers${qs({ sort, cursor, limit: 10, mood })}`, read());
 export const getAnswer = (aid: string) => apiFetch<Answer>(`/answers/${id(aid)}`, read());
 export const listReplies = (aid: string, stance?: ReplyStance, cursor?: string) =>
   apiFetch<ReplyPage>(`/answers/${id(aid)}/replies${qs({ stance, cursor, limit: 20 })}`, read());
@@ -63,12 +63,13 @@ export const setReaction = (aid: string, kind: ReactionKind, key: string) =>
 export const removeReaction = (aid: string) => apiFetch<ReactionState>(`/answers/${id(aid)}/reaction`, { method: "DELETE", authed: true });
 
 export interface NewsInput { isNews: boolean; newsTag?: NewsTag }
-export const createAnswer = (qid: string, body: string, news: NewsInput, key: string) =>
+/** `mood` is the one word of a mood question (LCH-02); an ordinary question sends none. */
+export const createAnswer = (qid: string, body: string, news: NewsInput, key: string, mood?: S["Mood"] | null) =>
   apiFetch<PostReceipt>(`/questions/${id(qid)}/answers`, {
     method: "POST",
     authed: true,
     idempotencyKey: key,
-    body: { kind: "TEXT", body, ...(news.isNews ? { isNews: true, newsTag: news.newsTag } : {}) },
+    body: { kind: "TEXT", body, ...(news.isNews ? { isNews: true, newsTag: news.newsTag } : {}), ...(mood ? { mood } : {}) },
   });
 export const createReply = (aid: string, stance: ReplyStance, body: string, key: string) =>
   apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "TEXT", body } });
