@@ -1,3 +1,4 @@
+"use client";
 import type { Mood } from "@/lib/api/mood";
 import { TONE } from "./mood";
 
@@ -21,5 +22,24 @@ export function MoodWordNote({ mood, changeHref }: { mood: Mood; changeHref: str
       <MoodChip mood={mood} />
       <a href={changeHref} className="min-h-6 text-label underline underline-offset-2">Change</a>
     </p>
+  );
+}
+
+/** One word to pick, as MoodPick draws them but smaller: for a form that posts an answer and is not the pick screen. */
+export function MoodWordPicker({ words, value, onChange }: { words: readonly Mood[]; value: Mood | null; onChange: (m: Mood) => void }) {
+  return (
+    <div role="group" aria-label="Pick one word" className="flex flex-wrap gap-2" data-testid="mood-word-picker">
+      {words.map((m) => (
+        <button
+          key={m}
+          type="button"
+          aria-pressed={m === value}
+          onClick={() => onChange(m)}
+          className={`min-h-11 cursor-pointer rounded-full border-0 px-4 text-[14px] font-extrabold tracking-[0.06em] focus-visible:shadow-[var(--shadow-focus)] focus-visible:outline-none ${TONE[m].chip} ${m === value ? TONE[m].pressed : ""}`}
+        >
+          {m}
+        </button>
+      ))}
+    </div>
   );
 }
