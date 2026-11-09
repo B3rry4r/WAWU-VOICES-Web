@@ -1,5 +1,6 @@
 "use client";
 
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Rail } from "@/components/shell/ShellSlots";
 import { Badge, Button, EmptyState, Icon, NotFoundState, ResultComment, Skeleton, Tabs, Toast } from "@/components/vx";
@@ -14,7 +15,7 @@ import { AppBar, DesktopBack, LabelsPanel, longDate, shortDate, useSignedIn } fr
 
 export const POLL_MS = 20000;
 
-type Load = { kind: "loading" } | { kind: "error"; missing: boolean } | { kind: "ready" };
+type Load = { kind: "loading" } | { kind: "error"; missing: boolean; busy?: boolean } | { kind: "ready" };
 
 export function LiveResultsPage({ threadId }: { threadId: string }) {
   const signedIn = useSignedIn();
@@ -65,7 +66,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
   useEffect(() => {
     setLoad({ kind: "loading" });
     fetchFirst(filter, false).catch((e: unknown) => {
-      if (filterRef.current === filter) setLoad({ kind: "error", missing: e instanceof ApiError && e.status === 404 });
+      if (filterRef.current === filter) setLoad({ kind: "error", missing: e instanceof ApiError && e.status === 404, busy: isBusy(e) });
     });
   }, [filter, fetchFirst]);
 
@@ -112,7 +113,7 @@ export function LiveResultsPage({ threadId }: { threadId: string }) {
       <>
         <AppBar href="/" backLabel="Back" title="Live results" />
         <DesktopBack href="/" label="Back" />
-        {load.missing ? <NotFoundState /> : <EmptyState icon="wifi-off" title="Could not load the results" body="Check your connection and try again." action="Try again" actionIcon="refresh-cw" onAction={() => { setLoad({ kind: "loading" }); fetchFirst(filter, false).catch(() => setLoad({ kind: "error", missing: false })); }} />}
+        {load.missing ? <NotFoundState /> : <EmptyState icon={load.busy ? "triangle-alert" : "wifi-off"} title={load.busy ? BUSY_TITLE : "Could not load the results"} body={load.busy ? BUSY_TEXT : "Check your connection and try again."} action="Try again" actionIcon="refresh-cw" onAction={() => { setLoad({ kind: "loading" }); fetchFirst(filter, false).catch((e: unknown) => setLoad({ kind: "error", missing: false, busy: isBusy(e) })); }} />}
       </>
     );
   }

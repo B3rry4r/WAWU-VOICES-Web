@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Banner, Icon, Logo } from "@/components/vx";
 import { ApiError, NetworkError } from "@/lib/api/client";
+import { BUSY_TEXT, BUSY_TITLE, BUSY_WORDS, isBusy } from "@/lib/api/busy";
 import { isSignedIn } from "@/lib/api/auth";
 import { getMe } from "@/lib/api/me";
 
@@ -74,6 +75,7 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
 /** Words for a refusal: the server's own words when it explained itself, else ours. Offline gets its own line. */
 export function refusalWords(e: unknown, fallback: string): string {
   if (e instanceof NetworkError) return "Could not reach VOICES. Check your connection and try again.";
+  if (isBusy(e)) return BUSY_WORDS;
   if (e instanceof ApiError && e.explained && e.message) return e.message.replace(/\s*—\s*/g, ", ");
   return fallback;
 }
@@ -89,8 +91,8 @@ const cannotRetry = (e: unknown): boolean =>
 export function ErrorBanner({ error, onRetry, fallback, title = "This did not work" }: { error: unknown; onRetry?: () => void; fallback: string; title?: string }) {
   const off = isOffline(error);
   return (
-    <Banner tone={off ? "offline" : "danger"} title={off ? "You are offline" : e403(error) ? "This account cannot be used" : title} action={onRetry && !e403(error) && !cannotRetry(error) ? "Try again" : undefined} onAction={onRetry}>
-      {refusalWords(error, fallback)}
+    <Banner tone={off ? "offline" : "danger"} title={off ? "You are offline" : e403(error) ? "This account cannot be used" : isBusy(error) ? BUSY_TITLE : title} action={onRetry && !e403(error) && !cannotRetry(error) ? "Try again" : undefined} onAction={onRetry}>
+      {isBusy(error) ? BUSY_TEXT : refusalWords(error, fallback)}
     </Banner>
   );
 }

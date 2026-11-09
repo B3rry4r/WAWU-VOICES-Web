@@ -1,5 +1,6 @@
 "use client";
 
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Rail } from "@/components/shell/ShellSlots";
@@ -20,6 +21,7 @@ export function NewsroomPage() {
   const [posts, setPosts] = useState<NewsAnswer[]>([]);
   const [next, setNext] = useState<string | null>(null);
   const [load, setLoad] = useState<Load>("loading");
+  const [busy, setBusy] = useState(false);
   const [more, setMore] = useState(false);
   const [tags, setTags] = useState<TagInfo[]>([]);
   const [info, setInfo] = useState(false);
@@ -33,7 +35,7 @@ export function NewsroomPage() {
     setLoad("loading");
     listNews({ tag: t })
       .then((p) => { setPosts(p.items); setNext(p.nextCursor); setLoad("ready"); })
-      .catch(() => setLoad("error"));
+      .catch((e) => { setBusy(isBusy(e)); setLoad("error"); });
   }, []);
   useEffect(() => { fetchPosts(tag); }, [tag, fetchPosts, signedIn]);
 
@@ -119,7 +121,7 @@ export function NewsroomPage() {
         {load === "loading" ? (
           <><Skeleton variant="answer" /><Skeleton variant="answer" /></>
         ) : load === "error" ? (
-          <EmptyState icon="wifi-off" title="Could not load the Newsroom" body="Check your connection and try again." action="Try again" actionIcon="refresh-cw" onAction={() => fetchPosts(tag)} />
+          <EmptyState icon={busy ? "triangle-alert" : "wifi-off"} title={busy ? BUSY_TITLE : "Could not load the Newsroom"} body={busy ? BUSY_TEXT : "Check your connection and try again."} action="Try again" actionIcon="refresh-cw" onAction={() => fetchPosts(tag)} />
         ) : posts.length === 0 ? (
           <EmptyState icon="radio" title={tag ? "No posts with this tag yet" : "No news posts yet"} />
         ) : (

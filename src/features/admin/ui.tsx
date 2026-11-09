@@ -9,6 +9,7 @@ import { fromLocalInput, slot } from "./time";
 import { Banner, EmptyState, Icon, Skeleton } from "@/components/vx";
 import type { IconName } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 
 /** The words the API refused with, or a plain line when it never answered. Never an internal code. */
 export function refusalWords(e: unknown): string {
@@ -165,8 +166,8 @@ export function LoadFailed({ error, retry }: { error: Error; retry: () => void }
     );
   }
   return (
-    <Banner tone="danger" title="This did not load" action="Try again" actionIcon="refresh-cw" onAction={retry}>
-      {refusalWords(error)}
+    <Banner tone="danger" title={isBusy(error) ? BUSY_TITLE : "This did not load"} action="Try again" actionIcon="refresh-cw" onAction={retry}>
+      {isBusy(error) ? BUSY_TEXT : refusalWords(error)}
     </Banner>
   );
 }

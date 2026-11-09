@@ -1,5 +1,6 @@
 "use client";
 
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button, EmptyState, Icon, Skeleton } from "@/components/vx";
@@ -16,6 +17,7 @@ const counts = (r: WeeklyReportCard) => `${fmt(r.basedOnVoices)} ${r.basedOnVoic
 export function WeeklyArchivePage() {
   const signedIn = useSignedIn();
   const [load, setLoad] = useState<Load>("loading");
+  const [busy, setBusy] = useState(false);
   const [latest, setLatest] = useState<WeeklyReportCard | null>(null);
   const [items, setItems] = useState<WeeklyReportCard[]>([]);
   const [next, setNext] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function WeeklyArchivePage() {
         setNextAt(a.nextPublishAt);
         setLoad("ready");
       })
-      .catch(() => { if (!stop) setLoad("error"); });
+      .catch((e) => { if (!stop) { setBusy(isBusy(e)); setLoad("error"); } });
     return () => { stop = true; };
   }, [tick, signedIn]);
 
@@ -69,7 +71,7 @@ export function WeeklyArchivePage() {
       <div>
         {bar}
         {head}
-        <EmptyState icon="wifi-off" title="We could not load the reports" body="Check your connection and try again." action="Try again" actionIcon="refresh-cw" onAction={() => setTick((n) => n + 1)} />
+        <EmptyState icon={busy ? "triangle-alert" : "wifi-off"} title={busy ? BUSY_TITLE : "We could not load the reports"} body={busy ? BUSY_TEXT : "Check your connection and try again."} action="Try again" actionIcon="refresh-cw" onAction={() => setTick((n) => n + 1)} />
       </div>
     );
   }

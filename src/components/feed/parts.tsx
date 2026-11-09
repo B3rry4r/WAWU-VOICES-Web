@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnswerCard, Banner, Button, EmptyState, Skeleton, TopicOfWeek, TopicTile } from "@/components/vx";
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import { categoryLook } from "@/lib/categories";
 import type { Answer, Question, Topic } from "@/lib/api/feed";
 import { answerCardProps, voicesLabel, weekMeta, voicesOf } from "@/lib/feed-format";
@@ -20,9 +21,10 @@ export function Loading() {
 
 export function Failed({ load }: { load: Extract<Load<unknown>, { state: "error" }> }) {
   const offline = "kind" in load.error;
+  const busy = isBusy(load.error);
   return (
-    <Banner tone={offline ? "offline" : "danger"} title={offline ? "You are offline" : "This did not load"} action="Try again" onAction={load.retry}>
-      {offline ? "Check your connection and try again." : "Something went wrong on our side. Try again in a moment."}
+    <Banner tone={offline ? "offline" : "danger"} title={offline ? "You are offline" : busy ? BUSY_TITLE : "This did not load"} action="Try again" onAction={load.retry}>
+      {offline ? "Check your connection and try again." : busy ? BUSY_TEXT : "Something went wrong on our side. Try again in a moment."}
     </Banner>
   );
 }

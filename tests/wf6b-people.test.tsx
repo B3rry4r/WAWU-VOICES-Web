@@ -77,8 +77,15 @@ describe("RX1: a missing thing says We could not find that.", () => {
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     expect(screen.queryByText("This did not load")).toBeNull();
   });
-  it("the same thread with a 503 still says it did not load and offers Try again", async () => {
+  it("the same thread with a 503 says the busy words (G1) and offers Try again; a 500 still says it did not load", async () => {
     routes = (u) => (u.includes("/answers/a1") ? json(503, { error: { code: "UNAVAILABLE", message: "x" } }) : null);
+    render(<ThreadScreen qid="q1" aid="a1" />);
+    expect(await screen.findByText("We are busy.")).toBeTruthy();
+    expect(screen.getByText("Try again in a minute.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+  });
+  it("the same thread with a 500 still says it did not load and offers Try again", async () => {
+    routes = (u) => (u.includes("/answers/a1") ? json(500, { error: { code: "INTERNAL", message: "x" } }) : null);
     render(<ThreadScreen qid="q1" aid="a1" />);
     expect(await screen.findByText("This did not load")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();

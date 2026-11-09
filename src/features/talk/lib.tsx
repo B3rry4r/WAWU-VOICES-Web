@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Banner, Button, Icon, IconButton, NotFoundState } from "@/components/vx";
 import { signInHref } from "@/lib/auth/entry-draft";
 import { ApiError } from "@/lib/api/client";
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import { isSignedIn } from "@/lib/api/auth";
 import { getPlayUrl } from "@/lib/api/talk";
 import { trackListen } from "./listen-track";
@@ -73,8 +74,8 @@ export function Problem({ error, onRetry }: { error: unknown; onRetry?: () => vo
   if (error instanceof ApiError && error.status === 404) return <NotFoundState />;
   const off = offline(error);
   return (
-    <Banner tone={off ? "offline" : "danger"} title={off ? "You are offline" : "This did not load"} action={onRetry ? "Try again" : undefined} onAction={onRetry}>
-      {off ? "Check your connection and try again." : "Something went wrong on our side. Try again in a moment."}
+    <Banner tone={off ? "offline" : "danger"} title={off ? "You are offline" : isBusy(error) ? BUSY_TITLE : "This did not load"} action={onRetry ? "Try again" : undefined} onAction={onRetry}>
+      {off ? "Check your connection and try again." : isBusy(error) ? BUSY_TEXT : "Something went wrong on our side. Try again in a moment."}
     </Banner>
   );
 }

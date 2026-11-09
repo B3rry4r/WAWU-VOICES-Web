@@ -1,4 +1,5 @@
 "use client";
+import { BUSY_WORDS, isBusy } from "@/lib/api/busy";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Button, EmptyState } from "@/components/vx";
 import type { Page } from "@/lib/api/profile";
@@ -36,7 +37,7 @@ export function PagedList<T>({ load, row, empty, reloadKey }: {
   return (
     <div className="pf-list">
       {items.map((it, i) => <div key={i}>{row(it)}</div>)}
-      {error ? <p className="pf-note pf-note--err" role="alert">Could not load more. Try again.</p> : null}
+      {error ? <p className="pf-note pf-note--err" role="alert">{isBusy(error) ? BUSY_WORDS : "Could not load more. Try again."}</p> : null}
       {next ? <Button variant="secondary" block loading={more} onClick={showMore}>Show more</Button> : null}
     </div>
   );

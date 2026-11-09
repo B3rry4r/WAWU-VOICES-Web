@@ -326,6 +326,9 @@ function Panel(p: {
       <div>
         <div className="mb-2 text-label">Action</div>
         <Tabs variant="segmented" block label="Moderation action" items={p.choices.map((x) => ({ id: x.id, label: x.label }))} value={p.choice} onChange={p.setChoice} />
+        {p.cur.action === "SUSPEND" && d.item.targetType !== "USER" ? (
+          <p className="m-0 mt-2 text-caption text-ink-2">Suspending this person also takes this post down.</p>
+        ) : null}
       </div>
 
       <TextField label={p.appeal ? "Reason (the poster sees this)" : "Reason (the poster sees this and can appeal)"} multiline value={p.reason} onChange={p.setReason} hint="Required. Say what was wrong and what is fine." />
@@ -333,7 +336,7 @@ function Panel(p: {
 
       <div className="flex flex-wrap items-center gap-3">
         <Button variant={p.cur.action === "KEEP" || p.cur.action === "RESTORE" ? "primary" : "destructive"} icon={p.cur.action === "KEEP" ? "check" : p.cur.action === "RESTORE" ? "rotate-ccw" : "trash-2"} loading={p.busy} disabled={p.disabled || p.busy} onClick={() => p.onDecide(p.cur)}>
-          {p.cur.button}
+          {p.cur.action === "SUSPEND" && d.item.targetType !== "USER" ? "Suspend and take it down" : p.cur.button}
         </Button>
         {p.cur.action !== "KEEP" ? (
           <Button variant="secondary" disabled={p.disabled || p.busy} onClick={() => p.onDecide(keep)}>

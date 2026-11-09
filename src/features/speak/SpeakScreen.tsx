@@ -6,6 +6,7 @@ import { Banner, Button, Icon, NotFoundState, Skeleton, StageBar } from "@/compo
 import { short } from "@/components/vx/helpers";
 import { isSignedIn } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import * as api from "@/lib/api/speak";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
@@ -406,8 +407,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         <div className="sp-plain">
           {gone ? <NotFoundState /> : (
             <>
-              <Banner tone={loadErr instanceof ApiError && loadErr.status === 0 ? "offline" : "danger"} title="This did not load" action="Try again" onAction={() => setReload((n) => n + 1)}>
-                {loadErr instanceof ApiError && loadErr.status === 0 ? "Check your connection and try again." : "Something went wrong on our side. Try again in a moment."}
+              <Banner tone={loadErr instanceof ApiError && loadErr.status === 0 ? "offline" : "danger"} title={isBusy(loadErr) ? BUSY_TITLE : "This did not load"} action="Try again" onAction={() => setReload((n) => n + 1)}>
+                {loadErr instanceof ApiError && loadErr.status === 0 ? "Check your connection and try again." : isBusy(loadErr) ? BUSY_TEXT : "Something went wrong on our side. Try again in a moment."}
               </Banner>
               <Button variant="secondary" href="/">Back to Home</Button>
             </>

@@ -1,5 +1,6 @@
 "use client";
 
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import { leaderFirst } from "@/lib/format/plural";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -25,6 +26,7 @@ const PastLink = ({ className }: { className?: string }) => (
 export function WeeklyPage({ reportId }: { reportId?: string }) {
   const signedIn = useSignedIn();
   const [load, setLoad] = useState<Load>("loading");
+  const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [poll, setPoll] = useState<PollResults | null>(null);
   const [share, setShare] = useState(false);
@@ -53,6 +55,7 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
       })
       .catch((e) => {
         if (stop) return;
+        setBusy(isBusy(e));
         setLoad(e instanceof ApiError && e.status === 404 ? "none" : "error");
       });
     return () => { stop = true; };
@@ -83,7 +86,7 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
     return (
       <div>
         {header}
-        <EmptyState icon="wifi-off" title="We could not load the report" body="Check your connection and try again." action="Try again" actionIcon="refresh-cw" onAction={() => setTick((n) => n + 1)} />
+        <EmptyState icon={busy ? "triangle-alert" : "wifi-off"} title={busy ? BUSY_TITLE : "We could not load the report"} body={busy ? BUSY_TEXT : "Check your connection and try again."} action="Try again" actionIcon="refresh-cw" onAction={() => setTick((n) => n + 1)} />
       </div>
     );
   }

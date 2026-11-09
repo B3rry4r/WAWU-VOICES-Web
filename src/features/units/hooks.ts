@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, NetworkError } from "@/lib/api/client";
+import { BUSY_WORDS, isBusy } from "@/lib/api/busy";
 import { sessionStorage } from "@/lib/auth/session-storage";
 
 /** null until the browser has been read (the server render knows nothing about the session). */
@@ -42,6 +43,7 @@ export function useLoad<T>(fn: () => Promise<T>, enabled = true): { result: Load
 /** A sentence for a failed read. The server's own words only when it explained itself. */
 export function readErrorText(e: unknown): string {
   if (e instanceof NetworkError) return "Could not reach VOICES. Check your connection and try again.";
+  if (isBusy(e)) return BUSY_WORDS;
   if (e instanceof ApiError && e.explained && e.message) return e.message;
   return "Something went wrong. Try again.";
 }

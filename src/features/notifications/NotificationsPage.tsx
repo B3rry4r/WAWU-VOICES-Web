@@ -1,5 +1,6 @@
 "use client";
 
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import { useRouter } from "next/navigation";
 import { signInHref } from "@/lib/auth/entry-draft";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -98,6 +99,7 @@ export function NotificationsPage() {
   const [next, setNext] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
   const [load, setLoad] = useState<Load>("loading");
+  const [busy, setBusy] = useState(false);
   const [more, setMore] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -119,7 +121,7 @@ export function NotificationsPage() {
         announceUnread(p.unread);
         setLoad("ready");
       })
-      .catch(() => { if (!stop) setLoad("error"); });
+      .catch((e) => { if (!stop) { setBusy(isBusy(e)); setLoad("error"); } });
     return () => { stop = true; };
   }, [filter, signedIn, tick]);
 
@@ -227,7 +229,7 @@ export function NotificationsPage() {
       {load === "loading" ? (
         <div className="flex flex-col gap-2"><Skeleton variant="line" /><Skeleton variant="answer" /></div>
       ) : load === "error" ? (
-        <EmptyState icon="wifi-off" title="We could not load your notifications" body="Check your connection and try again." action="Try again" actionIcon="refresh-cw" onAction={() => setTick((n) => n + 1)} />
+        <EmptyState icon={busy ? "triangle-alert" : "wifi-off"} title={busy ? BUSY_TITLE : "We could not load your notifications"} body={busy ? BUSY_TEXT : "Check your connection and try again."} action="Try again" actionIcon="refresh-cw" onAction={() => setTick((n) => n + 1)} />
       ) : items.length === 0 ? (
         <EmptyState icon="bell" title={EMPTY[filter].title} body={EMPTY[filter].body} />
       ) : (

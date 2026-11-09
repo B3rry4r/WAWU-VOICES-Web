@@ -1,5 +1,6 @@
 "use client";
 
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Rail } from "@/components/shell/ShellSlots";
@@ -45,6 +46,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
   const signedIn = useSignedIn();
   const [post, setPost] = useState<NewsAnswer | null>(null);
   const [load, setLoad] = useState<Load>("loading");
+  const [busy, setBusy] = useState(false);
   const [replies, setReplies] = useState<NewsReply[]>([]);
   const [nextReplies, setNextReplies] = useState<string | null>(null);
   const [more, setMore] = useState<NewsAnswer[]>([]);
@@ -58,7 +60,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
     setLoad("loading");
     getNewsPost(answerId)
       .then((p) => { setPost(p); setLoad("ready"); })
-      .catch((e: unknown) => setLoad(e instanceof ApiError && e.status === 404 ? "missing" : "error"));
+      .catch((e: unknown) => { setBusy(isBusy(e)); setLoad(e instanceof ApiError && e.status === 404 ? "missing" : "error"); });
     if (SERVED.replies) listReplies(answerId).then((r) => { setReplies(r.items); setNextReplies(r.nextCursor); }).catch(() => undefined);
     listNews({ limit: 4 }).then((p) => setMore(p.items.filter((x) => x.id !== answerId).slice(0, 3))).catch(() => undefined);
   }, [answerId]);
@@ -107,7 +109,7 @@ export function NewsPostPage({ answerId }: { answerId: string }) {
     return (
       <>
         <Link href="/news" className="mb-3 inline-flex items-center gap-1 text-label text-green-text no-underline"><Icon name="arrow-left" size={18} />Back to the Newsroom</Link>
-        {load === "missing" ? <NotFoundState /> : <EmptyState icon="wifi-off" title="Could not load this post" action="Try again" actionIcon="refresh-cw" onAction={fetchAll} />}
+        {load === "missing" ? <NotFoundState /> : <EmptyState icon={busy ? "triangle-alert" : "wifi-off"} title={busy ? BUSY_TITLE : "Could not load this post"} body={busy ? BUSY_TEXT : undefined} action="Try again" actionIcon="refresh-cw" onAction={fetchAll} />}
       </>
     );
   }

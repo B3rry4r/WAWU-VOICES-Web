@@ -26,12 +26,12 @@ function verifyOnce(id: string, key: string, txId?: string): Promise<Payment> {
   return p;
 }
 
-/** A raw provider reference (voices-<uuid>) is long: show its last 8 characters, and keep the whole value to copy. The person's own VU- reference is short already and is shown whole. */
+/** A raw provider reference (voices-<uuid>) is long: show its last 8 characters, and keep the whole value to copy. The person's own VT- reference is short already and is shown whole. */
 export function shortRef(ref: string): string {
   return ref.startsWith("voices-") && ref.length > 12 ? ref.slice(-8) : ref;
 }
 
-/** The one reference a person sees and copies for a payment (lead ruling WF, 6 Nov, B-L2): VU-yymmdd-XXXXXXXX, the same on every screen. The provider reference only if the API sent none. */
+/** The one reference a person sees and copies for a payment (lead ruling WF, 6 Nov, B-L2): VT-yymmdd-XXXXXXXX, the same on every screen. The provider reference only if the API sent none. */
 export function paymentRef(p: { reference?: string | null; receiptNo?: string | null; txRef: string }): string {
   return p.reference ?? p.receiptNo ?? p.txRef;
 }

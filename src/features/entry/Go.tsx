@@ -88,7 +88,7 @@ export function Go() {
                   type="button"
                   data-testid={`go-${m}`}
                   onClick={() => pick(m)}
-                  className={`flex min-h-[56px] cursor-pointer items-center justify-center rounded-m border-0 text-[17px] font-extrabold leading-[22px] tracking-[0.05em] focus-visible:shadow-focus focus-visible:outline-none ${TONE[m].chip}`}
+                  className={`go-word flex min-h-[56px] cursor-pointer items-center justify-center rounded-m border-0 text-[17px] font-extrabold leading-[22px] tracking-[0.05em] focus-visible:shadow-focus focus-visible:outline-none ${TONE[m].chip}`}
                 >{m}</button>
               ))}
             </div>
