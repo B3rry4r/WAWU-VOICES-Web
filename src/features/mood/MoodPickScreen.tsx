@@ -7,7 +7,10 @@ import { getPublicConfig } from "@/lib/api/feed";
 import { ApiError } from "@/lib/api/client";
 import type { Mood } from "@/lib/api/mood";
 import { AppBar, Problem, useSignedIn } from "@/features/talk/lib";
+import { getSettings, updateSettings } from "@/lib/api/profile";
 import { MOODS, TONE, isMood, readPick, writePick } from "./mood";
+import { ShareWordSwitch } from "./ShareWordSwitch";
+import { readPendingShareWord, writePendingShareWord } from "./share-word";
 
 /** MoodPick board: before Record or Write on a mood question, pick one word. It can be changed until the answer is posted. */
 export function MoodPickScreen({ qid }: { qid: string }) {
@@ -20,6 +23,23 @@ export function MoodPickScreen({ qid }: { qid: string }) {
   const [seconds, setSeconds] = useState(10);
   const [word, setWord] = useState<Mood | null>(null);
   const [hint, setHint] = useState(false);
+  // LCH-06: "Share my word", on by default. Signed in it is saved at once; before that it waits in this browser.
+  const [shareWord, setShareWord] = useState(true);
+  const [shareBusy, setShareBusy] = useState(false);
+  useEffect(() => {
+    if (signedIn === null) return undefined;
+    if (!signedIn) { setShareWord(readPendingShareWord() ?? true); return undefined; }
+    let live = true;
+    getSettings().then((s) => { if (live) setShareWord(s.shareMyWord); }, () => undefined);
+    return () => { live = false; };
+  }, [signedIn]);
+  async function changeShareWord(v: boolean) {
+    const before = shareWord;
+    setShareWord(v);
+    if (!signedIn) { writePendingShareWord(v); return; }
+    setShareBusy(true);
+    try { await updateSettings({ shareMyWord: v }); } catch { setShareWord(before); } finally { setShareBusy(false); }
+  }
 
   useEffect(() => {
     setErr(null);
@@ -85,6 +105,7 @@ export function MoodPickScreen({ qid }: { qid: string }) {
           <Button size="l" icon="mic" block onClick={() => go("speak")}>{`Say it in ${seconds} seconds`}</Button>
           <Button size="l" variant="secondary" icon="message-square" block onClick={() => go("write")}>Type it instead</Button>
         </section>
+        <ShareWordSwitch on={shareWord} busy={shareBusy} onChange={(v) => void changeShareWord(v)} />
       </div>
     </>
   );

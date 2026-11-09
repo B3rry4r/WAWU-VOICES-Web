@@ -271,6 +271,97 @@ paths:
           $ref: '#/components/responses/E422'
         '429':
           $ref: '#/components/responses/E429'
+  /me/invite:
+    get:
+      operationId: getMyInvite
+      tags:
+      - me-profile
+      summary: My personal invite link
+      security:
+      - wawuId: []
+      description: 'LCH-06: my one invite code, made the first time it is asked for and never changed, the link built from PUBLIC_WEB_BASE
+        (url is PUBLIC_WEB_BASE/go/code), and how many friends have answered through it. Auth: signed in with a finished profile.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyInvite'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '429':
+          $ref: '#/components/responses/E429'
+  /me/invite/claim:
+    post:
+      operationId: claimInvite
+      tags:
+      - me-profile
+      summary: Count me as the friend of the person whose link brought me
+      security:
+      - wawuId: []
+      description: 'LCH-06: the web sends the code it kept for the visitor (30 days, first link wins) after the person has posted an answer.
+        Always 204; it never says whether the code was valid. Ignored when the code is unknown or my own, when I already have an inviter, when my
+        account is older than 30 days, when I have no published answer, or when either of us blocked the other. Auth: signed in with a finished
+        profile.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimInviteRequest'
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /me/friends:
+    get:
+      operationId: listMyFriends
+      tags:
+      - me-profile
+      summary: Friends who answered through my link
+      security:
+      - wawuId: []
+      description: 'LCH-06: the count and a cursor page of the people who came through my link and answered, newest first. A friend''s word is
+        returned only to me, only if the friend''s Share my word is on at this moment (else word is null and wordShared is false); the friend still
+        counts. Never in a public response. Auth: signed in with a finished profile.'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendsPage'
+        '400':
+          $ref: '#/components/responses/E400'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '429':
+          $ref: '#/components/responses/E429'
   /me/categories:
     put:
       operationId: setCategories
@@ -6767,6 +6858,78 @@ components:
         handle:
           type: string
       additionalProperties: false
+    MyInvite:
+      type: object
+      properties:
+        code:
+          type: string
+        url:
+          type: string
+        friendsAnswered:
+          type: integer
+      additionalProperties: false
+      required:
+      - code
+      - url
+      - friendsAnswered
+    ClaimInviteRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 32
+      additionalProperties: false
+      required:
+      - code
+    Friend:
+      type: object
+      properties:
+        handle:
+          type: string
+        displayName:
+          type:
+          - string
+          - 'null'
+        answeredAt:
+          type: string
+          format: date-time
+        word:
+          type:
+          - string
+          - 'null'
+          enum:
+          - ANGRY
+          - TIRED
+          - PROUD
+          - HOPEFUL
+          - null
+        wordShared:
+          type: boolean
+      additionalProperties: false
+      required:
+      - handle
+      - displayName
+      - answeredAt
+      - word
+      - wordShared
+    FriendsPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Friend'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      required:
+      - count
+      - items
+      - nextCursor
     Settings:
       type: object
       properties:
@@ -6804,6 +6967,8 @@ components:
           type: boolean
         dailyQuestionMinute:
           type: integer
+        shareMyWord:
+          type: boolean
       additionalProperties: false
       required:
       - language
@@ -6819,6 +6984,7 @@ components:
       - notifyFlashPolls
       - notifyCategoryAlerts
       - dailyQuestionMinute
+      - shareMyWord
     UpdateSettingsRequest:
       type: object
       properties:
@@ -6856,6 +7022,8 @@ components:
           type: boolean
         dailyQuestionMinute:
           type: integer
+        shareMyWord:
+          type: boolean
       additionalProperties: false
     CategoryFollow:
       type: object

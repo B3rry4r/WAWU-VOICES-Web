@@ -205,6 +205,7 @@ function SettingsBody({ me }: { me: Me }) {
 
       <Section id="ad-h" title="Ads and privacy">
         <div className="pf-card">
+          <Switch label="Share my word" detail="The friend whose link brought you here sees your word. Nobody else does." checked={s.shareMyWord} onChange={(v) => patch({ shareMyWord: v })} />
           <RowButton icon="shield-alert" label="Blocked accounts" detail={blockedCount === null ? undefined : String(blockedCount)} onClick={() => setSheet("blocked")} />
         </div>
       </Section>

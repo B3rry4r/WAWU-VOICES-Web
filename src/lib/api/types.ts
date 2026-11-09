@@ -116,6 +116,66 @@ export interface paths {
         patch: operations["updateSettings"];
         trace?: never;
     };
+    "/me/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My personal invite link
+         * @description LCH-06: my one invite code, made the first time it is asked for and never changed, the link built from PUBLIC_WEB_BASE (url is PUBLIC_WEB_BASE/go/code), and how many friends have answered through it. Auth: signed in with a finished profile.
+         */
+        get: operations["getMyInvite"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/invite/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Count me as the friend of the person whose link brought me
+         * @description LCH-06: the web sends the code it kept for the visitor (30 days, first link wins) after the person has posted an answer. Always 204; it never says whether the code was valid. Ignored when the code is unknown or my own, when I already have an inviter, when my account is older than 30 days, when I have no published answer, or when either of us blocked the other. Auth: signed in with a finished profile.
+         */
+        post: operations["claimInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/friends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Friends who answered through my link
+         * @description LCH-06: the count and a cursor page of the people who came through my link and answered, newest first. A friend's word is returned only to me, only if the friend's Share my word is on at this moment (else word is null and wordShared is false); the friend still counts. Never in a public response. Auth: signed in with a finished profile.
+         */
+        get: operations["listMyFriends"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/categories": {
         parameters: {
             query?: never;
@@ -3169,6 +3229,28 @@ export interface components {
             countryCode?: string;
             handle?: string;
         };
+        MyInvite: {
+            code: string;
+            url: string;
+            friendsAnswered: number;
+        };
+        ClaimInviteRequest: {
+            code: string;
+        };
+        Friend: {
+            handle: string;
+            displayName: string | null;
+            /** Format: date-time */
+            answeredAt: string;
+            /** @enum {string|null} */
+            word: "ANGRY" | "TIRED" | "PROUD" | "HOPEFUL" | null;
+            wordShared: boolean;
+        };
+        FriendsPage: {
+            count: number;
+            items: components["schemas"]["Friend"][];
+            nextCursor: string | null;
+        };
         Settings: {
             language: string;
             dataSaver: boolean;
@@ -3184,6 +3266,7 @@ export interface components {
             notifyFlashPolls: boolean;
             notifyCategoryAlerts: boolean;
             dailyQuestionMinute: number;
+            shareMyWord: boolean;
         };
         UpdateSettingsRequest: {
             language?: string;
@@ -3200,6 +3283,7 @@ export interface components {
             notifyFlashPolls?: boolean;
             notifyCategoryAlerts?: boolean;
             dailyQuestionMinute?: number;
+            shareMyWord?: boolean;
         };
         CategoryFollow: {
             /** Format: uuid */
@@ -5191,6 +5275,82 @@ export interface operations {
             };
             401: components["responses"]["E401"];
             422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getMyInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyInvite"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    claimInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimInviteRequest"];
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    listMyFriends: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendsPage"];
+                };
+            };
+            400: components["responses"]["E400"];
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
             429: components["responses"]["E429"];
         };
     };
