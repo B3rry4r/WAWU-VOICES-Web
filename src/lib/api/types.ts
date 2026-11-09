@@ -2760,6 +2760,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/weekly-reports/{reportId}/instagram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Instagram pictures of a published report, as a zip
+         * @description LCH-13: the carousel (1080x1350) and the Story (1080x1920) drawn from the approved text of a PUBLISHED report. Nothing is posted anywhere; a draft, held or approved report is a 409. Auth: signed in with role EDITOR or ADMIN.
+         */
+        get: operations["adminWeeklyInstagramZip"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/weekly-reports/{reportId}/instagram/{file}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One Instagram picture
+         * @description LCH-13: one picture of the set, a PNG. Auth: signed in with role EDITOR or ADMIN.
+         */
+        get: operations["adminWeeklyInstagramPicture"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/weekly-reports/{reportId}/hold": {
         parameters: {
             query?: never;
@@ -9454,6 +9494,60 @@ export interface operations {
             409: components["responses"]["E409"];
             422: components["responses"]["E422"];
             429: components["responses"]["E429"];
+        };
+    };
+    adminWeeklyInstagramZip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+        };
+    };
+    adminWeeklyInstagramPicture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: string;
+                /** @description carousel-1.png and so on, or story.png. */
+                file: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
         };
     };
     adminHoldWeekly: {

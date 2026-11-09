@@ -5457,6 +5457,82 @@ paths:
           $ref: '#/components/responses/E422'
         '429':
           $ref: '#/components/responses/E429'
+  /admin/weekly-reports/{reportId}/instagram:
+    get:
+      operationId: adminWeeklyInstagramZip
+      tags:
+      - admin
+      summary: Instagram pictures of a published report, as a zip
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - EDITOR
+      - ADMIN
+      description: 'LCH-13: the carousel (1080x1350) and the Story (1080x1920) drawn from the approved text of a PUBLISHED report. Nothing is posted anywhere; a draft, held or approved report is a 409. Auth: signed in with role EDITOR or ADMIN.'
+      parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+  /admin/weekly-reports/{reportId}/instagram/{file}:
+    get:
+      operationId: adminWeeklyInstagramPicture
+      tags:
+      - admin
+      summary: One Instagram picture
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - EDITOR
+      - ADMIN
+      description: 'LCH-13: one picture of the set, a PNG. Auth: signed in with role EDITOR or ADMIN.'
+      parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: file
+        in: path
+        required: true
+        description: carousel-1.png and so on, or story.png.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
   /admin/weekly-reports/{reportId}/hold:
     post:
       operationId: adminHoldWeekly

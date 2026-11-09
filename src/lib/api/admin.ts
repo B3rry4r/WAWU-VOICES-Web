@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiBlob, apiFetch } from "./client";
 import type { components } from "./types";
 
 type S = components["schemas"];
@@ -88,6 +88,8 @@ export const getWeekly = (id: string) => apiFetch<AdminWeeklyReport>(`/admin/wee
 export const editWeekly = (id: string, body: { cardTitle?: string; editorNote?: string; headline?: string; mood?: string; summary?: string }) =>
   apiFetch<AdminWeeklyReport>(`/admin/weekly-reports/${enc(id)}`, { ...A, method: "PATCH", body });
 export const approveWeekly = (id: string, publishAt: string) => apiFetch<AdminWeeklyReport>(`/admin/weekly-reports/${enc(id)}/approve`, { ...A, method: "POST", body: { publishAt } });
+/** LCH-13: the Instagram pictures of a published report (carousel and Story) as one zip. Nothing is posted. */
+export const weeklyInstagramZip = (id: string) => apiBlob(`/admin/weekly-reports/${enc(id)}/instagram`, A);
 export const holdWeekly = (id: string, reason: string) => apiFetch<AdminWeeklyReport>(`/admin/weekly-reports/${enc(id)}/hold`, { ...A, method: "POST", body: { reason } });
 
 // Ads
