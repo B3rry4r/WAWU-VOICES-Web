@@ -5457,6 +5457,105 @@ paths:
           $ref: '#/components/responses/E422'
         '429':
           $ref: '#/components/responses/E429'
+  /answers/{answerId}/videos:
+    post:
+      operationId: makeAnswerVideo
+      tags:
+      - answers
+      summary: Make a video of my own voice answer
+      security:
+      - wawuId: []
+      description: 'LCH-07: only when the person asks. Builds an MP4 in the background (9x16 is 1080x1920, 1x1 is 1080x1080, at most 15 seconds:
+        a moving waveform of the voice, captions from the stored transcript, the question, the mood word on a mood question, the logo; no photos).
+        Answers 202 with the video as QUEUED; asking again for the same shape returns the same video. Only the answer''s author can ask (403
+        for anyone else); a text answer is a 422; a removed or deleted answer is a 404; a person may ask for 5 videos a day (429 RATE_LIMITED).
+        Until it is READY the share uses the audio link. Auth: signed in.'
+      parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MakeVideoRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceVideo'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+    get:
+      operationId: listAnswerVideos
+      tags:
+      - answers
+      summary: My videos of my answer
+      security:
+      - wawuId: []
+      description: 'LCH-07: the author''s videos of one answer with their state (QUEUED, MAKING, READY, FAILED). Empty once the answer is removed
+        or deleted. Anyone else gets a 404. Auth: signed in.'
+      parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceVideoList'
+        '401':
+          $ref: '#/components/responses/E401'
+        '404':
+          $ref: '#/components/responses/E404'
+  /voice-videos/{videoId}/file:
+    get:
+      operationId: getVoiceVideoFile
+      tags:
+      - answers
+      summary: The MP4 of my video
+      security:
+      - wawuId: []
+      description: 'LCH-07: the video file, for its author only, while the answer is published. Never cached, never a public link. A removed or
+        deleted answer''s video, a video that is not READY and anyone else''s video are a 404. Auth: signed in.'
+      parameters:
+      - name: videoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/E401'
+        '404':
+          $ref: '#/components/responses/E404'
   /admin/weekly-reports/{reportId}/instagram:
     get:
       operationId: adminWeeklyInstagramZip
@@ -9519,6 +9618,75 @@ components:
       description: imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story),
         null only where that route would 404. squareImageUrl is the 1080x1080 mood card (GET /share/{code}/square) for a mood answer and null
         for every other link.
+    MakeVideoRequest:
+      type: object
+      properties:
+        shape:
+          type: string
+          enum:
+          - 9x16
+          - 1x1
+      required:
+      - shape
+      additionalProperties: false
+    VoiceVideo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        answerId:
+          type: string
+          format: uuid
+        shape:
+          type: string
+          enum:
+          - 9x16
+          - 1x1
+        status:
+          type: string
+          enum:
+          - QUEUED
+          - MAKING
+          - READY
+          - FAILED
+        durationMs:
+          type:
+          - integer
+          - 'null'
+        url:
+          type:
+          - string
+          - 'null'
+          description: The file (GET /voice-videos/{videoId}/file), only when READY.
+        createdAt:
+          type: string
+          format: date-time
+        readyAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      required:
+      - id
+      - answerId
+      - shape
+      - status
+      - durationMs
+      - url
+      - createdAt
+      - readyAt
+      additionalProperties: false
+    VoiceVideoList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoiceVideo'
+      required:
+      - items
+      additionalProperties: false
     ShareEventRequest:
       type: object
       properties:

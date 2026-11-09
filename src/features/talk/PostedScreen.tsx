@@ -20,6 +20,7 @@ import { updateSettings } from "@/lib/api/profile";
 import { forgetInviteCode, keptInviteCode } from "@/lib/invite";
 import { readPendingShareWord, writePendingShareWord } from "@/features/mood/share-word";
 import { FriendsRow, InviteQr, InviteShare } from "@/features/share/InviteShare";
+import { VoiceVideoPanel } from "@/features/share/VoiceVideoPanel";
 
 /** The mood Posted screen is a full-screen task (YoureLive boards draw no tab bar); an ordinary Posted screen keeps it. */
 function NoTabBar() { useHideTabBar(); return null; }
@@ -176,6 +177,7 @@ export function PostedScreen({ qid }: { qid: string }) {
               <Button variant="secondary" disabled={!link?.squareImageUrl} onClick={() => void saveStoryCard(true)}>Save the card as a picture</Button>
             </section>
           ) : null}
+          {ans?.kind === "VOICE" && aid ? <VoiceVideoPanel answerId={aid} onNote={push} /> : null}
           <FriendsRow count={invite?.friendsAnswered ?? 0} firstName={firstFriend} />
           <InviteQr url={invite?.url ?? null} />
         </div>
@@ -205,6 +207,7 @@ export function PostedScreen({ qid }: { qid: string }) {
             <Button variant="secondary" icon="ellipsis" disabled={!aid} onClick={() => aid && share("ANSWER", aid)}>More apps</Button>
           </div>
         </section>
+        {ans?.kind === "VOICE" && aid ? <VoiceVideoPanel answerId={aid} onNote={push} /> : null}
         {ans ? <TalkCard answer={ans} signedIn push={push} /> : null}
         {link?.imageUrl && link.cardStatus === "READY" ? (
           <>

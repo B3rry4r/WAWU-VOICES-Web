@@ -2760,6 +2760,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/answers/{answerId}/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My videos of my answer
+         * @description LCH-07: the author's videos of one answer with their state (QUEUED, MAKING, READY, FAILED). Empty once the answer is removed or deleted. Anyone else gets a 404. Auth: signed in.
+         */
+        get: operations["listAnswerVideos"];
+        put?: never;
+        /**
+         * Make a video of my own voice answer
+         * @description LCH-07: only when the person asks. Builds an MP4 in the background (9x16 is 1080x1920, 1x1 is 1080x1080, at most 15 seconds: a moving waveform of the voice, captions from the stored transcript, the question, the mood word on a mood question, the logo; no photos). Answers 202 with the video as QUEUED; asking again for the same shape returns the same video. Only the answer's author can ask (403 for anyone else); a text answer is a 422; a removed or deleted answer is a 404; a person may ask for 5 videos a day (429 RATE_LIMITED). Until it is READY the share uses the audio link. Auth: signed in.
+         */
+        post: operations["makeAnswerVideo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/voice-videos/{videoId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The MP4 of my video
+         * @description LCH-07: the video file, for its author only, while the answer is published. Never cached, never a public link. A removed or deleted answer's video, a video that is not READY and anyone else's video are a 404. Auth: signed in.
+         */
+        get: operations["getVoiceVideoFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/weekly-reports/{reportId}/instagram": {
         parameters: {
             query?: never;
@@ -4181,6 +4225,30 @@ export interface components {
             squareImageUrl?: string | null;
             imageUrl?: string | null;
             previewText: string;
+        };
+        MakeVideoRequest: {
+            /** @enum {string} */
+            shape: "9x16" | "1x1";
+        };
+        VoiceVideo: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            answerId: string;
+            /** @enum {string} */
+            shape: "9x16" | "1x1";
+            /** @enum {string} */
+            status: "QUEUED" | "MAKING" | "READY" | "FAILED";
+            durationMs: number | null;
+            /** @description The file (GET /voice-videos/{videoId}/file), only when READY. */
+            url: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readyAt: string | null;
+        };
+        VoiceVideoList: {
+            items: components["schemas"]["VoiceVideo"][];
         };
         ShareEventRequest: {
             /** @enum {string} */
@@ -9494,6 +9562,85 @@ export interface operations {
             409: components["responses"]["E409"];
             422: components["responses"]["E422"];
             429: components["responses"]["E429"];
+        };
+    };
+    listAnswerVideos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                answerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceVideoList"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+        };
+    };
+    makeAnswerVideo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                answerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MakeVideoRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceVideo"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getVoiceVideoFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                videoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "video/mp4": string;
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
         };
     };
     adminWeeklyInstagramZip: {
