@@ -8,9 +8,11 @@ export interface ShellSlots {
   railEl: HTMLElement | null;
   barEl: HTMLElement | null;
   claimBar: () => () => void;
+  /** A page that is a full-screen task only in some states (the mood Posted screen) asks for no tab bar while it is mounted. */
+  hideTabs: () => () => void;
 }
 
-export const ShellSlotsContext = createContext<ShellSlots>({ railEl: null, barEl: null, claimBar: () => () => {} });
+export const ShellSlotsContext = createContext<ShellSlots>({ railEl: null, barEl: null, claimBar: () => () => {}, hideTabs: () => () => {} });
 
 /** Content for the desktop right rail ("This week"). Nothing renders on a phone, and an empty rail stays empty. */
 export function Rail({ children }: { children: ReactNode }) {
@@ -23,4 +25,10 @@ export function PhoneBar({ children }: { children: ReactNode }) {
   const { barEl, claimBar } = useContext(ShellSlotsContext);
   useEffect(() => claimBar(), [claimBar]);
   return barEl ? createPortal(children, barEl) : null;
+}
+
+/** While this is mounted the tab bar is hidden (phone). */
+export function useHideTabBar(): void {
+  const { hideTabs } = useContext(ShellSlotsContext);
+  useEffect(() => hideTabs(), [hideTabs]);
 }

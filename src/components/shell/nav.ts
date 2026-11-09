@@ -37,6 +37,7 @@ export const FULLSCREEN_PREFIXES = [
   "/speak",
   "/q/*/write",
   "/q/*/mood",
+  "/friends",
   "/q/*/propose",
   "/report",
   "/live/*/post",
