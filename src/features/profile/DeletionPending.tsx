@@ -9,9 +9,13 @@ import type { Me } from "@/lib/api/profile";
 import { date } from "@/lib/format/date";
 import "./profile.css";
 
+/** The words match docs/legal/terms.md ("Deleting your account") and CLAIMS.md: 14 days, then unspent tokens are lost, never paid out.
+ *  `ask` and `askKeep` are for the sheet, before the person has confirmed (it says what will happen); `grace` and `keep` are for after. */
 export const DELETE_WORDS = {
+  ask: "If you delete your account, it is kept for 14 days in case you change your mind. Nothing is removed in that time.",
+  askKeep: "To keep your account in those 14 days, tap Undo.",
   grace: "Your account is set to be deleted. For 14 days nothing is removed.",
-  lost: "After that, your posts, recordings and any unspent tokens are gone. tokens are never paid back as cash.",
+  lost: "After that, your posts, recordings and any unspent tokens are gone. Tokens are never paid back as cash.",
   keep: "To keep your account, tap Undo before the 14 days end.",
 };
 

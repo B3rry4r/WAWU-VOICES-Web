@@ -3989,7 +3989,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
-        /** @description LCH-02: on a mood question the explanation is an answer and carries one of its words in mood, as POST /questions/{id}/answers does; on any other question mood is refused. */
+        /** @description LCH-02: on a mood question the explanation is an answer and carries one of its words in mood, as POST /questions/{id}/answers does; on any other question mood is refused. H2: questionId is the question the voter came from (the one whose words they were shown); a weekly poll has no question of its own, so the reason is posted under it. It must belong to the poll's conversation (422 otherwise). Without it a weekly poll uses the topic's open question in slot order. */
         ExplainVoteRequest: {
             kind: components["schemas"]["PostKind"];
             body?: string;
@@ -3998,6 +3998,8 @@ export interface components {
             /** Format: uuid */
             extraVoiceTokenId?: string;
             mood?: components["schemas"]["Mood"];
+            /** Format: uuid */
+            questionId?: string;
         };
         /** @description label is always PROPOSED. A proposal is never shown as accepted. */
         Proposal: {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge, Banner, QuestionHero, TrendingList } from "@/components/vx";
 import { Rail } from "@/components/shell/ShellSlots";
 import { getHome, getMe, getTrendingQuestions, type Home } from "@/lib/api/feed";
+import { listMyAnswers } from "@/lib/api/profile";
 import { getAdPlacement, getFlashPolls, type AdPlacement, type Poll } from "@/lib/api/polls";
 import { isSignedIn } from "@/lib/api/auth";
 import { closesIn, shortCount, uniqueVoices, voicesOf } from "@/lib/feed-format";
@@ -22,6 +23,8 @@ interface Data {
   ad: AdPlacement | null;
   firstName: string | null;
   suspended: { status: string; until: string | null } | null;
+  /** Signed in and already answered today's question (H6): the card offers listening, not Speak again. */
+  answered: boolean;
 }
 
 /** Home: signed in greets by name and shows the flash poll; a guest reads the same feed with the "Listening is free" line (HomeGuest board). */
@@ -44,11 +47,13 @@ export function HomeScreen() {
           )
         : Promise.resolve({ firstName: null, suspended: null }),
     ]);
-    return { home, flash, trending, ad, firstName: who.firstName, suspended: who.suspended };
+    const today = home.dailyQuestion?.id;
+    const answered = signedIn && today ? await listMyAnswers().then((p) => p.items.some((i) => i.answer?.questionId === today), () => false) : false;
+    return { home, flash, trending, ad, firstName: who.firstName, suspended: who.suspended, answered };
   }, [signedIn]);
   if (signedIn === null || load.state === "loading") return <Loading />;
   if (load.state === "error") return <Failed load={load} />;
-  const { home: h, flash, trending, ad, firstName, suspended } = load.data;
+  const { home: h, flash, trending, ad, firstName, suspended, answered } = load.data;
   const q = h.dailyQuestion;
   const go = (path: string) => () => router.push(path);
   const talk = q ? go(`/q/${q.id}`) : undefined;
@@ -67,8 +72,10 @@ export function HomeScreen() {
               voices={voicesOf(q)}
               closesIn={closesIn(q.endsAt)}
               avatars={uniqueVoices(q.recentVoices).map((v) => v.handle)}
-              speakLabel={signedIn ? undefined : "Add your voice"}
-              onSpeak={go("/speak")}
+              speakLabel={answered ? "Listen to answers" : signedIn ? undefined : "Add your voice"}
+              speakIcon={answered ? "headphones" : undefined}
+              answered={answered}
+              onSpeak={answered ? talk : go("/speak")}
               onListen={talk}
               onDiscuss={talk}
               onVote={talk}

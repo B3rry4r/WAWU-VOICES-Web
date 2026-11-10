@@ -106,7 +106,7 @@ function ExportRow() {
   return (
     <>
       <RowButton icon="file-down" label="Export my data" detail={busy ? "Getting your data ready…" : "Your posts, transcripts and tokens history"} onClick={start} trailing={<span />} />
-      {ready ? <a className="pf-row-item pf-dl" href={exp.downloadUrl!} download>Download my data</a> : null}
+      {ready ? <a className="pf-row-item pf-dl" href={exp.downloadUrl!} download="voices-export.json">Download my data</a> : null}
       {error ? <p className="pf-note pf-note--err pf-pad" role="alert">{error}</p> : null}
     </>
   );
@@ -126,9 +126,9 @@ function DeleteSheet({ me, onClose, onDone }: { me: Me; onClose: () => void; onD
   return (
     <Sheet title="Delete your account?" onClose={onClose}>
       <div className="pf-menu">
-        <p className="pf-body">{DELETE_WORDS.grace}</p>
+        <p className="pf-body">{DELETE_WORDS.ask}</p>
         <p className="pf-body"><b>{DELETE_WORDS.lost}</b></p>
-        <p className="pf-body">{DELETE_WORDS.keep}</p>
+        <p className="pf-body">{DELETE_WORDS.askKeep}</p>
         <label className="pf-radio"><input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} />I understand my unspent tokens will be lost.</label>
         <TextField label={`Type @${handle} to confirm`} value={typed} onChange={setTyped} autoComplete="off" />
         {error ? <p className="pf-note pf-note--err" role="alert">{error}</p> : null}

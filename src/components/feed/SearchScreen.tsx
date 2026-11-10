@@ -48,12 +48,12 @@ export function SearchScreen() {
       </PhoneBar>
       {q.length < 2 ? (
         <div className="mt-6"><NothingYet title="Search VOICES" body="Type at least 2 letters to find questions, voices and people." /></div>
-      ) : load.state === "loading" ? (
+      ) : load.state === "loading" || (load.state === "ready" && !load.data.res) ? (
         <div className="mt-6"><Loading /></div>
       ) : load.state === "error" ? (
         <div className="mt-6"><Failed load={load} /></div>
       ) : (
-        <Results q={q} tab={tab} setTab={setTab} r={load.data.res!} />
+        <Results q={q} tab={tab} setTab={setTab} r={load.data.res as NonNullable<typeof load.data.res>} />
       )}
       {rail}
     </>

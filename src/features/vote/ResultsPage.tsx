@@ -173,7 +173,7 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
     setState("sending");
     key.current ??= newKey();
     try {
-      await explainMyVote(pollId, text, key.current, needsWord ? word : null);
+      await explainMyVote(pollId, text, key.current, needsWord ? word : null, questionId);
       key.current = null;
       setState("done");
     } catch (e) {
