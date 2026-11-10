@@ -3,6 +3,8 @@ import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/shell/AppShell";
 import { THEME_SCRIPT } from "@/components/shell/theme-script";
+import { InstallGate } from "@/features/install/InstallGate";
+import { INSTALL_SCRIPT } from "@/lib/install/boot-script";
 import "./globals.css";
 import "./type.css";
 import "../components/vx/vx.css";
@@ -20,17 +22,37 @@ const archivoExt = localFont({
   declarations: [{ prop: "unicode-range", value: "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF" }],
 });
 
-export const metadata: Metadata = { title: { default: "VOICES", template: "%s | VOICES" }, description: "Say your take. Listen to Africa." };
-export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
+export const metadata: Metadata = {
+  title: { default: "VOICES", template: "%s | VOICES" },
+  description: "Say your take. Listen to Africa.",
+  // V-41: the manifest comes from app/manifest.ts; these are the Apple home-screen tags (the touch icon is app/apple-icon.png).
+  applicationName: "VOICES",
+  appleWebApp: { capable: true, title: "VOICES", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
+};
+// theme-color follows the device theme: the --bg token, light and dark (tokens.css).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f5f5" },
+    { media: "(prefers-color-scheme: dark)", color: "#04120b" },
+  ],
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${bagel.variable} ${archivo.variable} ${archivoExt.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: INSTALL_SCRIPT }} />
       </head>
       <body>
-        <AppShell>{children}</AppShell>
+        <div id="app-root" style={{ display: "contents" }}>
+          <AppShell>{children}</AppShell>
+        </div>
+        <InstallGate />
       </body>
     </html>
   );
