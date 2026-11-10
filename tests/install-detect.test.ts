@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import vm from "node:vm";
 import { detectEnvironment, installMode, isExcludedPath, showsScreen, detectInApp } from "@/lib/install/detect";
-import { KEPT_ADDRESS_KEY, keepAddress, safeAddress, takeKeptAddress } from "@/lib/install/address";
+import { KEPT_ADDRESS_KEY, clearKeptAddress, keepAddress, safeAddress, takeKeptAddress } from "@/lib/install/address";
 import { INSTALL_SCRIPT } from "@/lib/install/boot-script";
 
 const UA = {
@@ -110,6 +110,16 @@ describe("install detection", () => {
     }
   });
 
+  it("Safari 17 or later on a Mac (Popover probe) gets the Add to Dock steps; without the probe, none (V-41)", () => {
+    const m = installMode(env(UA.desktopSafari, { supportsPopover: true }), false);
+    expect(m).toBe("dock-safari");
+    expect(showsScreen(m)).toBe(true);
+    expect(installMode(env(UA.desktopSafari, { supportsPopover: false }), false)).toBe("none-cannot-install");
+    // Firefox and Chrome are never Dock browsers, whatever the probe says
+    expect(installMode(env(UA.desktopFirefox, { supportsPopover: true }), false)).toBe("none-cannot-install");
+    expect(installMode(env(UA.desktopChrome, { supportsPopover: true }), false)).toBe("wait");
+  });
+
   it("desktop browsers that cannot install, and Firefox on Android, get no screen", () => {
     for (const ua of [UA.desktopFirefox, UA.desktopSafari, UA.androidFirefox]) {
       const m = installMode(env(ua), false);
@@ -121,6 +131,22 @@ describe("install detection", () => {
   it("the excluded paths: admin and server-only routes; share links, invites' landing and payment returns are not", () => {
     for (const p of ["/admin", "/admin/news", "/api/x", "/_next/static/a.js", "/go/ab12cd7"]) expect(isExcludedPath(p)).toBe(true);
     for (const p of ["/", "/go", "/c/music", "/s/abc1234", "/units/done", "/administrator", "/join", "/q/1"]) expect(isExcludedPath(p)).toBe(false);
+  });
+});
+
+describe("the kept address (more)", () => {
+  it("refuses a time in the future, a wrong clock (L2)", () => {
+    const m = new Map<string, string>();
+    const s = { setItem: (k: string, v: string) => void m.set(k, v), getItem: (k: string) => m.get(k) ?? null, removeItem: (k: string) => void m.delete(k) };
+    keepAddress("/s/future", 9e12, s);
+    expect(takeKeptAddress(1000, s)).toBeNull();
+  });
+  it("clearKeptAddress forgets it (sign-out)", () => {
+    const m = new Map<string, string>();
+    const s = { setItem: (k: string, v: string) => void m.set(k, v), getItem: (k: string) => m.get(k) ?? null, removeItem: (k: string) => void m.delete(k) };
+    keepAddress("/s/abc", 100, s);
+    clearKeptAddress(s);
+    expect(takeKeptAddress(200, s)).toBeNull();
   });
 });
 
@@ -173,18 +199,11 @@ describe("the head script", () => {
     vm.runInNewContext(INSTALL_SCRIPT, { window: win, navigator: nav, document: doc, Event: class {} });
     return { attrs, listeners, win };
   }
-  it("marks a tab visit pending on a phone and on Chromium", () => {
-    expect(run({ ua: UA.iosSafari }).attrs["data-install"]).toBe("pending");
-    expect(run({ ua: UA.androidChrome, path: "/c/music" }).attrs["data-install"]).toBe("pending");
-    expect(run({ ua: UA.desktopChrome }).attrs["data-install"]).toBe("pending");
-  });
-  it("leaves the page alone in standalone, on excluded paths, after Continue, and on a desktop that cannot install", () => {
-    expect(run({ ua: UA.androidChrome, standalone: true }).attrs["data-install"]).toBeUndefined();
-    expect(run({ ua: UA.iosSafari, navStandalone: true }).attrs["data-install"]).toBeUndefined();
-    expect(run({ ua: UA.androidChrome, path: "/admin/news" }).attrs["data-install"]).toBeUndefined();
-    expect(run({ ua: UA.androidChrome, path: "/go/ab12cd7" }).attrs["data-install"]).toBeUndefined();
-    expect(run({ ua: UA.iosSafari, dismissed: true }).attrs["data-install"]).toBeUndefined();
-    expect(run({ ua: UA.desktopFirefox }).attrs["data-install"]).toBeUndefined();
+  it("hides nothing for anyone: it never marks the page (M1)", () => {
+    for (const ua of [UA.iosSafari, UA.androidChrome, UA.desktopChrome, UA.desktopEdge, UA.androidSamsung, UA.desktopFirefox, UA.desktopSafari]) {
+      expect(run({ ua }).attrs["data-install"]).toBeUndefined();
+      expect(Object.keys(run({ ua }).attrs)).toEqual([]);
+    }
   });
   it("keeps the browser's install prompt for the button", () => {
     const r = run({ ua: UA.androidChrome });

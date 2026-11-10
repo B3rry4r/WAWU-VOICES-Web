@@ -2,6 +2,7 @@ import { AccountBlockedError, ApiError, apiFetch, isBlockedStatus } from "./clie
 import { WAWU_ID_BASE } from "./config";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import { clearEntryState } from "@/lib/auth/entry-draft";
+import { clearKeptAddress } from "@/lib/install/address";
 
 /*
  * WAWU ID owns sign-up, sign-in, the email code and password reset (the same service the WAWU website uses).
@@ -101,6 +102,7 @@ export function signOut(): void {
   const refreshToken = sessionStorage.getRefreshToken();
   sessionStorage.clear();
   clearEntryState();
+  clearKeptAddress();
   if (refreshToken) void idCall("/auth/logout", { refreshToken }).catch(() => undefined);
   // a kept recording belongs to the person who made it
   void import("@/features/speak/draft").then((m) => m.clearDraft()).catch(() => undefined);

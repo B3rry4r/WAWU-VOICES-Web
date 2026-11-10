@@ -1,7 +1,7 @@
 /**
  * V-41: "the address opened is kept". A visitor arrives at an invite, a share link or a payment return; the install screen
  * stands in front of that same address, so "Continue in the browser" simply reveals it. The address is also written down
- * when the person installs, so the installed app (which opens at "/") can take them to it once, within a week.
+ * once the person has installed (the browser says "accepted", or fires appinstalled; never on a cancelled prompt), so the installed app (which opens at "/") can take them to it once, within a week.
  * Only same-site paths are ever kept or opened.
  */
 export const KEPT_ADDRESS_KEY = "voices-opened-address";
@@ -22,7 +22,12 @@ export function keepAddress(address: string, now = Date.now(), store?: Pick<Stor
   try { (store ?? window.localStorage).setItem(KEPT_ADDRESS_KEY, JSON.stringify({ a, t: now })); } catch { /* storage may be off */ }
 }
 
-/** The kept address if it is still fresh; it is removed on the way out. */
+/** Forgets the kept address (sign-out: it belongs to whoever was on this device, not to the next person). */
+export function clearKeptAddress(store?: Pick<Storage, "removeItem">): void {
+  try { (store ?? window.localStorage).removeItem(KEPT_ADDRESS_KEY); } catch { /* storage may be off */ }
+}
+
+/** The kept address if it is still fresh; it is removed on the way out. A time in the future (a wrong clock) is refused. */
 export function takeKeptAddress(now = Date.now(), store?: Pick<Storage, "getItem" | "removeItem">): string | null {
   try {
     const s = store ?? window.localStorage;
@@ -30,7 +35,7 @@ export function takeKeptAddress(now = Date.now(), store?: Pick<Storage, "getItem
     if (!raw) return null;
     s.removeItem(KEPT_ADDRESS_KEY);
     const p = JSON.parse(raw) as { a?: unknown; t?: unknown };
-    if (typeof p.t !== "number" || now - p.t > KEPT_ADDRESS_DAYS * 86_400_000) return null;
+    if (typeof p.t !== "number" || p.t > now || now - p.t > KEPT_ADDRESS_DAYS * 86_400_000) return null;
     return safeAddress(p.a);
   } catch {
     return null;

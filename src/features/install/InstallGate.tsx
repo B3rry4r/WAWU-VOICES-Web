@@ -17,9 +17,6 @@ interface InstallPromptEvent extends Event {
 }
 type WithPrompt = Window & { __voicesInstall?: InstallPromptEvent | null };
 
-/** How long a Chromium browser is given to offer its prompt before we stop waiting (already installed, or it will not). */
-export const PROMPT_WAIT_MS = 1200;
-
 function readFacts(w: Window) {
   let display = false;
   try {
@@ -30,6 +27,8 @@ function readFacts(w: Window) {
     maxTouchPoints: w.navigator.maxTouchPoints,
     displayModeStandalone: display,
     navigatorStandalone: (w.navigator as Navigator & { standalone?: boolean }).standalone === true,
+    // Safari 17 probe for Add to Dock; see BrowserFacts.supportsPopover in detect.ts for why this feature.
+    supportsPopover: typeof (HTMLElement.prototype as { togglePopover?: unknown }).togglePopover === "function",
   };
 }
 
@@ -117,27 +116,19 @@ export function InstallGate() {
     if (showsScreen(m)) { setPhase("show"); setMark("show"); return; }
     if (m !== "wait") { setPhase("off"); setMark(null); return; }
 
-    // Chromium without its prompt yet: give it a moment, then step aside.
+    // Chromium with no install offer: nothing covers the app and nothing waits. If the browser offers later, draw the screen then.
     let done = false;
     const onReady = () => {
       if (done) return;
       done = true;
-      window.clearTimeout(timer);
       decide();
       setPhase("show");
       setMark("show");
     };
-    const timer = window.setTimeout(() => {
-      if (done) return;
-      done = true;
-      setPhase("off");
-      setMark(null);
-    }, PROMPT_WAIT_MS);
     w.addEventListener("voices-install-ready", onReady);
     w.addEventListener("beforeinstallprompt", onReady);
     return () => {
       done = true;
-      window.clearTimeout(timer);
       w.removeEventListener("voices-install-ready", onReady);
       w.removeEventListener("beforeinstallprompt", onReady);
     };
@@ -145,7 +136,11 @@ export function InstallGate() {
 
   // Installed from the browser menu or from our button: the screen has done its job.
   useEffect(() => {
-    const onInstalled = () => setInstalled(true);
+    // The address is kept only once the install really happened (this fires for the menu route as well).
+    const onInstalled = () => {
+      keepAddress(safeAddress(window.location.pathname + window.location.search + window.location.hash) ?? "/");
+      setInstalled(true);
+    };
     window.addEventListener("appinstalled", onInstalled);
     return () => window.removeEventListener("appinstalled", onInstalled);
   }, []);
@@ -174,13 +169,16 @@ export function InstallGate() {
   const install = async () => {
     const ev = (window as WithPrompt).__voicesInstall;
     if (!ev) return;
-    keepAddress(current());
+    const opened = current();
     (window as WithPrompt).__voicesInstall = null;
     setHasPrompt(false);
     try {
       await ev.prompt();
       const choice = await ev.userChoice;
-      if (choice.outcome === "accepted") setInstalled(true);
+      if (choice.outcome === "accepted") {
+        keepAddress(opened);
+        setInstalled(true);
+      }
     } catch { /* the browser refused; the steps below still apply */ }
   };
 
@@ -203,23 +201,42 @@ export function InstallGate() {
   );
   const status = <p className="ig-status" role="status" aria-live="polite">{copied === "yes" ? "Link copied. Paste it in your browser." : copied === "no" ? "Could not copy. Press and hold the address to copy it." : ""}</p>;
 
-  let title = "Add VOICES to your home screen";
-  let lede = "VOICES works best as an app. It opens full screen and sits one tap away.";
+  // On a computer the words are neutral: no "home screen", no "one tap" (V-41).
+  const computer = env.os === "desktop";
+  let title = computer ? "Install VOICES" : "Add VOICES to your home screen";
+  let lede = computer ? "VOICES works best as an app. It opens in its own window." : "VOICES works best as an app. It opens full screen and sits one tap away.";
   let body: React.ReactNode = null;
 
   if (installed) {
     title = "VOICES is on its way";
     lede = "";
-    body = <p className="ig-done">Open VOICES from your home screen or your apps. You can carry on here in the meantime.</p>;
+    body = <p className="ig-done">{computer ? "Open VOICES from your apps. You can carry on here in the meantime." : "Open VOICES from your home screen or your apps. You can carry on here in the meantime."}</p>;
   } else if (mode === "prompt") {
     body = (
       <div className="ig-actions">
         {hasPrompt ? (
           <Button block size="l" onClick={install}><span className="ig-btnrow"><Download size={22} aria-hidden="true" />Install VOICES</span></Button>
         ) : (
-          <p className="ig-note">To install later, use “Install” or “Add to Home screen” in your browser menu.</p>
+          <p className="ig-note">{computer ? "To install later, use “Install” in your browser menu." : "To install later, use “Install” or “Add to Home screen” in your browser menu."}</p>
         )}
       </div>
+    );
+  } else if (mode === "dock-safari") {
+    body = (
+      <ol className="ig-steps">
+        <li className="ig-step">
+          <span className="ig-step__n" aria-hidden="true">1</span>
+          <span className="ig-step__t">Open the “File” menu at the top of the screen.</span>
+        </li>
+        <li className="ig-step">
+          <span className="ig-step__n" aria-hidden="true">2</span>
+          <span className="ig-step__t">Choose “Add to Dock”.</span>
+        </li>
+        <li className="ig-step">
+          <span className="ig-step__n" aria-hidden="true">3</span>
+          <span className="ig-step__t">Click “Add”. Then open VOICES from your Dock.</span>
+        </li>
+      </ol>
     );
   } else if (mode === "ios-safari" || mode === "ios-other") {
     const browser = env.browser === "chrome" ? "Chrome" : env.browser === "firefox" ? "Firefox" : env.browser === "edge" ? "Edge" : "Safari";

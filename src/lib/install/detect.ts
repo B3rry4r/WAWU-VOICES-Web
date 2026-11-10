@@ -13,6 +13,13 @@ export interface BrowserFacts {
   displayModeStandalone?: boolean;
   /** iOS only: `navigator.standalone`. */
   navigatorStandalone?: boolean;
+  /**
+   * Safari 17 or later on a Mac can install a web app (File, Add to Dock). The user agent cannot tell the version (a Mac
+   * Safari UA is frozen at "10_15_7" and a fixed WebKit token), so the caller probes a feature that arrived in Safari 17.0:
+   * the Popover API, `typeof HTMLElement.prototype.togglePopover === "function"`. Safari 16 and earlier lack it and get no
+   * screen. (Chrome, Edge and Firefox are told apart by their own tokens before this is looked at.)
+   */
+  supportsPopover?: boolean;
 }
 
 export interface Environment {
@@ -20,6 +27,8 @@ export interface Environment {
   os: Os;
   browser: BrowserName;
   inApp: InAppName | null;
+  /** Desktop Safari that passed the Safari 17 probe: it can Add to Dock. */
+  canAddToDock: boolean;
 }
 
 /** The in-app browsers, most specific first (Messenger and Instagram UAs also carry the Facebook tokens). */
@@ -71,7 +80,7 @@ export function detectEnvironment(f: BrowserFacts): Environment {
   // An iPhone or iPad web view (no "Safari/" token, and none of the iOS browser apps) is some app's own browser.
   if (!inApp && (os === "ios" || os === "ipados") && browser === "other") inApp = "this app";
   const standalone = !!f.displayModeStandalone || f.navigatorStandalone === true;
-  return { standalone, os, browser, inApp };
+  return { standalone, os, browser, inApp, canAddToDock: os === "desktop" && browser === "safari" && f.supportsPopover === true };
 }
 
 export type InstallMode =
@@ -79,7 +88,8 @@ export type InstallMode =
   | "none-standalone"
   /** Chromium that fired (or may still fire) beforeinstallprompt: Install button. */
   | "prompt"
-  /** Chromium on Android or desktop whose prompt has not arrived yet: wait a moment, then give up. */
+  /** Chromium on Android or desktop with no install offer (yet): no screen, the app shows as it is. If the browser offers
+   *  later (beforeinstallprompt), the mode becomes "prompt" and the screen is drawn over the app. */
   | "wait"
   /** Safari on iPhone or iPad: Share, then Add to Home Screen. */
   | "ios-safari"
@@ -87,6 +97,8 @@ export type InstallMode =
   | "ios-other"
   /** Inside Instagram, WhatsApp and the rest: open in Safari or Chrome, with a copy-link button. */
   | "in-app"
+  /** Safari 17 or later on a Mac: File, then Add to Dock. */
+  | "dock-safari"
   /** A desktop (or other) browser that cannot install this app: nothing to offer, so no screen. */
   | "none-cannot-install";
 
@@ -99,13 +111,14 @@ export function installMode(env: Environment, hasPrompt: boolean): InstallMode {
     if (env.browser === "safari") return "ios-safari";
     return "ios-other";
   }
+  if (env.canAddToDock) return "dock-safari";
   if (CHROMIUM.includes(env.browser)) return hasPrompt ? "prompt" : "wait";
   return "none-cannot-install";
 }
 
 /** Does this mode draw the install screen (now or once the prompt arrives)? */
 export function showsScreen(mode: InstallMode): boolean {
-  return mode === "prompt" || mode === "ios-safari" || mode === "ios-other" || mode === "in-app";
+  return mode === "prompt" || mode === "ios-safari" || mode === "ios-other" || mode === "in-app" || mode === "dock-safari";
 }
 
 /** Paths that never get the screen: the staff admin pages (a desktop work tool, never installed by the public) and the

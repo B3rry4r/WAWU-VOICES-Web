@@ -29,6 +29,8 @@ export const metadata: Metadata = {
   applicationName: "VOICES",
   appleWebApp: { capable: true, title: "VOICES", statusBarStyle: "default" },
   formatDetection: { telephone: false },
+  // Chrome and Android want this tag; appleWebApp above only emits the older apple- one (Chrome warns it is deprecated).
+  other: { "mobile-web-app-capable": "yes" },
 };
 // theme-color follows the device theme: the --bg token, light and dark (tokens.css).
 export const viewport: Viewport = {

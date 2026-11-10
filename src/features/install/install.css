@@ -1,8 +1,6 @@
 /* V-41 install screen. Tokens only (tokens.css, type.css). */
-html[data-install="pending"] #app-root { visibility: hidden; animation: ig-reveal 0s linear 4s forwards; }
 html[data-install="show"] #app-root { visibility: hidden; }
 html[data-install="show"] body { overflow: hidden; }
-@keyframes ig-reveal { to { visibility: visible; } }
 
 .ig-root { position: fixed; inset: 0; z-index: 1000; overflow-y: auto; background: var(--bg); color: var(--ink); display: flex; justify-content: center;
   padding: max(var(--space-8), env(safe-area-inset-top)) var(--space-4) max(var(--space-6), env(safe-area-inset-bottom)); }
