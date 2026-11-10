@@ -59,7 +59,7 @@ export function slot(w: When): string {
 
 /** "8:00": the 24 hour clock the notification list draws. */
 export function clock24(w: When): string {
-  const p = parts(w, { hour: "numeric", minute: "2-digit", hour12: false });
+  const p = parts(w, { hour: "numeric", minute: "2-digit", hourCycle: "h23" });
   return `${p.hour}:${p.minute}`;
 }
 
