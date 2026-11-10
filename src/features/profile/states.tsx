@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { Button, EmptyState, Skeleton } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
-import { BUSY_WORDS, isBusy } from "@/lib/api/busy";
+import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 
 export function LoadingBlock({ rows = 3 }: { rows?: number }) {
   return (
@@ -23,7 +23,9 @@ export function errorLine(e: unknown, fallback = "Something went wrong. Try agai
 }
 
 export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
-  return <EmptyState icon="triangle-alert" title="We could not load this" body={isBusy(error) ? BUSY_WORDS : errorLine(error)} action="Try again" actionIcon="refresh-cw" onAction={onRetry} />;
+  // H6: when the server is busy the busy words are the heading, as on every other page (G1).
+  const busy = isBusy(error);
+  return <EmptyState icon="triangle-alert" title={busy ? BUSY_TITLE : "We could not load this"} body={busy ? BUSY_TEXT : errorLine(error)} action="Try again" actionIcon="refresh-cw" onAction={onRetry} />;
 }
 
 /** Shown to a guest. The sign-in screens are built by another task, so no button leads there yet. */

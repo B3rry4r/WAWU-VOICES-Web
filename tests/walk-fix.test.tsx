@@ -58,7 +58,9 @@ describe("G1: where the API cannot be reached or is busy, the person sees the bu
     expect((await import("@/features/profile/states")).errorLine(e, "Could not save that change. Try again.")).toBe("Could not save that change. Try again.");
     const { LoadError } = await import("@/features/profile/states");
     render(<LoadError error={e} onRetry={() => undefined} />);
-    expect(screen.getByText("We are busy. Try again in a minute.")).toBeTruthy();
+    // H6: the busy title is the heading and the busy line sits under it (it was one line under "We could not load this")
+    expect(screen.getByRole("heading", { name: "We are busy." })).toBeTruthy();
+    expect(screen.getByText("Try again in a minute.")).toBeTruthy();
     cleanup();
     expect((await import("@/features/units/checkout")).startErrorText(e)).toBe("Something went wrong. Nothing was charged. Try again.");
   });

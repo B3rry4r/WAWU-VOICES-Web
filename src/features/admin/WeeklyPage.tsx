@@ -73,7 +73,7 @@ function WeeklyBody() {
         <>
           <PageHead
             eyebrow={`Week ${report.weekNumber} · drafted ${slot(report.draftedAt)}${report.pollClosedAt ? ", after the poll closed" : ""}`}
-            title="Weekly report approval"
+            title={report.status === "PUBLISHED" ? "Weekly report" : "Weekly report approval"}
             right={statusPill(report)}
           />
           {reports.length > 1 ? (
@@ -150,7 +150,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
   return (
     <div className="grid grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] items-start gap-5">
       <div>
-        <div className="vx-eyebrow mb-2 text-ink-2">AI draft, edit before publishing</div>
+        <div className="vx-eyebrow mb-2 text-ink-2">{r.status === "PUBLISHED" ? "Published, reviewed by a person" : r.status === "APPROVED" ? "Approved, publishes at its time" : "AI draft, edit before publishing"}</div>
         <div className="ad-report">
           {editing ? (
             <Card className="flex flex-col gap-4">
@@ -166,7 +166,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
             </Card>
           ) : (
             <WeeklyReportCard
-              week={`Week ${r.weekNumber}${r.publishAt ? ` · publishes ${dayMonth(r.publishAt)}` : ""}`}
+              week={`Week ${r.weekNumber}${r.publishAt ? ` · ${r.status === "PUBLISHED" ? "published" : "publishes"} ${dayMonth(r.publishAt)}` : ""}`}
               title={r.cardTitle ?? "What Nigerians said this week"}
               moodLine={r.mood ?? r.headline ?? ""}
               summary={r.summary ?? undefined}
@@ -175,7 +175,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
               poll={summary ? { pct: summary.pct, text: summary.text } : undefined}
               voices={r.basedOnVoices}
               votes={r.basedOnVotes}
-              updated={r.publishAt ? `Publishes ${published(r.publishAt)}.` : undefined}
+              updated={r.publishAt ? `${r.status === "PUBLISHED" ? "Published" : "Publishes"} ${published(r.publishAt)}.` : undefined}
             />
           )}
         </div>

@@ -17,6 +17,10 @@ export interface QuestionHeroProps {
   closesIn?: string;
   avatars?: string[];
   speakLabel?: string;
+  /** The big button's icon. Default the microphone. */
+  speakIcon?: IconName;
+  /** True once the viewer has answered: the card says so and the quick Listen button (now the big one) is not repeated. */
+  answered?: boolean;
   onSpeak?: () => void;
   onListen?: () => void;
   onDiscuss?: () => void;
@@ -34,6 +38,12 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
         <div className="vx-hero__meta">
           {p.avatars ? <AvatarStack names={p.avatars} /> : null}
           <span className="vx-num">{voicesText(p.voices) + ' so far'}</span>
+          {p.answered ? (
+            <>
+              <span className="vx-dot" aria-hidden="true" />
+              <span>You have answered</span>
+            </>
+          ) : null}
           {p.closesIn ? (
             <>
               <span className="vx-dot" aria-hidden="true" />
@@ -42,9 +52,9 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
           ) : null}
         </div>
         <div className="vx-hero__cta">
-          <Button variant="dark" size="l" icon="mic" className="vx-hero__speak" onClick={p.onSpeak}>{p.speakLabel || 'Speak'}</Button>
+          <Button variant="dark" size="l" icon={p.speakIcon || 'mic'} className="vx-hero__speak" onClick={p.onSpeak}>{p.speakLabel || 'Speak'}</Button>
           <div className="vx-hero__quick">
-            <Button size="s" icon="headphones" onClick={p.onListen}>Listen</Button>
+            {p.answered ? null : <Button size="s" icon="headphones" onClick={p.onListen}>Listen</Button>}
             <Button size="s" icon="message-square" onClick={p.onDiscuss}>Discuss</Button>
             <Button size="s" icon="vote" onClick={p.onVote}>Vote</Button>
           </div>

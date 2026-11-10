@@ -54,9 +54,13 @@ export const getVoteAllowance = () => apiFetch<Allowances>("/me/allowance", { au
 export const castVote = (pollId: string, optionIds: string[], idempotencyKey: string) =>
   apiFetch<VoteReceipt>(`/polls/${enc(pollId)}/votes`, { method: "POST", authed: true, idempotencyKey, body: { optionIds } });
 
-/** `mood` is the one word of a mood question (LCH-02): its explanations are answers and carry one. */
-export const explainMyVote = (pollId: string, body: string, idempotencyKey: string, mood?: S["Mood"] | null) =>
-  apiFetch<PostReceipt>(`/polls/${enc(pollId)}/explanation`, { method: "POST", authed: true, idempotencyKey, body: { kind: "TEXT", body, ...(mood ? { mood } : {}) } });
+/**
+ * `mood` is the one word of a mood question (LCH-02): its explanations are answers and carry one. `questionId` is the
+ * question the person came from (H2): a weekly poll has none of its own, so the reason is posted under the question
+ * whose words they were shown.
+ */
+export const explainMyVote = (pollId: string, body: string, idempotencyKey: string, mood?: S["Mood"] | null, questionId?: string) =>
+  apiFetch<PostReceipt>(`/polls/${enc(pollId)}/explanation`, { method: "POST", authed: true, idempotencyKey, body: { kind: "TEXT", body, ...(mood ? { mood } : {}), ...(questionId ? { questionId } : {}) } });
 
 export const getWhatNext = (questionId: string, sort: ProposalSort = "SUPPORT") =>
   apiFetch<WhatNext>(`/questions/${enc(questionId)}/what-next?sort=${sort}`, read());
