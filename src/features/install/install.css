@@ -1,0 +1,41 @@
+/* V-41 install screen. Tokens only (tokens.css, type.css). */
+html[data-install="show"] #app-root { visibility: hidden; }
+html[data-install="show"] body { overflow: hidden; }
+
+.ig-root { position: fixed; inset: 0; z-index: 1000; overflow-y: auto; background: var(--bg); color: var(--ink); display: flex; justify-content: center;
+  padding: max(var(--space-8), env(safe-area-inset-top)) var(--space-4) max(var(--space-6), env(safe-area-inset-bottom)); }
+.ig-card { width: 100%; max-width: 440px; margin: auto; display: flex; flex-direction: column; gap: var(--space-5); }
+.ig-logo { display: flex; justify-content: center; }
+.ig-btnrow { display: inline-flex; align-items: center; gap: var(--space-2); }
+.ig-title:focus, .ig-title:focus-visible { outline: none; box-shadow: none; }
+.ig-title { margin: 0; text-align: center; font-family: var(--font-display); font-size: var(--t-display-m-size); line-height: var(--t-display-m-line); font-weight: var(--t-display-m-weight); outline: none; }
+.ig-lede { margin: 0; text-align: center; color: var(--ink-2); font-family: var(--font-body); font-size: var(--t-body-size); line-height: var(--t-body-line); }
+.ig-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.ig-step { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: var(--space-3); row-gap: var(--space-2); align-items: start; }
+.ig-step__n { width: 28px; height: 28px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); display: grid; place-items: center;
+  font-family: var(--font-body); font-size: var(--t-label-size); font-weight: 700; }
+.ig-step__t { font-family: var(--font-body); font-size: var(--t-body-strong-size); line-height: var(--t-body-strong-line); font-weight: var(--t-body-strong-weight); }
+.ig-step__pic { grid-column: 2; max-width: 190px; }
+.ig-note { margin: 0; text-align: center; color: var(--ink-2); font-family: var(--font-body); font-size: var(--t-caption-size); line-height: var(--t-caption-line); }
+.ig-actions { display: flex; flex-direction: column; gap: var(--space-2); }
+.ig-continue { position: sticky; bottom: 0; padding-bottom: var(--space-2); appearance: none; background: var(--bg); border: 0; padding-top: var(--space-3); cursor: pointer; text-align: center; color: var(--green-text); text-decoration: underline;
+  font-family: var(--font-body); font-size: var(--t-body-strong-size); line-height: var(--t-body-strong-line); font-weight: var(--t-body-strong-weight); }
+.ig-continue:focus-visible { outline: 2px solid var(--green-text); outline-offset: 2px; border-radius: var(--radius-s); }
+.ig-status { margin: 0; text-align: center; color: var(--success); font-family: var(--font-body); font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: 600; min-height: 20px; }
+.ig-done { background: var(--success-bg); color: var(--success); border-radius: var(--radius-m); padding: var(--space-4); text-align: center; font-family: var(--font-body); font-size: var(--t-body-size); line-height: var(--t-body-line); }
+
+.ig-pic { color: var(--ink); }
+.ig-pic__bg { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.ig-pic__bar { fill: var(--surface-2); }
+.ig-pic__field { fill: var(--surface-3); }
+.ig-pic__line { fill: var(--surface-3); }
+.ig-pic__row { fill: var(--surface-2); }
+.ig-pic__hot circle { fill: var(--mint); stroke: var(--green); stroke-width: 2; }
+.ig-pic__hotrow rect { fill: var(--mint); stroke: var(--green); stroke-width: 2; }
+.ig-pic__ink { color: var(--ink); }
+.ig-pic__text { fill: var(--ink); font-family: var(--font-body); font-size: 12px; font-weight: 600; }
+.ig-pic__app { fill: none; stroke: var(--line); stroke-width: 1.5; }
+.ig-pic__mark, .ig-pic__mark2 { stroke: var(--green); }
+.ig-pic__label { fill: var(--ink-2); font-family: var(--font-body); font-size: 10px; font-weight: 600; }
+@media (min-width: 1024px) { .ig-continue { background: var(--surface); }
+  .ig-card { max-width: 520px; padding: var(--space-8); background: var(--surface); border-radius: var(--radius-xl); box-shadow: inset 0 0 0 1px var(--line); } .ig-root { align-items: center; } }
