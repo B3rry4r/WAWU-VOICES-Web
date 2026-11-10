@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { clock, countdown, date, longSlot, published, weekdayClock, dateTime, dayKey, dayMonth, monthYear, slot, weekday } from "@/lib/format/date";
+import { describe, expect, it, vi } from "vitest";
+import { clock, clock24, countdown, date, longSlot, published, weekdayClock, dateTime, dayKey, dayMonth, monthYear, slot, weekday } from "@/lib/format/date";
 
 describe("shared date helper (Lagos time)", () => {
   it("writes the clock as the boards do: 12 hour, no space, lower case", () => {
@@ -50,5 +50,17 @@ describe("shared date helper (Lagos time)", () => {
     expect(published("2026-11-30T17:03:00Z")).toBe("30 Nov, 6:03pm");
     expect(longSlot("2026-12-06T22:59:00Z")).toBe("Sunday 6 Dec, 11:59pm");
     expect(weekdayClock("2026-12-01T07:00:00Z")).toBe("Tue 8am");
+  });
+});
+
+describe("24 hour clock on an ICU that defaults to the h24 cycle", () => {
+  it("reads 0:05 just past midnight, never 24:05", () => {
+    const Real = Intl.DateTimeFormat;
+    const spy = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(((_l: unknown, o?: Intl.DateTimeFormatOptions) => new Real("en-GB-u-hc-h24", o)) as unknown as typeof Intl.DateTimeFormat);
+    try {
+      expect(clock24("2026-11-04T23:05:00Z")).toBe("0:05");
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

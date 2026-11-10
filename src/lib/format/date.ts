@@ -19,7 +19,7 @@ function parts(w: When, o: Intl.DateTimeFormatOptions): Parts {
 
 /** "12:39am", "6:00pm": 12 hour clock as the boards draw it, no space, lower case. `short` drops :00 ("6pm"). */
 export function clock(w: When, o: { short?: boolean } = {}): string {
-  const p = parts(w, { hour: "numeric", minute: "2-digit", hour12: true });
+  const p = parts(w, { hour: "numeric", minute: "2-digit", hourCycle: "h12" });
   const mer = (p.dayPeriod ?? "").toLowerCase();
   return o.short && p.minute === "00" ? `${p.hour}${mer}` : `${p.hour}:${p.minute}${mer}`;
 }
@@ -59,7 +59,7 @@ export function slot(w: When): string {
 
 /** "8:00": the 24 hour clock the notification list draws. */
 export function clock24(w: When): string {
-  const p = parts(w, { hour: "numeric", minute: "2-digit", hour12: false });
+  const p = parts(w, { hour: "numeric", minute: "2-digit", hourCycle: "h23" });
   return `${p.hour}:${p.minute}`;
 }
 
