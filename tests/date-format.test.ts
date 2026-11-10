@@ -54,7 +54,7 @@ describe("shared date helper (Lagos time)", () => {
 });
 
 describe("24 hour clock on an ICU that defaults to the h24 cycle", () => {
-  it("reads 0:05 just past midnight (the hour has no leading zero, as "8:00"), never 24:05", () => {
+  it("reads 0:05 just past midnight, never 24:05", () => {
     const Real = Intl.DateTimeFormat;
     const spy = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(((_l: unknown, o?: Intl.DateTimeFormatOptions) => new Real("en-GB-u-hc-h24", o)) as unknown as typeof Intl.DateTimeFormat);
     try {
