@@ -128,17 +128,17 @@ describe("H5 the weekly page says it is published", () => {
   });
 });
 
-describe("H6 the payment done page says Download receipt at every size", () => {
-  it("one button wording, no 1440 'Receipt'", async () => {
+describe("H6 the payment done page keeps the board's receipt words", () => {
+  it("390 says Download receipt, 1440 says Receipt (boards/PaymentDone.md)", async () => {
     search = "paymentId=01a1ad10-f09a-73fc-9902-42da40d26dec";
     window.localStorage.setItem("voices-web-session", SESSION);
     vi.stubGlobal("fetch", vi.fn(async (u: string) => {
       if (String(u).includes("/payments/")) return json({ id: "01a1ad10-f09a-73fc-9902-42da40d26dec", kind: "UNITS", status: "SUCCEEDED", amountKobo: 73200, txRef: "voices-1", title: "Standard pack", unitsMilli: 732000, bonusMilli: 0, method: "card", cardLast4: "4412", receiptNo: "VU-261202-48213", failureReason: null, balanceMilli: 744500, createdAt: "2026-12-02T17:10:00Z", verifiedAt: "2026-12-02T17:14:00Z", token: null });
       return json({ items: [] });
     }));
-    const { container } = render(<PaymentDoneScreen />);
-    const link = await screen.findByRole("link", { name: /Download receipt/ }, { timeout: 4000 });
-    expect(link.textContent).toBe("Download receipt");
-    expect(within(container).queryByText("Receipt", { selector: "span" })).toBeNull();
+    render(<PaymentDoneScreen />);
+    const link = await screen.findByRole("link", { name: /receipt/i }, { timeout: 4000 });
+    expect(link.querySelector(".dt\\:hidden")?.textContent).toBe("Download receipt");
+    expect(link.querySelector(".dt\\:inline")?.textContent).toBe("Receipt");
   });
 });

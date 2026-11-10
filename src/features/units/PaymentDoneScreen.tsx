@@ -289,7 +289,7 @@ export function PaymentDoneScreen() {
         <Details rows={rows} />
         <Actions>
           <Button icon={posted ? "message-circle" : undefined} href={target}>{posted ? "Back to the conversation" : from ? "Back" : "Back to your tokens"}</Button>
-          <Button variant={desktop ? "secondary" : "ghost"} icon="file-down" href={`/units/receipt/${p.id}`}>Download receipt</Button>
+          <Button variant={desktop ? "secondary" : "ghost"} icon="file-down" href={`/units/receipt/${p.id}`}><span className="dt:hidden">Download receipt</span><span className="hidden dt:inline">Receipt</span></Button>
         </Actions>
       </Shell>
     );
