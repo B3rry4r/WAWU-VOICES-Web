@@ -36,7 +36,7 @@ html[data-install="show"] body { overflow: hidden; }
 .ig-pic__hotrow rect { fill: var(--mint); stroke: var(--green); stroke-width: 2; }
 .ig-pic__ink { color: var(--ink); }
 .ig-pic__text { fill: var(--ink); font-family: var(--font-body); font-size: 12px; font-weight: 600; }
-.ig-pic__app { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.ig-pic__app { fill: none; stroke: var(--line); stroke-width: 1.5; }
 .ig-pic__mark, .ig-pic__mark2 { stroke: var(--green); }
 .ig-pic__label { fill: var(--ink-2); font-family: var(--font-body); font-size: 10px; font-weight: 600; }
 @media (min-width: 1024px) { .ig-continue { background: var(--surface); }

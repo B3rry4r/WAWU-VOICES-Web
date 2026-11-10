@@ -239,7 +239,7 @@ export function InstallGate() {
           <li className="ig-step">
             <span className="ig-step__n" aria-hidden="true">3</span>
             <span className="ig-step__t">Tap “Add”. Then open VOICES from your home screen.</span>
-            <div className="ig-step__pic"><PicHome /></div>
+            {mode === "ios-safari" ? <div className="ig-step__pic"><PicHome /></div> : null}
           </li>
         </ol>
         {mode === "ios-other" ? (
