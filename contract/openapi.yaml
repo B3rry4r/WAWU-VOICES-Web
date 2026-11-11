@@ -4600,6 +4600,57 @@ paths:
         '429':
           $ref: '#/components/responses/E429'
   /admin/questions:
+    get:
+      operationId: adminListQuestionPool
+      tags:
+      - admin
+      summary: 'The question pool (V-42): daily and flash questions with no week and no day'
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - EDITOR
+      - ADMIN
+      description: 'Newest first, cursor pages. A question is in the pool while it has no week, no day, is not closed and (for a flash question)
+        has not been started as a flash poll. total is the whole pool, not the page. Auth: signed in with role EDITOR or ADMIN.'
+      parameters:
+      - name: pool
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Must be 1; only the pool is listed here
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Opaque cursor from nextCursor
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+        description: 1 to 50, default 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminQuestionPool'
+        '400':
+          $ref: '#/components/responses/E400'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
     post:
       operationId: adminCreateQuestion
       tags:
@@ -4624,6 +4675,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminQuestion'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/questions/bulk:
+    post:
+      operationId: adminBulkQuestions
+      tags:
+      - admin
+      summary: Add many pool questions at once (up to 50 lines)
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - EDITOR
+      - ADMIN
+      description: 'V-42 (K2). Every line is made under the same rules as POST /admin/questions (3 to 400 characters, no control characters) with
+        no week and no day. A refused line is named by its line number and the others are kept, so the answer is 200 with created and refused
+        counts. Blank lines are skipped but still numbered. Auth: signed in with role EDITOR or ADMIN.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkQuestionsRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkQuestionsResult'
         '401':
           $ref: '#/components/responses/E401'
         '403':
@@ -4659,6 +4745,53 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/MoveQuestionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoveQuestionResult'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/questions/{questionId}/schedule:
+    post:
+      operationId: adminScheduleQuestion
+      tags:
+      - admin
+      summary: Put a pool question on a day; a taken day swaps and the old question goes to the pool
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - EDITOR
+      - ADMIN
+      description: 'V-42 (K3). The question joins the week whose dates hold the day; no week there is 422 ''There is no week on that day. Add
+        the week in the calendar first.''. A free day takes it at once. A taken day is 409 with code DAY_TAKEN and the question there in details.question,
+        until the request sends replace true; then the two swap and swappedWith is the question that went back to the pool. A day or question
+        that has started is 409. Only a daily question can be put on a day. Auth: signed in with role EDITOR or ADMIN.'
+      parameters:
+      - name: questionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleQuestionRequest'
       responses:
         '200':
           description: OK
@@ -10931,6 +11064,96 @@ components:
       - contentKind
       - startsAt
       - endsAt
+    AdminQuestionPool:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminQuestion'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+        total:
+          type: integer
+      additionalProperties: false
+      required:
+      - items
+      - nextCursor
+      - total
+      description: 'V-42: the question pool, newest first; total counts the whole pool.'
+    BulkQuestionsRequest:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+          - DAILY
+          - FLASH
+        categoryId:
+          type: string
+          format: uuid
+        lines:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - kind
+      - lines
+      description: 'V-42 (K2): one question per line, at most 50 non-blank lines; the line number is the position in this list, counted from 1.'
+    BulkQuestionLine:
+      type: object
+      properties:
+        line:
+          type: integer
+        text:
+          type: string
+        question:
+          oneOf:
+          - $ref: '#/components/schemas/AdminQuestion'
+          - type: 'null'
+        error:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      required:
+      - line
+      - text
+      - question
+      - error
+      description: 'One line of a bulk add: the question made, or why the line was refused.'
+    BulkQuestionsResult:
+      type: object
+      properties:
+        created:
+          type: integer
+        refused:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkQuestionLine'
+      additionalProperties: false
+      required:
+      - created
+      - refused
+      - items
+      description: Every non-blank line, in order. A refused line does not stop the others.
+    ScheduleQuestionRequest:
+      type: object
+      properties:
+        day:
+          type: string
+          format: date
+        replace:
+          type: boolean
+      additionalProperties: false
+      required:
+      - day
+      description: 'V-42 (K3): the day to put the pool question on. replace true confirms swapping the question already there into the pool.'
     MoveQuestionRequest:
       type: object
       properties:

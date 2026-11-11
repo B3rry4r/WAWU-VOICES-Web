@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, EmptyState, Icon, TextField, TopicChip } from "@/components/vx";
-import { createTopic, getTopic, listTopics, moveQuestion, startFlashPoll, updateQuestion, updateTopic } from "@/lib/api/admin";
+import { addSpareQuestion, createTopic, getTopic, listTopics, moveQuestion, updateQuestion, updateTopic } from "@/lib/api/admin";
 import type { AdminQuestion, AdminTopic, AdminTopicList, CalendarWeek, TopicStatus } from "@/lib/api/admin";
 import { dayMonth, dayStringShort, dayStringWeekday, slot, weekRange } from "./time";
 import { Card, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, refusalWords, useAction, Gated } from "./ui";
 import { ApiError } from "@/lib/api/client";
+import { FLASH_HOURS, startFlashNow } from "./flash";
 
 /** The 7 days of a week from its first day, as "2026-11-12" strings (Lagos calendar days). */
 function weekDays(startsOn: string): string[] {
@@ -22,9 +23,6 @@ function moveWords(e: unknown): string {
 
 /** A FLASH question with no day yet: held until an editor starts it as a flash poll (RW5). */
 const isHeldFlash = (q: AdminQuestion) => q.kind === "FLASH" && !q.day && q.status !== "CLOSED" && q.status !== "LIVE";
-
-/** How long a flash poll stays open once started from the calendar (RW5). */
-const FLASH_HOURS = 24;
 
 const STATUS_WORDS: Record<TopicStatus, string> = { DRAFT: "Draft", IN_REVIEW: "In review", SCHEDULED: "Scheduled", LIVE: "Live", CLOSED: "Closed" };
 
@@ -231,6 +229,7 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
           <FlashRow key={q.id} q={q} topicId={t.id} onStarted={() => { setN((x) => x + 1); onChanged("Flash poll started."); }} />
         ))}
       </ul>
+      <AddSpare topicId={t.id} onAdded={() => { setN((x) => x + 1); onChanged("Question added to the week as a spare."); }} />
 
       {d.poll ? (
         <div className="mt-4 rounded-l bg-surface-2 p-4">
@@ -338,24 +337,43 @@ function QuestionRow({ q, days, week, onSaved }: { q: AdminQuestion; days: strin
   );
 }
 
+/** K5: "Add a question" in a week. It becomes a spare: no day, held for follow-ups and flash polls. */
+function AddSpare({ topicId, onAdded }: { topicId: string; onAdded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const act = useAction();
+  async function save() {
+    const r = await act.run(() => addSpareQuestion(topicId, text.trim()));
+    if (r) {
+      setOpen(false);
+      setText("");
+      onAdded();
+    }
+  }
+  if (!open)
+    return (
+      <div className="mt-3 border-t border-line pt-3">
+        <Button size="s" variant="secondary" icon="plus" onClick={() => setOpen(true)}>Add a question</Button>
+      </div>
+    );
+  return (
+    <div className="mt-3 flex flex-col gap-2 border-t border-line pt-3" role="group" aria-label="Add a question to this week">
+      <TextField label="New spare question" multiline value={text} onChange={setText} maxLength={400} hint="It joins this week as a spare, with no day." />
+      <ErrorLine>{act.error}</ErrorLine>
+      <div className="flex gap-2">
+        <Button size="s" icon="check" loading={act.busy} disabled={text.trim().length < 3 || act.busy} onClick={() => void save()}>Add question</Button>
+        <Button size="s" variant="secondary" disabled={act.busy} onClick={() => { setOpen(false); setText(""); act.clear(); }}>Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
 /** A held FLASH question: start it as a flash poll that opens now (RW5). The API refuses a second open flash poll in its own words. */
 function FlashRow({ q, topicId, onStarted }: { q: AdminQuestion; topicId: string; onStarted: () => void }) {
   const [asking, setAsking] = useState(false);
   const act = useAction();
   async function start() {
-    const now = Date.now();
-    const r = await act.run(() =>
-      startFlashPoll({
-        kind: "FLASH",
-        questionId: q.id,
-        topicId,
-        title: q.text.slice(0, 200),
-        choiceMode: "SINGLE",
-        options: ["Yes", "No"],
-        startsAt: new Date(now).toISOString(),
-        endsAt: new Date(now + FLASH_HOURS * 3600000).toISOString(),
-      }),
-    );
+    const r = await act.run(() => startFlashNow(q, topicId));
     if (r) {
       setAsking(false);
       onStarted();
