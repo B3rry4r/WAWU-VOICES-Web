@@ -2399,13 +2399,37 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The question pool (V-42): daily and flash questions with no week and no day
+         * @description Newest first, cursor pages. A question is in the pool while it has no week, no day, is not closed and (for a flash question) has not been started as a flash poll. total is the whole pool, not the page. Auth: signed in with role EDITOR or ADMIN.
+         */
+        get: operations["adminListQuestionPool"];
         put?: never;
         /**
          * Create a question (daily, flash, follow-up)
          * @description kind is required here. Auth: signed in with role EDITOR or ADMIN.
          */
         post: operations["adminCreateQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/questions/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add many pool questions at once (up to 50 lines)
+         * @description V-42 (K2). Every line is made under the same rules as POST /admin/questions (3 to 400 characters, no control characters) with no week and no day. A refused line is named by its line number and the others are kept, so the answer is 200 with created and refused counts. Blank lines are skipped but still numbered. Auth: signed in with role EDITOR or ADMIN.
+         */
+        post: operations["adminBulkQuestions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2426,6 +2450,26 @@ export interface paths {
          * @description Lead ruling WF, 6 Nov (RW6). Outside the week is 422 'That day is outside the week.'; a question that has started cannot move (409). Held FLASH questions are opened as flash polls with POST /admin/polls (kind FLASH, questionId). Auth: signed in with role EDITOR or ADMIN.
          */
         post: operations["adminMoveQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/questions/{questionId}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put a pool question on a day; a taken day swaps and the old question goes to the pool
+         * @description V-42 (K3). The question joins the week whose dates hold the day; no week there is 422 'There is no week on that day. Add the week in the calendar first.'. A free day takes it at once. A taken day is 409 with code DAY_TAKEN and the question there in details.question, until the request sends replace true; then the two swap and swappedWith is the question that went back to the pool. A day or question that has started is 409. Only a daily question can be put on a day. Auth: signed in with role EDITOR or ADMIN.
+         */
+        post: operations["adminScheduleQuestion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4697,6 +4741,39 @@ export interface components {
             keepWeeklyTheme?: boolean;
             dropReplaced?: boolean;
             reason?: string;
+        };
+        /** @description V-42: the question pool, newest first; total counts the whole pool. */
+        AdminQuestionPool: {
+            items: components["schemas"]["AdminQuestion"][];
+            nextCursor: string | null;
+            total: number;
+        };
+        /** @description V-42 (K2): one question per line, at most 50 non-blank lines; the line number is the position in this list, counted from 1. */
+        BulkQuestionsRequest: {
+            /** @enum {string} */
+            kind: "DAILY" | "FLASH";
+            /** Format: uuid */
+            categoryId?: string;
+            lines: string[];
+        };
+        /** @description One line of a bulk add: the question made, or why the line was refused. */
+        BulkQuestionLine: {
+            line: number;
+            text: string;
+            question: components["schemas"]["AdminQuestion"] | null;
+            error: string | null;
+        };
+        /** @description Every non-blank line, in order. A refused line does not stop the others. */
+        BulkQuestionsResult: {
+            created: number;
+            refused: number;
+            items: components["schemas"]["BulkQuestionLine"][];
+        };
+        /** @description V-42 (K3): the day to put the pool question on. replace true confirms swapping the question already there into the pool. */
+        ScheduleQuestionRequest: {
+            /** Format: date */
+            day: string;
+            replace?: boolean;
         };
         /** @description RW6: the day (inside the question's own week) to put it on. */
         MoveQuestionRequest: {
@@ -8975,6 +9052,38 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
+    adminListQuestionPool: {
+        parameters: {
+            query?: {
+                /** @description Must be 1; only the pool is listed here */
+                pool?: string;
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminQuestionPool"];
+                };
+            };
+            400: components["responses"]["E400"];
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
     adminCreateQuestion: {
         parameters: {
             query?: never;
@@ -9003,6 +9112,34 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
+    adminBulkQuestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkQuestionsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkQuestionsResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
     adminMoveQuestion: {
         parameters: {
             query?: never;
@@ -9015,6 +9152,38 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MoveQuestionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MoveQuestionResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminScheduleQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                questionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleQuestionRequest"];
             };
         };
         responses: {

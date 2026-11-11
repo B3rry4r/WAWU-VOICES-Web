@@ -10,6 +10,9 @@ export type CalendarWeek = S["CalendarWeek"];
 export type AdminTopic = S["AdminTopic"];
 export type AdminQuestion = S["AdminQuestion"];
 export type TopicStatus = S["TopicStatus"];
+export type AdminQuestionPool = S["AdminQuestionPool"];
+export type BulkQuestionsResult = S["BulkQuestionsResult"];
+export type MoveQuestionResult = S["MoveQuestionResult"];
 export type UpsertTopicRequest = S["UpsertTopicRequest"];
 export type CreateOverrideRequest = S["CreateOverrideRequest"];
 export type OverridePreview = S["OverridePreview"];
@@ -53,7 +56,22 @@ export const listTopics = (o: { status?: string; sensitive?: boolean; q?: string
 export const getTopic = (id: string) => apiFetch<AdminTopic>(`/admin/topics/${enc(id)}`, A);
 export const createTopic = (body: UpsertTopicRequest) => apiFetch<AdminTopic>("/admin/topics", { ...A, method: "POST", body });
 export const updateTopic = (id: string, body: Partial<UpsertTopicRequest>) => apiFetch<AdminTopic>(`/admin/topics/${enc(id)}`, { ...A, method: "PATCH", body });
-export const updateQuestion = (id: string, body: { kind: S["QuestionKind"]; text: string; scheduledFor?: string; pinned?: boolean }) => apiFetch<unknown>(`/admin/questions/${enc(id)}`, { ...A, method: "PATCH", body });
+export const updateQuestion = (id: string, body: { kind: S["QuestionKind"]; text: string; scheduledFor?: string; pinned?: boolean; categoryId?: string; status?: S["QuestionStatus"] }) =>
+  apiFetch<unknown>(`/admin/questions/${enc(id)}`, { ...A, method: "PATCH", body });
+/** K5: a spare question for a week (no day; held for follow-ups and flash polls). */
+export const addSpareQuestion = (topicId: string, text: string) =>
+  apiFetch<AdminQuestion>("/admin/questions", { ...A, method: "POST", body: { topicId, kind: "DAILY", isSpare: true, text } });
+
+// Question pool (V-42)
+/** K1: questions with no week and no day, newest first. */
+export const listQuestionPool = (o: { cursor?: string | null; limit?: number } = {}) =>
+  apiFetch<AdminQuestionPool>(`/admin/questions${qs({ pool: 1, cursor: o.cursor, limit: o.limit })}`, A);
+/** K2: many questions at once, one per line. A refused line is named by its number; the rest are kept. */
+export const addPoolQuestions = (body: { kind: "DAILY" | "FLASH"; categoryId?: string; lines: string[] }) =>
+  apiFetch<BulkQuestionsResult>("/admin/questions/bulk", { ...A, method: "POST", body });
+/** K3: put a pool question on a day. A taken day answers 409 DAY_TAKEN until replace is true. */
+export const schedulePoolQuestion = (id: string, day: string, replace = false) =>
+  apiFetch<MoveQuestionResult>(`/admin/questions/${enc(id)}/schedule`, { ...A, method: "POST", body: { day, ...(replace ? { replace: true } : {}) } });
 
 // Override
 /** RW6: put a scheduled question on another day of its week. A taken day swaps the two (one transaction). */
