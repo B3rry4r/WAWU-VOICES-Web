@@ -36,6 +36,8 @@ export class WawuIdStandIn {
   refreshDelay = 0;
   statusOf: Record<string, string> = {};
   private codes = new Map<string, { tries: number }>();
+  /** The reset link's token per email, as WAWU ID mails it. A tests reads it to open the link. */
+  readonly resetTokens = new Map<string, string>();
   /** Set to make the next verify/start or any call answer with this status (for the network-error states). */
   failNext: { status: number; body: unknown } | null = null;
 
@@ -137,6 +139,21 @@ export class WawuIdStandIn {
         if (u.email.startsWith("phone-") && !u.verified) return refuse(403, "Confirm your phone number before signing in.", "PHONE_NOT_CONFIRMED");
         if (!u.verified) return refuse(403, "Verify your email address before signing in.", "EMAIL_NOT_VERIFIED");
         return send(201, { data: { ...this.tokens(u), user: this.userOut(u) } });
+      }
+      case "/auth/forgot-password": {
+        // Same answer whether or not an account exists, as WAWU ID gives it. A link goes to a person whose email is confirmed.
+        const u = byEmail(body.identifier);
+        if (u && u.verified && body.method === "email") this.resetTokens.set(u.email, `reset-${u.id.slice(0, 8)}`);
+        return send(200, { data: { message: "If an account exists, a reset code has been sent.", expiresInSeconds: 3600 } });
+      }
+      case "/auth/reset-password": {
+        const u = byEmail(body.email);
+        const token = u ? this.resetTokens.get(u.email) : undefined;
+        if (!u || !token || body.token !== token) return refuse(401, "Invalid or expired reset token");
+        if (!body.password || body.password.length < 8) return refuse(400, "password must be longer than or equal to 8 characters");
+        u.password = body.password;
+        this.resetTokens.delete(u.email);
+        return send(200, { data: { message: "Password reset successfully" } });
       }
       case "/auth/refresh": {
         const id = this.refresh.get(body.refreshToken);

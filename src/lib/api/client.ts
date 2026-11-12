@@ -110,7 +110,7 @@ async function doRefresh(before: string, retried = false): Promise<boolean | nul
     const res = await fetch(`${WAWU_ID_BASE}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken: current }),
+      body: JSON.stringify({ refreshToken: current, app: "voices" }),
     });
     if (res.status === 429) {
       // Too many tries: keep the session, wait as long as WAWU ID asks (at most 30 s), and ask once more.

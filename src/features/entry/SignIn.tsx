@@ -160,6 +160,7 @@ export function SignIn() {
             {errs.consent ? <p id="consent-err" role="alert" className="m-0 mt-1 text-caption text-danger">{errs.consent}</p> : null}
           </div>
         ) : null}
+        {join || needEmail ? null : <Link href="/forgot-password" className="link -mt-2 inline-flex min-h-[44px] items-center self-start">Forgot password?</Link>}
         <Button size="l" block type="submit" loading={busy}>{join || needEmail ? "Send code" : "Sign in"}</Button>
         <p className="m-0 mx-auto text-center text-body">
           {join ? "Have an account? " : "New to VOICES? "}

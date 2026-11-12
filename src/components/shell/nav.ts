@@ -30,7 +30,7 @@ function matchesAny(pathname: string, prefixes: readonly string[]): boolean {
 }
 
 /** Chromeless: no shell at all (no top bar, no tab bar, no side nav). The screen draws its whole page. */
-export const CHROMELESS_PREFIXES = ["/s", "/welcome", "/go", "/sign-in", "/join", "/admin", "/link-not-found"] as const;
+export const CHROMELESS_PREFIXES = ["/s", "/welcome", "/go", "/sign-in", "/forgot-password", "/reset-password", "/join", "/admin", "/link-not-found"] as const;
 
 /** Full-screen tasks (V-5): recording, writing, paying, reporting. No tab bar; the screen draws its own app bar. */
 export const FULLSCREEN_PREFIXES = [
