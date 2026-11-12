@@ -40,8 +40,11 @@ function unwrap<T>(v: unknown): T {
   return (v && typeof v === "object" && "data" in v ? (v as { data: T }).data : v) as T;
 }
 
-async function idCall<T>(path: string, body: unknown): Promise<T> {
-  return unwrap<T>(await apiFetch<unknown>(path, { method: "POST", baseUrl: WAWU_ID_BASE, body }));
+/** Which product is asking. WAWU ID uses it to send VOICES' own emails, with VOICES words and links, never the WHO MADE THIS ones (V-44). */
+export const WAWU_ID_APP = "voices";
+
+async function idCall<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  return unwrap<T>(await apiFetch<unknown>(path, { method: "POST", baseUrl: WAWU_ID_BASE, body: { ...body, app: WAWU_ID_APP } }));
 }
 
 /** Tidy a typed phone into +234 form: drops spaces, dashes and one leading 0 (or a pasted +234 or 234). */
@@ -95,6 +98,19 @@ export async function startEmailVerification(email: string): Promise<{ expiresIn
 
 export async function confirmEmailVerification(email: string, code: string): Promise<WawuIdUser> {
   return keepSession(await idCall<WawuIdTokenResult>("/auth/email/verify/confirm", { email: email.trim().toLowerCase(), code }));
+}
+
+/**
+ * Asks WAWU ID to mail a reset link to the account's email. WAWU ID answers the same way whether or not an account exists,
+ * so this never says which. The mail opens /reset-password on this site with a one time token and the email.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  await idCall("/auth/forgot-password", { identifier: email.trim().toLowerCase(), method: "email" });
+}
+
+/** Sets a new password from the link in the mail. WAWU ID refuses (401) a link that is wrong, used or older than an hour. Does not sign anyone in. */
+export async function resetPassword(input: { token: string; email: string; password: string }): Promise<void> {
+  await idCall("/auth/reset-password", { token: input.token, email: input.email.trim().toLowerCase(), password: input.password });
 }
 
 /** Ends the session here first, then tells WAWU ID to kill the refresh token (best effort). */

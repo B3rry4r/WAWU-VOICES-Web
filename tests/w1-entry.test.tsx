@@ -312,7 +312,7 @@ describe("Verify (the email code)", () => {
     expect((screen.getByLabelText("Digit 6") as HTMLInputElement).value).toBe("6");
     await userEvent.setup().click(screen.getByRole("button", { name: "Verify" }));
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/join/topics"));
-    expect(idCalls("/auth/email/verify/confirm")[0].body).toEqual({ email: "ada@example.com", code: RIGHT_CODE });
+    expect(idCalls("/auth/email/verify/confirm")[0].body).toEqual({ email: "ada@example.com", code: RIGHT_CODE, app: "voices" });
     expect(stored()?.accessToken).toBeTruthy();
     expect(stored()?.refreshToken).toBeTruthy();
   });
