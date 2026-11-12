@@ -53,3 +53,7 @@ p, li { text-wrap: pretty; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .go-word { box-shadow: inset 0 0 0 1.5px var(--forest-line); } }
 :root[data-theme="dark"] .go-word { box-shadow: inset 0 0 0 1.5px var(--forest-line); }
 :root .go-word:focus-visible { box-shadow: var(--shadow-focus); }
+
+/* V-43: the first line of the landing headline is Yoruba. Bagel Fat One draws none of its marks (no tone marks, no dot under the e),
+   so that line is set in Archivo bold (its Vietnamese subset has them, see layout.tsx); the English line stays in the display font. */
+.headline-yo::first-line { font-family: var(--nf-archivo-a), var(--nf-archivo-b), var(--nf-archivo-c), Archivo, "Helvetica Neue", Arial, sans-serif; font-weight: 700; letter-spacing: -0.02em; }

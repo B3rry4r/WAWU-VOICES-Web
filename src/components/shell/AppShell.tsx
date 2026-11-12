@@ -7,6 +7,7 @@ import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react"
 import { DeskSearch } from "./DeskSearch";
 import { ShellSlotsContext } from "./ShellSlots";
 import { Bell, UnreadProvider } from "./Bell";
+import { SoundButton } from "./SoundButton";
 import { GuestEntry } from "./GuestEntry";
 import { NAV, activeNav, hidesTabBar, isChromeless, onWeekly, showsLogoBar, type NavId } from "./nav";
 
@@ -68,6 +69,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
           <Mic size={22} aria-hidden="true" />
           Speak
         </Link>
+        <span className="sh-sidenav__sound"><SoundButton /></span>
       </nav>
 
       {/* phone top bar: the logo bar on the tab screens only; elsewhere the screen draws its own app bar (PhoneBar or inline) */}
@@ -79,7 +81,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
           </Link>
         )}
         <div ref={setBarEl} className="sh-topbar__slot" />
-        {logoBar ? <><GuestEntry /><Bell /></> : null}
+        {logoBar ? <><SoundButton /><GuestEntry /><Bell /></> : null}
       </header>
 
       <div className="sh-centre">

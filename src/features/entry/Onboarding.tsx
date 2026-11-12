@@ -11,7 +11,7 @@ import { closesIn, voicesLabel, voicesOf } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { holdReturn } from "@/lib/auth/entry-draft";
 import { fromPrice, textPostNaira } from "./format";
-import { LANDING_EYEBROW, LANDING_HEADLINE, LANDING_INTRO } from "./landing-words";
+import { LANDING_EYEBROW, LANDING_HEADLINE_EN, LANDING_HEADLINE_YO, LANDING_INTRO } from "./landing-words";
 
 type Poll = components["schemas"]["Poll"];
 
@@ -64,7 +64,7 @@ export function Onboarding() {
 
   const slides = [
     {
-      title: LANDING_HEADLINE,
+      title: <>{LANDING_HEADLINE_YO} <br />{LANDING_HEADLINE_EN}</>,
       body: LANDING_INTRO,
       art: (
         <>
@@ -130,7 +130,7 @@ export function Onboarding() {
               {s.art}
             </div>
             <div className="flex flex-col gap-[10px]" aria-live="polite">
-              <h1 className="m-0 font-display text-display-l">{s.title}</h1>
+              <h1 className={"m-0 font-display text-display-l" + (i === 0 ? " headline-yo" : "")}>{s.title}</h1>
               <p className="m-0 text-body-l text-ink-2">{s.body}</p>
             </div>
           </section>
@@ -152,7 +152,7 @@ export function Onboarding() {
           </div>
           <div className="flex flex-col justify-center gap-5 p-10">
             <span className="vx-eyebrow text-green-text">{LANDING_EYEBROW}</span>
-            <h1 className="m-0 font-display text-display-xl">{LANDING_HEADLINE}</h1>
+            <h1 className="m-0 font-display text-display-xl headline-yo">{LANDING_HEADLINE_YO} <br />{LANDING_HEADLINE_EN}</h1>
             <p className="m-0 text-body-l text-ink-2">{LANDING_INTRO}</p>
             <ul className="m-0 flex list-none flex-col gap-4 p-0">
               {[

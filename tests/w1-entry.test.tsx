@@ -97,7 +97,7 @@ describe("return paths and phone numbers", () => {
 describe("Landing", () => {
   it("draws the board words and points the buttons", async () => {
     render(<Landing />);
-    expect(await screen.findByText("Finally, a place to say it. And be heard.")).toBeTruthy();
+    expect(await screen.findByText("\u1EB8 j\u1EB9\u0301 k\u00E1 s\u1ECD\u0300r\u1ECD\u0300! Let\u2019s talk.")).toBeTruthy();
     expect(screen.getByText("Every topic, four steps. Join at any one.")).toBeTruthy();
     expect(screen.getByText("Your first 10 posts are free.")).toBeTruthy();
     expect(screen.getByText(/tokens start at ₦138\. Every price shows before you tap\. Ads are always labelled/)).toBeTruthy();
@@ -731,7 +731,7 @@ describe("round 1: refused sign-ins, redirects, two tabs, reloads", () => {
   });
   it("Landing links the rules, puts Add your voice first at 1440 and Onboarding Skip is green", async () => {
     render(<Landing />);
-    await screen.findByText("Finally, a place to say it. And be heard.");
+    await screen.findByText("\u1EB8 j\u1EB9\u0301 k\u00E1 s\u1ECD\u0300r\u1ECD\u0300! Let\u2019s talk.");
     expect(screen.getAllByRole("link", { name: /Rules|Community rules/ }).every((a) => a.getAttribute("href") === "/settings/legal/rules")).toBe(true);
     const row = screen.getAllByRole("link", { name: "Listen as a guest" })[0].parentElement!;
     expect(row.className).not.toMatch(/row-reverse/);

@@ -13,7 +13,7 @@ import { closesIn, voicesOf } from "@/lib/feed-format";
 import { TONE, isMoodQuestion, pickHref, writePick } from "@/features/mood/mood";
 import type { Mood } from "@/lib/api/mood";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner } from "./ui";
-import { LANDING_EYEBROW, LANDING_HEADLINE, LANDING_INTRO } from "./landing-words";
+import { LANDING_EYEBROW, LANDING_HEADLINE_EN, LANDING_HEADLINE_YO, LANDING_INTRO } from "./landing-words";
 
 /**
  * /go (LCH-08, Go-390 board): the page the broadcast links to. The launch words, today's question with its word buttons
@@ -74,7 +74,7 @@ export function Go() {
         ) : null}
         <section className="flex flex-col gap-3">
           <span className="vx-eyebrow text-green-text">{LANDING_EYEBROW}</span>
-          <h1 className="m-0 font-display text-[38px] leading-[42px] tracking-[-0.01em]">{LANDING_HEADLINE}</h1>
+          <h1 className="m-0 font-display text-[38px] leading-[42px] tracking-[-0.01em] headline-yo">{LANDING_HEADLINE_YO} <br />{LANDING_HEADLINE_EN}</h1>
           <p className="m-0 text-body text-ink-2">{LANDING_INTRO}</p>
         </section>
         {mood ? (
