@@ -21,6 +21,12 @@ const archivoExt = localFont({
   src: "../../public/fonts/archivo-latin-ext-var.woff2", weight: "400 700", display: "swap", variable: "--nf-archivo-b", preload: false,
   declarations: [{ prop: "unicode-range", value: "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF" }],
 });
+// V-43: Bagel Fat One has no tone marks and no dot under the e, so the Yoruba headline line is set in Archivo, whose Vietnamese subset
+// carries U+1EB9 (ẹ), U+1ECD (ọ) and the combining accents (U+0300, U+0301, U+0323). It loads only when those characters are on the page.
+const archivoViet = localFont({
+  src: "../../public/fonts/archivo-vietnamese-var.woff2", weight: "400 700", display: "swap", variable: "--nf-archivo-c", preload: false,
+  declarations: [{ prop: "unicode-range", value: "U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB" }],
+});
 
 export const metadata: Metadata = {
   title: { default: "VOICES", template: "%s | VOICES" },
@@ -45,7 +51,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${bagel.variable} ${archivo.variable} ${archivoExt.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${bagel.variable} ${archivo.variable} ${archivoExt.variable} ${archivoViet.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: INSTALL_SCRIPT }} />

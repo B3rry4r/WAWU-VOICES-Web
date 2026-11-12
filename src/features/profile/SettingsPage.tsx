@@ -8,6 +8,8 @@ import {
   deleteAccount, getExport, getFollowedCategories, listBlocks, listCategories, requestExport, setFollowedCategories, unblockUser, updateSettings,
   type BlockedUser, type Category, type CategoryFollow, type DataExport, type Me, type Settings,
 } from "@/lib/api/profile";
+import { useSong } from "@/components/shell/SoundButton";
+import { toggleSong } from "@/lib/theme-song";
 import { DELETE_WORDS, DeletionPending } from "./DeletionPending";
 import { LoadError, LoadingBlock, NeedsProfileNotice, Section, SignedOutNotice, errorLine } from "./states";
 import { minuteLabel } from "./format";
@@ -31,6 +33,17 @@ function RowButton({ icon, label, detail, onClick, danger, trailing }: { icon?: 
       <span className="pf-row-item__txt"><b>{label}</b>{detail ? <span>{detail}</span> : null}</span>
       {trailing ?? <Icon name="chevron-right" size={20} />}
     </button>
+  );
+}
+
+/** V-43: start and stop the VOICES theme song. It only starts on a tap, and a failed load is said in words. */
+function MusicRow() {
+  const song = useSong();
+  return (
+    <>
+      <Switch label="Music" detail="The VOICES theme song, until you stop it" checked={song.playing} onChange={() => { void toggleSong(); }} />
+      {song.error ? <p className="pf-note pf-note--err pf-pad" role="alert">{song.error}</p> : null}
+    </>
   );
 }
 
@@ -195,6 +208,7 @@ function SettingsBody({ me }: { me: Me }) {
       <Section id="a-h" title="App">
         <div className="pf-card">
           <Switch label="Data saver" detail="Voices play only when you tap, in lighter quality" checked={s.dataSaver} onChange={(v) => patch({ dataSaver: v })} />
+          <MusicRow />
           <div className="pf-appearance">
             <span className="pf-appearance__t"><Icon name="moon" size={22} />Appearance</span>
             <Tabs label="Appearance" variant="segmented" block value={deviceChoice() ?? s.theme} onChange={(v) => patch({ theme: v as ThemeChoice })}

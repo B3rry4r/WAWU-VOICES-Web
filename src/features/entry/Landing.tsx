@@ -6,9 +6,10 @@ import { Answers } from "@/components/feed/parts";
 import { useLoad } from "@/components/feed/useLoad";
 import { getPublicConfig, getTodaysQuestion, getTrending } from "@/lib/api/feed";
 import { closesIn, voicesOf } from "@/lib/feed-format";
+import { SoundButton } from "@/components/shell/SoundButton";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { fromPrice } from "./format";
-import { LANDING_EYEBROW, LANDING_HEADLINE, LANDING_INTRO } from "./landing-words";
+import { LANDING_EYEBROW, LANDING_HEADLINE_EN, LANDING_HEADLINE_YO, LANDING_INTRO } from "./landing-words";
 
 const STEPS: { icon: IconName; title: string; phone: string; desk: string }[] = [
   { icon: "mic", title: "Speak", phone: "Record up to 10 seconds or write up to 500 characters.", desk: "Record up to 10 seconds or write up to 500 characters. Hear it back before you post." },
@@ -33,13 +34,15 @@ export function Landing() {
     <>
       <header className="flex h-[107px] flex-none items-center gap-2 px-4 pt-[47px] dt:hidden">
         <Link href="/" className="mr-auto flex" aria-label="VOICES home"><Logo height={34} alt="VOICES home" /></Link>
+        <SoundButton />
       </header>
       <header className="mx-auto hidden w-full max-w-[1176px] items-center gap-8 px-8 py-5 dt:flex">
         <Link href="/" className="mr-6 flex" aria-label="VOICES home"><Logo height={40} alt="VOICES home" /></Link>
         <a href="#how" className="text-label text-ink no-underline a-plain">How it works</a>
         <Link href="/weekly" className="text-label text-ink no-underline a-plain">Weekly report</Link>
         <Link href="/settings/legal/rules" className="text-label text-ink no-underline a-plain">Rules</Link>
-        <span className="ml-auto flex gap-3">
+        <span className="ml-auto flex items-center gap-3">
+          <SoundButton />
           <Button variant="secondary" href="/sign-in">Sign in</Button>
           <Button icon="mic" href="/">Add your voice</Button>
         </span>
@@ -56,7 +59,7 @@ export function Landing() {
     const hero = (
       <section className="flex flex-col gap-[14px] pt-1 dt:gap-6">
         <span className="vx-eyebrow text-green-text">{LANDING_EYEBROW}</span>
-        <h1 className="m-0 font-display text-[40px] leading-[44px] tracking-[-0.01em] dt:text-[72px] dt:leading-[74px]">{LANDING_HEADLINE}</h1>
+        <h1 className="m-0 font-display text-[40px] leading-[44px] tracking-[-0.01em] dt:text-[72px] dt:leading-[74px] headline-yo">{LANDING_HEADLINE_YO} <br />{LANDING_HEADLINE_EN}</h1>
         <p className="m-0 text-body-l text-ink-2 dt:max-w-[420px]">{LANDING_INTRO}</p>
         <div className="flex flex-col gap-[14px] dt:flex-row">
           <span className="hidden dt:block"><Button size="l" icon="mic" href="/">Add your voice</Button></span>
