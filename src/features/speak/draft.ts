@@ -13,7 +13,23 @@ export interface Draft {
   /** Stays the same for this recording so a retried post cannot post twice. */
   key: string;
   savedAt: number;
+  /** When the recording was made (savedAt moves each time the draft is written again). The 7 day limit counts from here. */
+  recordedAt?: number;
+  /** The person tapped Send and it could not go (offline): it is offered for sending when the connection is back (V-FIX-D). */
+  queued?: boolean;
+  /** "Post without my name" and the mood word as they stood when Send was tapped, so a later send says the same. */
+  anonymous?: boolean;
+  mood?: string | null;
+  /** The share link this recording came from, so the post can be counted as published from it (V-FIX-D). */
+  shareCode?: string | null;
+  /** Set when this recording is a voice reply, not an answer: the parent answer and the stance it was sent with. It is sent as that same reply. */
+  reply?: { answerId: string; stance: "AGREE" | "DISAGREE" | "EXPERIENCE" };
 }
+
+/** A saved recording is removed after 7 days (addendum 7.7). */
+export const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+export const draftIsStale = (d: Draft, now = Date.now()): boolean => now - (d.recordedAt ?? d.savedAt) > DRAFT_MAX_AGE_MS;
+export const STALE_NOTE = "A recording you saved more than 7 days ago was removed.";
 
 import { sessionStorage } from "@/lib/auth/session-storage";
 
@@ -60,13 +76,16 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
   }
 }
 
-export async function saveDraft(input: Draft): Promise<void> {
+/** True when the recording is really kept on this device. False means only this page holds it (storage blocked or full). */
+export async function saveDraft(input: Draft): Promise<boolean> {
   const d: Draft = { ...input, owner: currentOwner() };
   memory = d;
   try {
     await run("readwrite", (s) => s.put(d, ID));
+    return true;
   } catch {
-    /* blocked storage: the memory copy still serves this page */
+    /* blocked or full storage: the memory copy still serves this page, and the caller says so */
+    return false;
   }
 }
 
@@ -104,4 +123,11 @@ export async function clearDraft(): Promise<void> {
   } catch {
     /* nothing to clear */
   }
+}
+
+/** A waiting voice reply is a promise made to the person: a plain take on the record screen never overwrites it. Returns false when it held back. */
+export async function saveDraftKeepingReply(input: Draft): Promise<boolean> {
+  const cur = await loadDraft();
+  if (cur?.reply && cur.key !== input.key) return false;
+  return saveDraft(input);
 }

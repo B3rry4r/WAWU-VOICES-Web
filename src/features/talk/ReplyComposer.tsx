@@ -5,6 +5,8 @@ import type { IntentKind } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { countChars } from "@/lib/shared/text-price";
+import { AnonymousSwitch } from "./AnonymousSwitch";
+import { OWN_NAMELESS_NOTE, useReplyAnon } from "./reply-anon";
 import { InView } from "@/components/InView";
 import { failText, isOutOfPosts, needsNewKey, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
 
@@ -13,16 +15,20 @@ const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "
 
 /** The reply box drawn inside the Thread at 1440. A reply spends a free post or tokens like an answer, so a 402 keeps the words in this browser
  *  and sends the person to buy tokens, then back here. */
-export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, onVoice }: {
+export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, onVoice, ownNameless }: {
+  /** The writer of a nameless answer replying under it: always nameless (the server decides), so no switch is offered. */
+  ownNameless?: boolean;
   aid: string; qid: string; who: string; stance?: ReplyStance; allow: Allowances; onPosted: () => void; onBuy: (href: string) => void;
   /** Opens the voice reply (the same recorder as an answer). */
   onVoice?: () => void;
 }) {
   const busy = useRef(false);
-  const key = useRef<{ text: string; k: string } | null>(null);
+  const key = useRef<{ text: string; anon: boolean; st: ReplyStance; k: string } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const slot = `r:${aid}`;
+  // V-FIX-D: "Post without my name". send() reads anon.ref at the moment it sends, never a value captured when an earlier try began.
+  const anon = useReplyAnon(aid);
   const [text, setText] = useState(() => typedDraft(slot));
   const [intent, setIntent] = useState<IntentKind | null>(stance ? INTENT_OF[stance] : null);
   const c = allow.costs;
@@ -36,10 +42,13 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
     busy.current = true;
     setSending(true);
     setMsg(null);
-    if (!key.current || key.current.text !== body) key.current = { text: body, k: uuidKey() };
+    // The Idempotency-Key belongs to the exact body: the words, the stance and the switch. Flip the switch and it is a new request.
+    const anonNow = ownNameless ? true : anon.ref.current;
+    if (!key.current || key.current.text !== body || key.current.anon !== anonNow || key.current.st !== st) key.current = { text: body, anon: anonNow, st, k: uuidKey() };
     try {
-      await api.createReply(aid, st, body, key.current.k);
+      await api.createReply(aid, st, body, key.current.k, anonNow);
       saveTyped(slot, "");
+      anon.clear();
       key.current = null;
       setText("");
       setIntent(stance ? INTENT_OF[stance] : null);
@@ -55,6 +64,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
   }
   return (
     <div className="grid gap-2">
+      {ownNameless ? <p data-testid="own-nameless" className="m-0 rounded-[var(--radius-l)] bg-[var(--surface)] px-4 py-[14px] text-[13px] font-medium leading-[18px] text-[var(--ink-2)] shadow-[inset_0_0_0_1px_var(--line)]">{OWN_NAMELESS_NOTE}</p> : <AnonymousSwitch on={anon.on} disabled={sending} onChange={anon.set} />}
       <Composer
         freeLeft={allow.freePostsRemaining}
         maxChars={c.textMaxChars}

@@ -11,6 +11,7 @@ import { DmUnreadProvider, MessagesIcon } from "./Messages";
 import { DMS_LIVE } from "@/features/dm/live";
 import { SoundButton } from "./SoundButton";
 import { GuestEntry } from "./GuestEntry";
+import { Outbox } from "@/features/speak/Outbox";
 import { NAV, activeNav, hidesTabBar, isChromeless, onWeekly, showsLogoBar, type NavId } from "./nav";
 
 const ICONS: Record<Exclude<NavId, "speak">, typeof House> = { home: House, discover: Compass, profile: User };
@@ -103,6 +104,9 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
       </div>
 
       <aside ref={setRailEl} className="sh-desk sh-rail" aria-label="This week">{rail}</aside>
+
+      {/* recordings made offline: sent by themselves when free, offered with their price otherwise */}
+      <Outbox />
 
       {/* phone bottom tab bar */}
       {bare ? null : (
