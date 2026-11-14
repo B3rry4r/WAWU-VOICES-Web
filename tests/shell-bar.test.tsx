@@ -16,6 +16,9 @@ import { PhoneBar } from "@/components/shell/ShellSlots";
 import { announceUnread } from "@/components/shell/unread";
 
 const SESSION = "voices-web-session";
+/** The two unread calls the bar makes, answered by address: the bell asks /notifications/unread-count, the messages icon /dm/unread. */
+const unreadAnswers = (bell: number, dm = 0) => apiFetch.mockImplementation((url: string) => Promise.resolve(url === "/dm/unread" ? { unread: dm } : { unread: bell }));
+const callsTo = (url: string) => apiFetch.mock.calls.filter((c) => c[0] === url).length;
 const signIn = () => window.localStorage.setItem(SESSION, JSON.stringify({ accessToken: "t", refreshToken: "r" }));
 const logoBar = () => document.querySelector("header.sh-topbar");
 
@@ -74,17 +77,17 @@ describe("side nav and bell", () => {
   });
   it("a signed-in person gets the bell to /notifications with a dot from the API", async () => {
     signIn();
-    apiFetch.mockResolvedValue({ unread: 3 });
+    unreadAnswers(3);
     render(<AppShell>x</AppShell>);
     await waitFor(() => expect(screen.getAllByLabelText("Notifications, 3 unread").length).toBeGreaterThan(0));
-    expect(apiFetch.mock.calls[0][0]).toBe("/notifications/unread-count");
+    expect(apiFetch.mock.calls.map((c) => c[0]).sort()).toEqual(["/dm/unread", "/notifications/unread-count"]);
     const bell = screen.getAllByLabelText("Notifications, 3 unread")[0];
     expect(bell.getAttribute("href")).toBe("/notifications");
     expect(bell.querySelector('[data-testid="bell-dot"]')).toBeTruthy();
   });
   it("no dot at zero, and the bell follows the Notifications page", async () => {
     signIn();
-    apiFetch.mockResolvedValue({ unread: 0 });
+    unreadAnswers(0);
     render(<AppShell>x</AppShell>);
     await waitFor(() => expect(screen.getAllByLabelText("Notifications").length).toBeGreaterThan(0));
     expect(document.querySelector('[data-testid="bell-dot"]')).toBeNull();
@@ -94,17 +97,25 @@ describe("side nav and bell", () => {
 });
 
 describe("one source for the bell", () => {
-  it("phone and desktop bells share one unread call per mount", async () => {
+  it("phone and desktop bells share one unread call per mount, and the two messages icons share one /dm/unread call", async () => {
     signIn();
-    apiFetch.mockResolvedValue({ unread: 2 });
+    unreadAnswers(2, 4);
     render(<AppShell>x</AppShell>);
     await waitFor(() => expect(screen.getAllByLabelText("Notifications, 2 unread").length).toBe(2));
-    expect(apiFetch).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getAllByLabelText("Messages, 4 unread").length).toBe(2));
+    expect(callsTo("/notifications/unread-count")).toBe(1);
+    expect(callsTo("/dm/unread")).toBe(1);
+    expect(apiFetch).toHaveBeenCalledTimes(2);
+  });
+  it("a guest makes neither call", () => {
+    render(<AppShell>x</AppShell>);
+    expect(callsTo("/notifications/unread-count") + callsTo("/dm/unread")).toBe(0);
+    expect(screen.queryByLabelText(/^Messages/)).toBeNull();
   });
   it("the bell is lit on /notifications", async () => {
     signIn();
     path = "/notifications";
-    apiFetch.mockResolvedValue({ unread: 0 });
+    unreadAnswers(0);
     render(<AppShell>x</AppShell>);
     await waitFor(() => expect(screen.getAllByLabelText("Notifications").length).toBeGreaterThan(0));
     for (const b of screen.getAllByLabelText("Notifications")) {

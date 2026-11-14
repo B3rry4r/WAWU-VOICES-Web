@@ -3403,7 +3403,7 @@ export interface paths {
         put?: never;
         /**
          * Send a direct message (text or voice) to one member
-         * @description V-DM. Only a verified sender (for now: a member with a running subscription), else 403 verification_required. A person who blocked you, who turned messages off, or who is suspended is a 403 (blocked, dm_closed, recipient_unavailable). The price comes from config (dm.text_price_milli per 150 characters in proportion, dm.voice_price_milli per voice message; both 0 by default, so messages are free); text is at most 5,000 characters and voice at most dm.voice_max_seconds (60). Free posts do not apply. A direct message has its own cap, dm.messages_per_day (100 by default, 429 DAILY_LIMIT_REACHED), and does not count toward the 20 posts a day. Charged only when the message is stored: a refused or failed send costs nothing, and a repeat with the same Idempotency-Key returns the first result and charges once. Auth: signed in with a finished profile. Rate limit: 20 posts per 10 minutes per account.
+         * @description V-DM. Only a verified sender (for now: a member with a running subscription), else 403 verification_required. A person who blocked you (or whom you blocked), who turned messages off, or who is suspended, banned or leaving is one and the same 403 `dm_unavailable` ("This person is not taking messages."), so nobody can tell which; an unknown or deleted person is 404. The price comes from config (dm.text_price_milli per 150 characters in proportion, dm.voice_price_milli per voice message; both 0 by default, so messages are free); text is at most 5,000 characters and voice at most dm.voice_max_seconds (60). Free posts do not apply. A direct message has its own cap, dm.messages_per_day (100 by default, 429 DAILY_LIMIT_REACHED), and does not count toward the 20 posts a day. Charged only when the message is stored: a refused or failed send costs nothing, and a repeat with the same Idempotency-Key returns the first result and charges once. Auth: signed in with a finished profile. Rate limit: 20 posts per 10 minutes per account.
          */
         post: operations["sendDm"];
         delete?: never;
@@ -4076,7 +4076,7 @@ export interface components {
         };
         AppealRequest: {
             /** @enum {string} */
-            targetType: "ANSWER" | "REPLY" | "PROPOSAL" | "RESULT_POST" | "USER";
+            targetType: "ANSWER" | "REPLY" | "PROPOSAL" | "RESULT_POST" | "USER" | "DM_MESSAGE";
             /** Format: uuid */
             targetId: string;
             note: string;
@@ -5802,12 +5802,14 @@ export interface components {
             lastMessage: components["schemas"]["DmLastMessage"] | null;
             unread: number;
             muted: boolean;
+            acceptsMessages: boolean;
             /** Format: date-time */
             updatedAt: string;
         };
         DmMessagePage: {
             person: components["schemas"]["DmPerson"];
             muted: boolean;
+            acceptsMessages: boolean;
             items: components["schemas"]["DmMessage"][];
             nextCursor: string | null;
         };

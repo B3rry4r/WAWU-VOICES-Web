@@ -66,7 +66,6 @@ const ACTIVE_BY_PREFIX: [string, NavId][] = [
   ["/c", "discover"],
   ["/live", "home"],
   ["/notifications", "home"],
-  ["/messages", "home"],
   ["/q", "home"],
   ["/p", "home"],
 ];

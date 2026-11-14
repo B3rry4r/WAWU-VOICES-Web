@@ -2,10 +2,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BellOff } from "lucide-react";
 import { Avatar, Badge, Button, EmptyState, Icon, IconButton, Sheet, Skeleton, Tabs } from "@/components/vx";
 import * as api from "@/lib/api/dm";
 import { AppBar, Problem, SignInNote, useSignedIn } from "@/features/talk/lib";
 import { announceDmUnread } from "@/components/shell/Messages";
+import { DmRail } from "./DmRail";
 import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { personName, when } from "./dm-logic";
 import "./dm.css";
@@ -80,7 +82,8 @@ export function InboxPage() {
     } catch (e) { setError(e); } finally { setMore(false); }
   }
 
-  const unreadCount = useMemo(() => (items ?? []).filter((c) => c.unread > 0 && !c.muted).length, [items]);
+  // The Unread tab counts unread messages (rows with 2 and 1 make "Unread 3"), muted chats left out.
+  const unreadCount = useMemo(() => (items ?? []).filter((c) => !c.muted).reduce((n, c) => n + c.unread, 0), [items]);
   const shown = useMemo(() => {
     const t = find.trim().toLowerCase().replace(/^@/, "");
     return (items ?? []).filter((c) => (tab === "all" || (c.unread > 0 && !c.muted)) && (!t || c.person.handle.toLowerCase().includes(t) || (c.person.displayName ?? "").toLowerCase().includes(t) || (c.lastMessage?.preview ?? "").toLowerCase().includes(t)));
@@ -88,14 +91,18 @@ export function InboxPage() {
 
   const bar = (
     <AppBar title="Messages" back="/profile" phoneOnly>
-      <IconButton icon="search" label="Search messages" variant="ghost" iconSize={24} pressed={finding} onClick={() => setFinding((v) => !v)} />
-      <IconButton icon="plus" label="New message" variant="ghost" iconSize={24} onClick={() => setCompose(true)} />
+      {signedIn ? (
+        <>
+          <IconButton icon="search" label="Search messages" variant="ghost" iconSize={24} pressed={finding} onClick={() => setFinding((v) => !v)} />
+          <IconButton icon="plus" label="New message" variant="ghost" iconSize={24} onClick={() => setCompose(true)} />
+        </>
+      ) : null}
     </AppBar>
   );
   const head = (
     <div className="dm-deskhead dm-only-desk">
       <h1>Messages</h1>
-      <Button icon="plus" onClick={() => setCompose(true)}>New message</Button>
+      <Button variant="secondary" icon="plus" onClick={() => setCompose(true)}>New message</Button>
     </div>
   );
   if (signedIn === false) return <div className="dm-page">{bar}<SignInNote from="/messages">Sign in to read your messages.</SignInNote></div>;
@@ -106,14 +113,14 @@ export function InboxPage() {
     <div className="dm-page">
       {bar}
       {head}
+      <div className="dm-tabs">
+        <Tabs label="Show messages" variant="segmented" value={tab} onChange={(v) => setTab(v as "all" | "unread")} items={[{ id: "all", label: "All" }, { id: "unread", label: "Unread", count: unreadCount }]} />
+      </div>
       <label className={"dm-search" + (finding ? "" : " dm-only-desk")}>
         <Icon name="search" size={20} />
         <span className="vx-sr">Search messages</span>
         <input type="search" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search messages" />
       </label>
-      <div className="dm-tabs">
-        <Tabs label="Show messages" variant="segmented" block value={tab} onChange={(v) => setTab(v as "all" | "unread")} items={[{ id: "all", label: "All" }, { id: "unread", label: "Unread", count: unreadCount }]} />
-      </div>
       {items.length === 0 ? (
         <EmptyState icon="message-circle" title="No messages yet" body="When someone writes to you, it shows here. Tap New message to write to someone." action="New message" onAction={() => setCompose(true)} />
       ) : shown.length === 0 ? (
@@ -137,7 +144,7 @@ export function InboxPage() {
                     <span className="dm-row__line">
                       {voice ? <Icon name="mic" size={16} /> : null}
                       <span>{last ? `${last.mine && !voice ? "You: " : ""}${voice ? last.preview : last.preview}` : ""}</span>
-                      {c.unread > 0 && !c.muted ? <span className="dm-row__badge" data-testid="row-unread"><Badge tone="count">{c.unread}</Badge></span> : c.muted ? <span className="dm-row__badge"><Icon name="bell" size={16} label="Muted" /></span> : null}
+                      {c.unread > 0 && !c.muted ? <span className="dm-row__badge" data-testid="row-unread"><Badge tone="count">{c.unread}</Badge></span> : c.muted ? <span className="dm-row__badge dm-muted" data-testid="row-muted"><BellOff size={16} aria-hidden="true" />Muted</span> : null}
                     </span>
                   </span>
                 </Link>
@@ -147,6 +154,7 @@ export function InboxPage() {
         </ul>
       )}
       {next ? <Button variant="secondary" block loading={more} onClick={() => void older()}>Show older conversations</Button> : null}
+      <DmRail />
       <p className="dm-foot">Messages are private between you and the other person. You can report or block from any chat.</p>
       {compose ? <NewMessage onClose={() => setCompose(false)} /> : null}
     </div>

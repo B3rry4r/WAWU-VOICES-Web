@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Banner, Button, EmptyState, Icon, IconButton, NotFoundState, Sheet, Tabs } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { isSignedIn } from "@/lib/api/auth";
+import { useMe } from "./useMe";
 import { blockUser, createReport, getPerson, listPersonReplies, searchPeople, unblockUser, type PublicProfile, type ReportReason } from "@/lib/api/profile";
 import { ShareSheet } from "@/features/share";
 import { PagedList } from "./PostList";
@@ -107,6 +108,7 @@ export function PersonPage({ segment }: { segment: string }) {
   const [more, setMore] = useState(false);
   const [share, setShare] = useState(false);
   const [version, setVersion] = useState(0);
+  const { state: meState } = useMe();
 
   const load = useCallback(() => {
     setWho({ status: "loading" }); setData(null); setError(null);
@@ -138,6 +140,8 @@ export function PersonPage({ segment }: { segment: string }) {
   if (who.status === "loading" || !data) return <div className="pf-page">{back}<LoadingBlock /></div>;
 
   const profile = data.profile;
+  // Your own profile offers no Message, Report or Block on yourself.
+  const isMine = meState.status === "ready" && meState.me.profile?.id === profile.id;
   const handle = "@" + profile.handle;
   return (
     <div className="pf-page">
@@ -147,7 +151,7 @@ export function PersonPage({ segment }: { segment: string }) {
         {/* lead ruling WF, 6 Nov (B-M5): the share icon (390) and "Share profile" (1440), with PROFILE links. */}
         {data.isBlockedByMe ? null : <IconButton className="pf-only-phone" icon="share-2" label={`Share ${handle}’s profile`} onClick={() => setShare(true)} />}
         {data.isBlockedByMe ? null : <Button className="pf-only-desk" variant="secondary" icon="share-2" onClick={() => setShare(true)}>Share profile</Button>}
-        {signedIn ? <IconButton icon="ellipsis" label={`More: report or block ${handle}`} onClick={() => setMore(true)} /> : null}
+        {signedIn && !isMine ? <IconButton icon="ellipsis" label={`More: report or block ${handle}`} onClick={() => setMore(true)} /> : null}
       </header>
       <ProfileCard profile={profile} stats={[{ label: "Voices", value: voicesOf(profile) }, { label: "Reactions", value: profile.reactionsReceived }, { label: "Replies", value: profile.replyCount }]} />
       {data.isBlockedByMe ? (

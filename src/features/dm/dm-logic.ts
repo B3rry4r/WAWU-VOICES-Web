@@ -2,15 +2,15 @@ import { ApiError } from "@/lib/api/client";
 import type { DmLimits } from "@/lib/api/dm";
 import { countChars, textCostMilli, tokensLabel } from "@/lib/shared/text-price";
 
-/** The longest text message, in characters (the same 5,000 as the server). */
-export const DM_MAX_CHARS = 5000;
+/** The words for a chat that cannot be written to (the server's one refusal, and a chat that says acceptsMessages false). */
+export const CLOSED_TEXT = "This person is not taking messages.";
 /** How often the unread number on the messages icon is asked for while a page is open. */
 export const UNREAD_POLL_MS = 30_000;
 /** The page a refused sender is sent to: it explains the plan and the ID check. */
 export const PLANS_HREF = "/verify";
 
 /** What a direct message costs, from GET /dm/limits (config on the server, 0 is free). Never typed into a screen. */
-export type DmCosts = Pick<DmLimits, "textPriceMilli" | "textPriceChars" | "voicePriceMilli" | "voiceMaxSeconds" | "messagesLeftToday">;
+export type DmCosts = Pick<DmLimits, "textPriceMilli" | "textPriceChars" | "voicePriceMilli" | "voiceMaxSeconds" | "messagesLeftToday" | "maxChars">;
 
 export function textPrice(text: string, c: DmCosts): { chars: number; milli: number } {
   const chars = countChars(text.trim());
@@ -44,9 +44,7 @@ export function dmFailure(e: unknown): DmFailure {
   if (e.status === 0) return f("You are offline. Check your connection and try again.");
   switch (e.code) {
     case "verification_required": return f("Subscribe and get verified to send messages.", { plans: true });
-    case "blocked":
-    case "recipient_unavailable": return f("You can't message this person.");
-    case "dm_closed": return f("This person is not taking messages.");
+    case "dm_unavailable": return f(CLOSED_TEXT);
     case "ACCOUNT_SUSPENDED": return f("Your account is suspended, so you cannot send messages right now.");
     case "DAILY_LIMIT_REACHED": return f("You have sent the most messages one day allows. Come back after midnight.");
     case "RATE_LIMITED": return f("You are going fast. Wait a moment and try again.");
