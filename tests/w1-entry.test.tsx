@@ -132,7 +132,7 @@ describe("Onboarding and Country", () => {
     expect(screen.getByRole("link", { name: "Start" }).getAttribute("href")).toBe("/join/country");
     expect(screen.getAllByRole("link", { name: "Skip" })[0].getAttribute("href")).toBe("/join/country");
   });
-  it("Country: Nigeria live and chosen, others coming, languages saved", async () => {
+  it("Country: Nigeria live and chosen, others coming, languages hidden", async () => {
     api = (u) => (u.endsWith("/countries") ? json({ items: [{ code: "NG", name: "Nigeria", currency: "NGN", status: "live" }, { code: "GH", name: "Ghana", currency: "GHS", status: "coming" }] }) : null);
     const user = userEvent.setup();
     render(<Country />);
@@ -143,9 +143,10 @@ describe("Onboarding and Country", () => {
     expect(screen.getByText("Coming soon")).toBeTruthy();
     await user.click(gh);
     expect(gh.getAttribute("aria-checked")).toBe("false");
-    await user.click(screen.getByRole("button", { name: "Hausa" }));
+    expect(screen.queryByRole("button", { name: "Hausa" })).toBeNull();
+    expect(screen.queryByText("Which languages do you speak?")).toBeNull();
     await user.click(screen.getAllByRole("button", { name: "Continue" })[0]);
-    expect(readDraft()).toMatchObject({ countryCode: "NG", languages: ["en", "pcm", "ha"] });
+    expect(readDraft()).toMatchObject({ countryCode: "NG", languages: ["en", "pcm"] });
     expect(push).toHaveBeenCalledWith("/sign-in?mode=join");
   });
 });

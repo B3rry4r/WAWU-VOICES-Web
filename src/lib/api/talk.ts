@@ -64,12 +64,12 @@ export const removeReaction = (aid: string) => apiFetch<ReactionState>(`/answers
 
 export interface NewsInput { isNews: boolean; newsTag?: NewsTag }
 /** `mood` is the one word of a mood question (LCH-02); an ordinary question sends none. */
-export const createAnswer = (qid: string, body: string, news: NewsInput, key: string, mood?: S["Mood"] | null) =>
+export const createAnswer = (qid: string, body: string, news: NewsInput, key: string, mood?: S["Mood"] | null, anonymous = false) =>
   apiFetch<PostReceipt>(`/questions/${id(qid)}/answers`, {
     method: "POST",
     authed: true,
     idempotencyKey: key,
-    body: { kind: "TEXT", body, ...(news.isNews ? { isNews: true, newsTag: news.newsTag } : {}), ...(mood ? { mood } : {}) },
+    body: { kind: "TEXT", body, ...(news.isNews ? { isNews: true, newsTag: news.newsTag } : {}), ...(mood ? { mood } : {}), ...(anonymous ? { anonymous: true } : {}) },
   });
 export const createReply = (aid: string, stance: ReplyStance, body: string, key: string) =>
   apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "TEXT", body } });

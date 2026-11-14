@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Badge, Button, Icon, TopicChip } from "@/components/vx";
+import { Badge, Button, Icon } from "@/components/vx";
 import { useLoad } from "@/components/feed/useLoad";
 import { listCountries } from "@/lib/api/me";
 import { readDraft, saveDraft } from "@/lib/auth/entry-draft";
@@ -19,12 +19,11 @@ export const LANGUAGES: { code: string; label: string }[] = [
 
 const SYMBOL: Record<string, string> = { NGN: "₦" };
 
-/** /join/country: where you speak from (Nigeria live, others coming) and which languages you speak. */
+/** /join/country: where you speak from (Nigeria live, others coming). The language chips are hidden for now. */
 export function Country() {
   const router = useRouter();
   const load = useLoad(listCountries, []);
   const [code, setCode] = useState("NG");
-  const [langs, setLangs] = useState<string[]>(["en", "pcm"]);
   useEffect(() => {
     // Signed in without a profile: straight on to finish it. With one: Home.
     if (isSignedIn()) {
@@ -33,14 +32,13 @@ export function Country() {
     }
     const d = readDraft();
     setCode(d.countryCode);
-    setLangs(d.languages);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const go = () => {
-    saveDraft({ countryCode: code, languages: langs });
+    // The languages section is hidden (owner, 14 Nov 2026): the draft keeps its default languages, which createMe sends as before.
+    saveDraft({ countryCode: code });
     router.push("/sign-in?mode=join");
   };
-  const toggle = (c: string, on: boolean) => setLangs((l) => (on ? [...l, c] : l.filter((x) => x !== c)));
 
   let rows;
   if (load.state === "loading") rows = <div className="h-[60px] animate-pulse rounded-l bg-surface-2" aria-busy="true" />;
@@ -85,21 +83,16 @@ export function Country() {
           <h1 className="m-0 font-display text-display-l">Where are you speaking from?</h1>
           {rows}
           <p className="m-0 flex items-start gap-2 text-body text-ink-2"><Icon name="globe" size={18} className="mt-[2px] flex-none" />VOICES starts in Nigeria. Your country sets your questions, prices and polls.</p>
-          <h2 className="m-0 mt-2 font-display text-display-m">Which languages do you speak?</h2>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Languages">
-            {LANGUAGES.map((l) => <TopicChip key={l.code} label={l.label} selected={langs.includes(l.code)} onClick={(on) => toggle(l.code, on)} />)}
-          </div>
-          <p className="m-0 text-body text-ink-2">The app is in English. We use your languages to transcribe your voice and to find voices you understand.</p>
           <div className="hidden items-center gap-4 dt:flex">
-            <Button size="l" disabled={load.state !== "ready" || langs.length === 0} onClick={go}>Continue</Button>
-            <p className="m-0 text-caption text-ink-2">You can change both later in Settings.</p>
+            <Button size="l" disabled={load.state !== "ready"} onClick={go}>Continue</Button>
+            <p className="m-0 text-caption text-ink-2">You can change this later in Settings.</p>
           </div>
         </DeskCard>
       </EntryScroll>
       <div className="dt:hidden">
         <BottomBar>
-          <Button size="l" block disabled={load.state !== "ready" || langs.length === 0} onClick={go}>Continue</Button>
-          <p className="m-0 mx-auto text-center text-caption text-ink-2">You can change both later in Settings.</p>
+          <Button size="l" block disabled={load.state !== "ready"} onClick={go}>Continue</Button>
+          <p className="m-0 mx-auto text-center text-caption text-ink-2">You can change this later in Settings.</p>
         </BottomBar>
       </div>
     </EntryFrame>
