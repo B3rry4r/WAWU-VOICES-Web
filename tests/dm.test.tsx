@@ -5,8 +5,9 @@ import userEvent from "@testing-library/user-event";
 
 const push = vi.fn();
 const replace = vi.fn();
+const router = { push, replace, back: vi.fn() }; // one object, as the real router is: a new one each render would restart the effects
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, replace, back: vi.fn() }),
+  useRouter: () => router,
   usePathname: () => "/messages/c1",
   useSearchParams: () => new URLSearchParams(""),
 }));
