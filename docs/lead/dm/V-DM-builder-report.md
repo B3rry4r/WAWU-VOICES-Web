@@ -27,3 +27,26 @@ Messages inbox and chat per the boards (tabs All/Unread, rows, mint unread, voic
 - Send uses the existing "post" rate bucket (20 per 10 minutes), which is stricter than the 100-a-day cap.
 - Web contract/types were regenerated from the merged backend contract. Data export does not include DMs.
 - Mistake to note: one early full jest run used the shared voices_test database and applied then rolled back my migration there (rollback.down.sql run, _prisma_migrations row deleted); other builders' runs in that window could have seen it. Scratch DB voices_dm_scratch dropped; my processes stopped.
+
+# Round 1
+
+Heads: API v/dm d3ea61c (merged origin/v/verify a222398), web v/dm e0a97cb (merged origin/v/verify 11f064c). Both pushed.
+
+- Merge: conflicts only in schema.prisma, contract build.py and schemas.py (kept both sides, ErrorCode union). Contract regenerated with build.py, copied to web, `npm run api:types` run; no generated file edited by hand.
+- canSendDm now calls isVerifiedNow (reads verifiedUntil and verificationStatus). 403 stays verification_required. Specs: approved and running can send; a subscriber with no status or PENDING cannot (and once approved the same person can); REJECTED, EXPIRED, lapsed plan, no plan cannot; a stored send still replays after lapse.
+- Web 403 prompt now links "See how to get verified" to /verify.
+- DM sentence: /verify "what you get" and the verified state say "you can message other people"; E13 html (preheader and box) and text say "message other people". The web test that said no screen mentions DMs now expects the line (and no dash); API spec checks E13 html and text.
+- verified field on DmPerson (API contract and responses), the tick shows beside the name in inbox rows and the chat header (VerifiedTick).
+- Own rate bucket "dm" (ratelimit.dm_per_min, default 30 a minute, in the admin catalogue); spec shows a DM burst does not block an answer and the reverse.
+- Data export: directMessages section (sent and received text, times, other handle, voice length only, no file or clip id); spec reads the stored export.
+- Checks: tsc both repos clean. API on a fresh scratch DB with all migrations: test/dm 46/46 (after adding the mail test: dm, admin ops, moderation, launch 123/123), test/verify 46/46, test/me 108/108, test/units 110/110. Web vitest dm + v-verify 52/52, plus tests/subscriptions earlier. `next build` passed.
+- Not run: full suites, pictures against the boards. Scratch DB dropped, my processes stopped.
+
+# Round 2
+
+Heads: API v/dm b1a6afc, web v/dm 5fb4a50 (both pushed). Pictures: web branch, docs/lead/dm/r2/ (inbox-390, inbox-1440, chat-390, chat-menu-390, chat-1440, chat-menu-1440; built app, stub API through browser routes, boards in docs/lead/dm/boards/ on origin/verify/v-dm). Compared by eye with the boards: 1440 inbox (title, tabs pill, search, rounded list card, outlined New message, Trending rail) and chat (back row, bordered header card, menu, composer in a white card) now follow them; 390 rows edge to edge, compact tabs.
+
+API: 1 one refusal dm_unavailable "This person is not taking messages." (blocked either way, messages off, suspended, banned, leaving; unknown or deleted 404). 2 acceptsMessages on the chat page and the inbox row. 3 notice "A message of yours was taken down", POST /appeals accepts DM_MESSAGE (sender only, once). 4 wallet history and CSV "Direct message" / "Voice message". 5 one audit row (moderation.read_dm, who, item, never the content) when a moderator opens a reported DM. 6 ADD VALUE IF NOT EXISTS on every enum value. 7 a DM clip refuses extraVoiceTokenId (422). Contract fixed and regenerated (a quoting slip in routes.py had made build.py fail silently earlier; now byte-identical, test/launch 7/7), web types regenerated.
+Web: 8 shell-bar tests rewritten stricter (exactly one /notifications/unread-count and one /dm/unread per mount, shared by phone and desktop; guest none). 9 opens at the newest message and after my own send (scrollIntoView with margin for the composer); long unbroken text has min-width and overflow-wrap rules, not tried with 200 messages in a browser. 10 Retry button beside the error, focus back to the field (field is read-only while sending, not disabled). 11 Unread tab is the sum of unread messages. 12 closed chat: no Say hello, no composer, only the one line; deleted account and acceptsMessages false the same, history readable. 13 More menu: aria-expanded, focus in, Escape, click outside, focus back. 14 maxChars from /dm/limits. 15 boards matched (see pictures). 16 guest sees no search or plus; muted bell and "Muted"; recording line on one line; no tab highlighted and a plain messages icon; no More menu on your own profile; dir="auto" on bubbles.
+Checks: tsc and eslint both repos clean. API (fresh scratch DB): test/dm, test/admin (whole), test/units, test/me, test/launch all pass (dm now covers the round 2 cases). Web: whole vitest suite 88 files, 894 tests, all pass; next build passed (twice).
+Not proved: a 200-message chat and a long link in a real browser; the 1390 px band between phone and desktop; dark theme after the CSS changes; real API behaviour (stub only). Stopped: all my servers, jobs and the scratch DB.
