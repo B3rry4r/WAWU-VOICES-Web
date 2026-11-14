@@ -2,7 +2,6 @@ import { AccountBlockedError, ApiError, apiFetch, isBlockedStatus } from "./clie
 import { WAWU_ID_BASE } from "./config";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import { clearEntryState } from "@/lib/auth/entry-draft";
-import { clearSurveyKeeps } from "@/lib/auth/survey-keeps";
 import { clearKeptAddress } from "@/lib/install/address";
 
 /*
@@ -120,7 +119,6 @@ export function signOut(): void {
   sessionStorage.clear();
   clearEntryState();
   clearKeptAddress();
-  clearSurveyKeeps();
   if (refreshToken) void idCall("/auth/logout", { refreshToken }).catch(() => undefined);
   // a kept recording belongs to the person who made it
   void import("@/features/speak/draft").then((m) => m.clearDraft()).catch(() => undefined);

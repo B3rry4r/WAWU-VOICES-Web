@@ -24,7 +24,7 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
 
 export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number }
 
-export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, previewHint, postingText, onReady }: {
+export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, previewHint, postingText, onReady, canWrite }: {
   purpose: Purpose;
   maxSeconds: number;
   /** The length a free post covers; a longer take may need an old voice token, as on the record screen. */
@@ -49,6 +49,8 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   postingText?: string;
   /** Survey answers: the take is sent up the moment the recording stops, and this is called once the clip is READY, before anything is posted. The caller keeps the clip id. Left out: nothing is sent until the person taps Send. */
   onReady?: (clip: ReadyClip) => void;
+  /** Asked before each upload call (create, complete, send): false stops the upload, nothing is sent. Only the survey answer passes it (the signed-in person must still be the one the tab loaded for). */
+  canWrite?: () => boolean;
 }) {
   const [phase, setPhase] = useState<"idle" | "recording" | "preview">("idle");
   const [left, setLeft] = useState(maxSeconds);
@@ -141,6 +143,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   async function send(holdOnly = false) {
     if (!take || sending || disabled) return;
     if (take.seconds > maxSeconds + 0.5) return;
+    if (canWrite && !canWrite()) return;
     setNote(null);
     setSending({ step: "upload", pct: 0 });
     let st = state.current;
@@ -166,8 +169,13 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
         st.uploaded = true;
       }
       stage = "later";
-      if (!st.completed) { await api.completeVoiceClip(st.clipId); st.completed = true; }
+      if (!st.completed) {
+        if (canWrite && !canWrite()) throw new Error("STALE_TAB");
+        await api.completeVoiceClip(st.clipId);
+        st.completed = true;
+      }
       setSending({ step: "process" });
+      if (canWrite && !canWrite()) throw new Error("STALE_TAB");
       await waitReady(st.clipId);
       if (holdOnly && onReady) {
         // Ready, and kept by the caller, but not posted.
@@ -176,6 +184,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
         if (alive.current) onReady({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds });
         return;
       }
+      if (canWrite && !canWrite()) throw new Error("STALE_TAB");
       setSending({ step: "post" });
       await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds });
       state.current = null;
@@ -183,6 +192,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
     } catch (e) {
       if (!alive.current) return;
       setSending(null);
+      if (e instanceof Error && e.message === "STALE_TAB") return; // another person is signed in: the screen shows the notice, nothing more is sent
       if (stage === "upload" && st.clipId) { void api.deleteVoiceClip(st.clipId).catch(() => undefined); state.current = null; }
       if (e instanceof Error && e.message === "CLIP_FAILED") { state.current = null; setNote("We could not process that recording. Record it again and send it."); return; }
       if (e instanceof Error && e.message === "CLIP_SLOW") { setNote("Your voice is still being prepared. Tap Send again in a moment."); return; }

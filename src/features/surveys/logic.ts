@@ -46,11 +46,13 @@ export const TEXT_MAX = 500;
 
 // ---- What the page keeps for one survey in this tab (sessionStorage; every call is wrapped, a blocked store means nothing is kept) ----
 
-// Every key carries the signed-in person's id (the token's subject), so another person on the same tab never finds it. Signing out removes them all (clearSurveyKeeps).
-const keyFor = (id: string, what: "started" | "draft" | "skipped") => `${SURVEY_KEEP_PREFIX}${currentOwner() ?? "unknown"}.${id}.${what}`;
-const startedKey = (id: string) => keyFor(id, "started");
-const draftKey = (id: string) => keyFor(id, "draft");
-const skippedKey = (id: string) => keyFor(id, "skipped");
+// Every key carries the person's id (the token's subject) and the survey id, so another person on the same tab never finds it, shows it, sends it or deletes it.
+// Signing out clears nothing: what a person kept is theirs and is there when they sign in again. The screen passes the person it was loaded for as `owner`
+// (a stale tab must never write under whoever is signed in now); without it the person signed in now is used.
+const keyFor = (id: string, what: "started" | "draft" | "skipped", owner?: string) => `${SURVEY_KEEP_PREFIX}${owner ?? currentOwner() ?? "unknown"}.${id}.${what}`;
+const startedKey = (id: string, owner?: string) => keyFor(id, "started", owner);
+const draftKey = (id: string, owner?: string) => keyFor(id, "draft", owner);
+const skippedKey = (id: string, owner?: string) => keyFor(id, "skipped", owner);
 
 function store(): Storage | null {
   try {
@@ -61,32 +63,32 @@ function store(): Storage | null {
 }
 
 /** True once START has gone for this survey in this tab. One START per person per survey: a reload or a second open does not send it again. */
-export function wasStarted(id: string): boolean {
+export function wasStarted(id: string, owner?: string): boolean {
   try {
-    return store()?.getItem(startedKey(id)) === "1";
+    return store()?.getItem(startedKey(id, owner)) === "1";
   } catch {
     return false;
   }
 }
-export function markStarted(id: string): void {
+export function markStarted(id: string, owner?: string): void {
   try {
-    store()?.setItem(startedKey(id), "1");
+    store()?.setItem(startedKey(id, owner), "1");
   } catch {
     /* nothing kept */
   }
 }
 
 /** True once a SKIP has gone for this survey by this person in this tab. A SKIP goes at most once. */
-export function wasSkipped(id: string): boolean {
+export function wasSkipped(id: string, owner?: string): boolean {
   try {
-    return store()?.getItem(skippedKey(id)) === "1";
+    return store()?.getItem(skippedKey(id, owner)) === "1";
   } catch {
     return false;
   }
 }
-export function markSkipped(id: string): void {
+export function markSkipped(id: string, owner?: string): void {
   try {
-    store()?.setItem(skippedKey(id), "1");
+    store()?.setItem(skippedKey(id, owner), "1");
   } catch {
     /* nothing kept */
   }
@@ -101,29 +103,29 @@ export interface Draft {
   ageBand: string;
 }
 
-export function saveDraft(id: string, d: Draft): void {
+export function saveDraft(id: string, d: Draft, owner?: string): void {
   try {
     const s = store();
     if (!s) return;
-    if (Object.keys(d.given).length === 0 && d.idx === 0 && !d.anonymous && !d.shareState && !d.ageBand) s.removeItem(draftKey(id));
-    else s.setItem(draftKey(id), JSON.stringify(d));
+    if (Object.keys(d.given).length === 0 && d.idx === 0 && !d.anonymous && !d.shareState && !d.ageBand) s.removeItem(draftKey(id, owner));
+    else s.setItem(draftKey(id, owner), JSON.stringify(d));
   } catch {
     /* nothing kept */
   }
 }
 
-export function clearDraft(id: string): void {
+export function clearDraft(id: string, owner?: string): void {
   try {
-    store()?.removeItem(draftKey(id));
+    store()?.removeItem(draftKey(id, owner));
   } catch {
     /* nothing kept */
   }
 }
 
 /** The saved draft for this survey, or null. Anything that does not fit the survey as it is now (a question or choice that is gone) is dropped. */
-export function loadDraft(id: string, questions: SurveyQuestionView[], ageBands: string[]): Draft | null {
+export function loadDraft(id: string, questions: SurveyQuestionView[], ageBands: string[], owner?: string): Draft | null {
   try {
-    const raw = store()?.getItem(draftKey(id));
+    const raw = store()?.getItem(draftKey(id, owner));
     if (!raw) return null;
     const d = JSON.parse(raw) as Partial<Draft>;
     const given: GivenByQuestion = {};

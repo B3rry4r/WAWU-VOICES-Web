@@ -83,7 +83,7 @@ describe("N1: SKIP only for a real choice to leave, and once", () => {
   });
 });
 
-describe("N2: what is kept belongs to the person and goes on sign-out", () => {
+describe("N2: what is kept belongs to the person (and signing out clears nothing)", () => {
   it("person B on the same tab finds question 1, nothing of A's, and sends their own START", async () => {
     mockApi(table());
     const u = userEvent.setup();
@@ -93,7 +93,8 @@ describe("N2: what is kept belongs to the person and goes on sign-out", () => {
     expect(keys().every((k) => k.startsWith("wawu.survey.userA."))).toBe(true);
     a.unmount();
     signOut();
-    expect(keys()).toEqual([]);
+    // round 4, ruling 3: signing out clears nothing; A's keys stay, under A
+    expect(keys().sort()).toEqual(["wawu.survey.userA.s1.draft", "wawu.survey.userA.s1.started"]);
     signIn(jwt("userB"));
     render(<SurveyScreen id="s1" />);
     expect(await screen.findByText("Question 1 of 3")).toBeTruthy();

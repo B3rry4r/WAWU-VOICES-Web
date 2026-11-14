@@ -7,21 +7,26 @@ import { useLoad } from "@/components/feed/useLoad";
 import { Rail } from "@/components/shell/ShellSlots";
 import { VoiceBox } from "@/features/speak/VoiceBox";
 import { refusalText } from "@/features/speak/logic";
-import { isSignedIn } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { deleteVoiceClip } from "@/lib/api/speak";
 import { answerSurvey, getSurvey, recordSurveyEvent, type Survey, type SurveyQuestionView } from "@/lib/api/surveys";
+import { useSameWho, whoNow } from "./who";
 import { aboutMinutes, clearDraft, clock, loadDraft, markSkipped, markStarted, recapLine, saveDraft, TEXT_MAX, toInputs, wasSkipped, wasStarted, type Given, type GivenByQuestion } from "./logic";
 
 /** The Sponsored Survey, one question at a time (Survey boards), then the Done screen. Answering is free; nothing here touches tokens or a free post. */
 export function SurveyScreen({ id }: { id: string }) {
-  const [signed, setSigned] = useState<boolean | null>(null);
-  useEffect(() => setSigned(isSignedIn()), []);
+  // The tab knows who it belongs to: the person signed in when it loaded. Every write compares this with the session in storage (see who.ts).
+  const [who, setWho] = useState<string | null | undefined>(undefined);
+  useEffect(() => setWho(whoNow()), []);
+  const same = useSameWho(who);
+  const signed = who === undefined ? null : who !== null;
   const load = useLoad<Survey | null>(async () => {
     if (!signed) return null;
     return getSurvey(id);
   }, [id, signed]);
 
+  // Another tab signed someone else in (or out): nothing of this person is shown or sent, and nothing is kept or cleared.
+  if (same.stale) return <StaleTab signedOut={whoNow() === null} />;
   if (signed === null || load.state === "loading") return <SurveySkeleton />;
   if (!signed) {
     return (
@@ -50,7 +55,23 @@ export function SurveyScreen({ id }: { id: string }) {
   }
   const survey = load.data as Survey;
   if (survey.myStatus === "ANSWERED" || survey.questions.length === 0) return <Done survey={survey} recap={null} />;
-  return <Ask survey={survey} />;
+  return <Ask survey={survey} owner={who as string} check={same.check} />;
+}
+
+function StaleTab({ signedOut }: { signedOut: boolean }) {
+  return (
+    <Centre>
+      <div data-testid="survey-stale" role="alert">
+        <EmptyState
+          icon="user"
+          title={signedOut ? "You are signed out in another tab. Reload to carry on." : "You are signed in as someone else in another tab. Reload to carry on."}
+          body="Nothing was sent. Your answers stay with the person who gave them."
+          action="Reload"
+          onAction={() => window.location.reload()}
+        />
+      </div>
+    </Centre>
+  );
 }
 
 function Centre({ children }: { children: React.ReactNode }) {
@@ -66,12 +87,12 @@ function SurveySkeleton() {
   );
 }
 
-function Ask({ survey }: { survey: Survey }) {
+function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: () => boolean }) {
   const router = useRouter();
   const qs = survey.questions;
   const total = qs.length;
   // A reload brings back the position, the answers (voice clip ids too) and the sharing choices kept for this survey in this tab.
-  const [saved] = useState(() => loadDraft(survey.id, qs, survey.ageBands));
+  const [saved] = useState(() => loadDraft(survey.id, qs, survey.ageBands, owner));
   const [idx, setIdx] = useState(saved?.idx ?? 0);
   const [given, setGiven] = useState<GivenByQuestion>(saved?.given ?? {});
   const [choice, setChoice] = useState<string | null>(null);
@@ -99,26 +120,28 @@ function Ask({ survey }: { survey: Survey }) {
 
   // START is counted once per person per survey: the flag lives in this tab's session storage, so a reload or a second open does not send it again.
   useEffect(() => {
-    if (wasStarted(survey.id)) return;
-    markStarted(survey.id);
+    if (wasStarted(survey.id, owner)) return;
+    if (!check()) return;
+    markStarted(survey.id, owner);
     void recordSurveyEvent(survey.id, "START");
-  }, [survey.id]);
+  }, [survey.id, owner, check]);
 
   // What a reload must bring back is written as it changes.
   useEffect(() => {
-    if (!finished.current) saveDraft(survey.id, { idx, given, anonymous, shareState, ageBand });
-  }, [survey.id, idx, given, anonymous, shareState, ageBand]);
+    if (!finished.current) saveDraft(survey.id, { idx, given, anonymous, shareState, ageBand }, owner);
+  }, [survey.id, owner, idx, given, anonymous, shareState, ageBand]);
 
   // SKIP is for a real choice to leave: Skip, Leave, Back with no answers, or a link away inside the app. A reload, a hidden tab, switching app and closing the tab send nothing.
   // At most once per survey per person per tab (the flag is in session storage, keyed by person), and leaving by any of these routes also removes the draft.
   const sendSkip = useCallback(() => {
     if (finished.current) return;
-    clearDraft(survey.id);
-    if (skipSent.current || wasSkipped(survey.id)) return;
+    if (!check()) return; // another person is signed in now: nothing is sent and nothing of theirs is touched
+    clearDraft(survey.id, owner);
+    if (skipSent.current || wasSkipped(survey.id, owner)) return;
     skipSent.current = true;
-    markSkipped(survey.id);
+    markSkipped(survey.id, owner);
     void recordSurveyEvent(survey.id, "SKIP", { keepalive: true });
-  }, [survey.id]);
+  }, [survey.id, owner, check]);
 
   const releaseGuard = useCallback(() => {
     if (!guard.current) return;
@@ -178,6 +201,7 @@ function Ask({ survey }: { survey: Survey }) {
 
   const submit = useCallback(
     async (all: GivenByQuestion) => {
+      if (!check()) return;
       const answers = toInputs(qs, all);
       // Every question skipped: nothing to send. The person has skipped the survey.
       if (answers.length === 0) return leave();
@@ -189,20 +213,20 @@ function Ask({ survey }: { survey: Survey }) {
           ...(anonymous ? { anonymous: true } : { ...(shareState ? { shareState: true } : {}), ...(ageBand ? { ageBand: ageBand as "18-24" } : {}) }),
         });
         finished.current = true;
-        clearDraft(survey.id);
+        clearDraft(survey.id, owner);
         releaseGuard();
         setRecap(qs.filter((x) => all[x.id]).map((x) => ({ prompt: x.prompt, line: recapLine(all[x.id]) })));
       } catch (e) {
         if (e instanceof ApiError && e.status === 409 && /closed/i.test(e.message)) {
           // The survey ended before this answer arrived: say so in the server's words. Nothing more to count, and the draft goes.
           finished.current = true;
-          clearDraft(survey.id);
+          clearDraft(survey.id, owner);
           releaseGuard();
           setClosed(e.message);
         } else if (e instanceof ApiError && e.status === 409) {
           // A second answer is not an error: the survey is already answered, so the Done screen shows.
           finished.current = true;
-          clearDraft(survey.id);
+          clearDraft(survey.id, owner);
           releaseGuard();
           setRecap(null);
         } else setProblem(refusalText(e));
@@ -210,7 +234,7 @@ function Ask({ survey }: { survey: Survey }) {
         setBusy(false);
       }
     },
-    [anonymous, ageBand, leave, qs, releaseGuard, shareState, survey.id],
+    [anonymous, ageBand, check, leave, owner, qs, releaseGuard, shareState, survey.id],
   );
 
   function keep(g: Given | null) {
@@ -218,7 +242,7 @@ function Ask({ survey }: { survey: Survey }) {
     if (g) next[q.id] = g;
     else delete next[q.id];
     // A voice answer is in the draft the moment its clip is ready, before anything is sent, so a reload (or a failed send) finds it ready.
-    if (g?.kind === "voice") saveDraft(survey.id, { idx, given: next, anonymous, shareState, ageBand });
+    if (g?.kind === "voice") saveDraft(survey.id, { idx, given: next, anonymous, shareState, ageBand }, owner);
     setGiven(next);
     if (last) void submit(next);
     else setIdx(idx + 1);
@@ -269,18 +293,19 @@ function Ask({ survey }: { survey: Survey }) {
           sendDisabled={sendDisabled}
           busy={busy}
           onSend={send}
-          onVoice={async (clip) => keep({ kind: "voice", clipId: clip.clipId, seconds: clip.seconds })}
+          onVoice={async (clip) => { if (check()) keep({ kind: "voice", clipId: clip.clipId, seconds: clip.seconds }); }}
           onVoiceReady={(clip) => setGiven((g) => ({ ...g, [qid]: { kind: "voice" as const, clipId: clip.clipId, seconds: clip.seconds } }))}
           voice={given[q.id]?.kind === "voice" ? (given[q.id] as Extract<Given, { kind: "voice" }>) : null}
           onSendVoice={() => keep(given[q.id])}
           onRerecord={() => {
             const g = given[q.id];
-            if (g?.kind === "voice") void deleteVoiceClip(g.clipId).catch(() => undefined);
+            if (g?.kind === "voice" && check()) void deleteVoiceClip(g.clipId).catch(() => undefined);
             const next = { ...given };
             delete next[q.id];
             setGiven(next);
           }}
           last={last}
+          check={check}
         />
 
         {last ? (
@@ -359,6 +384,8 @@ function QuestionCard(p: {
   onSendVoice: () => void;
   onRerecord: () => void;
   last: boolean;
+  /** True while the person is the one this tab loaded for; asked before every voice upload call. */
+  check: () => boolean;
 }) {
   const { survey, q } = p;
   const total = survey.questions.length;
@@ -410,6 +437,7 @@ function QuestionCard(p: {
         postingText="Saving"
         sendLabel={() => "Send answer"}
         onSend={(c) => p.onVoice({ clipId: c.clipId, seconds: c.seconds })}
+        canWrite={p.check}
         onReady={(c) => p.onVoiceReady({ clipId: c.clipId, seconds: c.seconds })}
       />
     </SponsoredSurveyCard>
