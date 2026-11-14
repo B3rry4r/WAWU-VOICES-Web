@@ -8,6 +8,7 @@ import {
   fetchStatementCsv,
   getAdPlacement,
   getHistory,
+  getMySubscriptions,
   getPublicConfig,
   getTiers,
   getWallet,
@@ -18,11 +19,13 @@ import {
 import { Rail } from "@/components/shell/ShellSlots";
 import { startErrorText } from "./checkout";
 import { costRows, ledgerFigure, ledgerNote, naira, smallestPack, units, unitsLabel, whenLong, whenShort } from "./format";
+import { MySubscriptionCard } from "./Plans";
 import { readErrorText, useDesktop, useLoad, useSignedIn } from "./hooks";
 import { Card, ErrorBlock, H2, Line, LoadingBlock, Note, SignInNeeded } from "./ui";
 
 const KIND_ICON: Record<LedgerItem["kind"], IconName> = {
   PURCHASE: "coins",
+  SUBSCRIPTION_CREDIT: "coins",
   SPEND_POST: "message-square",
   SPEND_REACTION: "smile-plus",
   SPEND_VOTE: "vote",
@@ -216,11 +219,11 @@ function SignedOut() {
 }
 
 function SignedIn() {
-  const { result, reload } = useLoad(() => Promise.all([getWallet(), getTiers()]));
+  const { result, reload } = useLoad(() => Promise.all([getWallet(), getTiers(), getMySubscriptions().catch(() => null)]));
 
   if (result.state === "loading") return <LoadingBlock rows={3} />;
   if (result.state === "error") return <ErrorBlock error={result.error} onRetry={reload} />;
-  const [wallet, tiers] = result.data;
+  const [wallet, tiers, mine] = result.data;
   const min = smallestPack(tiers.tiers);
   const total = wallet.freePostsRemaining + wallet.freePostsUsed;
 
@@ -254,6 +257,8 @@ function SignedIn() {
         <FreePosts left={wallet.freePostsRemaining} total={total} />
         <Note className="text-caption">Text and voice both count. Deleting a post does not give one back. After these, each post shows its token cost first.</Note>
       </Card>
+
+      {mine ? <MySubscriptionCard mine={mine} /> : null}
 
       <CostCard costs={wallet.costs} className="dt:hidden" />
       <Rail>

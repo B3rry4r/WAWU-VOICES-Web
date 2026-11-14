@@ -52,6 +52,8 @@ export function PostRow({ a }: { a: Answer }) {
           <Avatar name={who?.displayName || who?.handle} src={who?.avatarUrl ?? undefined} />
           <div className="vx-answer__who">
             <span className="vx-answer__name">{who ? "@" + who.handle : "Anonymous"}</span>
+            {/* V-ANON: the API lists a person's anonymous posts on their own page only; the tag is theirs alone. */}
+            {!who && a.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
             <span className="vx-answer__time">{ago(a.createdAt) + (place ? " · " + place : "")}</span>
           </div>
         </div>

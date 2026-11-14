@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, EmptyState, TextField } from "@/components/vx";
-import { confirmGroup, listProposalQuestions, listProposals } from "@/lib/api/admin";
+import { confirmGroup, listProposalQuestions, listProposals, removeGroup } from "@/lib/api/admin";
 import type { AdminProposalItem, AdminProposalQuestion, AdminProposals } from "@/lib/api/admin";
 import { Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, useAction, Gated, queueRow } from "./ui";
 
@@ -150,19 +150,44 @@ function Proposals({ questionId, onDone }: { questionId: string; onDone: (msg: s
         ) : (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {d.groups.map((g) => (
-              <li key={g.id} className="flex items-center justify-between gap-3 border-t border-line py-2 first:border-t-0">
-                <span className="text-body">{g.title}</span>
-                <span className="flex items-center gap-2">
-                  <span className="text-caption text-ink-2">{count(g.proposalCount, "proposal", "proposals")}</span>
-                  {g.confirmed ? <Pill tone="green">Confirmed</Pill> : <Pill tone="sun">Suggested</Pill>}
-                </span>
-              </li>
+              <GroupRow key={g.id} g={g} onDone={done} />
             ))}
           </ul>
         )}
-        <p className="m-0 mt-3 text-caption text-ink-2">To change a group, confirm a new one with the proposals you want. They move, and an empty group goes away.</p>
+        <p className="m-0 mt-3 text-caption text-ink-2">To change a group, split it and group the proposals again, or confirm a new group with the proposals you want.</p>
       </Card>
     </div>
+  );
+}
+
+function GroupRow({ g, onDone }: { g: AdminProposals["groups"][number]; onDone: (msg: string) => void }) {
+  const [asking, setAsking] = useState(false);
+  const act = useAction();
+  async function split() {
+    const r = await act.run(() => removeGroup(g.id));
+    if (r) onDone(`Group split: “${g.title}”. Its ${count(r.released, "proposal", "proposals")} went back to not grouped.`);
+  }
+  return (
+    <li className="flex flex-col gap-2 border-t border-line py-2 first:border-t-0">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-body">{g.title}</span>
+        <span className="flex items-center gap-2">
+          <span className="text-caption text-ink-2">{count(g.proposalCount, "proposal", "proposals")}</span>
+          {g.confirmed ? <Pill tone="green">Confirmed</Pill> : <Pill tone="sun">Suggested</Pill>}
+          <Button size="s" variant="ghost" disabled={asking} onClick={() => setAsking(true)}>Split this group</Button>
+        </span>
+      </div>
+      {asking ? (
+        <div className="flex flex-col gap-2 rounded-l bg-surface-2 p-3" role="group" aria-label={`Split ${g.title}`}>
+          <p className="m-0 text-body">{`Split “${g.title}”? Its ${count(g.proposalCount, "proposal", "proposals")} go back to not grouped, and it stops showing as a group on What Next.`}</p>
+          <ErrorLine>{act.error}</ErrorLine>
+          <div className="flex gap-2">
+            <Button size="s" variant="destructive" loading={act.busy} disabled={act.busy} onClick={() => void split()}>Split the group</Button>
+            <Button size="s" variant="secondary" disabled={act.busy} onClick={() => { setAsking(false); act.clear(); }}>Keep it</Button>
+          </div>
+        </div>
+      ) : null}
+    </li>
   );
 }
 

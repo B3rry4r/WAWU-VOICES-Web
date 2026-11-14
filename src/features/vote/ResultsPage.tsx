@@ -6,9 +6,11 @@ import { Banner, Button, Composer, EmptyState, Poll } from "@/components/vx";
 import { ShareSheet } from "@/features/share";
 import { StageNav } from "@/features/stage/StageNav";
 import { ApiError } from "@/lib/api/client";
-import { explainMyVote, getPollResults, getQuestion, loadQuestionPolls, newKey } from "@/lib/api/vote";
+import { explainMyVote, explainMyVoteByVoice, getPollResults, getQuestion, getVoteAllowance, loadQuestionPolls, newKey } from "@/lib/api/vote";
+import { VoiceBox } from "@/features/speak/VoiceBox";
 import type { Poll as PollT, PollResults, Question } from "@/lib/api/vote";
 import { closesIn, voicesOf } from "@/lib/feed-format";
+import { LiveResultsLink } from "@/components/feed/LinkCards";
 import { AdBanner } from "./AdBanner";
 import { AppBar, nextOpening, useOpensAt, DeskBack, LoadFailed, Loading, PageHead, ShareButton, shortCount, useLoadWhen, useSignedIn, weekPollLine } from "./chrome";
 import { DeskRail } from "./DeskRail";
@@ -93,6 +95,7 @@ export function ResultsPage({ questionId }: { questionId: string }) {
         counts={q ? { speak: shortCount(voicesOf(q)), discuss: shortCount(voicesOf(q)), vote: poll ? shortCount(results?.totalVotes ?? poll.totalVotes) : "0", next: shortCount(q.proposalCount) } : undefined}
       />
       <DeskRail kind="results" questionId={questionId} />
+      <LiveResultsLink className="mt-3" />
       {load.state === "loading" || signedIn === null ? <Loading /> : null}
       {load.state === "error" ? <LoadFailed error={load.error} retry={load.retry} what="this poll" /> : null}
       {load.state === "ready" && !poll ? <EmptyState icon="vote" title="No poll on this question yet" body="Polls open with the question or during the week." /> : null}
@@ -138,7 +141,7 @@ export function ResultsPage({ questionId }: { questionId: string }) {
   );
 }
 
-/** Explain my vote (free, V-15). By voice waits for the recorder (W4); In words writes the reason into the discussion. */
+/** Explain my vote (free, V-15). By voice records with the same recorder as an answer; In words writes the reason into the discussion. */
 function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId: string; label: string; questionId: string; signedIn: boolean; moodOptions?: readonly Mood[] }) {
   // LCH-02: on a mood question the reason is an answer, so it carries one word, picked here as on the pick screen.
   const [word, setWord] = useState<Mood | null>(null);
@@ -159,7 +162,14 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsWord, signedIn, questionId]);
-  const [writing, setWriting] = useState(false);
+  const [mode, setMode] = useState<null | "words" | "voice">(null);
+  const writing = mode === "words";
+  const [maxSeconds, setMaxSeconds] = useState(60);
+  // Explaining by voice records up to the longest voice message, the same limit as a voice answer.
+  useEffect(() => {
+    if (mode !== "voice") return;
+    getVoteAllowance().then((a) => setMaxSeconds(a.maxVoiceSeconds ?? a.costs.voiceMaxSeconds ?? 60), () => undefined);
+  }, [mode]);
   const [reason, setReason] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | { error: string }>("idle");
   const busy = useRef(false);
@@ -192,7 +202,7 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
         <Banner tone="success" title="Posted">
           Your reason is in the discussion. <Link href={`/q/${questionId}`} className="link">Open the discussion</Link>
         </Banner>
-      ) : writing ? (
+      ) : mode ? (
         <div className="vt-explain">
           {typeof state === "object" ? <Banner tone="danger" title="Not posted">{state.error}</Banner> : null}
           {needsWord ? (
@@ -201,11 +211,28 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
               <MoodWordPicker words={moodOptions!} value={word} onChange={setWord} />
             </>
           ) : null}
-          <Composer label="Your reason" placeholder="Say why you voted this way" meter={false} value={reason} onChange={setReason} busy={state === "sending"} onSubmit={(t) => void send(t)} onVoice={false} />
+          {mode === "voice" ? (
+            <>
+              <VoiceBox
+                purpose="VOTE_EXPLANATION"
+                maxSeconds={maxSeconds}
+                freeSeconds={maxSeconds}
+                disabled={!signedIn || (needsWord && !word)}
+                hint={<p className="vx-rec__hint">{needsWord && !word ? <b>Pick one word first.</b> : <>{"Tap to record. You have "}<b>{`${maxSeconds} seconds`}</b>{". Explaining your vote is free."}</>}</p>}
+                sendLabel={() => "Send"}
+                onSend={async (clip) => { await explainMyVoteByVoice(pollId, clip.clipId, clip.key, needsWord ? word : null, questionId); setState("done"); }}
+                onCancel={() => setMode(null)}
+              />
+              <Button variant="ghost" onClick={() => setMode(null)}>Back</Button>
+            </>
+          ) : (
+          <Composer label="Your reason" placeholder="Say why you voted this way" meter={false} value={reason} onChange={setReason} busy={state === "sending"} onSubmit={(t) => void send(t)} onVoice={() => setMode("voice")} />
+          )}
         </div>
       ) : (
         <div className="vt-btnrow">
-          <Button variant="secondary" icon="message-square" onClick={() => setWriting(true)}>In words</Button>
+          <Button variant="secondary" icon="mic" onClick={() => setMode("voice")}>By voice</Button>
+          <Button variant="secondary" icon="message-square" onClick={() => setMode("words")}>In words</Button>
         </div>
       )}
       {!signedIn ? <Banner tone="info">Sign in to explain your vote.</Banner> : null}

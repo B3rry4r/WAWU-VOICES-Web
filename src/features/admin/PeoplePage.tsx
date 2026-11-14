@@ -48,7 +48,7 @@ function PeopleBody() {
     const term = q.trim();
     if (!term) return;
     setSaved(null);
-    const r = await search.run(() => findPeople(term));
+    const r = await search.run(() => findPeople(term.replace(/^@/, "")));
     if (r) setFound(r.items.map((u) => ({ id: u.profile.id, handle: u.profile.handle, name: u.profile.displayName, roles: u.roles })));
   }
 
@@ -148,7 +148,10 @@ function Editor({ p, onSaved }: { p: Person; onSaved: (roles: Role[]) => void })
   const drops = p.roles.filter((r) => !roles.includes(r));
   async function save() {
     const out = await act.run(() => setRoles(p.id, roles, reason.trim()));
-    if (out) onSaved(out.roles);
+    if (out) {
+      setReason("");
+      onSaved(out.roles);
+    }
   }
   return (
     <Card>
@@ -179,6 +182,9 @@ function Editor({ p, onSaved }: { p: Person; onSaved: (roles: Role[]) => void })
           </p>
         ) : null}
         <ErrorLine>{act.error}</ErrorLine>
+        {!changed || reason.trim().length < 3 ? (
+          <p className="m-0 text-caption text-ink-2" role="status">{!changed ? "Change a role to save." : "Give a reason of at least 3 characters."}</p>
+        ) : null}
         <div>
           <Button icon="check" loading={act.busy} disabled={!changed || reason.trim().length < 3 || act.busy} onClick={() => void save()}>Save roles</Button>
         </div>

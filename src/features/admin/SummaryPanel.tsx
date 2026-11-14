@@ -9,7 +9,7 @@ import { slot } from "./time";
 
 type Fields = { mainView: string; mainViewVoices: string; opposingView: string; opposingViewVoices: string; pollLine: string; nextStepsLine: string };
 
-const EMPTY: Fields = { mainView: "", mainViewVoices: "0", opposingView: "", opposingViewVoices: "0", pollLine: "", nextStepsLine: "" };
+const EMPTY: Fields = { mainView: "", mainViewVoices: "", opposingView: "", opposingViewVoices: "", pollLine: "", nextStepsLine: "" };
 const WORDS: Record<string, string> = { ANGRY: "Angry", TIRED: "Tired", PROUD: "Proud", HOPEFUL: "Hopeful" };
 
 const num = (v: string): number => {
@@ -20,9 +20,10 @@ const num = (v: string): number => {
 function fromDraft(d: SummaryDraft["draft"]): Fields {
   return {
     mainView: d.mainView,
-    mainViewVoices: String(d.mainViewVoices),
+    // The counts start empty in every draft: they are voices an editor counted, never poll votes.
+    mainViewVoices: "",
     opposingView: d.opposingView,
-    opposingViewVoices: String(d.opposingViewVoices),
+    opposingViewVoices: "",
     pollLine: d.pollLine,
     nextStepsLine: d.nextStepsLine,
   };
@@ -36,6 +37,7 @@ function fromDraft(d: SummaryDraft["draft"]): Fields {
 export function SummaryPanel({ topicId }: { topicId: string }) {
   const [info, setInfo] = useState<AdminSummary | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [f, setF] = useState<Fields>(EMPTY);
   const [basis, setBasis] = useState<SummaryDraft | null>(null);
@@ -46,10 +48,13 @@ export function SummaryPanel({ topicId }: { topicId: string }) {
 
   const load = useCallback(async () => {
     setLoadError(null);
+    setLoading(true);
     try {
       setInfo(await getSummary(topicId));
     } catch {
       setLoadError("The summary did not load.");
+    } finally {
+      setLoading(false);
     }
   }, [topicId]);
   useEffect(() => {
@@ -102,6 +107,7 @@ export function SummaryPanel({ topicId }: { topicId: string }) {
   }
 
   const s = info?.summary ?? null;
+  const countsOk = num(f.mainViewVoices) >= 1 && num(f.opposingViewVoices) >= 1;
   const ready = f.mainView.trim().length >= 3 && f.opposingView.trim().length >= 3 && f.pollLine.trim().length >= 3 && f.nextStepsLine.trim().length >= 3;
 
   return (
@@ -112,12 +118,17 @@ export function SummaryPanel({ topicId }: { topicId: string }) {
           <CardTitle>Argument chips and “Based on N voices”</CardTitle>
         </div>
         {!open ? (
-          <Button size="s" variant="secondary" disabled={!info && !loadError} onClick={edit}>
+          <Button size="s" variant="secondary" disabled={!info} onClick={edit}>
             {s ? "Edit the summary" : "Write the summary"}
           </Button>
         ) : null}
       </div>
-      {loadError ? <ErrorLine>{loadError}</ErrorLine> : null}
+      {loadError ? (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <ErrorLine>{loadError}</ErrorLine>
+          <Button size="s" variant="secondary" icon="refresh-cw" loading={loading} disabled={loading} onClick={() => void load()}>Try again</Button>
+        </div>
+      ) : null}
       {saved ? <SavedLine>{saved}</SavedLine> : null}
 
       {!open ? (
@@ -144,7 +155,7 @@ export function SummaryPanel({ topicId }: { topicId: string }) {
               Draft with AI
             </Button>
             <span className="text-caption text-ink-2" role="status">
-              {info?.aiAvailable ? "The AI draft reads this week’s voices. Check every line." : "AI drafting is off here. The draft from the data still works."}
+              {info?.aiAvailable ? "The AI draft proposes the two views from this week’s voices. Check every line and count the voices yourself." : "AI drafting is off here. The draft from the data still works."}
             </span>
           </div>
           <p className="m-0 text-caption text-ink-2">Drafting replaces the words below. Nothing is saved until you save.</p>
@@ -152,17 +163,18 @@ export function SummaryPanel({ topicId }: { topicId: string }) {
           {basis?.aiNote ? <p role="status" className="m-0 rounded-m bg-warning-bg px-3 py-2 text-caption text-warning">{basis.aiNote}</p> : null}
 
           <TextField label="Main view" value={f.mainView} onChange={set("mainView")} maxLength={600} hint="Finishes “Most voices so far lean towards: …”. Say “lean towards” or “split”, never that everyone agrees." />
-          <TextField label="Voices behind the main view" inputMode="numeric" value={f.mainViewVoices} onChange={set("mainViewVoices")} />
+          <TextField label="Voices behind the main view: count them from the voices" inputMode="numeric" value={f.mainViewVoices} onChange={set("mainViewVoices")} />
           <TextField label="Main opposing view" value={f.opposingView} onChange={set("opposingView")} maxLength={600} />
-          <TextField label="Voices behind the opposing view" inputMode="numeric" value={f.opposingViewVoices} onChange={set("opposingViewVoices")} />
+          <TextField label="Voices behind the opposing view: count them from the voices" inputMode="numeric" value={f.opposingViewVoices} onChange={set("opposingViewVoices")} />
           <TextField label="The poll so far" multiline value={f.pollLine} onChange={set("pollLine")} maxLength={600} />
           <TextField label="Proposed next steps" multiline value={f.nextStepsLine} onChange={set("nextStepsLine")} maxLength={600} />
 
           {basis ? <Basis b={basis} /> : null}
 
+          {!countsOk ? <p role="status" className="m-0 text-caption text-ink-2">To show it on What Next, count the voices behind each view and enter at least 1 for both. You can save a draft without them.</p> : null}
           <ErrorLine>{saveAct.error}</ErrorLine>
           <div className="flex flex-wrap gap-3">
-            <Button icon="check" loading={saveAct.busy} disabled={!ready || saveAct.busy} onClick={() => void save(true)}>Save and show on What Next</Button>
+            <Button icon="check" loading={saveAct.busy} disabled={!ready || !countsOk || saveAct.busy} onClick={() => void save(true)}>Save and show on What Next</Button>
             <Button variant="secondary" disabled={!ready || saveAct.busy} onClick={() => void save(false)}>Save as a draft</Button>
             <Button variant="ghost" disabled={saveAct.busy} onClick={() => setOpen(false)}>Cancel</Button>
           </div>
@@ -197,7 +209,7 @@ function Basis({ b }: { b: SummaryDraft }) {
       ) : (
         <p className="m-0 mt-1 text-caption text-ink-2">No voice has a reaction yet.</p>
       )}
-      <p className="m-0 mt-3 text-caption text-ink-2">The two views come from the weekly poll’s two leading choices. Rewrite them in your own words if the voices say something else.</p>
+      <p className="m-0 mt-3 text-caption text-ink-2">The two views are yours to write from the voices, and the counts are yours to count. Poll numbers are votes and appear only in the poll line.</p>
     </div>
   );
 }

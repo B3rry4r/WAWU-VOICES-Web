@@ -93,7 +93,7 @@ function WeeklyBody() {
 function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeeklyReport) => void }) {
   const [editing, setEditing] = useState(false);
   const [f, setF] = useState({ cardTitle: r.cardTitle ?? "", headline: r.headline ?? "", mood: r.mood ?? "", summary: r.summary ?? "" });
-  const [rows, setRows] = useState<{ name: string; share: string; change: string }[]>(r.emotions.map((e) => ({ name: e.name, share: String(e.share), change: String(e.change) })));
+  const [rows, setRows] = useState<{ name: string; share: string; change: string }[]>((r.emotions ?? []).map((e) => ({ name: e.name, share: String(e.share), change: e.change == null ? "" : String(e.change) })));
   const [notes, setNotes] = useState(r.editorNote ?? "");
   const [at, setAt] = useState(toLocalInput(r.publishAt ?? nextSixPm()));
   const [holding, setHolding] = useState(false);
@@ -108,7 +108,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
 
   const emotions: Emotion[] = rows
     .filter((x) => x.name.trim())
-    .map((x) => ({ name: x.name.trim(), share: Math.min(100, Math.max(0, Number(x.share) || 0)), change: Math.min(100, Math.max(-100, Number(x.change) || 0)) }));
+    .map((x) => ({ name: x.name.trim(), share: Math.min(100, Math.max(0, Number(x.share) || 0)), change: x.change.trim() === "" ? null : Math.min(100, Math.max(-100, Number(x.change) || 0)) }));
   const setRow = (i: number, k: "name" | "share" | "change", v: string) => setRows((o) => o.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
 
   async function saveEdit() {
@@ -172,7 +172,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
                     <div key={i} className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-3">
                       <TextField label={`Emotion ${i + 1}`} value={x.name} onChange={(v) => setRow(i, "name", v)} maxLength={40} />
                       <TextField label="Share (%)" inputMode="numeric" value={x.share} onChange={(v) => setRow(i, "share", v)} />
-                      <TextField label="Change (points)" inputMode="numeric" value={x.change} onChange={(v) => setRow(i, "change", v)} />
+                      <TextField label="Change (points, empty if unknown)" inputMode="numeric" value={x.change} onChange={(v) => setRow(i, "change", v)} />
                       <Button size="s" variant="ghost" onClick={() => setRows((o) => o.filter((_, j) => j !== i))}>Remove</Button>
                     </div>
                   ))}
@@ -196,7 +196,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
               title={r.cardTitle ?? "What Nigerians said this week"}
               moodLine={r.mood ?? r.headline ?? ""}
               summary={r.summary ?? undefined}
-              mood={r.emotions.map((e) => ({ label: e.name, pct: Math.round(e.share), delta: Math.round(e.change) }))}
+              mood={(r.emotions ?? []).map((e) => ({ label: e.name, pct: Math.round(e.share), delta: e.change == null ? undefined : Math.round(e.change) }))}
               themes={themes}
               poll={summary ? { pct: summary.pct, text: summary.text } : undefined}
               voices={r.basedOnVoices}
