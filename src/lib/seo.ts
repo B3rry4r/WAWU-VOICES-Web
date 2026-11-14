@@ -11,5 +11,5 @@ export const SITE_IMAGE = { url: "/icons/icon-512.png", width: 512, height: 512,
 export const PUBLIC_PATHS = ["/", "/welcome", "/sign-in", "/join"] as const;
 export const PRIVATE_PATHS = [
   "/admin", "/settings", "/profile", "/api", "/notifications", "/friends", "/speak", "/units", "/report",
-  "/reset-password", "/forgot-password", "/go", "/s/", "/search",
+  "/join/", "/reset-password", "/forgot-password", "/go", "/s/", "/search",
 ] as const;

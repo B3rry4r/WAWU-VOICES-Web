@@ -30,11 +30,11 @@ const archivoViet = localFont({
 });
 
 export const metadata: Metadata = {
-  // SEO-APPS: metadataBase makes every relative share image and canonical absolute. Pages without their own write-up get this one.
+  // SEO-APPS: no og:url here (a page without its own would claim the home address); only / and /welcome set one. metadataBase makes every relative share image and canonical absolute. Pages without their own write-up get this one.
   metadataBase: new URL(SITE_URL),
   title: { default: SITE_TITLE, template: "%s | VOICES" },
   description: SITE_DESCRIPTION,
-  openGraph: { type: "website", siteName: "VOICES", title: SITE_TITLE, description: SITE_DESCRIPTION, url: SITE_URL, locale: "en_NG", images: [SITE_IMAGE] },
+  openGraph: { type: "website", siteName: "VOICES", title: SITE_TITLE, description: SITE_DESCRIPTION, locale: "en_NG", images: [SITE_IMAGE] },
   twitter: { card: "summary", title: SITE_TITLE, description: SITE_DESCRIPTION, images: [SITE_IMAGE.url] },
   // V-41: the manifest comes from app/manifest.ts; these are the Apple home-screen tags (the touch icon is app/apple-icon.png).
   applicationName: "VOICES",
