@@ -114,13 +114,13 @@ describe("draft ownership", () => {
     expect(await loadDraft()).toBeNull();
     expect(await loadDraft()).toBeNull();
   });
-  it("another account never sees a signed-in person's recording, and it is removed when they sign in", async () => {
+  it("another account never sees a signed-in person's recording, and it is kept for the person who made it (round 7 ruling)", async () => {
     as("u-1");
     await saveDraft(d);
     as("u-2");
     expect(await loadDraft()).toBeNull();
     as("u-1");
-    expect(await loadDraft()).toBeNull();
+    expect((await loadDraft())?.owner).toBe("u-1");
   });
   it("a guest does not see a signed-in person's recording", async () => {
     as("u-1");

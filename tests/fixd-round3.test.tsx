@@ -241,7 +241,7 @@ describe("M3: a voice reply sent offline is really kept", () => {
     render(<Outbox />);
     await screen.findByText(/Your saved voice reply was posted/);
     expect(talk.createVoiceReply).toHaveBeenCalledTimes(1);
-    expect(talk.createVoiceReply.mock.calls[0]).toEqual(["a1", "DISAGREE", "clip1", kept!.key, undefined, true]);
+    expect(talk.createVoiceReply.mock.calls[0]).toEqual(["a1", "DISAGREE", "clip1", kept!.key, undefined, true, "u1"]);
     expect(speak.createVoiceClip.mock.calls[0][0]).toMatchObject({ purpose: "REPLY" });
     expect(speak.createVoiceAnswer).not.toHaveBeenCalled();
     expect(await loadDraft()).toBeNull();

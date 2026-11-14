@@ -52,7 +52,7 @@ describe("V-FIX-D: recordings made offline send themselves, or ask first", () =>
     await saveDraft(draft({ anonymous: true, mood: null }));
     render(<Outbox />);
     await waitFor(() => expect(speak.createVoiceAnswer).toHaveBeenCalledTimes(1));
-    expect(speak.createVoiceAnswer).toHaveBeenCalledWith("q1", "clip1", "key-1", undefined, null, true);
+    expect(speak.createVoiceAnswer).toHaveBeenCalledWith("q1", "clip1", "key-1", undefined, null, true, null, undefined);
     await waitFor(() => expect(screen.getByText(/Your saved voice was posted/)).toBeTruthy());
     expect(await loadDraft()).toBeNull();
     // the connection coming back again sends nothing more

@@ -87,10 +87,10 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
     if (subject !== undefined && sessionSubject() !== subject) throw new WrongPersonError();
     if (d.reply) {
       // The same reply it was made as: the parent answer, the stance, the name switch and the Idempotency-Key it was kept with.
-      const rr = await createVoiceReply(d.reply.answerId, d.reply.stance, clipId, d.key, tokenId, !!d.anonymous);
+      const rr = await createVoiceReply(d.reply.answerId, d.reply.stance, clipId, d.key, tokenId, !!d.anonymous, subject);
       return { ok: true, answerId: String((rr as { reply?: { id?: string } }).reply?.id ?? d.reply.answerId), questionId: d.questionId, replyTo: d.reply.answerId };
     }
-    const r = await api.createVoiceAnswer(d.questionId, clipId, d.key, tokenId, (d.mood as Mood | null | undefined) ?? null, !!d.anonymous);
+    const r = await api.createVoiceAnswer(d.questionId, clipId, d.key, tokenId, (d.mood as Mood | null | undefined) ?? null, !!d.anonymous, null, subject);
     return { ok: true, answerId: r.answer.id, questionId: d.questionId };
   } catch (e) {
     if (clipId && !uploaded) void api.deleteVoiceClip(clipId, subject).catch(() => undefined);

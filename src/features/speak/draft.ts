@@ -1,6 +1,6 @@
 /**
  * A guest's recording lives in this browser only (V-19, no server drafts). IndexedDB holds the audio across the
- * sign-in round trip and the payment round trip. One draft at a time. When IndexedDB is blocked the draft lives in memory.
+ * sign-in round trip and the payment round trip. One draft at a time for each person. When IndexedDB is blocked the draft lives in memory.
  */
 export interface Draft {
   /** The WAWU ID subject of the person it belongs to; null for a guest's recording, which goes to whoever signs in next, once. */
@@ -36,9 +36,8 @@ export const STALE_NOTE = "A recording you saved more than 7 days ago was remove
 import { sessionStorage } from "@/lib/auth/session-storage";
 import type { TagChoice } from "@/features/news/tag-choice";
 
-/** Who is signed in, read from the token's subject (only to match a draft, never trusted for anything else). */
-export function currentOwner(): string | null {
-  const t = sessionStorage.getToken();
+/** The person a token belongs to, read from its subject (only to match a draft, never trusted for anything else). */
+export function ownerOfToken(t: string | null): string | null {
   if (!t) return null;
   try {
     const b = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -49,10 +48,15 @@ export function currentOwner(): string | null {
   }
 }
 
+/** Who is signed in. */
+export const currentOwner = (): string | null => ownerOfToken(sessionStorage.getToken());
+
 const DB = "voices-speak";
 const STORE = "drafts";
-const ID = "current";
-let memory: Draft | null = null;
+/** A guest's recording, and the one slot older versions used for everybody. Each signed-in person has a slot of their own beside it. */
+const GUEST = "current";
+const slotOf = (owner: string | null): string => (owner ? `u:${owner}` : GUEST);
+const memory = new Map<string, Draft>();
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -79,12 +83,10 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
   }
 }
 
-/** True when the recording is really kept on this device. False means only this page holds it (storage blocked or full). */
-export async function saveDraft(input: Draft): Promise<boolean> {
-  const d: Draft = { ...input, owner: currentOwner() };
-  memory = d;
+async function put(slot: string, d: Draft): Promise<boolean> {
+  memory.set(slot, d);
   try {
-    await run("readwrite", (s) => s.put(d, ID));
+    await run("readwrite", (s) => s.put(d, slot));
     return true;
   } catch {
     /* blocked or full storage: the memory copy still serves this page, and the caller says so */
@@ -92,39 +94,64 @@ export async function saveDraft(input: Draft): Promise<boolean> {
   }
 }
 
-async function rawLoad(): Promise<Draft | null> {
+async function drop(slot: string): Promise<void> {
+  memory.delete(slot);
   try {
-    const d = await run<Draft | undefined>("readonly", (s) => s.get(ID));
+    await run("readwrite", (s) => s.delete(slot));
+  } catch {
+    /* nothing to clear */
+  }
+}
+
+/** True when the recording is really kept on this device. False means only this page holds it (storage blocked or full). */
+export async function saveDraft(input: Draft): Promise<boolean> {
+  const owner = currentOwner();
+  return put(slotOf(owner), { ...input, owner });
+}
+
+async function rawLoad(slot: string): Promise<Draft | null> {
+  try {
+    const d = await run<Draft | undefined>("readonly", (s) => s.get(slot));
     if (d && d.blob instanceof Blob) return d;
   } catch {
     /* fall through to memory */
   }
-  return memory;
+  return memory.get(slot) ?? null;
 }
 
-/** The kept recording for this person. A guest's recording is handed to the first person who signs in, once; another person's is never shown and is removed. */
+/**
+ * The kept recording for this person. A guest's recording is handed to the first person who signs in, once. Another person's is never
+ * shown and never sent, and it is not removed: it stays in its own slot for them until they send it, discard it, or it is 7 days old.
+ */
 export async function loadDraft(): Promise<Draft | null> {
-  const d = await rawLoad();
-  if (!d) return null;
   const me = currentOwner();
-  const owner = d.owner ?? null;
-  if (owner === me) return d;
-  if (owner === null && me !== null) {
-    const claimed = { ...d, owner: me };
-    memory = claimed;
-    try { await run("readwrite", (s) => s.put(claimed, ID)); } catch { /* memory copy serves */ }
-    return claimed;
+  const old = await rawLoad(GUEST);
+  if (me === null) return old && (old.owner ?? null) === null ? old : null;
+  const mine = await rawLoad(slotOf(me));
+  if (old) {
+    const owner = old.owner ?? null;
+    if (owner === null || owner === me) {
+      // A guest's recording (or this person's, kept by an older version) moves to this person's own slot, unless one is already there.
+      if (!mine) {
+        const claimed = { ...old, owner: me };
+        await put(slotOf(me), claimed);
+        await drop(GUEST);
+        return claimed;
+      }
+      if (owner === me) await drop(GUEST); // an older copy of this person's own, already replaced
+    } else if (draftIsStale(old)) {
+      await drop(GUEST); // someone else's, past the age limit
+    }
   }
-  if (me !== null) await clearDraft(); // someone else's recording on this browser
-  return null;
+  return mine;
 }
 
-export async function clearDraft(): Promise<void> {
-  memory = null;
-  try {
-    await run("readwrite", (s) => s.delete(ID));
-  } catch {
-    /* nothing to clear */
+/** Removes this person's kept recording (the signed-in person by default; pass the person who made it when they have just signed out). Nobody else's is touched. */
+export async function clearDraft(owner: string | null = currentOwner()): Promise<void> {
+  await drop(slotOf(owner));
+  if (owner) {
+    const old = await rawLoad(GUEST);
+    if (old && old.owner === owner) await drop(GUEST);
   }
 }
 

@@ -69,7 +69,7 @@ beforeEach(() => {
     return json({}, 404);
   }));
 });
-afterEach(async () => { cleanup(); await clearDraft(); vi.unstubAllGlobals(); window.localStorage.clear(); });
+afterEach(async () => { cleanup(); await clearDraft(); await clearDraft("userA"); await clearDraft("userB"); vi.unstubAllGlobals(); window.localStorage.clear(); });
 
 const tick = (ms: number) => new Promise((r) => setTimeout(r, ms));
 function openGate() { let open!: () => void; refreshGate = new Promise<void>((r) => { open = r; }); return open; }

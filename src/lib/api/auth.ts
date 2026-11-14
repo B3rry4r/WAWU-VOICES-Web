@@ -116,12 +116,13 @@ export async function resetPassword(input: { token: string; email: string; passw
 /** Ends the session here first, then tells WAWU ID to kill the refresh token (best effort). */
 export function signOut(): void {
   const refreshToken = sessionStorage.getRefreshToken();
+  const accessToken = sessionStorage.getToken();
   sessionStorage.clear();
   clearEntryState();
   clearKeptAddress();
   if (refreshToken) void idCall("/auth/logout", { refreshToken }).catch(() => undefined);
   // a kept recording belongs to the person who made it
-  void import("@/features/speak/draft").then((m) => m.clearDraft()).catch(() => undefined);
+  void import("@/features/speak/draft").then((m) => m.clearDraft(m.ownerOfToken(accessToken))).catch(() => undefined);
 }
 
 export function isSignedIn(): boolean {

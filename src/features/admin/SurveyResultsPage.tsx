@@ -1,6 +1,6 @@
 "use client";
 
-import { underFloor } from "./survey-floor";
+import { choiceShown, otherShown, underFloor } from "./survey-floor";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Banner, Button, Dialog, EmptyState, Icon } from "@/components/vx";
@@ -255,20 +255,20 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
               {q.answered === null || q.answered === undefined ? <p className="m-0 text-body text-ink-2" data-testid="too-few">Too few answers to show</p> : <p className="m-0 mb-3 text-caption text-ink-2">{`${num(q.answered)} answered this question`}</p>}
               {q.answered === null || q.answered === undefined ? null : q.kind === "SINGLE_CHOICE" ? (
                 <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                  {q.options.map((o) => (
+                  {q.options.map((o) => { const on = choiceShown(o, floor); return (
                     <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3 gap-y-1">
                       <span className="text-body-strong">{o.label}</span>
-                      {o.hidden ? (
+                      {!on ? (
                         <span className="text-caption text-ink-2">{`Fewer than ${floor} answers, not shown`}</span>
                       ) : (
                         <span className="text-body-strong tabular-nums">{`${num(o.count)} · ${pct(o.share)}`}</span>
                       )}
                       <div className="col-span-2 h-3 overflow-hidden rounded-pill bg-surface-2" aria-hidden="true">
-                        <div className="h-full rounded-pill bg-green" style={{ width: `${o.hidden || o.share === null ? 0 : Math.min(100, o.share)}%` }} />
+                        <div className="h-full rounded-pill bg-green" style={{ width: `${!on || o.share === null ? 0 : Math.min(100, o.share)}%` }} />
                       </div>
                     </li>
-                  ))}
-                  {q.other ? (
+                  ); })}
+                  {q.other && otherShown(q.other, floor) ? (
                     <li className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3 gap-y-1" data-testid="other-line">
                       <span className="text-body-strong">{q.other.label}</span>
                       <span className="text-body-strong tabular-nums">{`${num(q.other.count)} · ${pct(q.other.share)}`}</span>
