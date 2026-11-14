@@ -8,7 +8,9 @@ import { listMyAnswers } from "@/lib/api/profile";
 import { getAdPlacement, getFlashPolls, type AdPlacement, type Poll } from "@/lib/api/polls";
 import { isSignedIn } from "@/lib/api/auth";
 import { closesIn, shortCount, uniqueVoices, voicesOf } from "@/lib/feed-format";
+import { getSurveyPlacement, type SurveyCard } from "@/lib/api/surveys";
 import { AdCard } from "./AdCard";
+import { SurveyFeedCard } from "./SurveyFeedCard";
 import { FlashPoll } from "./FlashPoll";
 import { WeeklyReportLink } from "./LinkCards";
 import { Answers, Failed, Loading, NothingYet, Section, TextLink, Tiles, WeekCard } from "./parts";
@@ -22,6 +24,7 @@ interface Data {
   flash: Poll | null;
   trending: ReturnType<typeof trendItems>;
   ad: AdPlacement | null;
+  survey: SurveyCard | null;
   firstName: string | null;
   suspended: { status: string; until: string | null } | null;
   /** Signed in and already answered today's question (H6): the card offers listening, not Speak again. */
@@ -35,11 +38,12 @@ export function HomeScreen() {
   useEffect(() => setSignedIn(isSignedIn()), []);
   useFinishProfile();
   const load = useLoad<Data>(async () => {
-    const [home, flash, trending, ad, who] = await Promise.all([
+    const [home, flash, trending, ad, survey, who] = await Promise.all([
       getHome(),
       signedIn ? getFlashPolls().then((r) => r.items[0] ?? null, () => null) : Promise.resolve(null),
       getTrendingQuestions(3).then((r) => trendItems(r.items), () => []),
       getAdPlacement().catch(() => null),
+      signedIn ? getSurveyPlacement() : Promise.resolve(null),
       signedIn
         ? getMe().then(
             // Me carries no suspendedUntil (checked against 6a): the banner reads the end day from the suspension notice.
@@ -50,11 +54,11 @@ export function HomeScreen() {
     ]);
     const today = home.dailyQuestion?.id;
     const answered = signedIn && today ? await listMyAnswers().then((p) => p.items.some((i) => i.answer?.questionId === today), () => false) : false;
-    return { home, flash, trending, ad, firstName: who.firstName, suspended: who.suspended, answered };
+    return { home, flash, trending, ad, survey, firstName: who.firstName, suspended: who.suspended, answered };
   }, [signedIn]);
   if (signedIn === null || load.state === "loading") return <Loading />;
   if (load.state === "error") return <Failed load={load} />;
-  const { home: h, flash, trending, ad, firstName, suspended, answered } = load.data;
+  const { home: h, flash, trending, ad, survey, firstName, suspended, answered } = load.data;
   const q = h.dailyQuestion;
   const go = (path: string) => () => router.push(path);
   const talk = q ? go(`/q/${q.id}`) : undefined;
@@ -125,6 +129,7 @@ export function HomeScreen() {
         </Section>
 
         {signedIn ? <div className="order-8 dt:hidden"><AdCard ad={ad} /></div> : null}
+        {survey ? <div className="order-9"><SurveyFeedCard survey={survey} /></div> : null}
       </div>
 
       <Rail>

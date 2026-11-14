@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { Button } from './actions';
 import { VoicePlayer } from './conversation';
 import { cx, initials } from './helpers';
@@ -65,10 +65,29 @@ export interface SponsoredSurveyProps {
   questions?: number;
   minutes?: number;
   className?: string;
+  /** Controlled choice: with `onSelect`, `selected` is the truth. Left out, the card keeps its own. */
+  selected?: number | null;
+  onSelect?: (index: number) => void;
+  /** The send button: its words, the tap, and whether it can be tapped yet. */
+  sendLabel?: string;
+  onSend?: () => void;
+  sendDisabled?: boolean;
+  sendBusy?: boolean;
+  /** A card that only opens the survey: one button that goes to `href` (in place of the send and say-why buttons). */
+  href?: string;
+  cta?: string;
+  onOpen?: () => void;
+  /** Extra body under the question for a question with no choices (a text box, a recorder). */
+  children?: ReactNode;
+  /** Leaves the button row out (a recorder brings its own send). */
+  hideActions?: boolean;
 }
 
 export function SponsoredSurvey(p: SponsoredSurveyProps): ReactElement {
-  const [sel, setSel] = useState<number | null>(null);
+  const [own, setOwn] = useState<number | null>(null);
+  const controlled = p.onSelect !== undefined;
+  const sel = controlled ? (p.selected ?? null) : own;
+  const pick = (i: number) => (controlled ? p.onSelect?.(i) : setOwn(i));
   return (
     <section className={cx('vx-poll vx-poll--sponsored vx-survey', p.className)} aria-label={'Sponsored Survey from ' + p.brand}>
       <div className="vx-poll__head">
@@ -81,7 +100,7 @@ export function SponsoredSurvey(p: SponsoredSurveyProps): ReactElement {
           {p.options.map((o, i) => {
             const on = sel === i;
             return (
-              <button key={i} type="button" role="radio" aria-checked={on ? 'true' : 'false'} className="vx-opt" onClick={() => setSel(i)}>
+              <button key={i} type="button" role="radio" aria-checked={on ? 'true' : 'false'} className="vx-opt" onClick={() => pick(i)}>
                 <span className="vx-opt__radio">{on ? <Icon name="check" size={14} strokeWidth={3.5} /> : null}</span>
                 {o}
               </button>
@@ -89,13 +108,20 @@ export function SponsoredSurvey(p: SponsoredSurveyProps): ReactElement {
           })}
         </div>
       ) : null}
-      <div className="vx-poll__actions">
-        <Button disabled={p.options ? sel === null : false}>{p.options ? 'Send answer' : 'Answer by voice'}</Button>
-        {p.voiceToo ? <Button variant="secondary" icon="mic">Say why</Button> : null}
-      </div>
+      {p.children}
+      {p.hideActions ? null : p.href ? (
+        <div className="vx-poll__actions">
+          <Button iconEnd="chevron-right" href={p.href} onClick={p.onOpen}>{p.cta || 'Start the survey'}</Button>
+        </div>
+      ) : (
+        <div className="vx-poll__actions">
+          <Button disabled={p.sendDisabled ?? (p.options ? sel === null : false)} loading={p.sendBusy} onClick={p.onSend}>{p.sendLabel || (p.options ? 'Send answer' : 'Answer by voice')}</Button>
+          {p.voiceToo ? <Button variant="secondary" icon="mic">Say why</Button> : null}
+        </div>
+      )}
       <p className="vx-survey__privacy">
         <Icon name="lock" size={16} />
-        {p.brand + ' sees totals only, never your name or number. ' + (p.questions ? p.questions + ' questions · about ' + p.minutes + ' min' : '')}
+        {p.brand + ' sees totals only, never your name or number. ' + (p.questions ? p.questions + ' ' + (p.questions === 1 ? 'question' : 'questions') + ' · about ' + p.minutes + ' min' : '')}
       </p>
     </section>
   );

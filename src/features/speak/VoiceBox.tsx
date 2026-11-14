@@ -11,7 +11,7 @@ import "./speak.css";
 
 /** One recording for a reply or an explain-my-vote: the same recorder, the same upload (create, PUT, complete, wait until READY) as an answer.
  *  The caller posts the READY clip. Nothing is posted until the person taps Send. */
-type Purpose = "REPLY" | "VOTE_EXPLANATION";
+type Purpose = "REPLY" | "VOTE_EXPLANATION" | "SURVEY_ANSWER";
 interface Take { blob: Blob; mime: string; seconds: number; peaks: number[]; key: string }
 type Step = { step: "upload"; pct: number } | { step: "process" } | { step: "post" };
 
@@ -24,7 +24,7 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
 
 export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number }
 
-export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel }: {
+export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, previewHint, postingText }: {
   purpose: Purpose;
   maxSeconds: number;
   /** The length a free post covers; a longer take may need an old voice token, as on the record screen. */
@@ -41,6 +41,10 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
   /** Anything the caller wants under a refusal, for example a Get tokens button. */
   extra?: ReactNode;
   onCancel?: () => void;
+  /** The line under the played-back take. Left out: "Listen back. Nothing posts until you tap Send." */
+  previewHint?: string;
+  /** The words for the last step of the send. Left out: "Posting". */
+  postingText?: string;
 }) {
   const [phase, setPhase] = useState<"idle" | "recording" | "preview">("idle");
   const [left, setLeft] = useState(maxSeconds);
@@ -177,7 +181,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
 
   const live = phase === "recording";
   const help = micError ? MIC_HELP[micError] : null;
-  const stepText = sending ? (sending.step === "upload" ? `Sending your voice, ${sending.pct}%` : sending.step === "process" ? "Getting your voice ready" : "Posting") : "";
+  const stepText = sending ? (sending.step === "upload" ? `Sending your voice, ${sending.pct}%` : sending.step === "process" ? "Getting your voice ready" : (postingText ?? "Posting")) : "";
   const tooLong = !!take && take.seconds > maxSeconds + 0.5;
   const idleHint = hint ?? <p className="vx-rec__hint">{"Tap to record. You have "}<b>{`${maxSeconds} seconds`}</b>{"."}</p>;
   const liveHint = (
@@ -209,7 +213,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
       {phase === "preview" && take ? (
         <>
           <TakePlayer blob={take.blob} seconds={take.seconds} peaks={take.peaks} />
-          <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>
+          <p className="vx-rec__hint">{previewHint ?? "Listen back. Nothing posts until you tap Send."}</p>
           {sending ? (
             <div className="sp-progress" role="status" aria-live="polite">
               <div className="sp-progress__bar"><i style={{ width: `${sending.step === "upload" ? sending.pct : 100}%` }} /></div>
