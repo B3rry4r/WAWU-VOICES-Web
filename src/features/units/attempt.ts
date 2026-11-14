@@ -81,7 +81,8 @@ export function safePath(p: string | null | undefined): string | undefined {
   return p;
 }
 
-export function choiceId(spec: { kind: "UNITS"; tierId: string; method?: string } | { kind: "EXTRA_VOICE"; tokenKind: string }): string {
+export function choiceId(spec: { kind: "UNITS"; tierId: string; method?: string } | { kind: "EXTRA_VOICE"; tokenKind: string } | { kind: "SUBSCRIPTION"; planId: string }): string {
+  if (spec.kind === "SUBSCRIPTION") return `SUBSCRIPTION:${spec.planId}`;
   return spec.kind === "UNITS" ? `UNITS:${spec.tierId}:${spec.method ?? "any"}` : `EXTRA_VOICE:${spec.tokenKind}`;
 }
 
