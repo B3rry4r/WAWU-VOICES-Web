@@ -1,5 +1,6 @@
 import { sessionStorage } from "@/lib/auth/session-storage";
 import { API_BASE, REQUEST_TIMEOUT_MS, WAWU_ID_BASE } from "./config";
+import { noteServerDate } from "./server-clock";
 
 /** The one error shape the VOICES API returns: { error: { code, message, details? } }. */
 export interface ApiErrorBody {
@@ -181,6 +182,8 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   } finally {
     clearTimeout(timer);
   }
+  // The server's clock, from the answer the app already has (the browser only: the server render has no device clock to correct).
+  if (typeof window !== "undefined" && !baseUrl) noteServerDate(res.headers?.get?.("date"), res.headers?.get?.("age"));
   if (res.status === 401 && authed && !token && !isRetry) {
     if (!refreshing) refreshing = refreshSession().finally(() => { refreshing = null; });
     const ok = await refreshing;

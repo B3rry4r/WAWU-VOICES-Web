@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { SurveyScreen } from "@/features/surveys/SurveyScreen";
 import { signOut } from "@/lib/api/auth";
-import { calls, mockApi, signIn } from "./w6-helpers";
+import { apiError, calls, mockApi, signIn } from "./w6-helpers";
 
 const push = vi.fn();
 const back = vi.fn();
@@ -152,5 +152,36 @@ describe("rule 3: signing out clears nothing of another person's and sends nothi
     signOut();
     expect(keys()).toEqual(["wawu.survey.userA.s1.draft", "wawu.survey.userC.s9.skipped"]);
     expect(calls.slice(before).filter((c) => c.path.startsWith("/surveys"))).toEqual([]);
+  });
+});
+
+describe("the key rule (needsNewKey): a writer drops its Idempotency-Key only after success or when the server asks for a new one", () => {
+  it("a 500 then a success sends the same key twice", async () => {
+    const seen: string[] = [];
+    let n = 0;
+    mockApi(table({ "POST /surveys/s1/responses": ({ headers }: { headers: Headers }) => { seen.push(headers.get("Idempotency-Key") ?? ""); n += 1; return n === 1 ? apiError(500, "INTERNAL", "no") : { ok: true, note: "" }; } }));
+    const u = userEvent.setup();
+    render(<SurveyScreen id="s1" />);
+    await toLast(u);
+    await u.click(screen.getByRole("button", { name: "Send answer" }));
+    await screen.findByText("Your answers were not sent");
+    await u.click(screen.getByRole("button", { name: "Send answer" }));
+    await screen.findByText("Thanks. Your answers are in.");
+    expect(seen.length).toBe(2);
+    expect(seen[0]).not.toBe("");
+    expect(seen[1]).toBe(seen[0]);
+  });
+  it("when the server asks for a new key, the next tap carries a different one", async () => {
+    const seen: string[] = [];
+    let n = 0;
+    mockApi(table({ "POST /surveys/s1/responses": ({ headers }: { headers: Headers }) => { seen.push(headers.get("Idempotency-Key") ?? ""); n += 1; return n === 1 ? apiError(409, "IDEMPOTENCY_KEY_REUSED", "Key used") : { ok: true, note: "" }; } }));
+    const u = userEvent.setup();
+    render(<SurveyScreen id="s1" />);
+    await toLast(u);
+    await u.click(screen.getByRole("button", { name: "Send answer" }));
+    await screen.findByText("That did not send. Tap Send answer to try again.");
+    await u.click(screen.getByRole("button", { name: "Send answer" }));
+    await screen.findByText("Thanks. Your answers are in.");
+    expect(seen[1]).not.toBe(seen[0]);
   });
 });

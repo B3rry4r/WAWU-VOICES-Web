@@ -1,4 +1,6 @@
 "use client";
+import { InView } from "@/components/InView";
+import { needsNewKey } from "@/lib/api/keys";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Banner, Button, Icon } from "@/components/vx";
 import * as api from "@/lib/api/speak";
@@ -195,6 +197,13 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
       if (e instanceof Error && e.message === "STALE_TAB") return; // another person is signed in: the screen shows the notice, nothing more is sent
       if (stage === "upload" && st.clipId) { void api.deleteVoiceClip(st.clipId).catch(() => undefined); state.current = null; }
       if (e instanceof Error && e.message === "CLIP_FAILED") { state.current = null; setNote("We could not process that recording. Record it again and send it."); return; }
+      if (needsNewKey(e)) {
+        // The server refused the key as spent: the same recording goes out under a new key (and a new clip). The recording is kept.
+        state.current = null;
+        setTake((t) => (t ? { ...t, key: uuidKey() } : t));
+        setNote(refusalText(e));
+        return;
+      }
       if (e instanceof Error && e.message === "CLIP_SLOW") { setNote("Your voice is still being prepared. Tap Send again in a moment."); return; }
       setNote(errorText?.(e) ?? refusalText(e));
     }
@@ -224,7 +233,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   return (
     <section className={"vx-rec" + (live ? " is-live" : "")} aria-label="Voice recorder" data-testid="voice-box">
       {live ? <div className="vx-rec__top"><span className="vx-rec__dot">Recording</span></div> : null}
-      {note ? <Banner tone="danger" onClose={() => setNote(null)}>{note}</Banner> : null}
+      {note ? <InView key={note}><Banner tone="danger" onClose={() => setNote(null)}>{note}</Banner></InView> : null}
       {note && extra ? extra : null}
       {phase !== "preview" && help ? (
         <div className="sp-help" role="alert">

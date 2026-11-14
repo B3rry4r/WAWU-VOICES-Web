@@ -39,8 +39,8 @@ export const recordSurveyEvent = (id: string, kind: SurveyEventKind, opts?: { ke
   );
 
 /** One answer per person. A second one is a 409 (the caller shows the Done screen). Free: no tokens, no free post. */
-export const answerSurvey = (id: string, body: SurveyResponseRequest) =>
-  apiFetch<SurveyResponseResult>(`/surveys/${enc(id)}/responses`, { method: "POST", authed: true, body });
+export const answerSurvey = (id: string, body: SurveyResponseRequest, idempotencyKey?: string) =>
+  apiFetch<SurveyResponseResult>(`/surveys/${enc(id)}/responses`, { method: "POST", authed: true, body, ...(idempotencyKey ? { idempotencyKey } : {}) });
 
 /** A brand's public page by its slug. No sign-in needed. */
 export const getBrandPage = (slug: string) => apiFetch<BrandPage>(`/brands/${enc(slug)}`);

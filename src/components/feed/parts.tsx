@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AnswerCard, Banner, Button, EmptyState, Skeleton, TopicOfWeek, TopicTile } from "@/components/vx";
+import { Banner, Button, EmptyState, Skeleton, TopicOfWeek, TopicTile } from "@/components/vx";
 import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import { categoryLook } from "@/lib/categories";
 import type { Answer, Question, Topic } from "@/lib/api/feed";
-import { answerCardProps, voicesLabel, weekMeta, voicesOf } from "@/lib/feed-format";
-import { MoodChip } from "@/features/mood/MoodChip";
+import { startsLabel, topicNotStarted, voicesLabel, weekMeta, voicesOf } from "@/lib/feed-format";
+import { TalkCard, useToast } from "@/features/talk/TalkCard";
+import { useSignedIn } from "@/features/talk/lib";
 import type { Load } from "./useLoad";
 
 export function Loading() {
@@ -29,15 +30,50 @@ export function Failed({ load }: { load: Extract<Load<unknown>, { state: "error"
   );
 }
 
-export function Answers({ items, unfolded }: { items: Answer[]; unfolded?: boolean }) {
+/** The frame of a card in a list: a tap on the card itself opens the conversation, a tap on a control (or inside a sheet the card drew) never does.
+ *  Keyboard and screen readers get a real link, hidden until focused, so nothing is nested and nothing looks different. */
+function OpenOnTap({ questionId, questionText, children }: { questionId: string; questionText?: string | null; children: React.ReactNode }) {
+  const router = useRouter();
+  const href = `/q/${questionId}`;
+  return (
+    <div
+      className="relative cursor-pointer"
+      onClick={(e) => {
+        // React events bubble through portals: only a click whose target is inside this element, and not on a control, counts.
+        const t = e.target as Element | null;
+        if (!t || !e.currentTarget.contains(t)) return;
+        if (t.closest("button, a, input, textarea, select, [role=button], [role=dialog], [role=menu]")) return;
+        // A click that ends a text selection (a drag over the answer) is not a tap: leave the selection alone.
+        if (typeof window !== "undefined" && (window.getSelection()?.toString() ?? "") !== "") return;
+        router.push(href);
+      }}
+    >
+      <Link href={href} aria-label={questionText ? `Open the conversation: ${questionText}` : undefined} className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:left-2 focus-visible:top-2 focus-visible:z-10 focus-visible:rounded-[var(--radius-m)] focus-visible:bg-[var(--surface)] focus-visible:px-2 focus-visible:py-1 focus-visible:text-[var(--ink)]">
+        Open the conversation
+      </Link>
+      {children}
+    </div>
+  );
+}
+
+/** A list of voice cards (Home, a category, search). Each is the conversation page's own card, so every control works in place. */
+export function Answers({ items, unfolded, signedIn }: { items: Answer[]; unfolded?: boolean; signedIn?: boolean | null }) {
+  const [toast, push] = useToast();
+  const own = useSignedIn();
+  const known = signedIn ?? own;
   return (
     <div className="grid gap-3">
       {items.map((a) => (
-        <Link key={a.id} href={`/q/${a.questionId}`} className="block no-underline">
-          {a.mood ? <MoodChip mood={a.mood} className="mb-[6px]" /> : null}
-          <AnswerCard {...answerCardProps(a)} unfolded={unfolded && a.kind === "VOICE" ? true : undefined} />
-        </Link>
+        <TalkCard
+          key={a.id}
+          answer={a}
+          signedIn={!!known}
+          push={push}
+          unfolded={unfolded && a.kind === "VOICE" ? true : undefined}
+          frame={(card) => <OpenOnTap questionId={a.questionId} questionText={a.questionText}>{card}</OpenOnTap>}
+        />
       ))}
+      {toast}
     </div>
   );
 }
@@ -59,9 +95,11 @@ export function WeekCard({ topic, questionId, variant }: { topic: Topic; questio
   const router = useRouter();
   if (!questionId) return null;
   const href = `/q/${questionId}`;
-  const meta = weekMeta(topic, !!topic.weeklyPollId);
+  // V-PRELAUNCH: a week that has not begun says when it starts, not "Poll open", and offers nothing to join.
+  const upcoming = topicNotStarted(topic);
+  const meta = upcoming ? startsLabel(topic) : weekMeta(topic, !!topic.weeklyPollId);
   return variant === "rail" ? (
-    <TopicOfWeek title={topic.title} meta={meta} variant="rail" onClick={() => router.push(href)} />
+    <TopicOfWeek title={topic.title} meta={meta} variant="rail" upcoming={upcoming} onClick={() => router.push(href)} />
   ) : (
     <div className="contents [&_a:focus-visible]:[box-shadow:var(--shadow-focus)]">
       <TopicOfWeek title={topic.title} meta={meta} href={href} />

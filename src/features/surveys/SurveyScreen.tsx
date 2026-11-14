@@ -8,6 +8,7 @@ import { Rail } from "@/components/shell/ShellSlots";
 import { VoiceBox } from "@/features/speak/VoiceBox";
 import { refusalText } from "@/features/speak/logic";
 import { ApiError } from "@/lib/api/client";
+import { freshKey, needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { deleteVoiceClip } from "@/lib/api/speak";
 import { answerSurvey, getSurvey, recordSurveyEvent, type Survey, type SurveyQuestionView } from "@/lib/api/surveys";
 import { useSameWho, whoNow } from "./who";
@@ -108,6 +109,7 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
   const [closed, setClosed] = useState<string | null>(null); // the server's words when the survey closed before the answers went in
   const canGoBack = useRef(typeof window !== "undefined" && window.history.length > 1); // the person came from inside the app, so Back lands on their place in the feed
   const finished = useRef(false); // the answers were sent (or the survey was already answered): nothing more to count
+  const sendKey = useRef<{ key: string; body: string } | null>(null); // the Idempotency-Key of the answer in flight: kept after a failure so a retry is the same request, dropped only after success or when the server asks for a new one
   const skipSent = useRef(false); // SKIP goes once
   const alive = useRef(false);
   const guard = useRef(false); // the history entry that lets Back ask first is in place
@@ -207,11 +209,16 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
       if (answers.length === 0) return leave();
       setBusy(true);
       setProblem(null);
+      const body = {
+        answers,
+        ...(anonymous ? { anonymous: true } : { ...(shareState ? { shareState: true } : {}), ...(ageBand ? { ageBand: ageBand as "18-24" } : {}) }),
+      };
+      const json = JSON.stringify(body);
+      // The same answers keep the same key (a retry after a 500 is the same request); other answers are another request and get their own.
+      if (!sendKey.current || sendKey.current.body !== json) sendKey.current = { key: freshKey(), body: json };
       try {
-        await answerSurvey(survey.id, {
-          answers,
-          ...(anonymous ? { anonymous: true } : { ...(shareState ? { shareState: true } : {}), ...(ageBand ? { ageBand: ageBand as "18-24" } : {}) }),
-        });
+        await answerSurvey(survey.id, body, sendKey.current.key);
+        sendKey.current = null;
         finished.current = true;
         clearDraft(survey.id, owner);
         releaseGuard();
@@ -223,6 +230,9 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
           clearDraft(survey.id, owner);
           releaseGuard();
           setClosed(e.message);
+        } else if (needsNewKey(e)) {
+          sendKey.current = null; // the key is spent: the next tap carries a new one
+          setProblem(newKeyLine("Send answer", "send"));
         } else if (e instanceof ApiError && e.status === 409) {
           // A second answer is not an error: the survey is already answered, so the Done screen shows.
           finished.current = true;

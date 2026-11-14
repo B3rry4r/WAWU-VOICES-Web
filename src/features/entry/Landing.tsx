@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useShareSheet } from "@/features/talk/TalkCard";
 import { Button, Icon, Logo, QuestionHero, Skeleton, type IconName } from "@/components/vx";
 import { Answers } from "@/components/feed/parts";
 import { useLoad } from "@/components/feed/useLoad";
 import { getPublicConfig, getTodaysQuestion, getTrending } from "@/lib/api/feed";
-import { closesIn, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, voicesOf } from "@/lib/feed-format";
 import { SoundButton } from "@/components/shell/SoundButton";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { fromPrice } from "./format";
@@ -27,9 +28,12 @@ const TRUST: { icon: IconName; text: string }[] = [
 /** Guest welcome page (/welcome): the Landing board at 390 and 1440. */
 export function Landing() {
   const router = useRouter();
+  const [shareNode, share] = useShareSheet();
   const skipping = useSkipIfSignedIn();
-  const load = useLoad(() => Promise.all([getTodaysQuestion(), getTrending(1), getPublicConfig()]), []);
+  const load = useLoad(() => Promise.all([getTodaysQuestion(), getTrending(1), getPublicConfig()]), [], ([q]) => questionStart(q));
   if (skipping) return null;
+  // V-PRELAUNCH round 2: until the question has opened nothing here says to listen or to add a voice; the way to join stays.
+  const before = load.state === "ready" && !!comingUp(load.data[0]);
   const header = (
     <>
       <header className="flex h-[107px] flex-none items-center gap-2 px-4 pt-[47px] dt:hidden">
@@ -44,7 +48,7 @@ export function Landing() {
         <span className="ml-auto flex items-center gap-3">
           <SoundButton />
           <Button variant="secondary" href="/sign-in">Sign in</Button>
-          <Button icon="mic" href="/">Add your voice</Button>
+          {load.state === "loading" ? null : before ? <Button icon="mic" href="/join">Join VOICES</Button> : <Button icon="mic" href="/">Add your voice</Button>}
         </span>
       </header>
     </>
@@ -62,8 +66,14 @@ export function Landing() {
         <h1 className="m-0 font-display text-[40px] leading-[44px] tracking-[-0.01em] dt:text-[72px] dt:leading-[74px] headline-yo">{LANDING_HEADLINE_YO} <br />{LANDING_HEADLINE_EN}</h1>
         <p className="m-0 text-body-l text-ink-2 dt:max-w-[420px]">{LANDING_INTRO}</p>
         <div className="flex flex-col gap-[14px] dt:flex-row">
-          <span className="hidden dt:block"><Button size="l" icon="mic" href="/">Add your voice</Button></span>
-          <Button size="l" variant="secondary" icon="headphones" href="/" className="max-dt:w-full">Listen as a guest</Button>
+          {before ? (
+            <span className="hidden dt:block"><Button size="l" icon="mic" href="/join">Join VOICES</Button></span>
+          ) : (
+            <>
+              <span className="hidden dt:block"><Button size="l" icon="mic" href="/">Add your voice</Button></span>
+              <Button size="l" variant="secondary" icon="headphones" href="/" className="max-dt:w-full">Listen as a guest</Button>
+            </>
+          )}
         </div>
         <p className="m-0 flex items-center gap-2 text-caption text-ink-2"><Icon name="lock" size={16} />Free to read, listen, like and share. Adults only (18+).</p>
       </section>
@@ -74,13 +84,15 @@ export function Landing() {
           question={q.text}
           voices={voicesOf(q)}
           closesIn={closesIn(q.endsAt)}
+          opensLabel={comingUp(q)}
+          onShare={() => share("QUESTION", q.id, { notOpen: true })}
           speakLabel="Add your voice"
           onSpeak={() => router.push("/")}
           onListen={() => router.push(`/q/${q.id}`)}
           onDiscuss={() => router.push(`/q/${q.id}`)}
           onVote={() => router.push(`/q/${q.id}`)}
         />
-        {voice ? <Answers items={[voice]} /> : null}
+        {voice && !before ? <Answers items={[voice]} /> : null}
       </section>
     );
     body = (
@@ -140,6 +152,7 @@ export function Landing() {
     <EntryFrame>
       {header}
       <EntryScroll>{body}</EntryScroll>
+      {shareNode}
       <div className="dt:hidden">
         <BottomBar>
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-[10px]">

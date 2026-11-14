@@ -73,7 +73,7 @@ paths:
       security:
       - wawuId: []
       description: 'Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and
-        3 or more categories. Creates the tokens balance, free allowance (2 posts) and settings. Records the referral if a code is sent. Auth:
+        3 or more categories. Creates the tokens balance, free allowance (5 posts) and settings. Records the referral if a code is sent. Auth:
         WAWU ID token; works before the VOICES profile exists.'
       requestBody:
         required: true
@@ -7599,8 +7599,11 @@ components:
         type: string
         minLength: 8
         maxLength: 80
-      description: Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body
-        is 409 IDEMPOTENCY_KEY_REUSED.
+      description: Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the
+        first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it
+        charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT
+        (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a
+        removed reply, 403 CONTENT_REMOVED); the removed text is never sent again.
     VisitorId:
       name: X-Visitor-Id
       in: header
@@ -7656,7 +7659,8 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     E409:
-      description: CONFLICT or a state error such as ALREADY_VOTED, QUESTION_CLOSED, POLL_CLOSED
+      description: CONFLICT or a state error such as ALREADY_VOTED, QUESTION_CLOSED, QUESTION_NOT_OPEN (a write on the question shown as coming
+        up), POLL_CLOSED
       content:
         application/json:
           schema:
@@ -8017,6 +8021,7 @@ components:
       - DAILY_LIMIT_REACHED
       - TEXT_FIX_FAILED
       - QUESTION_CLOSED
+      - QUESTION_NOT_OPEN
       - POLL_CLOSED
       - POLL_NOT_STARTED
       - ALREADY_VOTED
@@ -8789,7 +8794,9 @@ components:
       - status
       - sensitive
       - voiceCount
-      description: 'voicesCount (RW1) is the sum of its questions'' voicesCount: the number every "N voices so far" shows.'
+      description: 'voicesCount (RW1) is the sum of its questions'' voicesCount: the number every "N voices so far" shows. A week that has not
+        started (status SCHEDULED) sends its title and dates only: questionCount is 0 (the field is a required integer), weeklyPollId and reportId
+        are null, and the counts are 0.'
     CalendarWeek:
       type: object
       properties:
@@ -8988,6 +8995,7 @@ components:
       - trending
       - newConversations
       - greetingName
+      description: trending is the top voices of today's question only (empty until that question has opened); it is not a cross-question list.
     CategoryDetail:
       type: object
       properties:

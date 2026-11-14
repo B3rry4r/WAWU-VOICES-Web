@@ -5,7 +5,8 @@ import type { IntentKind } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { countChars } from "@/lib/shared/text-price";
-import { failText, isOutOfPosts, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
+import { InView } from "@/components/InView";
+import { failText, isOutOfPosts, needsNewKey, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
 
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
@@ -45,6 +46,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
       onPosted();
     } catch (e) {
       if (isOutOfPosts(e)) { saveTyped(slot, body); onBuy(`/units/buy?from=${encodeURIComponent(`/q/${qid}/a/${aid}`)}`); return; }
+      if (needsNewKey(e)) key.current = null; // the server refused the key as spent: the next tap carries a new one
       setMsg(failText(e));
     } finally {
       busy.current = false;
@@ -72,7 +74,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
         onSubmit={() => void send()}
       />
       {sending ? <Banner tone="info">Posting your reply.</Banner> : null}
-      {msg ? <Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner> : null}
+      {msg ? <InView key={msg}><Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner></InView> : null}
     </div>
   );
 }
