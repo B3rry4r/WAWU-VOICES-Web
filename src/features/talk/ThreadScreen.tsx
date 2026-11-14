@@ -126,7 +126,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
           <TopicChip key={c.label} label={c.label} count={c.n} selected={filter === c.id} onClick={() => setFilter(c.id)} />
         ))}
       </div>
-      <div className={`tk-replies mt-3 grid gap-3 ${open ? "pb-48" : "pb-6"} dt:pb-6`}>
+      <div className={`tk-replies mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 ${open ? "pb-48" : "pb-6"} dt:pb-6`}>
         {state === "loading" ? <><Skeleton variant="answer" /><Skeleton variant="answer" /></> : null}
         {state === "error" && !items.length ? <Problem error={err} onRetry={() => void load()} /> : null}
         {state === "ready" && !items.length ? <EmptyState icon="message-square" title="No replies yet" body={`Be the first to reply to ${who}.`} /> : null}

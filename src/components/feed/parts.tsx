@@ -31,7 +31,7 @@ export function Failed({ load }: { load: Extract<Load<unknown>, { state: "error"
 
 export function Answers({ items, unfolded }: { items: Answer[]; unfolded?: boolean }) {
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
       {items.map((a) => (
         <Link key={a.id} href={`/q/${a.questionId}`} className="block no-underline">
           {a.mood ? <MoodChip mood={a.mood} className="mb-[6px]" /> : null}

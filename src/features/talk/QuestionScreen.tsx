@@ -195,9 +195,9 @@ export function QuestionScreen({ id }: { id: string }) {
       {state !== "loading" && !(state === "error" && !items.length) && !items.length ? (
         <EmptyState icon="mic" title="No voices yet" body="Be the first to answer this question." action={open ? "Write instead" : undefined} onAction={open ? () => router.push(writeHref) : undefined} />
       ) : null}
-      <div className="grid gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {items.map((a) => (
-          <div key={a.id} className="grid gap-1">
+          <div key={a.id} className="grid grid-cols-[minmax(0,1fr)] gap-1">
             <TalkCard answer={a} signedIn={!!signedIn} freeReactions={allow?.freeReactionsLeftToday} onAllowance={(p) => setAllow((c) => (c ? { ...c, ...p } : c))} push={push} onDeleted={(aid) => { setItems((cur) => cur.filter((x) => x.id !== aid)); setRemovedN((n) => n + 1); }} />
             {a.replyCount > 0 ? (
               <div className="flex items-center gap-2 px-2">
