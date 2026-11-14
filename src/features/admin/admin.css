@@ -61,6 +61,6 @@
 @media (max-width: 1023.98px) {
   .ad-root .vx-btn--s { height: var(--touch-min); }
   .ad-root .vx-iconbtn { min-width: var(--touch-min); min-height: var(--touch-min); }
-  .ad-root .vx-seg .vx-tab { min-height: var(--touch-min); }
+  .ad-root .vx-seg .vx-tab { min-height: var(--touch-min); padding: 0 var(--space-2); }
   .ad-root select.vx-field__input { min-height: var(--touch-min); }
 }
