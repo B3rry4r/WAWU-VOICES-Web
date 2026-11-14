@@ -90,11 +90,13 @@ export function ReplyRow({ r }: { r: Reply }) {
   const stance = { AGREE: "Agrees", DISAGREE: "Disagrees", EXPERIENCE: "Shares an experience" }[r.stance];
   return (
     <div className="pf-post">
-      <article className="vx-answer" aria-label={`Reply from ${r.author.handle}`}>
+      <article className="vx-answer" aria-label={`Reply from ${r.author ? r.author.handle : "an anonymous poster"}`}>
         <div className="vx-answer__head">
-          <Avatar name={r.author.displayName || r.author.handle} src={r.author.avatarUrl ?? undefined} />
+          <Avatar name={r.author ? r.author.displayName || r.author.handle : "Anonymous"} src={r.author?.avatarUrl ?? undefined} />
           <div className="vx-answer__who">
-            <span className="vx-answer__name">{"@" + r.author.handle}<VerifiedTick verified={r.author.verified} /></span>
+            <span className="vx-answer__name">{r.author ? "@" + r.author.handle : "Anonymous"}{r.author ? <VerifiedTick verified={r.author.verified} /> : null}</span>
+            {/* V-FIX-D: the API lists a person's unnamed replies on their own page only; the tag is theirs alone. */}
+            {!r.author && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
             <span className="vx-answer__time">{ago(r.createdAt) + " · " + stance}</span>
           </div>
         </div>

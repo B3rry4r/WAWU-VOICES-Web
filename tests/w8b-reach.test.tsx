@@ -110,7 +110,7 @@ describe("Notifications", () => {
 describe("ShareSheet", () => {
   const link = (over = {}) => ({ code: "abc1234", url: "https://v.test/s/abc1234", cardStatus: "READY", imageUrl: "https://v.test/card.png", storyImageUrl: null, squareImageUrl: null, previewText: "Hello\nAdd your voice: https://v.test/s/abc1234", ...over });
 
-  it("makes the link, shows the card, records the intent for each target and offers no target a browser cannot open", async () => {
+  it("makes the link, shows the card, records the intent for each target; Status, Stories and TikTok are drawn on the board and offered (V-FIX-D)", async () => {
     routes = (url, init) => (url.endsWith("/share/links") ? json(link(), 201) : url.includes("/events") ? new Response(null, { status: 204 }) : null);
     const user = userEvent.setup();
     const onClose = vi.fn();
@@ -120,7 +120,8 @@ describe("ShareSheet", () => {
     expect(JSON.parse(made.body!)).toEqual({ objectType: "ANSWER", objectId: "a1" });
     expect(made.headers.get("Authorization")).toBe("Bearer tok");
     expect(screen.getByText("A card and a link go out. The audio file never does.")).toBeTruthy();
-    expect(screen.queryByText("TikTok")).toBeNull();
+    // V-FIX-D: the board draws Status, Stories and TikTok; a browser cannot open them, so Status opens WhatsApp and the other two save the story card.
+    for (const name of ["Status", "Stories", "TikTok"]) expect(screen.getByText(name)).toBeTruthy();
     const wa = screen.getByRole("link", { name: "WhatsApp" });
     expect(wa.getAttribute("href")).toContain("https://wa.me/?text=");
     await user.click(wa);

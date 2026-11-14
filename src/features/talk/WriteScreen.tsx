@@ -13,6 +13,8 @@ import { countChars } from "@/lib/shared/text-price";
 import { FixPanel } from "./FixPanel";
 import { AnonymousSwitch } from "./AnonymousSwitch";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
+import { OWN_NAMELESS_NOTE, useReplyAnon } from "./reply-anon";
+import { notePublished } from "@/features/share/share-visit";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { AppBar, Problem, failText, needsNewKey, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
@@ -37,9 +39,10 @@ export function WriteScreen({ qid }: { qid: string }) {
   const [text, setText] = useState("");
   const [tag, setTag] = useState<ComposerTag>("none");
   const [intent, setIntent] = useState<IntentKind | null>(stanceQ ? INTENT_OF[stanceQ] ?? null : null);
-  const key = useRef<{ text: string; k: string } | null>(null);
-  // V-ANON: "Post without my name" is for a new answer only (the API has no such field on a reply). Off until turned on.
+  const key = useRef<{ text: string; anon: boolean; st: string | null; k: string } | null>(null);
+  // V-ANON: "Post without my name" on a new answer, off until turned on. V-FIX-D: the same switch on a reply (useReplyAnon, read at send time).
   const [anon, setAnon] = useState(() => (replyTo ? false : readAnonPref(qid)));
+  const replyAnon = useReplyAnon(replyTo ?? "none");
   const slot = replyTo ? `r:${replyTo}` : `q:${qid}`;
   const [initial, setInitial] = useState<string | null>(null);
   // LCH-02: a mood question needs its one word before anything is written; without one the person is sent to pick it.
@@ -67,6 +70,8 @@ export function WriteScreen({ qid }: { qid: string }) {
   if (q.status !== "LIVE") return <>{header}<div className="mt-4"><Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner></div></>;
 
   const whoLabel = parent?.author ? `@${parent.author.handle}` : "Anonymous";
+  // The writer of a nameless answer replying under it: always nameless (the server decides), so no switch is offered.
+  const ownNameless = !!replyTo && !!parent && parent.author === null && parent.isMine;
   const left = allow?.freePostsRemaining ?? 0;
   const c = allow?.costs;
   const price = allow ? postPrice(text, allow) : null;
@@ -83,18 +88,22 @@ export function WriteScreen({ qid }: { qid: string }) {
     if (replyTo && !stance) { setMsg("Pick how you are replying: I agree, I disagree or My experience."); return; }
     // The held draft carries the post's Idempotency-Key (same text, same key), so a post after a purchase is the same post.
     const held = replyTo ? undefined : saveDraft(qid, body);
-    if (!key.current || key.current.text !== body) key.current = { text: body, k: held ? held.key : uuidKey() };
+    // The key belongs to the exact body: the words, the reply switch and the stance. Changing any of them makes a new request.
+    const anonNow = replyTo ? (ownNameless || replyAnon.ref.current) : anon;
+    if (!key.current || key.current.text !== body || key.current.anon !== anonNow || key.current.st !== (replyTo ? stance : null)) key.current = { text: body, anon: anonNow, st: replyTo ? stance : null, k: held ? held.key : uuidKey() };
     busy.current = true;
     setSending(true);
     setMsg(null);
     try {
       if (replyTo) {
-        await api.createReply(replyTo, stance!, body, key.current.k);
+        await api.createReply(replyTo, stance!, body, key.current.k, anonNow);
         saveTyped(slot, "");
+        replyAnon.clear();
         router.push(`/q/${qid}/a/${replyTo}`);
       } else {
         const r = await api.createAnswer(qid, body, { isNews: tag === "unverified" || tag === "gossip", newsTag: tag === "unverified" ? "UNVERIFIED_NEWS" : tag === "gossip" ? "GOSSIP" : undefined }, key.current.k, mood.word, anon);
         writeAnonPref(qid, false);
+        notePublished();
         saveTyped(slot, "");
         clearDraft(qid);
         writePick(qid, null);
@@ -160,7 +169,7 @@ export function WriteScreen({ qid }: { qid: string }) {
             onSubmit={() => void send()}
           />
         </div>
-        {replyTo ? null : <AnonymousSwitch on={anon} disabled={sending} onChange={(v) => { setAnon(v); writeAnonPref(qid, v); }} />}
+        {replyTo && ownNameless ? <p data-testid="own-nameless" className="m-0 rounded-[var(--radius-l)] bg-[var(--surface)] px-4 py-[14px] text-[13px] font-medium leading-[18px] text-[var(--ink-2)] shadow-[inset_0_0_0_1px_var(--line)]">{OWN_NAMELESS_NOTE}</p> : replyTo ? <AnonymousSwitch on={replyAnon.on} disabled={sending} onChange={replyAnon.set} /> : <AnonymousSwitch on={anon} disabled={sending} onChange={(v) => { setAnon(v); writeAnonPref(qid, v); }} />}
         {dayLeft === 0 ? <Banner tone="info" title="You have reached the daily limit">{`You can send ${c?.messagesPerDay ?? 20} messages a day. Come back after midnight, Lagos time. Reading, listening, likes, shares and reactions never count.`}</Banner> : null}
         {sending ? <Banner tone="info">Posting your answer.</Banner> : null}
         {msg ? <InView key={msg}><Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner></InView> : null}
