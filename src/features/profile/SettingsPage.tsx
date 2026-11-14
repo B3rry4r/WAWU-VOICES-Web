@@ -1,4 +1,5 @@
 "use client";
+import { DMS_LIVE } from "@/features/dm/live";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -226,7 +227,7 @@ function SettingsBody({ me }: { me: Me }) {
 
       <Section id="ad-h" title="Ads and privacy">
         <div className="pf-card">
-          <Switch label="Let people message me" detail="Turn this off and nobody new can send you a message. Messages you already have stay." checked={s.dmOpen} onChange={(v) => patch({ dmOpen: v })} />
+          {DMS_LIVE ? <Switch label="Let people message me" detail="Turn this off and nobody new can send you a message. Messages you already have stay." checked={s.dmOpen} onChange={(v) => patch({ dmOpen: v })} /> : null}
           <Switch label="Share my word" detail="The friend whose link brought you here sees your word. Nobody else does." checked={s.shareMyWord} onChange={(v) => patch({ shareMyWord: v })} />
           <RowButton icon="shield-alert" label="Blocked accounts" detail={blockedCount === null ? undefined : String(blockedCount)} onClick={() => setSheet("blocked")} />
         </div>

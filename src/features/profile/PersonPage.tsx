@@ -1,5 +1,6 @@
 "use client";
 
+import { DMS_LIVE } from "@/features/dm/live";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Banner, Button, EmptyState, Icon, IconButton, NotFoundState, Sheet, Tabs } from "@/components/vx";
@@ -62,7 +63,7 @@ function MoreSheet({ person, canMessage, onClose, onBlocked }: { person: PublicP
     <Sheet title={step === "report" ? "Report " + handle : step === "sent" ? "Thanks. We got your report." : handle} onClose={onClose}>
       {step === "menu" ? (
         <div className="pf-menu">
-          {canMessage ? <button type="button" className="pf-menu__row" onClick={() => router.push(`/messages/new/${person.id}`)}><Icon name="message-circle" size={22} />{"Message " + handle}</button> : null}
+          {canMessage && DMS_LIVE ? <button type="button" className="pf-menu__row" onClick={() => router.push(`/messages/new/${person.id}`)}><Icon name="message-circle" size={22} />{"Message " + handle}</button> : null}
           <button type="button" className="pf-menu__row" onClick={() => setStep("report")}><Icon name="flag" size={22} />{"Report " + handle}</button>
           <button type="button" className="pf-menu__row" onClick={block} disabled={busy}><Icon name="shield-alert" size={22} />{"Block " + handle}</button>
           <p className="pf-hint">Blocking hides you and them from each other.</p>
