@@ -9,7 +9,10 @@ import { getAdminToday } from "@/lib/api/admin";
 import type { AdminToday, Role } from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/client";
 import { getMe } from "@/lib/api/feed";
+import { signOut } from "@/lib/api/auth";
 import { sessionStorage } from "@/lib/auth/session-storage";
+import { AdminNotAdmin } from "./AdminNotAdmin";
+import { AdminSignIn } from "./AdminSignIn";
 import "./admin.css";
 import { ADMIN_PAGES, canOpen, isAdminPerson, roleLine } from "./roles";
 import type { AdminPageId } from "./roles";
@@ -21,6 +24,8 @@ interface AdminCtx {
   today: AdminToday | null;
   todayError: Error | null;
   reloadToday: () => void;
+  /** Ends the session through the app's own sign-out; the admin sign-in page shows after it. */
+  signOut: () => void;
 }
 
 const Ctx = createContext<AdminCtx | null>(null);
@@ -34,9 +39,9 @@ export function useAdmin(): AdminCtx {
 /** Waits before the two automatic retries of a failed access check (5xx, network, timeout). */
 const RETRY_MS = [1000, 3000];
 
-type Gate = { s: "checking" } | { s: "no" } | { s: "failed" } | { s: "yes"; roles: Role[]; name: string };
+type Gate = { s: "checking" } | { s: "guest" } | { s: "notadmin"; handle: string | null } | { s: "failed" } | { s: "yes"; roles: Role[]; name: string };
 
-/** The admin area is only drawn for a signed-in person with an admin role. Everyone else gets the same "could not find that" any unknown address gets. */
+/** The admin area is only drawn for a signed-in person with an admin role. No session: the admin sign-in page. A session without a role: the "not an admin" page. The API is the real guard. */
 export function AdminFrame({ children }: { children: ReactNode }) {
   const [gate, setGate] = useState<Gate>({ s: "checking" });
   const [today, setToday] = useState<AdminToday | null>(null);
@@ -44,7 +49,13 @@ export function AdminFrame({ children }: { children: ReactNode }) {
   const [n, setN] = useState(0);
   const reloadToday = useCallback(() => setN((x) => x + 1), []);
 
+  const pathname = usePathname() ?? "/admin";
   const [tries, setTries] = useState(0);
+  const endSession = useCallback(() => {
+    signOut();
+    setToday(null);
+    setGate({ s: "guest" });
+  }, []);
   const tryAgain = useCallback(() => {
     setGate({ s: "checking" });
     setTries((x) => x + 1);
@@ -52,24 +63,24 @@ export function AdminFrame({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!sessionStorage.getToken()) {
-      setGate({ s: "no" });
+      setGate({ s: "guest" });
       return;
     }
     let live = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    // getMe already refreshes an expired access token and retries once. A refusal that survives that (401 with the session
-    // cleared, or 403) means "not an admin": the deliberate "could not find that". Anything else is a failed check, not an answer.
+    // getMe already refreshes an expired access token and retries once. A 401 that survives that (session cleared) means no session:
+    // the sign-in page. A 403 means a signed-in account that is not an admin. Anything else is a failed check, not an answer.
     const check = (attempt: number) => {
       getMe().then(
         (me) => {
           if (!live) return;
           const roles = me.roles ?? [];
-          setGate(isAdminPerson(roles) ? { s: "yes", roles, name: me.profile?.displayName || me.handle || "Admin" } : { s: "no" });
+          setGate(isAdminPerson(roles) ? { s: "yes", roles, name: me.profile?.displayName || me.handle || "Admin" } : { s: "notadmin", handle: me.handle || null });
         },
         (e: unknown) => {
           if (!live) return;
-          const refused = e instanceof ApiError && (e.status === 403 || (e.status === 401 && !sessionStorage.getToken()));
-          if (refused) return setGate({ s: "no" });
+          if (e instanceof ApiError && e.status === 403) return setGate({ s: "notadmin", handle: null });
+          if (e instanceof ApiError && e.status === 401 && !sessionStorage.getToken()) return setGate({ s: "guest" });
           if (attempt < RETRY_MS.length) timer = setTimeout(() => check(attempt + 1), RETRY_MS[attempt]);
           else setGate({ s: "failed" });
         },
@@ -103,7 +114,7 @@ export function AdminFrame({ children }: { children: ReactNode }) {
     };
   }, [yes, n]);
 
-  const value = useMemo<AdminCtx | null>(() => (gate.s === "yes" ? { roles: gate.roles, name: gate.name, today, todayError, reloadToday } : null), [gate, today, todayError, reloadToday]);
+  const value = useMemo<AdminCtx | null>(() => (gate.s === "yes" ? { roles: gate.roles, name: gate.name, today, todayError, reloadToday, signOut: endSession } : null), [gate, today, todayError, reloadToday, endSession]);
 
   if (gate.s === "checking") return <div className="min-h-[60vh]" aria-busy="true" aria-label="Loading" />;
   if (gate.s === "failed") {
@@ -113,12 +124,9 @@ export function AdminFrame({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (gate.s === "no" || !value) {
-    return (
-      <div className="flex min-h-[70vh] items-center justify-center">
-        <EmptyState icon="compass" title="We could not find that" body="Go back to Home and pick another page." action="Go to Home" onAction={() => window.location.assign("/")} />
-      </div>
-    );
+  if (gate.s === "notadmin") return <AdminNotAdmin handle={gate.handle} onOtherAccount={endSession} />;
+  if (gate.s === "guest" || !value) {
+    return <AdminSignIn path={pathname} onSignedIn={tryAgain} />;
   }
 
   return (
@@ -129,7 +137,10 @@ export function AdminFrame({ children }: { children: ReactNode }) {
           <div className="min-w-0 px-10 pb-16 pt-8">{children}</div>
         </div>
         <div className="flex min-h-screen items-center justify-center p-6 dt:hidden">
-          <p className="m-0 mx-auto max-w-[320px] text-center text-body text-ink-2">Open the admin on a computer.</p>
+          <div className="flex flex-col items-center gap-3">
+            <p className="m-0 mx-auto max-w-[320px] text-center text-body text-ink-2">Open the admin on a computer.</p>
+            <button type="button" className="link inline-flex min-h-[44px] items-center border-0 bg-transparent p-0" onClick={value.signOut}>Sign out</button>
+          </div>
         </div>
       </div>
     </Ctx.Provider>
@@ -156,7 +167,7 @@ function countFor(id: AdminPageId, t: AdminToday | null): number | null {
 }
 
 function Sidebar() {
-  const { roles, name, today } = useAdmin();
+  const { roles, name, today, signOut } = useAdmin();
   const path = usePathname() ?? "/admin";
   const items = ADMIN_PAGES.filter((p) => canOpen(roles, p.id));
   // The list scrolls inside the sidebar when the window is short. The fade at the cut edge shows there is more.
@@ -236,6 +247,9 @@ function Sidebar() {
         </div>
         <span className="sr-only">{initials}</span>
       </div>
+      <button type="button" onClick={signOut} className="mt-3 flex min-h-[44px] items-center rounded-m border-0 bg-transparent px-3 text-label text-forest-on hover:bg-forest-2">
+        Sign out
+      </button>
     </aside>
   );
 }
