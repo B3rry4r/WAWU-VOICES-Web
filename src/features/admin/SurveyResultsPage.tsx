@@ -1,5 +1,6 @@
 "use client";
 
+import { underFloor } from "./survey-floor";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Banner, Button, Dialog, EmptyState, Icon } from "@/components/vx";
@@ -217,8 +218,11 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
   const full = showsPeople(r);
   const floor = r.minGroupSize ?? 20;
   // A breakdown the server left out whole is not drawn at all, not even an empty frame.
-  const hasState = (r.byState ?? []).length > 0 || !!r.byStateOther;
-  const hasAge = (r.byAgeBand ?? []).length > 0 || !!r.byAgeBandOther;
+  // A row under the floor is never drawn, whatever the server sent: it is folded into "Other" when the server gave one, otherwise left out.
+  const byState = underFloor(r.byState ?? [], r.byStateOther, floor);
+  const byAge = underFloor(r.byAgeBand ?? [], r.byAgeBandOther, floor);
+  const hasState = byState.rows.length > 0 || !!byState.other;
+  const hasAge = byAge.rows.length > 0 || !!byAge.other;
   return (
     <div className="flex flex-col gap-5" data-testid="stage-released">
       {r.releasedAt ? <p className="m-0 text-caption text-ink-2" data-testid="released-at">{`Released on ${slot(r.releasedAt)}. These results are fixed.`}</p> : null}
@@ -299,12 +303,12 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
             <Card>
               <CardTitle>By state</CardTitle>
               <p className="m-0 mb-3 text-caption text-ink-2">Only people who chose to share their state.</p>
-              {(r.byState ?? []).length || r.byStateOther ? (
+              {hasState ? (
                 <table className="w-full border-collapse text-left text-body">
                   <thead><tr className="text-ink-2"><th className="vx-eyebrow py-2">State</th><th className="vx-eyebrow py-2 text-right">Answers</th><th className="vx-eyebrow py-2 text-right">Share</th></tr></thead>
                   <tbody>
-                    {(r.byState ?? []).map((s) => <tr key={s.state} className="border-t border-line"><td className="py-2">{s.state}</td><td className="py-2 text-right tabular-nums">{s.responses}</td><td className="py-2 text-right tabular-nums">{`${s.share}%`}</td></tr>)}
-                    {r.byStateOther ? <tr className="border-t border-line"><td className="py-2">Other</td><td className="py-2 text-right tabular-nums">{r.byStateOther.responses}</td><td className="py-2 text-right tabular-nums">{`${r.byStateOther.share}%`}</td></tr> : null}
+                    {byState.rows.map((s) => <tr key={s.state} className="border-t border-line"><td className="py-2">{s.state}</td><td className="py-2 text-right tabular-nums">{s.responses}</td><td className="py-2 text-right tabular-nums">{`${s.share}%`}</td></tr>)}
+                    {byState.other ? <tr className="border-t border-line"><td className="py-2">Other</td><td className="py-2 text-right tabular-nums">{byState.other.responses}</td><td className="py-2 text-right tabular-nums">{`${byState.other.share}%`}</td></tr> : null}
                   </tbody>
                 </table>
               ) : null}
@@ -314,12 +318,12 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
             <Card>
               <CardTitle>By age band</CardTitle>
               <p className="m-0 mb-3 text-caption text-ink-2">Only people who chose to share their age band.</p>
-              {(r.byAgeBand ?? []).length || r.byAgeBandOther ? (
+              {hasAge ? (
                 <table className="w-full border-collapse text-left text-body">
                   <thead><tr className="text-ink-2"><th className="vx-eyebrow py-2">Age band</th><th className="vx-eyebrow py-2 text-right">Answers</th><th className="vx-eyebrow py-2 text-right">Share</th></tr></thead>
                   <tbody>
-                    {(r.byAgeBand ?? []).map((a) => <tr key={a.ageBand} className="border-t border-line"><td className="py-2">{a.ageBand}</td><td className="py-2 text-right tabular-nums">{a.responses}</td><td className="py-2 text-right tabular-nums">{`${a.share}%`}</td></tr>)}
-                    {r.byAgeBandOther ? <tr className="border-t border-line"><td className="py-2">Other</td><td className="py-2 text-right tabular-nums">{r.byAgeBandOther.responses}</td><td className="py-2 text-right tabular-nums">{`${r.byAgeBandOther.share}%`}</td></tr> : null}
+                    {byAge.rows.map((a) => <tr key={a.ageBand} className="border-t border-line"><td className="py-2">{a.ageBand}</td><td className="py-2 text-right tabular-nums">{a.responses}</td><td className="py-2 text-right tabular-nums">{`${a.share}%`}</td></tr>)}
+                    {byAge.other ? <tr className="border-t border-line"><td className="py-2">Other</td><td className="py-2 text-right tabular-nums">{byAge.other.responses}</td><td className="py-2 text-right tabular-nums">{`${byAge.other.share}%`}</td></tr> : null}
                   </tbody>
                 </table>
               ) : null}

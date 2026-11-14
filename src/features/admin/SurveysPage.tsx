@@ -373,7 +373,7 @@ function SurveyForm({ survey, cats, brands, onClose, onSaved }: { survey?: Admin
           <div className="vx-field__box">
             <select
               id="sv-brand"
-              className="vx-field__input"
+              className="vx-field__input min-h-11"
               value={brandId}
               onChange={(e) => {
                 setBrandId(e.target.value);
@@ -401,7 +401,7 @@ function SurveyForm({ survey, cats, brands, onClose, onSaved }: { survey?: Admin
               <div className="vx-field">
                 <label className="vx-field__label" htmlFor={`sv-kind-${i}`}>Kind</label>
                 <div className="vx-field__box">
-                  <select id={`sv-kind-${i}`} className="vx-field__input" value={q.kind} onChange={(e) => { const kind = e.target.value as QDraft["kind"]; setQ(i, { kind, options: kind === "SINGLE_CHOICE" && q.options.length < 2 ? ["", ""] : q.options }); }}>
+                  <select id={`sv-kind-${i}`} className="vx-field__input min-h-11" value={q.kind} onChange={(e) => { const kind = e.target.value as QDraft["kind"]; setQ(i, { kind, options: kind === "SINGLE_CHOICE" && q.options.length < 2 ? ["", ""] : q.options }); }}>
                     {(Object.keys(KIND_WORDS) as QDraft["kind"][]).map((k) => (
                       <option key={k} value={k}>{KIND_WORDS[k]}</option>
                     ))}
@@ -419,7 +419,7 @@ function SurveyForm({ survey, cats, brands, onClose, onSaved }: { survey?: Admin
                   </div>
                 ))}
                 {q.options.length < 6 ? (
-                  <div><Button variant="secondary" size="s" icon="plus" onClick={() => setQ(i, { options: [...q.options, ""] })}>Add a choice</Button></div>
+                  <div><Button variant="secondary" icon="plus" onClick={() => setQ(i, { options: [...q.options, ""] })}>Add a choice</Button></div>
                 ) : <span className="text-caption text-ink-2">Six choices is the most.</span>}
               </div>
             ) : null}

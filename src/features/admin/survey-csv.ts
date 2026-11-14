@@ -1,3 +1,4 @@
+import { underFloor } from "./survey-floor";
 import type { SurveyReport } from "@/lib/api/admin-surveys";
 
 /** One CSV cell. Quotes are doubled; a cell that a spreadsheet could read as a formula gets a leading apostrophe. */
@@ -66,10 +67,12 @@ export function reportToCsv(r: SurveyReport): string {
         for (const v of q.voices) row("Voice answer", q.prompt, scrub(v.transcript), null, null, v.seconds);
       }
     }
-    for (const s of r.byState ?? []) row("State", "", s.state, s.responses, s.share);
-    if (r.byStateOther) row("State", "", "Other", r.byStateOther.responses, r.byStateOther.share);
-    for (const a of r.byAgeBand ?? []) row("Age band", "", a.ageBand, a.responses, a.share);
-    if (r.byAgeBandOther) row("Age band", "", "Other", r.byAgeBandOther.responses, r.byAgeBandOther.share);
+    const st = underFloor(r.byState ?? [], r.byStateOther, r.minGroupSize ?? 20);
+    for (const s of st.rows) row("State", "", s.state, s.responses, s.share);
+    if (st.other) row("State", "", "Other", st.other.responses, st.other.share);
+    const ag = underFloor(r.byAgeBand ?? [], r.byAgeBandOther, r.minGroupSize ?? 20);
+    for (const a of ag.rows) row("Age band", "", a.ageBand, a.responses, a.share);
+    if (ag.other) row("Age band", "", "Other", ag.other.responses, ag.other.share);
     if (r.note) row("Note", "", r.note);
   }
   return "﻿" + [CSV_HEAD.map((h) => cell(h)).join(","), ...rows.map((x) => x.map((v) => cell(v)).join(","))].join("\r\n") + "\r\n";
