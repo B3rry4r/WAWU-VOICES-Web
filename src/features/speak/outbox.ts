@@ -46,6 +46,8 @@ export const releaseSend = (key: string): void => { inFlight.delete(key); };
 
 export type SendResult =
   | { ok: true; answerId: string; questionId: string }
+  /** Another tab sent this recording while this one waited: it is done, and there is nothing more to do here. */
+  | { ok: true; answerId: null; questionId: string; byOtherTab: true }
   | { ok: false; reason: "busy" | "offline" | "needs_tokens" | "failed"; message?: string };
 
 async function waitReady(clipId: string): Promise<void> {
@@ -59,7 +61,7 @@ async function waitReady(clipId: string): Promise<void> {
 }
 
 /** Sends one kept recording as a voice answer: create the clip, upload, complete, wait until READY, post with the recording's own key. */
-export async function sendKeptRecording(d: Draft, tokenId?: string): Promise<SendResult> {
+async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
   if (!claimSend(d.key)) return { ok: false, reason: "busy" };
   let clipId: string | undefined;
   let uploaded = false;
@@ -85,5 +87,50 @@ export async function sendKeptRecording(d: Draft, tokenId?: string): Promise<Sen
     return { ok: false, reason: "failed", message: e instanceof ApiError && e.explained && e.message.trim() ? e.message : undefined };
   } finally {
     releaseSend(d.key);
+  }
+}
+
+const FLAG = (key: string) => `voices-send-lock:${key}`;
+const FLAG_LIFE_MS = 2 * 60 * 1000;
+
+/**
+ * One tab sends a kept recording; any other tab waits and then shows the result, and uploads nothing. The lock is the Web Locks
+ * API where the browser has it, else a storage flag that dies after two minutes (a tab that closes mid-send cannot block it for good).
+ * After waiting, the kept copy is looked at again: when it is gone the other tab posted it.
+ */
+export async function sendKeptRecording(
+  d: Draft,
+  tokenId?: string,
+  stillKept: () => Promise<boolean> = async () => false,
+  /** Runs inside the lock after a successful post (the caller removes the kept copy here, so a waiting tab never sees a posted recording as kept). */
+  onPosted: () => Promise<void> = async () => undefined,
+): Promise<SendResult> {
+  const sendThenTidy = async (): Promise<SendResult> => {
+    const r = await sendHere(d, tokenId);
+    if (r.ok) await onPosted();
+    return r;
+  };
+  const locks = typeof navigator !== "undefined" ? (navigator as Navigator & { locks?: LockManager }).locks : undefined;
+  const other: SendResult = { ok: true, answerId: null, questionId: d.questionId, byOtherTab: true };
+  if (locks) {
+    const name = `voices-send:${d.key}`;
+    const mine = await locks.request(name, { ifAvailable: true }, async (lock) => (lock ? await sendThenTidy() : null));
+    if (mine) return mine;
+    await locks.request(name, async () => undefined); // waits until the other tab has finished
+    return (await stillKept()) ? { ok: false, reason: "failed" } : other;
+  }
+  const flag = FLAG(d.key);
+  const held = (): boolean => {
+    try { const t = Number(window.localStorage.getItem(flag)); return !!t && Date.now() - t < FLAG_LIFE_MS; } catch { return false; }
+  };
+  if (held()) {
+    while (held()) await new Promise((r) => setTimeout(r, 1000));
+    return (await stillKept()) ? { ok: false, reason: "failed" } : other;
+  }
+  try { window.localStorage.setItem(flag, String(Date.now())); } catch { /* no flag: the in-tab lock still holds */ }
+  try {
+    return await sendThenTidy();
+  } finally {
+    try { window.localStorage.removeItem(flag); } catch { /* nothing to clear */ }
   }
 }

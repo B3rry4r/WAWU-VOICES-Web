@@ -177,7 +177,9 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds, anonymous: !!anonSlot && anonRef.current });
+      // The key belongs to the exact body: the same recording sent unnamed is a different request from the named one.
+      const anonNow = !!anonSlot && anonRef.current;
+      await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: anonNow ? `${take.key}-anon` : take.key, seconds: take.seconds, anonymous: anonNow });
       if (anonSlot) { anonRef.current = false; writeAnonPref(anonSlot, false); }
       state.current = null;
       if (alive.current) { setSending(null); setTake(null); setPhase("idle"); }

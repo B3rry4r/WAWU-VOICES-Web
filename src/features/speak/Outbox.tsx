@@ -2,23 +2,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Banner } from "@/components/vx";
+import { Banner, Button } from "@/components/vx";
 import { isSignedIn } from "@/lib/api/auth";
 import * as api from "@/lib/api/speak";
 import { clearDraft, draftIsStale, loadDraft, STALE_NOTE, type Draft } from "./draft";
 import { isSending, planFor, sendKeptRecording, type SendPlan } from "./outbox";
 import { isMoodQuestion } from "@/features/mood/mood";
+import { publishedFromLink } from "@/features/share/share-visit";
 
 /**
- * Recordings made offline send themselves, or ask first (V-FIX-D, addendum 7.7). It looks when the app opens and when the connection comes
- * back. A recording the person already tapped Send on (it is `queued` on this device) is:
- *  - sent by itself when a free post covers it;
+ * Recordings made offline send themselves, or ask first (V-FIX-D, addendum 7.7). It looks when the app opens and when the connection
+ * comes back. A recording the person already tapped Send on (it is `queued` on this device) is:
+ *  - sent by itself when a free post covers it, with "Sending your saved voice" on screen while it goes;
  *  - offered with its price and one Send button otherwise, never charged without the person seeing the cost;
+ *  - kept, with its button (Try again, or its price again), when a send fails;
  *  - removed with a plain note once it is more than 7 days old.
  * A recording the person has only listened to, and not sent, is never touched. The record screen shows its own take, so this stays away from it.
+ * Two tabs never send one recording: one sends, the other waits and shows the result.
  */
 type View =
-  | { kind: "offer"; draft: Draft; plan: SendPlan; seconds: number }
+  | { kind: "offer"; draft: Draft; plan: SendPlan; error?: string }
+  | { kind: "sending" }
   | { kind: "finish"; draft: Draft }
   | { kind: "note"; tone: "info" | "success" | "danger"; text: string; href?: string; hrefLabel?: string };
 
@@ -27,23 +31,23 @@ const secondsText = (s: number) => `${Math.max(1, Math.round(s))} seconds`;
 export function Outbox() {
   const pathname = usePathname() ?? "/";
   const [view, setView] = useState<View | null>(null);
-  const [busy, setBusy] = useState(false);
   const running = useRef(false);
   const onSpeak = /(^|\/)speak(\/|$)/.test(pathname);
 
   const send = useCallback(async (d: Draft, plan: SendPlan) => {
-    setBusy(true);
-    const r = await sendKeptRecording(d, plan.tokenId);
-    setBusy(false);
-    if (r.ok) {
+    setView({ kind: "sending" });
+    const r = await sendKeptRecording(d, plan.tokenId, async () => (await loadDraft())?.key === d.key, async () => {
+      publishedFromLink(d.shareCode);
       await clearDraft();
-      setView({ kind: "note", tone: "success", text: "Your saved voice was posted.", href: `/q/${r.questionId}/posted?a=${r.answerId}`, hrefLabel: "See it" });
+    });
+    if (r.ok) {
+      setView({ kind: "note", tone: "success", text: "Your saved voice was posted.", href: r.answerId ? `/q/${r.questionId}/posted?a=${r.answerId}` : undefined, hrefLabel: "See it" });
     } else if (r.reason === "offline") {
       setView(null); // stays kept; the next time the connection is back it is tried again
     } else if (r.reason === "needs_tokens") {
       setView({ kind: "note", tone: "danger", text: r.message ?? "You need more tokens to send your saved recording.", href: "/units/buy?from=%2F", hrefLabel: "Get tokens" });
-    } else if (r.reason === "failed") {
-      setView({ kind: "note", tone: "danger", text: r.message ?? "We could not send your saved recording. It is kept on this device. Try again in a moment." });
+    } else {
+      setView({ kind: "offer", draft: d, plan, error: r.message ?? "We could not send it. It is kept on this device." });
     }
   }, []);
 
@@ -71,7 +75,7 @@ export function Outbox() {
       }
       const plan = planFor(d, { allowance, config });
       if (plan.free) await send(d, plan);
-      else setView({ kind: "offer", draft: d, plan, seconds: d.seconds });
+      else setView({ kind: "offer", draft: d, plan });
     } catch {
       /* offline again, or the server is busy: the recording is kept and this runs again on the next open or reconnect */
     } finally {
@@ -95,9 +99,14 @@ export function Outbox() {
   return (
     <div className="fixed inset-x-0 bottom-[96px] z-40 mx-auto grid max-w-[560px] gap-2 px-4 dt:bottom-4 dt:left-auto dt:right-4 dt:mx-0 dt:w-[560px]" data-testid="outbox">
       {view.kind === "offer" ? (
-        <Banner tone="info" title="A recording is waiting" action={view.plan.label} onAction={() => void send(view.draft, view.plan)} onClose={() => void remove()}>
-          {busy ? "Sending it now." : `Saved while you were offline, ${secondsText(view.seconds)}.`}
+        <Banner tone={view.error ? "danger" : "info"} title="A recording is waiting" onClose={() => void remove()}>
+          <span className="block">{view.error ?? `Saved while you were offline, ${secondsText(view.draft.seconds)}.`}</span>
+          <span className="mt-2 block">
+            <Button variant="secondary" size="s" onClick={() => void send(view.draft, view.plan)}>{view.error && view.plan.free ? "Try again" : view.plan.label}</Button>
+          </span>
         </Banner>
+      ) : view.kind === "sending" ? (
+        <Banner tone="info" title="Sending your saved voice">Keep this page open until it is posted.</Banner>
       ) : view.kind === "finish" ? (
         <Banner tone="info" title="A recording is waiting" onClose={() => void remove()}>
           <Link href={`/speak?q=${encodeURIComponent(view.draft.questionId)}`} className="underline">Pick your word and send it</Link>

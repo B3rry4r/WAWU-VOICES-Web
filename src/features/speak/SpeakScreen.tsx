@@ -22,7 +22,7 @@ import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { voicesOf } from "@/lib/feed-format";
 import { AnonymousSwitch } from "@/features/talk/AnonymousSwitch";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
-import { noteRecordingStarted, notePublished, rememberShareVisit } from "@/features/share/share-visit";
+import { noteRecordingStarted, notePublished, rememberShareVisit, shareVisitCode } from "@/features/share/share-visit";
 
 /** Where a guest goes to sign in. The recording waits in this browser (IndexedDB) until they are back (V-19). */
 export const JOIN_PATH = "/join";
@@ -351,7 +351,12 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   /** Keeps the recording on this device marked as waiting to go, with the switch and the word as they are now (read here, at the moment of keeping). */
   async function keepForLater(t: Take) {
     if (!qid) return;
-    await saveDraft({ ...t, questionId: qid, savedAt: Date.now(), queued: true, anonymous: anonRef.current, mood: mood.word ?? null } satisfies Draft);
+    const kept = await saveDraft({ ...t, questionId: qid, savedAt: Date.now(), queued: true, anonymous: anonRef.current, mood: mood.word ?? null, shareCode: shareVisitCode() } satisfies Draft);
+    if (!kept) {
+      // The device could not keep it (storage full or blocked): never say it is saved.
+      pushNote({ tone: "danger", text: "We could not keep your recording on this device. Stay on this page until you are back online, then tap Send.", action: "Try again", onAction: () => void send() });
+      return;
+    }
     pushNote({
       tone: "offline",
       text: "You are offline. Your recording is saved on this device. It will be offered for sending when you are back online, or tap Send again then.",

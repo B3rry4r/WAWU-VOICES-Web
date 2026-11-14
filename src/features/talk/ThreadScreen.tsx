@@ -35,9 +35,9 @@ function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => Pro
     <>
     <div className="mt-2 hidden items-center gap-2 text-eyebrow uppercase text-[var(--ink-2)] dt:flex"><Icon name={stanceIcon[r.stance]} size={14} />{st.label}</div>
     <article className="vx-answer" aria-label={`Reply from ${r.author ? r.author.handle : "an anonymous poster"}`}>
-      <div className="vx-answer__head">
+      <div className="vx-answer__head flex-wrap">
         <Avatar name={r.author ? r.author.displayName ?? r.author.handle : "Anonymous"} src={r.author?.avatarUrl ?? undefined} size="s" />
-        <div className="vx-answer__who">
+        <div className="vx-answer__who min-w-0 flex-1">
           <span className="vx-answer__name">{r.author ? `@${r.author.handle}` : "Anonymous"}</span>
           {/* V-FIX-D: an unnamed reply has no author for anyone; its writer alone is told it is theirs. */}
           {!r.author && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}

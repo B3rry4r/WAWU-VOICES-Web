@@ -70,6 +70,17 @@ describe("V-FIX-D: Post without my name on a text reply", () => {
     await waitFor(() => expect(readAnonPref("reply:a1")).toBe(false));
   });
 
+  it("a try again with the switch left alone keeps its Idempotency-Key", async () => {
+    talk.createReply.mockRejectedValueOnce(new Error("boom")).mockResolvedValue({});
+    render(<ReplyComposer aid="a1" qid="q1" who="@tunde.a" allow={allow} onPosted={() => {}} onBuy={() => {}} />);
+    await typeAndPick("Same words");
+    await userEvent.click(post());
+    await screen.findByText("This did not post");
+    await userEvent.click(post());
+    await waitFor(() => expect(talk.createReply).toHaveBeenCalledTimes(2));
+    expect(talk.createReply.mock.calls[0][3]).toBe(talk.createReply.mock.calls[1][3]);
+  });
+
   it("a try again after a failure uses the switch as it is NOW (turned off after a failed anonymous try, then on after a failed named one)", async () => {
     talk.createReply.mockRejectedValueOnce(new Error("boom")).mockRejectedValueOnce(new Error("boom")).mockResolvedValue({});
     render(<ReplyComposer aid="a1" qid="q1" who="@tunde.a" allow={allow} onPosted={() => {}} onBuy={() => {}} />);
@@ -87,8 +98,9 @@ describe("V-FIX-D: Post without my name on a text reply", () => {
     await userEvent.click(post());
     await waitFor(() => expect(talk.createReply).toHaveBeenCalledTimes(3));
     expect(talk.createReply.mock.calls.map((c) => c[4])).toEqual([true, false, true]);
-    // the retry keeps its Idempotency-Key (same words), so the server cannot post it twice
-    expect(new Set(talk.createReply.mock.calls.map((c) => c[3])).size).toBe(1);
+    // the key belongs to the exact body: each flip of the switch is a new request with a new key
+    const keys = talk.createReply.mock.calls.map((c) => c[3]);
+    expect(new Set(keys).size).toBe(3);
   });
 });
 
@@ -141,8 +153,8 @@ describe("V-FIX-D: Post without my name on a voice reply (VoiceBox)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
     await waitFor(() => expect(onSend).toHaveBeenCalledTimes(2));
     expect(onSend.mock.calls[1][0].anonymous).toBe(false);
-    // both tries are the same recording and the same key
-    expect(onSend.mock.calls[1][0].key).toBe(onSend.mock.calls[0][0].key);
+    // the same recording sent unnamed and then named are two different requests, so two keys
+    expect(onSend.mock.calls[1][0].key).not.toBe(onSend.mock.calls[0][0].key);
   });
 
   it("a box with no switch (an explain-my-vote voice) always sends anonymous false", async () => {

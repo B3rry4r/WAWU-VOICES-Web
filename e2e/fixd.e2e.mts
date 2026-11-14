@@ -90,7 +90,7 @@ try {
       await page.getByTestId('card-saved').waitFor();
       await shot(page, `sharesheet-saved-${w}`);
       const dl2 = page.waitForEvent('download');
-      await page.getByRole('button', { name: /Save the square card instead/ }).click();
+      await page.getByRole('button', { name: /Save the square version instead/ }).click();
       assert.equal((await dl2).suggestedFilename(), 'voices-square-card.png');
       const ev = find(calls, 'POST', '/share/abc1234/events').map((c) => c.body);
       assert.ok(ev.some((b) => b?.kind === 'intent' && b?.target === 'INSTAGRAM_STORIES'), 'no INSTAGRAM_STORIES intent');
@@ -249,6 +249,76 @@ try {
       }
     });
   }
+
+  // ---- round 2
+  await t('390: story and square pictures are shown small, and the saved panel scrolls into view with only true words', async () => {
+    const { page, ctx } = await open(390);
+    await page.goto(`${ORIGIN}/q/q1/a/a1`);
+    await page.getByRole('button', { name: 'Share this voice' }).first().click();
+    await page.getByTestId('card-previews').waitFor();
+    await shot(page, 'r2-sheet-previews-390');
+    const dl = page.waitForEvent('download');
+    await page.getByRole('group', { name: 'Share to' }).getByRole('button', { name: 'Stories' }).click();
+    await dl;
+    const panel = page.getByTestId('card-saved');
+    await panel.waitFor();
+    await page.waitForTimeout(900);
+    const box = await panel.boundingBox();
+    assert.ok(box && box.y + box.height <= 844 + 1 && box.y >= 0, 'panel not inside the first screen: ' + JSON.stringify(box));
+    assert.equal(await page.getByText('Saved to your downloads. Open the app and add it from there.').count(), 1);
+    assert.equal(await page.getByText(/from your photos|Your story\./).count(), 0);
+    await shot(page, 'r2-sheet-saved-390');
+    await ctx.close();
+  });
+  await t('storage full: the screen never says the recording is saved', async () => {
+    const { page, ctx, calls } = await open(390);
+    await page.addInitScript(() => { IDBObjectStore.prototype.put = function () { throw new DOMException('full', 'QuotaExceededError'); }; });
+    await page.goto(`${ORIGIN}/speak`);
+    await recordTake(page);
+    await ctx.setOffline(true);
+    await page.getByRole('button', { name: /^Send/ }).click();
+    await page.getByText(/We could not keep your recording on this device\. Stay on this page/).waitFor();
+    assert.equal(await page.getByText(/is saved on this device/).count(), 0);
+    await shot(page, 'r2-storage-full-390');
+    assert.equal(find(calls, 'POST', '/questions/q1/answers').length, 0);
+    await ctx.close();
+  });
+  await t('two tabs with one kept recording: one clip, one answer request', async () => {
+    const { page, calls, ctx } = await open(390, { free: 5 });
+    await page.goto(`${ORIGIN}/speak`);
+    await recordTake(page);
+    await ctx.setOffline(true);
+    await page.getByRole('button', { name: /^Send/ }).click();
+    await page.getByText(/You are offline/).waitFor();
+    await ctx.setOffline(false);
+    const p2 = await ctx.newPage();
+    await Promise.all([page.goto(`${ORIGIN}/`), p2.goto(`${ORIGIN}/`)]);
+    await page.getByText(/Your saved voice was posted/).waitFor();
+    await p2.getByText(/Your saved voice was posted/).waitFor();
+    assert.equal(find(calls, 'POST', '/voice-clips').length, 1, 'clips: ' + find(calls, 'POST', '/voice-clips').length);
+    assert.equal(find(calls, 'POST', '/questions/q1/answers').length, 1);
+    await ctx.close();
+  });
+  await t('390: the writer\'s own My experience reply does not scroll the page sideways', async () => {
+    const { page, ctx } = await open(390, { replies: [reply({ id: 'rx', author: null, isMine: true, stance: 'EXPERIENCE', body: 'Said without my name.' })] });
+    await page.goto(`${ORIGIN}/q/q1/a/a1`);
+    await page.getByText('Said without my name.').waitFor();
+    const sw = await page.evaluate(() => document.documentElement.scrollWidth);
+    assert.ok(sw <= 390, 'scrollWidth ' + sw);
+    await shot(page, 'r2-thread-writer-390');
+    await ctx.close();
+  });
+  await t('1440: the switch sits above Post, and is inside the first screen', async () => {
+    const { page, ctx } = await open(1440);
+    await page.goto(`${ORIGIN}/q/q1/a/a2`);
+    const sw = page.getByRole('switch', { name: 'Post without my name' });
+    await sw.waitFor();
+    const post = page.getByRole('region', { name: 'Reply' }).getByRole('button', { name: /^Post/ });
+    const a = await sw.boundingBox(); const b = await post.boundingBox();
+    assert.ok(a && b && a.y < b.y && a.y + a.height <= 900, 'switch ' + JSON.stringify(a) + ' post ' + JSON.stringify(b));
+    await shot(page, 'r2-composer-1440');
+    await ctx.close();
+  });
 } finally {
   await browser.close();
 }

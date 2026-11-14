@@ -20,7 +20,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
   onVoice?: () => void;
 }) {
   const busy = useRef(false);
-  const key = useRef<{ text: string; k: string } | null>(null);
+  const key = useRef<{ text: string; anon: boolean; st: ReplyStance; k: string } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const slot = `r:${aid}`;
@@ -39,9 +39,11 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
     busy.current = true;
     setSending(true);
     setMsg(null);
-    if (!key.current || key.current.text !== body) key.current = { text: body, k: uuidKey() };
+    // The Idempotency-Key belongs to the exact body: the words, the stance and the switch. Flip the switch and it is a new request.
+    const anonNow = anon.ref.current;
+    if (!key.current || key.current.text !== body || key.current.anon !== anonNow || key.current.st !== st) key.current = { text: body, anon: anonNow, st, k: uuidKey() };
     try {
-      await api.createReply(aid, st, body, key.current.k, anon.ref.current);
+      await api.createReply(aid, st, body, key.current.k, anonNow);
       saveTyped(slot, "");
       anon.clear();
       key.current = null;
@@ -58,6 +60,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
   }
   return (
     <div className="grid gap-2">
+      <AnonymousSwitch on={anon.on} disabled={sending} onChange={anon.set} />
       <Composer
         freeLeft={allow.freePostsRemaining}
         maxChars={c.textMaxChars}
@@ -76,7 +79,6 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
         onVoice={onVoice ?? false}
         onSubmit={() => void send()}
       />
-      <AnonymousSwitch on={anon.on} disabled={sending} onChange={anon.set} />
       {sending ? <Banner tone="info">Posting your reply.</Banner> : null}
       {msg ? <Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner> : null}
     </div>

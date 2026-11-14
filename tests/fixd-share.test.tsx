@@ -61,7 +61,10 @@ describe("V-FIX-D: the share sheet draws the board's targets and offers both car
     expect(fetchMock).toHaveBeenCalledWith(LINK.storyImageUrl);
     expect(downloads).toEqual(["voices-story-card.png"]);
     expect(screen.getByText("Your story card is saved")).toBeTruthy();
-    expect(screen.getByText(/Open Instagram and tap Your story/)).toBeTruthy();
+    // only what is true: a picture was downloaded
+    expect(screen.getByText("Saved to your downloads. Open the app and add it from there.")).toBeTruthy();
+    expect(screen.queryByText(/Your story\./)).toBeNull();
+    expect(screen.queryByText(/from your photos/)).toBeNull();
     expect(recordShareEvent).toHaveBeenCalledWith("abc1234", "intent", "INSTAGRAM_STORIES");
   });
 
@@ -70,19 +73,50 @@ describe("V-FIX-D: the share sheet draws the board's targets and offers both car
     const btn = await screen.findByRole("button", { name: "Stories" });
     await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false));
     await userEvent.click(btn);
-    await userEvent.click(await screen.findByRole("button", { name: /Save the square card instead/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Save the square version instead/ }));
     await waitFor(() => expect(downloads).toEqual(["voices-story-card.png", "voices-square-card.png"]));
     expect(fetchMock).toHaveBeenLastCalledWith(LINK.squareImageUrl);
-    expect(screen.getByText("Your square card is saved")).toBeTruthy();
+    expect(screen.getByText("Your square version is saved")).toBeTruthy();
   });
 
-  it("TikTok saves the story card with TikTok's own how-to", async () => {
+  it("TikTok saves the story card and says only that it was saved", async () => {
     render(<ShareSheet objectType="PROFILE" objectId="o1" onClose={() => {}} />);
     const btn = await screen.findByRole("button", { name: "TikTok" });
     await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false));
     await userEvent.click(btn);
-    await waitFor(() => expect(screen.getByText(/Open TikTok/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Saved to your downloads. Open the app and add it from there.")).toBeTruthy());
+    expect(screen.queryByText(/Open TikTok/)).toBeNull();
     expect(recordShareEvent).toHaveBeenCalledWith("abc1234", "intent", "TIKTOK");
+  });
+
+  it("the story and square pictures are shown small before anything is saved", async () => {
+    render(<ShareSheet objectType="QUESTION" objectId="o1" onClose={() => {}} />);
+    const box = await screen.findByTestId("card-previews");
+    expect(box.querySelectorAll("img")).toHaveLength(2);
+    expect(screen.getByAltText("The story version of the card")).toBeTruthy();
+    expect(screen.getByAltText("The square version of the card")).toBeTruthy();
+  });
+
+  it("where the device can share a file, Stories, TikTok and Status hand the picture to the phone's own share sheet and download nothing", async () => {
+    const share = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "canShare", { value: () => true, configurable: true });
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    render(<ShareSheet objectType="ANSWER" objectId="o1" onClose={() => {}} />);
+    await screen.findByTestId("card-previews");
+    for (const name of ["Stories", "TikTok"]) {
+      await userEvent.click(screen.getByRole("button", { name }));
+      await waitFor(() => expect(share).toHaveBeenCalledTimes(name === "Stories" ? 1 : 2));
+    }
+    await userEvent.click(screen.getByRole("link", { name: "Status" }));
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(3));
+    const files = share.mock.calls.map((c) => (c as unknown as [{ files: File[] }])[0].files[0].name);
+    expect(files).toEqual(["voices-story-card.png", "voices-story-card.png", "voices-story-card.png"]);
+    expect(downloads).toEqual([]);
+    expect(screen.queryByTestId("card-saved")).toBeNull();
+    // and More is offered because the browser can share
+    expect(screen.getByRole("button", { name: "More" })).toBeTruthy();
+    Reflect.deleteProperty(navigator, "canShare");
+    Reflect.deleteProperty(navigator, "share");
   });
 
   it("a card that is not ready says so in plain words and saves nothing", async () => {

@@ -36,6 +36,16 @@ export function rememberShareVisit(code: string | null | undefined): void {
   write({ code: c });
 }
 
+/** The share link this visit came by, or null. */
+export function shareVisitCode(): string | null {
+  return read()?.code ?? null;
+}
+
+/** A kept recording that came from a share link was posted later (by the outbox, possibly in another visit): count it once. */
+export function publishedFromLink(code: string | null | undefined): void {
+  if (code && CODE_RE.test(code)) void recordShareEvent(code, "published_from_link");
+}
+
 /** The recorder started (the microphone is open). Once per visit. */
 export function noteRecordingStarted(): void {
   const v = read();

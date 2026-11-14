@@ -20,6 +20,8 @@ export interface Draft {
   /** "Post without my name" and the mood word as they stood when Send was tapped, so a later send says the same. */
   anonymous?: boolean;
   mood?: string | null;
+  /** The share link this recording came from, so the post can be counted as published from it (V-FIX-D). */
+  shareCode?: string | null;
 }
 
 /** A saved recording is removed after 7 days (addendum 7.7). */
@@ -72,13 +74,16 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
   }
 }
 
-export async function saveDraft(input: Draft): Promise<void> {
+/** True when the recording is really kept on this device. False means only this page holds it (storage blocked or full). */
+export async function saveDraft(input: Draft): Promise<boolean> {
   const d: Draft = { ...input, owner: currentOwner() };
   memory = d;
   try {
     await run("readwrite", (s) => s.put(d, ID));
+    return true;
   } catch {
-    /* blocked storage: the memory copy still serves this page */
+    /* blocked or full storage: the memory copy still serves this page, and the caller says so */
+    return false;
   }
 }
 
