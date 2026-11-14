@@ -2,7 +2,7 @@
 
 /** The pre-filled message, word for word as the launch spec gives it. `word` is the mood word in capitals. */
 export function inviteMessage(word: string, link: string): string {
-  return `I just shared how I feel about Nigeria on VOICES.\n\nI feel ${word} about Nigeria. What about you?\n\nAdd your voice in 10 seconds: ${link}`;
+  return `I just shared how I feel about Nigeria on VOICES.\n\nI feel ${word} about Nigeria. What about you?\n\nAdd your voice in a minute or less: ${link}`;
 }
 
 /** WhatsApp opens with the text filled in; the person still taps Send. */

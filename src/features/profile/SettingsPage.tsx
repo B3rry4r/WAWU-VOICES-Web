@@ -217,6 +217,12 @@ function SettingsBody({ me }: { me: Me }) {
         </div>
       </Section>
 
+      <Section id="v-h" title="Verification">
+        <div className="pf-card">
+          <Link href="/verify" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Get verified</b><span>Send your ID and a utility bill. A tick shows beside your name.</span></span><Icon name="chevron-right" size={20} /></Link>
+        </div>
+      </Section>
+
       <Section id="ad-h" title="Ads and privacy">
         <div className="pf-card">
           <Switch label="Share my word" detail="The friend whose link brought you here sees your word. Nobody else does." checked={s.shareMyWord} onChange={(v) => patch({ shareMyWord: v })} />

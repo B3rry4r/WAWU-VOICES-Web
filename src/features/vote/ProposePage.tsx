@@ -8,6 +8,8 @@ import { ApiError } from "@/lib/api/client";
 import { createProposal, getPublicConfig, getQuestion, newKey, similarProposals } from "@/lib/api/vote";
 import type { Proposal, Question } from "@/lib/api/vote";
 import { AppBar, DeskBack, LoadFailed, Loading, shortCount, useLoadWhen, useSignedIn } from "./chrome";
+import { useVerified } from "@/features/verify/useVerification";
+import { VERIFICATION_REQUIRED_WORDS } from "@/features/verify/words";
 import { DeskRail } from "./DeskRail";
 import { useWhatNextPrompt } from "./prompt";
 import { ProposalItem } from "./WhatNextPage";
@@ -23,6 +25,7 @@ export function ProposePage({ questionId }: { questionId: string }) {
   const params = useSearchParams();
   const improves = params?.get("improves") ?? undefined;
   const signedIn = useSignedIn();
+  const verified = useVerified(signedIn);
   const load = useLoadWhen(
     async () => {
       const [question, config] = await Promise.all([getQuestion(questionId), getPublicConfig().catch(() => null)]);
@@ -125,7 +128,11 @@ export function ProposePage({ questionId }: { questionId: string }) {
           {improves ? <Banner tone="info" title="You are improving a proposal">Your version will show as an improvement on it.</Banner> : null}
           {signNote ? <Banner tone="info" title="Sign in to post" onClose={() => setSignNote(false)}>Reading is open to everyone. Posting a proposal needs an account.</Banner> : null}
           {error ? <Banner tone="danger" title={error.title} onClose={() => setError(null)}>{error.text}</Banner> : null}
+          {verified === false ? (
+            <Banner tone="info" title="Verification needed" action="Get verified" onAction={() => router.push("/verify")}>{VERIFICATION_REQUIRED_WORDS}</Banner>
+          ) : (
           <Composer label="Your proposal" placeholder="Who should do what, and by when?" meter={false} value={text} onChange={onInput} busy={sending} onSubmit={(t) => void post(t)} maxChars={load.state === "ready" ? load.data.max : undefined} onVoice={false} />
+          )}
           {similar.length ? (
             <section className="vt-similar" aria-label="This looks like a proposal already here">
               <div className="vt-similar__head">

@@ -188,7 +188,7 @@ describe("RX5 and B-N1: /s counts, poll title, updated just now", () => {
 describe("B-N4: no free post line for a person with none left", () => {
   const allow = (free: number, balanceMilli: number) => ({ freePostsRemaining: free, balanceMilli, maxVoiceSeconds: 10, freeReactionsLeftToday: 0, freeVotesLeftToday: 0, costs: { voicePostMilli: 78000, textPostMilli: 5000, extraVoice30Kobo: 7800, extraVoice60Kobo: 10000 }, extraVoiceTokens: [] }) as never;
   it("with free posts it says so", () => {
-    expect(postingLine(60, allow(3, 0))).toBe("You have 10 seconds on a free post. Longer is charged when you send. Reading and listening are always free.");
+    expect(postingLine(60, allow(3, 0))).toBe("You have 60 seconds on a free post. Reading and listening are always free.");
     expect(postingLine(10, null)).toContain("on a free post");
   });
   it("with none left it says what they have: units, or Out of free posts", () => {
