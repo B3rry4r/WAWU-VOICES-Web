@@ -3432,6 +3432,170 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dm/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a direct message (text or voice) to one member
+         * @description V-DM. Only a verified sender (for now: a member with a running subscription), else 403 verification_required. A person who blocked you (or whom you blocked), who turned messages off, or who is suspended, banned or leaving is one and the same 403 `dm_unavailable` ("This person is not taking messages."), so nobody can tell which; an unknown or deleted person is 404. The price comes from config (dm.text_price_milli per 150 characters in proportion, dm.voice_price_milli per voice message; both 0 by default, so messages are free); text is at most 5,000 characters and voice at most dm.voice_max_seconds (60). Free posts do not apply. A direct message has its own cap, dm.messages_per_day (100 by default, 429 DAILY_LIMIT_REACHED), and does not count toward the 20 posts a day. Charged only when the message is stored: a refused or failed send costs nothing, and a repeat with the same Idempotency-Key returns the first result and charges once. Auth: signed in with a finished profile. Rate limit: 30 a minute per account (config ratelimit.dm_per_min).
+         */
+        post: operations["sendDm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a direct message costs and how many I have left today
+         * @description Auth: signed in with a finished profile.
+         */
+        get: operations["getDmLimits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/conversations/{conversationId}/mute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Mute a chat
+         * @description A muted chat does not raise the unread number or dot. The other person is not told. Idempotent. Auth: signed in with a finished profile.
+         */
+        put: operations["muteDm"];
+        post?: never;
+        /**
+         * Unmute a chat
+         * @description Auth: signed in with a finished profile.
+         */
+        delete: operations["unmuteDm"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My conversations, latest first
+         * @description Newest message first. Each has the last message preview and my unread count. People who blocked me, or whom I blocked, are left out. Auth: signed in with a finished profile.
+         */
+        get: operations["listDmConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/conversations/{conversationId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The messages of one conversation, newest first
+         * @description 404 for a conversation I am not in, and for one with a person who blocked me or whom I blocked. Auth: signed in with a finished profile.
+         */
+        get: operations["listDmMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/conversations/{conversationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark everything sent to me in a conversation as read
+         * @description Auth: signed in with a finished profile.
+         */
+        post: operations["markDmRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many direct messages I have not read
+         * @description The number on the messages icon. The web polls it every 30 seconds while the page is open. Auth: signed in with a finished profile.
+         */
+        get: operations["getDmUnread"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/with/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The person, my conversation with them and whether they take messages
+         * @description For the Message button on a profile and the new-message screen. 404 for myself, a banned or a deleted account. Auth: signed in with a finished profile.
+         */
+        get: operations["getDmWith"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3461,7 +3625,7 @@ export interface components {
         /** @enum {string} */
         ContentStatus: "PUBLISHED" | "HELD" | "REMOVED" | "DELETED_BY_AUTHOR";
         /** @enum {string} */
-        ReportTargetType: "ANSWER" | "REPLY" | "PROPOSAL" | "RESULT_POST" | "USER";
+        ReportTargetType: "ANSWER" | "REPLY" | "PROPOSAL" | "RESULT_POST" | "USER" | "DM_MESSAGE";
         /** @enum {string} */
         ReportReason: "HATE_OR_HARASSMENT" | "THREAT_OR_VIOLENCE" | "SCAM_OR_SPAM" | "PERSONAL_DETAILS" | "MISLEADING_NEWS_TAG" | "ABOUT_ME" | "OTHER";
         /** @enum {string} */
@@ -3499,7 +3663,7 @@ export interface components {
         /** @enum {string} */
         ResultThreadStatus: "SCHEDULED" | "OPEN" | "CLOSED";
         /** @enum {string} */
-        VoiceClipPurpose: "ANSWER" | "REPLY" | "PROPOSAL" | "VOTE_EXPLANATION" | "VOICE_CARD" | "OVERRIDE_NOTE" | "AD_AUDIO";
+        VoiceClipPurpose: "ANSWER" | "REPLY" | "PROPOSAL" | "VOTE_EXPLANATION" | "VOICE_CARD" | "OVERRIDE_NOTE" | "AD_AUDIO" | "DM";
         /** @enum {string} */
         VoiceClipStatus: "PENDING_UPLOAD" | "UPLOADED" | "PROCESSING" | "READY" | "FAILED" | "REMOVED";
         /** @enum {string} */
@@ -3513,7 +3677,7 @@ export interface components {
         /** @enum {string} */
         ProposalStanceKind: "SUPPORT" | "CHALLENGE";
         /** @enum {string} */
-        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "QUESTION_NOT_OPEN" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required";
+        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "QUESTION_NOT_OPEN" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required" | "dm_unavailable";
         /** @description The one error shape. Every non-2xx response is this. */
         Error: {
             error: components["schemas"]["ErrorBody"];
@@ -3691,6 +3855,7 @@ export interface components {
             notifyCategoryAlerts: boolean;
             dailyQuestionMinute: number;
             shareMyWord: boolean;
+            dmOpen: boolean;
         };
         UpdateSettingsRequest: {
             language?: string;
@@ -3709,6 +3874,7 @@ export interface components {
             notifyCategoryAlerts?: boolean;
             dailyQuestionMinute?: number;
             shareMyWord?: boolean;
+            dmOpen?: boolean;
         };
         CategoryFollow: {
             /** Format: uuid */
@@ -3952,7 +4118,8 @@ export interface components {
             items: components["schemas"]["Proposal"][];
         };
         AppealRequest: {
-            targetType: components["schemas"]["ReportTargetType"];
+            /** @enum {string} */
+            targetType: "ANSWER" | "REPLY" | "PROPOSAL" | "RESULT_POST" | "USER" | "DM_MESSAGE";
             /** Format: uuid */
             targetId: string;
             note: string;
@@ -5768,8 +5935,116 @@ export interface components {
             changed: boolean;
             charge: components["schemas"]["TextFixCharge"];
         };
+        DmPerson: {
+            /** Format: uuid */
+            id: string;
+            handle: string;
+            displayName: string | null;
+            place: string | null;
+            verified: boolean;
+            deleted: boolean;
+        };
+        /** @description Play it with GET /voice-clips/{id}/play: only the two people in the conversation may. */
+        DmClip: {
+            /** Format: uuid */
+            id: string;
+            durationMs: number | null;
+            peaks: number[] | null;
+            transcript: string | null;
+        };
+        /** @description A removed message (status REMOVED or DELETED_BY_AUTHOR) has no body and no clip. costMilli is only on my own messages, readAt only on my own and says when the other person opened it. */
+        DmMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            senderId: string;
+            mine: boolean;
+            kind: components["schemas"]["PostKind"];
+            body: string | null;
+            clip: components["schemas"]["DmClip"] | null;
+            status: components["schemas"]["ContentStatus"];
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            costMilli?: number;
+            /** Format: date-time */
+            readAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description A TEXT message has body (1 to 5,000 characters) and no clipId. A VOICE message has clipId (a READY clip made with purpose DM, at most dm.voice_max_seconds, 60 by default) and no body. */
+        SendDmRequest: {
+            /** Format: uuid */
+            toUserId: string;
+            kind: components["schemas"]["PostKind"];
+            body?: string;
+            /** Format: uuid */
+            clipId?: string;
+        };
+        DmCharge: {
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            costMilli: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number;
+        };
+        DmSendReceipt: {
+            message: components["schemas"]["DmMessage"];
+            charge: components["schemas"]["DmCharge"];
+        };
+        DmLastMessage: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["PostKind"];
+            preview: string;
+            mine: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DmConversation: {
+            /** Format: uuid */
+            id: string;
+            person: components["schemas"]["DmPerson"];
+            lastMessage: components["schemas"]["DmLastMessage"] | null;
+            unread: number;
+            muted: boolean;
+            acceptsMessages: boolean;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DmMessagePage: {
+            person: components["schemas"]["DmPerson"];
+            muted: boolean;
+            acceptsMessages: boolean;
+            items: components["schemas"]["DmMessage"][];
+            nextCursor: string | null;
+        };
+        /** @description acceptsMessages is false when the person turned messages off, is suspended, or either of us blocked the other. */
+        DmWith: {
+            person: components["schemas"]["DmPerson"];
+            /** Format: uuid */
+            conversationId: string | null;
+            acceptsMessages: boolean;
+        };
+        /** @description What a direct message costs now, from config. 0 is free (the owner's design says messages are free). textPriceMilli is per textPriceChars characters, in proportion; voicePriceMilli is for one voice message of any length up to voiceMaxSeconds. */
+        DmLimits: {
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            textPriceMilli: number;
+            textPriceChars: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            voicePriceMilli: number;
+            voiceMaxSeconds: number;
+            maxChars: number;
+            messagesPerDay: number;
+            messagesLeftToday: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number;
+        };
         BlockedUserPage: {
             items: components["schemas"]["BlockedUser"][];
+            nextCursor: string | null;
+        };
+        DmConversationPage: {
+            items: components["schemas"]["DmConversation"][];
             nextCursor: string | null;
         };
         CalendarPage: {
@@ -11310,6 +11585,235 @@ export interface operations {
             429: components["responses"]["E429"];
             502: components["responses"]["E502"];
             503: components["responses"]["E503"];
+        };
+    };
+    sendDm: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendDmRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmSendReceipt"];
+                };
+            };
+            401: components["responses"]["E401"];
+            402: components["responses"]["E402"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getDmLimits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmLimits"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    muteDm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    unmuteDm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    listDmConversations: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmConversationPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    listDmMessages: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmMessagePage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    markDmRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getDmUnread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCount"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getDmWith: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmWith"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
         };
     };
 }

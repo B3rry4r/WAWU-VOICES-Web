@@ -45,6 +45,7 @@ export const FULLSCREEN_PREFIXES = [
   "/units/buy",
   "/units/done",
   "/units/out-of-posts",
+  "/messages/*",
 ] as const;
 
 /**

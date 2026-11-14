@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Banner, Button, EmptyState, Icon, IconButton, NotFoundState, Sheet, Tabs } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { isSignedIn } from "@/lib/api/auth";
+import { useMe } from "./useMe";
 import { blockUser, createReport, getPerson, listPersonReplies, searchPeople, unblockUser, type PublicProfile, type ReportReason } from "@/lib/api/profile";
 import { ShareSheet } from "@/features/share";
 import { PagedList } from "./PostList";
@@ -34,7 +35,8 @@ const REASONS: { id: ReportReason; label: string }[] = [
   { id: "OTHER", label: "Something else" },
 ];
 
-function MoreSheet({ person, onClose, onBlocked }: { person: PublicProfile["profile"]; onClose: () => void; onBlocked: () => void }) {
+function MoreSheet({ person, canMessage, onClose, onBlocked }: { person: PublicProfile["profile"]; canMessage: boolean; onClose: () => void; onBlocked: () => void }) {
+  const router = useRouter();
   const [step, setStep] = useState<"menu" | "report" | "sent">("menu");
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [note, setNote] = useState("");
@@ -60,6 +62,7 @@ function MoreSheet({ person, onClose, onBlocked }: { person: PublicProfile["prof
     <Sheet title={step === "report" ? "Report " + handle : step === "sent" ? "Thanks. We got your report." : handle} onClose={onClose}>
       {step === "menu" ? (
         <div className="pf-menu">
+          {canMessage ? <button type="button" className="pf-menu__row" onClick={() => router.push(`/messages/new/${person.id}`)}><Icon name="message-circle" size={22} />{"Message " + handle}</button> : null}
           <button type="button" className="pf-menu__row" onClick={() => setStep("report")}><Icon name="flag" size={22} />{"Report " + handle}</button>
           <button type="button" className="pf-menu__row" onClick={block} disabled={busy}><Icon name="shield-alert" size={22} />{"Block " + handle}</button>
           <p className="pf-hint">Blocking hides you and them from each other.</p>
@@ -105,6 +108,7 @@ export function PersonPage({ segment }: { segment: string }) {
   const [more, setMore] = useState(false);
   const [share, setShare] = useState(false);
   const [version, setVersion] = useState(0);
+  const { state: meState } = useMe();
 
   const load = useCallback(() => {
     setWho({ status: "loading" }); setData(null); setError(null);
@@ -136,6 +140,8 @@ export function PersonPage({ segment }: { segment: string }) {
   if (who.status === "loading" || !data) return <div className="pf-page">{back}<LoadingBlock /></div>;
 
   const profile = data.profile;
+  // Your own profile offers no Message, Report or Block on yourself.
+  const isMine = meState.status === "ready" && meState.me.profile?.id === profile.id;
   const handle = "@" + profile.handle;
   return (
     <div className="pf-page">
@@ -145,7 +151,7 @@ export function PersonPage({ segment }: { segment: string }) {
         {/* lead ruling WF, 6 Nov (B-M5): the share icon (390) and "Share profile" (1440), with PROFILE links. */}
         {data.isBlockedByMe ? null : <IconButton className="pf-only-phone" icon="share-2" label={`Share ${handle}’s profile`} onClick={() => setShare(true)} />}
         {data.isBlockedByMe ? null : <Button className="pf-only-desk" variant="secondary" icon="share-2" onClick={() => setShare(true)}>Share profile</Button>}
-        {signedIn ? <IconButton icon="ellipsis" label={`More: report or block ${handle}`} onClick={() => setMore(true)} /> : null}
+        {signedIn && !isMine ? <IconButton icon="ellipsis" label={`More: report or block ${handle}`} onClick={() => setMore(true)} /> : null}
       </header>
       <ProfileCard profile={profile} stats={[{ label: "Voices", value: voicesOf(profile) }, { label: "Reactions", value: profile.reactionsReceived }, { label: "Replies", value: profile.replyCount }]} />
       {data.isBlockedByMe ? (
@@ -164,7 +170,7 @@ export function PersonPage({ segment }: { segment: string }) {
         </>
       )}
       {share ? <ShareSheet objectType="PROFILE" objectId={profile.id} onClose={() => setShare(false)} /> : null}
-      {more ? <MoreSheet person={profile} onClose={() => setMore(false)} onBlocked={() => setVersion((v) => v + 1)} /> : null}
+      {more ? <MoreSheet person={profile} canMessage={!data.isBlockedByMe} onClose={() => setMore(false)} onBlocked={() => setVersion((v) => v + 1)} /> : null}
     </div>
   );
 }
