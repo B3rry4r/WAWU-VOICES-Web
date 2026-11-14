@@ -136,7 +136,7 @@ function Body({ state, onState }: { state: VerificationState; onState: (s: Verif
       return (
         <Card label="Verified" className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-verified-bg text-verified" aria-hidden="true">
+            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-success-bg text-success" aria-hidden="true">
               <Icon name="badge-check" size={22} />
             </span>
             <h2 className="m-0 text-body-strong">You are verified</h2>
