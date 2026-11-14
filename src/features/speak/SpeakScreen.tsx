@@ -19,6 +19,8 @@ import "./speak.css";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { voicesOf } from "@/lib/feed-format";
+import { AnonymousSwitch } from "@/features/talk/AnonymousSwitch";
+import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 
 /** Where a guest goes to sign in. The recording waits in this browser (IndexedDB) until they are back (V-19). */
 export const JOIN_PATH = "/join";
@@ -113,6 +115,9 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const freeLeft = allowance?.freePostsRemaining ?? freeTotal;
   const offers = config?.extraVoice ?? [];
   const qid = question?.id;
+  // V-ANON: "Post without my name", off until turned on; a choice made before signing in or buying tokens is kept for this question.
+  const [anon, setAnon] = useState(false);
+  useEffect(() => { if (qid) setAnon(readAnonPref(qid)); }, [qid]);
   const open = question ? question.status === "LIVE" : true;
 
   const pushNote = (n: Note) => setNotes((l) => [...l.filter((x) => x.text !== n.text), n]);
@@ -357,7 +362,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word);
+      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anon);
+      writeAnonPref(qid, false);
       await clearDraft();
       writePick(qid, null);
       sendState.current = null;
@@ -500,6 +506,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         <>
           <TakePlayer blob={take.blob} seconds={take.seconds} peaks={take.peaks} />
           <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>
+          <AnonymousSwitch onForest on={anon} disabled={!!sending} onChange={(v) => { setAnon(v); if (qid) writeAnonPref(qid, v); }} />
           {signedIn === false ? <p className="sp-fine">You sign in to post. Your recording waits here in this browser.</p> : null}
           {sending ? (
             <div className="sp-progress" role="status" aria-live="polite">
