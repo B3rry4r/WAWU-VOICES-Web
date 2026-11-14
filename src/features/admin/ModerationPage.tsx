@@ -303,7 +303,7 @@ function Panel(p: {
       {d.transcript || c.body ? (
         <div className="rounded-l bg-surface-2 p-4">
           <Eyebrow className="mb-2">{d.transcript ? "Transcript" : "The post"}</Eyebrow>
-          <p className="m-0 text-body text-ink">{d.transcript ?? c.body}</p>
+          <p className="m-0 whitespace-pre-wrap break-words text-body text-ink">{d.transcript ?? c.body}</p>
         </div>
       ) : null}
 
