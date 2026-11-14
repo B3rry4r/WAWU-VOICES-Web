@@ -115,3 +115,13 @@ export function SelectField({ id, label, value, onChange, options }: { id: strin
     </div>
   );
 }
+
+/** A plain table that stacks into cards below 1024 px (see TableFrame). The caller brings its own frame. */
+export function StackTable({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const ref = useStackLabels();
+  return (
+    <table ref={ref} className={`ad-stack ${className}`}>
+      {children}
+    </table>
+  );
+}

@@ -95,7 +95,7 @@ function PoolBody() {
         title="Question pool"
         sub="Questions with no week and no day yet. Nothing here is public until it is put on a day and that day opens."
       />
-      <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start gap-5">
+      <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <AddBox categories={categories} onAdded={changed} />
         <div className="flex min-w-0 flex-col gap-3">
           {saved ? <SavedLine>{saved}</SavedLine> : null}
@@ -197,7 +197,7 @@ function PoolRow({ q, categories, categoryName, onChanged }: { q: AdminQuestion;
   const close = () => setMode("view");
   return (
     <li className="border-t border-line px-4 py-3 first:border-t-0">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+      <div className="grid grid-cols-1 items-start gap-3 dt:grid-cols-[minmax(0,1fr)_auto]">
         <div className="min-w-0">
           <div className="text-body text-ink">{q.text}</div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -206,7 +206,7 @@ function PoolRow({ q, categories, categoryName, onChanged }: { q: AdminQuestion;
           </div>
         </div>
         {mode === "view" ? (
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex flex-wrap gap-2 dt:justify-end">
             {flash ? (
               <Button size="s" onClick={() => setMode("flash")}>Start now</Button>
             ) : (

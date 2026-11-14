@@ -38,7 +38,7 @@ export function PageHead({ eyebrow, title, sub, right }: { eyebrow?: string; tit
         <h1 className="m-0 mt-1 font-display text-display-xl text-ink">{title}</h1>
         {sub ? <p className="m-0 mt-1 text-body text-ink-2">{sub}</p> : null}
       </div>
-      {right ? <div className="flex flex-none flex-wrap items-center gap-3 pt-2">{right}</div> : null}
+      {right ? <div className="flex flex-none flex-wrap items-center gap-3 pt-2 max-dt:w-full">{right}</div> : null}
     </header>
   );
 }

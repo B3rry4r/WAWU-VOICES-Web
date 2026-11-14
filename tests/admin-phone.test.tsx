@@ -141,3 +141,14 @@ describe("the shared table on a phone", () => {
     expect(row.children[0].getAttribute("data-label")).toBe("Person");
   });
 });
+
+describe("a list page's detail on a phone", () => {
+  it("the pane has a way back, and shows its content", async () => {
+    const { DetailPane } = await import("@/features/admin/ui");
+    const closed = vi.fn();
+    render(<DetailPane open onClose={closed}><p>the detail</p></DetailPane>);
+    expect(screen.getByText("the detail")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Back to the list" }));
+    expect(closed).toHaveBeenCalledOnce();
+  });
+});

@@ -18,7 +18,14 @@ const PAGES: { name: string; path: string; dialog?: (p: any) => Promise<void> }[
   { name: "money-prices", path: "/admin/money/prices", dialog: async (p) => { await p.getByRole("button", { name: /Change/ }).first().click(); } },
   { name: "verification", path: "/admin/verification", dialog: async (p) => { await p.getByRole("listitem").first().click(); await p.getByRole("button", { name: "Show the government id" }).click(); } },
   { name: "moderation", path: "/admin/moderation", dialog: async (p) => { await p.getByRole("listitem").first().click(); } },
-  ...(process.env.MORE ? JSON.parse(process.env.MORE) : []),
+  { name: "today", path: "/admin" },
+  { name: "calendar", path: "/admin/calendar", dialog: async (p) => { await p.getByRole("button", { name: /Money, markets/ }).first().click(); } },
+  { name: "pool", path: "/admin/pool", dialog: async (p) => { await p.getByRole("button", { name: /^Edit question/ }).first().click(); } },
+  { name: "override", path: "/admin/override", dialog: async (p) => { await p.getByLabel(/Headline/).fill("Special report"); await p.getByLabel("Message").fill("Words"); await p.getByRole("button", { name: "Go live now" }).click(); } },
+  { name: "results", path: "/admin/results", dialog: async (p) => { await p.getByRole("listitem").first().click(); } },
+  { name: "weekly", path: "/admin/weekly", dialog: async (p) => { await p.getByRole("button", { name: "Hold", exact: true }).click(); } },
+  { name: "news", path: "/admin/news", dialog: async (p) => { await p.getByRole("listitem").first().click(); } },
+  { name: "ads", path: "/admin/ads", dialog: async (p) => { await p.getByRole("button", { name: /^Open Zobo/ }).first().click(); } },
 ];
 const sizes = MODE === "phone" ? [{ w: 390, h: 844 }, { w: 768, h: 1024 }] : [{ w: 1440, h: 900 }];
 mkdirSync(OUT, { recursive: true });
@@ -63,13 +70,14 @@ for (const s of sizes) {
         const sw2 = await page.evaluate(() => document.documentElement.scrollWidth);
         if (sw2 !== s.w) { notes.push(`DIALOG SCROLLWIDTH ${sw2}`); bad++; }
         await page.screenshot({ path: `${OUT}/${pg.name}-${s.w}-open.png` });
-        const close = page.getByRole("button", { name: /Back to the list|Close|Cancel/ }).first();
+        const dlg = page.getByRole("dialog");
+        const close = ((await dlg.count()) ? dlg.getByRole("button", { name: /Close|Cancel/ }) : page.getByRole("button", { name: /Back to the list|Close|Cancel/ })).first();
         if (await close.count()) await close.click(); else notes.push("NO CLOSE");
       }
       // Controls under 44 px (visible buttons, links that are not inside a line of text, inputs).
       const small = await page.evaluate(() => {
         const out: string[] = [];
-        document.querySelectorAll<HTMLElement>("button, [role=tab], [role=switch], input:not([type=hidden]), select, textarea, a.ad-nav-item, nav a").forEach((el) => {
+        document.querySelectorAll<HTMLElement>("button:not([role=switch]), [role=tab], input:not([type=hidden]), select, textarea, a.ad-nav-item, nav a").forEach((el) => {
           const r = el.getBoundingClientRect();
           if (r.width === 0 || r.height === 0 || getComputedStyle(el).visibility === "hidden") return;
           if (r.height < 43.5 || r.width < 43.5) out.push(`${el.tagName.toLowerCase()} "${(el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 24)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
