@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home for guests, desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="max-width: 1440px; margin: 0 auto; min-height: 1100px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--bg); color: var(--ink); font-family: var(--font-body);">
+<div style="flex: 0 0 248px; display: flex;">
+<x-import component-from-global-scope="Voices.SideNav" active="home"></x-import>
+</div>
+<div style="flex: 999 1 640px; min-width: 0; display: flex; flex-wrap: wrap; align-items: stretch;">
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 0 32px 48px;">
+<div style="max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 76px;">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="Voices.SearchField" placeholder="Search questions and voices"></x-import></div>
+<button type="button" class="vx-country" aria-label="Country: Nigeria. Change country"><x-import component-from-global-scope="Voices.Icon" name="globe" size="{{s18}}"></x-import>Nigeria<x-import component-from-global-scope="Voices.Icon" name="chevron-down" size="{{s16}}"></x-import></button>
+<a href="../talk/Messages-1440.dc.html" class="vx-iconbtn" aria-label="Messages"><x-import component-from-global-scope="Voices.Icon" name="message-circle" size="{{s22}}"></x-import></a>
+<a href="Notifications-1440.dc.html" class="vx-iconbtn" aria-label="Notifications"><x-import component-from-global-scope="Voices.Icon" name="bell" size="{{s22}}"></x-import></a>
+<x-import component-from-global-scope="Voices.Button" variant="secondary" href="SignIn-1440.dc.html">Sign in</x-import>
+</div>
+<h1 style="margin: 4px 0 0; font: 400 32px/36px var(--font-display);">What is Nigeria saying today?</h1>
+<x-import component-from-global-scope="Voices.QuestionHero" question="When salary arrives, how many hours pass before it disappears?" voices="{{heroVoices}}" closes-in="9h" avatars="{{heroAvatars}}" speak-label="Add your voice"></x-import>
+<x-import component-from-global-scope="Voices.Banner" tone="info" icon="headphones" title="Listening is free.">Read, listen, like and share without an account. We only ask for your number when you post, react or vote.</x-import>
+<div class="vx-tiles">
+<x-import component-from-global-scope="Voices.TopicTile" tone="sky" category="Power and light" question="Has bad electricity cost you a job, a client or an exam?" voices="{{n2400}}"></x-import>
+<x-import component-from-global-scope="Voices.TopicTile" tone="coral" category="Faith" question="Is a tithe a rule or a choice?" voices="{{n6100}}"></x-import>
+</div>
+<section aria-labelledby="h-top" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<h2 id="h-top" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">Top voices on today's question</h2>
+<a href="../talk/Question-1440.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font: 600 14px/20px var(--font-body); text-decoration: none;">See all 12,480</a>
+</div>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{a1}}" time="2h" place="Ibadan" voice="{{v1}}" likes="{{n1284}}" replies="{{n86}}" reactions="{{r1}}" label="Most Relatable"></x-import>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{a2}}" time="3h" place="Lagos" text="Salary lands at 9am. By 11am rent contribution, my mother's upkeep and generator fuel have taken their share. What is left is for transport and prayer." likes="{{n642}}" replies="{{n41}}" reactions="{{r2}}"></x-import>
+</section>
+</div>
+</main>
+<aside aria-label="This week" style="flex: 0 0 340px; box-sizing: border-box; border-left: 1px solid var(--line); padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+<x-import component-from-global-scope="Voices.TopicOfWeek" variant="rail" title="Are You Really Fine? You Dey Okay?" meta="Week 1 · 10 questions · Poll open"></x-import>
+<x-import component-from-global-scope="Voices.TrendingList" items="{{trend}}"></x-import>
+<x-import component-from-global-scope="Voices.AdSlot" brand="Zobo Fresh" headline="Cold zobo, delivered in 30 minutes" body="Lagos Island and Lekki only." cta="Order now"></x-import>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1487}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+s16: 16, s18: 18, s22: 22,
+heroVoices: 12480,
+heroAvatars: ['Ada Okafor', 'Tunde Adewale', 'Kemi Bello'],
+a1: { handle: '@tunde.a', name: 'Tunde Adewale' },
+v1: { duration: 9, seed: 4, transcript: 'Two hours. I counted. Rent contribution first, then my mother, then the generator man is already at the gate.' },
+r1: { top: ['💯', '😢', '🔥'], total: 2310 },
+a2: { handle: '@kemi.b', name: 'Kemi Bello' },
+r2: { top: ['❤️', '😂'], total: 905 },
+trend: [
+{ question: 'Should failed transfers be refunded within one hour by law?', voices: 8200, category: 'Money' },
+{ question: 'Is a tithe a rule or a choice?', voices: 6100, category: 'Faith' },
+{ question: 'Should the minimum wage rise automatically with inflation?', voices: 4900, category: 'Work' }
+],
+n1284: 1284, n86: 86, n642: 642, n41: 41, n2400: 2400, n6100: 6100
+};
+}
+}
+</script>
+</body>
+</html>

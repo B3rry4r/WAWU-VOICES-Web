@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin: Override the day</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+.c-switch{appearance:none;-webkit-appearance:none;margin:0;flex:none;width:52px;height:32px;border-radius:999px;background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--line-strong);position:relative;cursor:pointer;transition:background-color var(--dur-fast) var(--ease-standard)}
+.c-switch::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:var(--surface);box-shadow:var(--shadow-1);transition:transform var(--dur-fast) var(--ease-spring)}
+.c-switch:checked{background:var(--green);box-shadow:none}
+.c-switch:checked::after{transform:translateX(20px)}
+.c-switch:focus-visible{outline:2px solid transparent;box-shadow:var(--shadow-focus)}
+</style>
+</helmet>
+<div style="min-height: 900px; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-wrap: wrap; align-items: stretch;">
+<nav aria-label="Admin" style="flex: 0 0 248px; box-sizing: border-box; padding: 24px 16px; background: var(--forest); color: var(--on-forest); display: flex; flex-direction: column; gap: 4px;">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 12px 24px;"><x-import component-from-global-scope="Voices.Logo" tone="white" alt="VOICES"></x-import><span style="padding: 2px 8px; border-radius: var(--radius-xs); background: var(--forest-2); color: var(--sun); font: 700 12px/16px var(--font-body); letter-spacing: 0.08em; text-transform: uppercase;">Admin</span></div>
+<a href="AdminToday-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="house" size="{{n20}}"></x-import>Today</a>
+<a href="AdminOverride-1440.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); background: var(--forest-2); color: var(--on-forest); font: 700 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="clock" size="{{n20}}"></x-import>Override the day</a>
+<a href="AdminCalendar-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="clipboard-list" size="{{n20}}"></x-import>Topic calendar</a>
+<a href="AdminNews-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="shield-check" size="{{n20}}"></x-import><span style="flex: 1;">News tags</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">6</span></a>
+<a href="AdminResults-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="badge-check" size="{{n20}}"></x-import><span style="flex: 1;">Posted results</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">14</span></a>
+<a href="AdminAds-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="megaphone" size="{{n20}}"></x-import><span style="flex: 1;">Adverts and surveys</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">3</span></a>
+<a href="AdminWeekly-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="chart-column" size="{{n20}}"></x-import><span style="flex: 1;">Weekly report</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">1</span></a>
+<a href="AdminModeration-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="shield-alert" size="{{n20}}"></x-import><span style="flex: 1;">Moderation</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">49</span></a>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 16px 12px 0; border-top: 1px solid var(--forest-2);"><x-import component-from-global-scope="Voices.Avatar" name="Ngozi Eze" tone="coral"></x-import><span style="display: flex; flex-direction: column;"><b style="font: 700 14px/20px var(--font-body);">Ngozi E.</b><span style="font: 500 13px/18px var(--font-body); color: var(--on-forest-2);">Editor and admin</span></span></div>
+</nav>
+<main style="flex: 999 1 640px; min-width: 0; box-sizing: border-box; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 24px;">
+<header style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;">
+<div style="flex: 1 1 360px; display: flex; flex-direction: column; gap: 6px;">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Monday 30 Nov 2026 · Week 3</span>
+<h1 style="margin: 0; font: 400 36px/40px var(--font-display); letter-spacing: -0.01em;">Override the day</h1>
+</div>
+<span style="display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: var(--radius-pill); background: var(--success-bg); color: var(--success); font: 700 14px/20px var(--font-body);"><x-import component-from-global-scope="Voices.Icon" name="circle-check" size="{{n18}}"></x-import>Normal flow running</span>
+</header>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr)); gap: 24px; align-items: start;">
+<div style="display: flex; flex-direction: column; gap: 20px;">
+<section aria-labelledby="sch-h" style="display: flex; flex-direction: column; gap: 8px; padding: 20px; border-radius: var(--radius-l); background: var(--surface-2);">
+<h2 id="sch-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">Scheduled for today</h2>
+<p style="margin: 0; font: 400 22px/27px var(--font-display);">Which campaign promise have you heard so many times that you can recite it from memory?</p>
+<p style="margin: 0; font: 500 14px/20px var(--font-body); color: var(--ink-2);">Live since 8:00am with 3,482 voices. If you override, it is not lost: it moves to the next free slot.</p>
+</section>
+<section aria-labelledby="rep-h" style="display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="rep-h" style="margin: 0; font: 400 22px/27px var(--font-display);">What goes up instead</h2>
+<x-import component-from-global-scope="Voices.Tabs" variant="segmented" block="{{yes}}" items="{{kinds}}" default-value="text" label="Content type"></x-import>
+<x-import component-from-global-scope="Voices.TextField" label="Headline" default-value="Lagos floods: are you and your family safe?" max-length="{{n120}}"></x-import>
+<x-import component-from-global-scope="Voices.TextField" label="Message" multiline="{{yes}}" default-value="Tell us where you are and what you see. If you are safe, say so, so your people can hear it." hint="Shown under the headline on Home and on the share card."></x-import>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<span style="font: 600 15px/20px var(--font-body);">Editor voice note (optional)</span>
+<x-import component-from-global-scope="Voices.VoicePlayer" duration="{{n14}}" seed="{{n27}}"></x-import>
+</div>
+<x-import component-from-global-scope="Voices.TextField" label="Link (optional)" placeholder="https://" hint="Opens from a button under the message."></x-import>
+</section>
+</div>
+<div style="display: flex; flex-direction: column; gap: 20px;">
+<section aria-labelledby="when-h" style="display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="when-h" style="margin: 0; font: 400 22px/27px var(--font-display);">When and how</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+<x-import component-from-global-scope="Voices.TextField" label="Starts" default-value="Mon 30 Nov, 10:30am"></x-import>
+<x-import component-from-global-scope="Voices.TextField" label="Ends" default-value="Tue 1 Dec, 10:30am" hint="24 hours. You can change it."></x-import>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<span style="font: 600 15px/20px var(--font-body);">The question it replaces</span>
+<x-import component-from-global-scope="Voices.Tabs" variant="segmented" block="{{yes}}" items="{{moves}}" default-value="move" label="The replaced question"></x-import>
+</div>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid var(--line); padding-top: 8px;"><span style="flex: 1; display: flex; flex-direction: column;"><span style="font: 600 15px/21px var(--font-body);">Keep the weekly theme and poll</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">Campaign Season and its poll stay as they are</span></span><input type="checkbox" class="c-switch" role="switch" checked="{{yes}}" read-only="{{yes}}"></label>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid var(--line); padding-top: 8px;"><span style="flex: 1; display: flex; flex-direction: column;"><span style="font: 600 15px/21px var(--font-body);">Emergency: apply now</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">Skips the schedule and goes live at once</span></span><input type="checkbox" class="c-switch" role="switch" checked="{{yes}}" read-only="{{yes}}"></label>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid var(--line); padding-top: 8px;"><span style="flex: 1; display: flex; flex-direction: column;"><span style="font: 600 15px/21px var(--font-body);">Send a push notification</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">To everyone in Nigeria who allows alerts</span></span><input type="checkbox" class="c-switch" role="switch" checked="{{yes}}" read-only="{{yes}}"></label>
+</section>
+<section aria-labelledby="next-h" style="display: flex; flex-direction: column; gap: 4px; padding: 24px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="next-h" class="vx-eyebrow" style="margin: 0 0 8px; color: var(--ink-2);">What happens next</h2>
+<div style="display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line);"><span style="width: 64px; flex: none; font: 700 14px/20px var(--font-body);">Mon 30</span><span style="flex: 1; font: 600 15px/21px var(--font-body); color: var(--green-text);">Your override, 10:30am to 10:30am</span></div>
+<div style="display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line);"><span style="width: 64px; flex: none; font: 700 14px/20px var(--font-body);">Tue 1</span><span style="flex: 1; font: 500 15px/21px var(--font-body);">Which campaign promise have you heard so many times that you can recite it from memory?</span></div>
+<div style="display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line);"><span style="width: 64px; flex: none; font: 700 14px/20px var(--font-body);">Wed 2</span><span style="flex: 1; font: 500 15px/21px var(--font-body);">They can afford billboards, helicopters and rallies. Why can they not afford a working clinic in your area?</span></div>
+<p style="margin: 8px 0 0; font: 500 13px/18px var(--font-body); color: var(--ink-2);">The rest of the week moves forward one day. The flow resumes by itself when the override ends. Every override is logged with who, what, when and what it replaced.</p>
+</section>
+<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+<x-import component-from-global-scope="Voices.Button" variant="destructive" size="l" icon="radio">Go live now</x-import>
+<x-import component-from-global-scope="Voices.Button" variant="secondary" size="l" icon="clock">Schedule instead</x-import>
+<x-import component-from-global-scope="Voices.Button" variant="ghost" size="l">Cancel</x-import>
+</div>
+</div>
+</div>
+<section aria-labelledby="log-h" style="display: flex; flex-direction: column; gap: 8px;">
+<h2 id="log-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">Override log</h2>
+<div style="overflow-x: auto; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<table style="width: 100%; min-width: 760px; border-collapse: collapse; font: 500 14px/20px var(--font-body);">
+<thead><tr style="text-align: left; color: var(--ink-2); font: 700 12px/16px var(--font-body); letter-spacing: 0.08em; text-transform: uppercase;"><th scope="col" style="padding: 12px 16px; border-bottom: 1px solid var(--line);">When</th><th scope="col" style="padding: 12px 16px; border-bottom: 1px solid var(--line);">What went up</th><th scope="col" style="padding: 12px 16px; border-bottom: 1px solid var(--line);">It replaced</th><th scope="col" style="padding: 12px 16px; border-bottom: 1px solid var(--line);">By</th><th scope="col" style="padding: 12px 16px; border-bottom: 1px solid var(--line);">Result</th></tr></thead>
+<tbody>
+<tr><td style="padding: 12px 16px; border-bottom: 1px solid var(--line); white-space: nowrap;">25 Nov, 9:00am</td><td style="padding: 12px 16px; border-bottom: 1px solid var(--line);">Black Friday: post the fake discounts you see today</td><td style="padding: 12px 16px; border-bottom: 1px solid var(--line);">Week 2, question 3 (moved to 26 Nov)</td><td style="padding: 12px 16px; border-bottom: 1px solid var(--line);">Ngozi E.</td><td style="padding: 12px 16px; border-bottom: 1px solid var(--line);">Ran 24 hours</td></tr>
+<tr><td style="padding: 12px 16px; white-space: nowrap;">16 Nov, 7:30am</td><td style="padding: 12px 16px;">Welcome to VOICES (voice note from the editors)</td><td style="padding: 12px 16px;">Nothing, launch day</td><td style="padding: 12px 16px;">Ibrahim S.</td><td style="padding: 12px 16px;">Ended early at 8:00am</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1231}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n14: 14, n18: 18, n20: 20, n27: 27, n120: 120,
+      kinds: [{ id: 'text', label: 'Text', icon: 'message-square' }, { id: 'voice', label: 'Voice', icon: 'mic' }, { id: 'image', label: 'Image', icon: 'eye' }, { id: 'link', label: 'Link', icon: 'link' }],
+      moves: [{ id: 'move', label: 'Move to next slot' }, { id: 'drop', label: 'Drop it' }]
+    };
+  }
+}
+</script>
+</body>
+</html>

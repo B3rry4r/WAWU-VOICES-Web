@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin: News tags</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="min-height: 900px; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-wrap: wrap; align-items: stretch;">
+<nav aria-label="Admin" style="flex: 0 0 248px; box-sizing: border-box; padding: 24px 16px; background: var(--forest); color: var(--on-forest); display: flex; flex-direction: column; gap: 4px;">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 12px 24px;"><x-import component-from-global-scope="Voices.Logo" tone="white" alt="VOICES"></x-import><span style="padding: 2px 8px; border-radius: var(--radius-xs); background: var(--forest-2); color: var(--sun); font: 700 12px/16px var(--font-body); letter-spacing: 0.08em; text-transform: uppercase;">Admin</span></div>
+<a href="AdminToday-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="house" size="{{n20}}"></x-import>Today</a>
+<a href="AdminOverride-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="clock" size="{{n20}}"></x-import>Override the day</a>
+<a href="AdminCalendar-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="clipboard-list" size="{{n20}}"></x-import>Topic calendar</a>
+<a href="AdminNews-1440.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); background: var(--forest-2); color: var(--on-forest); font: 700 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="shield-check" size="{{n20}}"></x-import><span style="flex: 1;">News tags</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">6</span></a>
+<a href="AdminResults-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="badge-check" size="{{n20}}"></x-import><span style="flex: 1;">Posted results</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">14</span></a>
+<a href="AdminAds-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="megaphone" size="{{n20}}"></x-import><span style="flex: 1;">Adverts and surveys</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">3</span></a>
+<a href="AdminWeekly-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="chart-column" size="{{n20}}"></x-import><span style="flex: 1;">Weekly report</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">1</span></a>
+<a href="AdminModeration-1440.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: var(--radius-m); color: var(--on-forest-2); font: 600 15px/20px var(--font-body); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="shield-alert" size="{{n20}}"></x-import><span style="flex: 1;">Moderation</span><span style="min-width: 28px; box-sizing: border-box; padding: 0 8px; border-radius: var(--radius-pill); background: var(--green); color: var(--on-green); font: 700 12px/22px var(--font-body); text-align: center;">49</span></a>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 16px 12px 0; border-top: 1px solid var(--forest-2);"><x-import component-from-global-scope="Voices.Avatar" name="Ngozi Eze" tone="coral"></x-import><span style="display: flex; flex-direction: column;"><b style="font: 700 14px/20px var(--font-body);">Ngozi E.</b><span style="font: 500 13px/18px var(--font-body); color: var(--on-forest-2);">Editor and admin</span></span></div>
+</nav>
+<main style="flex: 999 1 640px; min-width: 0; box-sizing: border-box; padding: 28px 40px 48px; display: flex; flex-direction: column; gap: 24px;">
+<header style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;">
+<div style="flex: 1 1 360px; display: flex; flex-direction: column; gap: 6px;">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Editorial · 6 waiting</span>
+<h1 style="margin: 0; font: 400 36px/40px var(--font-display); letter-spacing: -0.01em;">News tag review</h1>
+<p style="margin: 0; font: 500 15px/21px var(--font-body); color: var(--ink-2);">Only editors can mark Verified News, and only with a named source. Every change is logged and the poster is told why.</p>
+</div>
+</header>
+<x-import component-from-global-scope="Voices.Tabs" items="{{tabs}}" default-value="flagged" label="News queues"></x-import>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 24px; align-items: start;">
+<section aria-label="Queue" style="display: flex; flex-direction: column; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden;">
+<a href="#" aria-current="true" style="display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; background: var(--mint); box-shadow: inset 0 0 0 2px var(--green-text); color: var(--ink); text-decoration: none;"><span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><x-import component-from-global-scope="Voices.NewsTag" kind="unverified"></x-import><span style="font: 700 13px/18px var(--font-body); color: var(--danger);">Flagged as misleading 4 times</span></span><span style="font: 600 15px/21px var(--font-body);">Fuel queues are back on Ikorodu Road this morning. Two stations closed, the one selling has a line to the bus stop.</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">@chidi.e · 3h · 412 likes</span></a>
+<a href="#" style="display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none;"><span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><x-import component-from-global-scope="Voices.NewsTag" kind="gossip"></x-import><span style="font: 700 13px/18px var(--font-body); color: var(--danger);">Flagged 2 times</span></span><span style="font: 600 15px/21px var(--font-body);">They are saying the Super Eagles coach will go after Saturday. Na gist o, I no fit confirm am.</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">@sola.m · 2h · flags say it is labelled right</span></a>
+<a href="#" style="display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none;"><span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><x-import component-from-global-scope="Voices.NewsTag" kind="unverified"></x-import><span style="font: 700 13px/18px var(--font-body); color: var(--verified);">Source sent for Verified News</span></span><span style="font: 600 15px/21px var(--font-body);">Market levy notice pasted at Oyingbo market gate this morning. Traders say it starts Monday.</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">@blessing.u · 5h · source photo attached</span></a>
+<a href="#" style="display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none;"><span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><x-import component-from-global-scope="Voices.NewsTag" kind="unverified"></x-import><span style="font: 700 13px/18px var(--font-body); color: var(--danger);">Flagged 3 times</span></span><span style="font: 600 15px/21px var(--font-body);">My cousin works at the bank and says transfers will be free from next month.</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">@emeka.n · 6h · reads like rumour</span></a>
+</section>
+<section aria-labelledby="dec-h" style="display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="dec-h" style="margin: 0; font: 400 22px/27px var(--font-display);">Decide the tag</h2>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{chidi}}" time="3h" place="Lagos" tag="unverified" text="Fuel queues are back on Ikorodu Road this morning. Two stations closed, the one selling has a line to the bus stop." likes="{{n412}}" replies="{{n58}}" compact="{{yes}}"></x-import>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: var(--radius-m); background: var(--surface-2);">
+<span class="vx-eyebrow" style="color: var(--ink-2);">What the flags say</span>
+<span style="font: 500 14px/20px var(--font-body);">"Old news, the queue cleared at 9am" (2) · "Not news, just complaining" (1) · "Wrong road" (1)</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<span style="font: 600 15px/20px var(--font-body);">Tag</span>
+<x-import component-from-global-scope="Voices.Tabs" variant="segmented" block="{{yes}}" items="{{tags}}" default-value="unverified" label="Choose the tag"></x-import>
+</div>
+<x-import component-from-global-scope="Voices.TextField" label="Source link (needed for Verified News)" placeholder="https://" hint="A named source WAWU checked. Shown on the post."></x-import>
+<x-import component-from-global-scope="Voices.TextField" label="Reason (the poster sees this)" default-value="A first-hand report of an event. The tag stays Unverified News until a source confirms it." multiline="{{yes}}"></x-import>
+<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+<x-import component-from-global-scope="Voices.Button" icon="check">Keep Unverified News</x-import>
+<x-import component-from-global-scope="Voices.Button" variant="secondary">Change tag</x-import>
+<x-import component-from-global-scope="Voices.Button" variant="ghost" icon="flag">Send to moderation</x-import>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line);">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Change log</span>
+<span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">8:15am · @chidi.e chose Unverified News when posting</span>
+<span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">10:02am · 4th flag, sent to this queue</span>
+</div>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1254}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n18: 18, n20: 20, n58: 58, n412: 412,
+      chidi: { handle: '@chidi.e', name: 'Chidi Eze' },
+      tabs: [{ id: 'flagged', label: 'Flagged as misleading', count: 4 }, { id: 'verify', label: 'Asking for Verified News', count: 2 }, { id: 'log', label: 'All changes' }],
+      tags: [{ id: 'verified', label: 'Verified News', icon: 'shield-check' }, { id: 'unverified', label: 'Unverified News', icon: 'shield-alert' }, { id: 'gossip', label: 'Gossip', icon: 'messages-square' }]
+    };
+  }
+}
+</script>
+</body>
+</html>

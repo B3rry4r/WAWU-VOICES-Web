@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Newsroom, desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+.vx-sidenav{border-right:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+.c-switch{appearance:none;-webkit-appearance:none;margin:0;flex:none;width:52px;height:32px;border-radius:999px;background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--line-strong);position:relative;cursor:pointer;transition:background-color var(--dur-fast) var(--ease-standard)}
+.c-switch::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:var(--surface);box-shadow:var(--shadow-1);transition:transform var(--dur-fast) var(--ease-spring)}
+.c-switch:checked{background:var(--green);box-shadow:none}
+.c-switch:checked::after{transform:translateX(20px)}
+.c-switch:focus-visible{outline:2px solid transparent;box-shadow:var(--shadow-focus)}
+</style>
+</helmet>
+<div style="min-height: 1100px; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-wrap: wrap; align-items: stretch;">
+<div style="flex: 0 0 248px; box-sizing: border-box; border-right: 1px solid var(--line);">
+<x-import component-from-global-scope="Voices.SideNav" active="discover" units="12.5" free-left="{{n7}}" style="height: 900px;"></x-import>
+</div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 0 32px 48px; display: flex; flex-direction: column; align-items: center;">
+<div style="width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 20px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 76px;">
+<x-import component-from-global-scope="Voices.SearchField" placeholder="Search questions, voices and handles" label="Search VOICES" shortcut="/" style="width: 100%;"></x-import>
+<button type="button" class="vx-country" aria-label="Country: Nigeria. Change country"><x-import component-from-global-scope="Voices.Icon" name="globe" size="{{n18}}"></x-import>Nigeria<x-import component-from-global-scope="Voices.Icon" name="chevron-down" size="{{n16}}"></x-import></button>
+<a class="vx-iconbtn" href="../talk/Messages-1440.dc.html" aria-label="Messages"><x-import component-from-global-scope="Voices.Icon" name="message-circle"></x-import></a>
+<x-import component-from-global-scope="Voices.IconButton" icon="bell" label="Notifications" dot="{{yes}}"></x-import>
+</div>
+<a href="Discover-1440.dc.html" style="display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 44px; font: 600 15px/20px var(--font-body); color: var(--ink-2); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="arrow-left" size="{{n18}}"></x-import>Discover</a>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h1 style="margin: 0; font: 400 36px/40px var(--font-display); letter-spacing: -0.01em;">Newsroom</h1>
+<p style="margin: 0; font: 400 16px/24px var(--font-body); color: var(--ink-2);">Every news post shows one tag, so you know what is confirmed and what is talk. Only WAWU editors can mark a post Verified News.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px;" role="group" aria-label="Filter by tag">
+<x-import component-from-global-scope="Voices.TopicChip" label="All" selected="{{yes}}" count="{{n218}}"></x-import>
+<x-import component-from-global-scope="Voices.TopicChip" label="Verified News" icon="shield-check" count="{{n24}}" new-count="{{n2}}"></x-import>
+<x-import component-from-global-scope="Voices.TopicChip" label="Unverified News" icon="shield-alert" count="{{n61}}"></x-import>
+<x-import component-from-global-scope="Voices.TopicChip" label="Gossip" icon="messages-square" count="{{n133}}"></x-import>
+</div>
+<article style="display: flex; flex-direction: column; gap: 8px;">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Roads and travel</span>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{desk}}" time="40 min" tag="verified" text="One lane of Third Mainland Bridge closes this weekend for repairs, from Friday 11pm to Monday 5am. Plan another route if you can." likes="{{n2140}}" replies="{{n312}}" reactions="{{r1}}"></x-import>
+<a href="#" style="display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 32px; font: 600 14px/20px var(--font-body); color: var(--verified); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="link" size="{{n16}}"></x-import>Source: Lagos State Ministry of Works statement</a>
+</article>
+<article style="display: flex; flex-direction: column; gap: 8px;">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Money</span>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{musa}}" time="1h" place="Kano" tag="unverified" voice="{{v1}}" likes="{{n230}}" replies="{{n19}}" unfolded="{{yes}}"></x-import>
+</article>
+<article style="display: flex; flex-direction: column; gap: 8px;">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Sport</span>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{sola}}" time="2h" place="Port Harcourt" tag="gossip" text="They are saying the Super Eagles coach will go after Saturday. Na gist o, I no fit confirm am." likes="{{n518}}" replies="{{n144}}" reactions="{{r2}}"></x-import>
+</article>
+<article style="display: flex; flex-direction: column; gap: 8px;">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Money</span>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{chidi}}" time="3h" place="Lagos" tag="unverified" text="Fuel queues are back on Ikorodu Road this morning. Two stations closed, the one selling has a line to the bus stop." likes="{{n412}}" replies="{{n58}}"></x-import>
+</article>
+</div>
+</main>
+<aside aria-label="About the tags" style="flex: 1 1 340px; max-width: 340px; box-sizing: border-box; padding: 24px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 16px;">
+<section aria-labelledby="tags-h" style="display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="tags-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">What the tags mean</h2>
+<x-import component-from-global-scope="Voices.NewsTag" kind="verified" with-note="{{yes}}"></x-import>
+<x-import component-from-global-scope="Voices.NewsTag" kind="unverified" with-note="{{yes}}"></x-import>
+<x-import component-from-global-scope="Voices.NewsTag" kind="gossip" with-note="{{yes}}"></x-import>
+<p style="margin: 0; font: 500 13px/18px var(--font-body); color: var(--ink-2);">Think a tag is wrong? Open the post and flag it as misleading. An editor checks every flag.</p>
+</section>
+<section aria-labelledby="follow-h" style="display: flex; flex-direction: column; gap: 4px; padding: 20px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="follow-h" class="vx-eyebrow" style="margin: 0 0 8px; color: var(--ink-2);">Follow by tag</h2>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; font: 600 15px/20px var(--font-body);"><span style="flex: 1;">Verified News</span><input type="checkbox" class="c-switch" role="switch" checked="{{yes}}" read-only="{{yes}}"></label>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; font: 600 15px/20px var(--font-body);"><span style="flex: 1;">Unverified News</span><input type="checkbox" class="c-switch" role="switch"></label>
+<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; font: 600 15px/20px var(--font-body);"><span style="flex: 1;">Gossip</span><input type="checkbox" class="c-switch" role="switch"></label>
+<p style="margin: 4px 0 0; font: 500 13px/18px var(--font-body); color: var(--ink-2);">We tell you when a post with that tag goes up. Never on the lock screen.</p>
+</section>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1694}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n2: 2, n7: 7, n16: 16, n18: 18, n19: 19, n24: 24, n58: 58, n61: 61, n133: 133, n144: 144, n218: 218, n230: 230, n312: 312, n412: 412, n518: 518, n2140: 2140,
+      desk: { handle: '@voices.desk', name: 'VOICES Desk' },
+      musa: { handle: '@musa.d', name: 'Musa Danjuma' },
+      sola: { handle: '@sola.m', name: 'Sola Martins' },
+      chidi: { handle: '@chidi.e', name: 'Chidi Eze' },
+      v1: { duration: 24, seed: 7, transcript: 'They said fuel would come down after the new refinery. My transport money is still double what it was in January.' },
+      r1: { top: ['👏', '💯'], total: 1260 },
+      r2: { top: ['😂', '💀', '🤔'], total: 2004 }
+    };
+  }
+}
+</script>
+</body>
+</html>

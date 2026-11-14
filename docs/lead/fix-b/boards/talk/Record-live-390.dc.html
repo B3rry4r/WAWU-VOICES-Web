@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Record: recording</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+.vq-flat .vx-answer{background:transparent;box-shadow:none;border-radius:0;padding:16px}
+.vq-flat .vx-poll{background:transparent;box-shadow:none;border-radius:0;padding:0}
+.vq-stage-c::before{top:16px}
+.vq-stage-c .vx-stage__dot{width:32px;height:32px}
+.vq-stage-c .vx-stage__step{gap:2px;font-size:12px;line-height:16px}
+.vq-stage-c .vx-stage__step[aria-current="step"] .vx-stage__dot{box-shadow:0 0 0 3px var(--mint)}
+.vq-main{scrollbar-width:none}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="width: 390px; height: 844px; overflow: hidden; position: relative; box-sizing: border-box; background: var(--forest); color: var(--on-forest); font-family: var(--font-body); display: flex; flex-direction: column">
+<header style="flex: none; position: relative; z-index: 7; padding-top: 47px; background: var(--forest); "><div style="display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 8px; box-sizing: border-box"><a href="Question-390.dc.html" aria-label="Close the recorder" style="width: 44px; height: 44px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--on-forest); text-decoration: none; background: transparent; border: 0; margin: 0; padding: 0; cursor: pointer"><x-import component-from-global-scope="Voices.Icon" name="x" size="{{s24}}"></x-import></a><div style="flex: 1; min-width: 0; display: flex; flex-direction: column; padding-left: 4px"><span style="font: 700 17px/22px var(--font-body); color: var(--on-forest); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Speak</span><span style="font: 500 13px/17px var(--font-body); color: var(--on-forest-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Today’s question</span></div></div></header>
+<main class="vq-main" style="flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 24px; box-sizing: border-box"><div><div style="display: flex; flex-direction: column; gap: 12px; padding: 0 0 8px"><section class="vx-rec" aria-label="Voice recorder"><div class="vx-rec__top"><span class="vx-rec__dot">Recording</span></div><p class="vx-rec__q">When salary arrives, how many hours pass before it disappears?</p><div class="vx-rec__stage"><svg class="vx-rec__ring" viewBox="0 0 208 208" aria-hidden="true"><circle class="bg" cx="104" cy="104" r="98"></circle><circle class="fg" cx="104" cy="104" r="98" stroke-dasharray="615.75" stroke-dashoffset="246.30"></circle></svg><button type="button" class="vx-rec__btn is-recording" aria-label="Stop recording"><x-import component-from-global-scope="Voices.Icon" name="square" size="{{s34}}" fill="{{yes}}"></x-import></button></div><span class="vx-rec__timer" aria-hidden="true">0:04</span><div class="vx-rec__live" aria-hidden="true"><i style="height: 18px"></i><i style="height: 21px"></i><i style="height: 19px"></i><i style="height: 18px"></i><i style="height: 25px"></i><i style="height: 23px"></i><i style="height: 24px"></i><i style="height: 31px"></i><i style="height: 28px"></i><i style="height: 34px"></i><i style="height: 25px"></i><i style="height: 36px"></i><i style="height: 39px"></i><i style="height: 21px"></i><i style="height: 37px"></i><i style="height: 42px"></i><i style="height: 35px"></i><i style="height: 22px"></i><i style="height: 40px"></i><i style="height: 33px"></i><i style="height: 21px"></i><i style="height: 29px"></i><i style="height: 32px"></i><i style="height: 25px"></i><i style="height: 19px"></i><i style="height: 28px"></i><i style="height: 22px"></i><i style="height: 15px"></i></div><p class="vx-rec__hint" aria-live="polite"><b>4 seconds left</b>. It stops by itself at 10.</p></section></div></div></main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false, "section": "Theme"}, "$preview": {"width": 390, "height": 844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var dark = this.props.dark ?? false;
+    return Object.assign({ theme: dark ? 'dark' : 'light', noop: function () {} }, {"yes": true, "no": false, "s14": 14, "s16": 16, "s18": 18, "s20": 20, "s22": 22, "s24": 24, "s28": 28, "s32": 32, "s36": 36, "s44": 44, "fl0": 0, "fl1": 1, "fl2": 2, "fl3": 3, "fl4": 4, "fl5": 5, "fl6": 6, "fl7": 7, "fl8": 8, "fl9": 9, "fl10": 10, "w35": 3.5, "freeLeft": 7, "stageCounts": {"speak": "12.5K", "discuss": "3.1K", "vote": "9.7K", "next": "214"}, "vSpeak": [], "vDiscuss": ["speak"], "vVote": ["speak", "discuss"], "trending": [{"question": "Should failed transfers be refunded within one hour by law?", "voices": 8200, "category": "Money"}, {"question": "Is a tithe a rule or a choice?", "voices": 6100, "category": "Faith"}, {"question": "Should the minimum wage rise automatically with inflation?", "voices": 4900, "category": "Work"}], "trendingElection": [{"question": "Will you vote on Saturday, or have you given up? Why?", "voices": 18400, "category": "Election"}, {"question": "What do you fear most about Election Day: violence, long queues, vote buying or manipulation?", "voices": 11200, "category": "Election"}, {"question": "If your vote does not count, why do politicians fight so hard for it?", "voices": 7600, "category": "Election"}], "pollOpts": [{"id": "a", "label": "Pay salaries on time, every time", "votes": 4260}, {"id": "b", "label": "Pay a real year-end bonus", "votes": 2930}, {"id": "c", "label": "Publish clear pay scales", "votes": 1370}, {"id": "d", "label": "End unpaid overtime", "votes": 1120}], "flashOpts": [{"id": "yes", "label": "Yes, for every day it is late", "votes": 3104}, {"id": "week", "label": "Only after the first week", "votes": 1210}, {"id": "no", "label": "No, just pay on time", "votes": 586}], "a1": {"author": {"handle": "@tunde.a", "name": "Tunde Adewale"}, "time": "2h", "place": "Ibadan", "voice": {"duration": 9, "seed": 4, "transcript": "Two hours. I counted. Landlord, school fees and my brother’s hospital bill. I did not even feel it arrive."}, "likes": 1284, "replies": 86, "reactions": {"top": ["💯", "😢", "🔥"], "total": 2310}, "label": "Most Relatable"}, "a2": {"author": {"handle": "@chioma.e", "name": "Chioma Eze"}, "time": "3h", "place": "Owerri", "text": "Salary lands at 9am. By 11am rent contribution, my mother’s upkeep and generator fuel have taken their share. What is left is for transport and prayer.", "likes": 642, "replies": 41, "reactions": {"top": ["❤️", "😂"], "total": 905}}, "a3": {"author": {"handle": "@musa.d", "name": "Musa Danjuma"}, "time": "1h", "place": "Kano", "voice": {"duration": 10, "seed": 9, "transcript": "Mine does not even reach my account. The cooperative deduction, the loan app and the thrift contribution take it at source."}, "likes": 388, "replies": 132, "reactions": {"top": ["🤔", "👎", "💯"], "total": 1120}, "label": "Most Debated"}, "a4": {"author": {"handle": "@kemi.b", "name": "Kemi Bello"}, "time": "5m", "place": "Abuja", "text": "Three days if I do not buy fuel. One day if I do.", "likes": 12, "replies": 2}, "n8": 8, "n10": 10, "tokens": [{"name": "Up to 30 seconds", "detail": "₦150 for one message"}, {"name": "Up to 1 minute", "detail": "₦200 for one message"}], "vFromDiscuss": ["discuss"]});
+  }
+}
+</script>
+</body>
+</html>

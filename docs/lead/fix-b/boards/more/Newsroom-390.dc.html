@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Newsroom, phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+.c-scroll{scrollbar-width:none}.c-scroll::-webkit-scrollbar{display:none}.c-scroll>*,.c-scroll>.sc-host-x>*{flex-shrink:0}.c-hs{scrollbar-width:none}.c-hs::-webkit-scrollbar{display:none}
+.c-tabbar .vx-bottombar{margin:0;border-radius:0;box-shadow:none;background:none}
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-direction: column;">
+<header style="flex: none; display: flex; align-items: center; gap: 4px; box-sizing: border-box; height: 103px; padding: 47px 8px 0; background: var(--bg);">
+<x-import component-from-global-scope="Voices.IconButton" icon="arrow-left" label="Back to Discover"></x-import>
+<h1 style="flex: 1; margin: 0; font: 400 24px/28px var(--font-display);">Newsroom</h1>
+<x-import component-from-global-scope="Voices.IconButton" icon="info" label="What the tags mean"></x-import>
+</header>
+<main class="c-scroll" style="flex: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 4px 16px 40px; display: flex; flex-direction: column; gap: 16px;">
+<p style="margin: 0; font: 400 16px/24px var(--font-body); color: var(--ink-2);">Every news post shows one tag, so you know what is confirmed and what is talk. Only WAWU editors can mark a post Verified News.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px;" role="group" aria-label="Filter by tag">
+<x-import component-from-global-scope="Voices.TopicChip" label="All" selected="{{yes}}"></x-import>
+<x-import component-from-global-scope="Voices.TopicChip" label="Verified News" icon="shield-check"></x-import>
+<x-import component-from-global-scope="Voices.TopicChip" label="Unverified News" icon="shield-alert"></x-import>
+<x-import component-from-global-scope="Voices.TopicChip" label="Gossip" icon="messages-square"></x-import>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 14px; border-radius: var(--radius-m); background: var(--surface-2);">
+<x-import component-from-global-scope="Voices.Icon" name="bell" size="{{n18}}"></x-import>
+<span style="flex: 1; font: 500 14px/20px var(--font-body);">You follow <b>Verified News</b></span>
+<button type="button" style="appearance: none; border: 0; background: none; padding: 0 4px; min-height: 44px; font: 600 14px/20px var(--font-body); color: var(--green-text); cursor: pointer;">Change</button>
+</div>
+<article style="display: flex; flex-direction: column; gap: 8px;">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Roads and travel</span>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{desk}}" time="40 min" tag="verified" text="One lane of Third Mainland Bridge closes this weekend for repairs, from Friday 11pm to Monday 5am. Plan another route if you can." likes="{{n2140}}" replies="{{n312}}" reactions="{{r1}}"></x-import>
+<a href="#" style="display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 32px; font: 600 14px/20px var(--font-body); color: var(--verified); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="link" size="{{n16}}"></x-import>Source: Lagos State Ministry of Works statement</a>
+</article>
+<article style="display: flex; flex-direction: column; gap: 8px;">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Money</span>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{musa}}" time="1h" place="Kano" tag="unverified" voice="{{v1}}" likes="{{n230}}" replies="{{n19}}"></x-import>
+</article>
+<article style="display: flex; flex-direction: column; gap: 8px;">
+<span class="vx-eyebrow" style="color: var(--ink-2);">Sport</span>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{sola}}" time="2h" place="Port Harcourt" tag="gossip" text="They are saying the Super Eagles coach will go after Saturday. Na gist o, I no fit confirm am." likes="{{n518}}" replies="{{n144}}" reactions="{{r2}}"></x-import>
+</article>
+</main>
+<div class="c-tabbar" style="flex: none; position: relative; z-index: 5; background: var(--surface); box-shadow: 0 -1px 0 var(--line); padding-bottom: 20px;">
+<x-import component-from-global-scope="Voices.BottomNav" active="discover"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n16: 16, n18: 18, n19: 19, n144: 144, n230: 230, n312: 312, n518: 518, n2140: 2140,
+      desk: { handle: '@voices.desk', name: 'VOICES Desk' },
+      musa: { handle: '@musa.d', name: 'Musa Danjuma' },
+      sola: { handle: '@sola.m', name: 'Sola Martins' },
+      v1: { duration: 24, seed: 7, transcript: 'They said fuel would come down after the new refinery. My transport money is still double what it was in January.' },
+      r1: { top: ['👏', '💯'], total: 1260 },
+      r2: { top: ['😂', '💀', '🤔'], total: 2004 }
+    };
+  }
+}
+</script>
+</body>
+</html>

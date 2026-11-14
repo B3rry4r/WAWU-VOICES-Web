@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>News post, phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+.c-scroll{scrollbar-width:none}.c-scroll::-webkit-scrollbar{display:none}.c-scroll>*,.c-scroll>.sc-host-x>*{flex-shrink:0}.c-hs{scrollbar-width:none}.c-hs::-webkit-scrollbar{display:none}
+.c-tabbar .vx-bottombar{margin:0;border-radius:0;box-shadow:none;background:none}
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-direction: column;">
+<header style="flex: none; display: flex; align-items: center; gap: 4px; box-sizing: border-box; height: 103px; padding: 47px 8px 0; background: var(--bg);">
+<x-import component-from-global-scope="Voices.IconButton" icon="arrow-left" label="Back to the Newsroom"></x-import>
+<span style="flex: 1; font: 700 16px/20px var(--font-body); color: var(--ink-2);">Newsroom</span>
+<x-import component-from-global-scope="Voices.IconButton" icon="share-2" label="Share this post"></x-import>
+</header>
+<main class="c-scroll" style="flex: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 4px 16px 40px; display: flex; flex-direction: column; gap: 16px;">
+<a href="#" style="display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: var(--radius-m); background: var(--surface-2); color: var(--ink); text-decoration: none;"><span class="vx-eyebrow" style="color: var(--ink-2);">Answering</span><span style="font: 400 18px/23px var(--font-display);">The fare to your village doubled for the same bumpy road. Who approved that?</span></a>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{chidi}}" time="3h" place="Lagos" tag="unverified" text="Fuel queues are back on Ikorodu Road this morning. Two stations closed, the one selling has a line to the bus stop." likes="{{n412}}" replies="{{n58}}" reactions="{{r1}}"></x-import>
+<div style="display: flex; align-items: center; gap: 8px; font: 500 13px/18px var(--font-body); color: var(--ink-2);"><x-import component-from-global-scope="Voices.Icon" name="clock" size="{{n16}}"></x-import>Tag chosen by @chidi.e when posting, 8:15am</div>
+<section aria-labelledby="flag-h" style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<x-import component-from-global-scope="Voices.NewsTag" kind="unverified" with-note="{{yes}}"></x-import>
+<div style="height: 1px; background: var(--line);"></div>
+<h2 id="flag-h" style="margin: 0; font: 700 16px/22px var(--font-body);">Is this tag wrong?</h2>
+<p style="margin: 0; font: 400 15px/22px var(--font-body); color: var(--ink-2);">Flag it. An editor reviews every flag, and the poster is told if the tag changes.</p>
+<div style="display: flex;"><x-import component-from-global-scope="Voices.Button" variant="secondary" icon="flag">Flag as misleading</x-import></div>
+</section>
+<section aria-labelledby="rep-h" style="display: flex; flex-direction: column; gap: 12px;">
+<h2 id="rep-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">58 replies</h2>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{kemi}}" time="2h" place="Ikeja" text="Same at Ojodu Berger at 7am. I counted forty cars before I gave up and took okada." likes="{{n96}}" replies="{{n4}}"></x-import>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{emeka}}" time="1h" place="Ketu" text="I passed there at 9. Queue dey, but e dey move. Station by the bus stop is selling." likes="{{n41}}" replies="{{n2}}"></x-import>
+</section>
+</main>
+<div class="c-tabbar" style="flex: none; position: relative; z-index: 5; background: var(--surface); box-shadow: 0 -1px 0 var(--line); padding-bottom: 20px;">
+<x-import component-from-global-scope="Voices.BottomNav" active="discover"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n2: 2, n4: 4, n16: 16, n41: 41, n58: 58, n96: 96, n412: 412,
+      chidi: { handle: '@chidi.e', name: 'Chidi Eze' },
+      kemi: { handle: '@kemi.b', name: 'Kemi Bello' },
+      emeka: { handle: '@emeka.n', name: 'Emeka Nwosu' },
+      r1: { top: ['😮', '😢'], total: 188 }
+    };
+  }
+}
+</script>
+</body>
+</html>

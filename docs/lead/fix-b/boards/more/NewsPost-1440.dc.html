@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>News post, desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+.vx-sidenav{border-right:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="min-height: 1100px; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-wrap: wrap; align-items: stretch;">
+<div style="flex: 0 0 248px; box-sizing: border-box; border-right: 1px solid var(--line);">
+<x-import component-from-global-scope="Voices.SideNav" active="discover" units="12.5" free-left="{{n7}}" style="height: 900px;"></x-import>
+</div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 0 32px 48px; display: flex; flex-direction: column; align-items: center;">
+<div style="width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 20px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 76px;">
+<x-import component-from-global-scope="Voices.SearchField" placeholder="Search questions, voices and handles" label="Search VOICES" shortcut="/" style="width: 100%;"></x-import>
+<button type="button" class="vx-country" aria-label="Country: Nigeria. Change country"><x-import component-from-global-scope="Voices.Icon" name="globe" size="{{n18}}"></x-import>Nigeria<x-import component-from-global-scope="Voices.Icon" name="chevron-down" size="{{n16}}"></x-import></button>
+<a class="vx-iconbtn" href="../talk/Messages-1440.dc.html" aria-label="Messages"><x-import component-from-global-scope="Voices.Icon" name="message-circle"></x-import></a>
+<x-import component-from-global-scope="Voices.IconButton" icon="bell" label="Notifications" dot="{{yes}}"></x-import>
+</div>
+<a href="Newsroom-1440.dc.html" style="display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 44px; font: 600 15px/20px var(--font-body); color: var(--ink-2); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="arrow-left" size="{{n18}}"></x-import>Newsroom</a>
+<a href="#" style="display: flex; flex-direction: column; gap: 4px; padding: 16px 20px; border-radius: var(--radius-m); background: var(--surface-2); color: var(--ink); text-decoration: none;"><span class="vx-eyebrow" style="color: var(--ink-2);">Answering</span><span style="font: 400 22px/27px var(--font-display);">The fare to your village doubled for the same bumpy road. Who approved that?</span></a>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{chidi}}" time="3h" place="Lagos" tag="unverified" text="Fuel queues are back on Ikorodu Road this morning. Two stations closed, the one selling has a line to the bus stop." likes="{{n412}}" replies="{{n58}}" reactions="{{r1}}"></x-import>
+<div style="display: flex; align-items: center; gap: 8px; font: 500 13px/18px var(--font-body); color: var(--ink-2);"><x-import component-from-global-scope="Voices.Icon" name="clock" size="{{n16}}"></x-import>Tag chosen by @chidi.e when posting, 8:15am</div>
+<section aria-labelledby="rep-h" style="display: flex; flex-direction: column; gap: 12px;">
+<h2 id="rep-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">58 replies</h2>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{kemi}}" time="2h" place="Ikeja" text="Same at Ojodu Berger at 7am. I counted forty cars before I gave up and took okada." likes="{{n96}}" replies="{{n4}}"></x-import>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{emeka}}" time="1h" place="Ketu" voice="{{v1}}" likes="{{n41}}" replies="{{n2}}"></x-import>
+</section>
+</div>
+</main>
+<aside aria-label="About this post" style="flex: 1 1 340px; max-width: 340px; box-sizing: border-box; padding: 24px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 16px;">
+<section aria-labelledby="tag-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="tag-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">This post's tag</h2>
+<x-import component-from-global-scope="Voices.NewsTag" kind="unverified" size="m" with-note="{{yes}}"></x-import>
+</section>
+<section aria-labelledby="flag-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="flag-h" style="margin: 0; font: 700 16px/22px var(--font-body);">Is this tag wrong?</h2>
+<p style="margin: 0; font: 400 15px/22px var(--font-body); color: var(--ink-2);">If this is presented as news but is not, or the tag hides what it is, flag it. An editor reviews every flag. If the tag changes, the poster is told why.</p>
+<div style="display: flex;"><x-import component-from-global-scope="Voices.Button" variant="secondary" icon="flag">Flag as misleading</x-import></div>
+</section>
+<section aria-labelledby="more-h" style="display: flex; flex-direction: column; padding: 20px 20px 8px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="more-h" class="vx-eyebrow" style="margin: 0 0 8px; color: var(--ink-2);">More in the Newsroom</h2>
+<a href="#" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none;"><x-import component-from-global-scope="Voices.NewsTag" kind="verified"></x-import><span style="font: 600 15px/21px var(--font-body);">One lane of Third Mainland Bridge closes this weekend for repairs</span></a>
+<a href="#" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none;"><x-import component-from-global-scope="Voices.NewsTag" kind="unverified"></x-import><span style="font: 600 15px/21px var(--font-body);">They said fuel would come down after the new refinery</span></a>
+<a href="#" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; color: var(--ink); text-decoration: none;"><x-import component-from-global-scope="Voices.NewsTag" kind="gossip"></x-import><span style="font: 600 15px/21px var(--font-body);">They are saying the Super Eagles coach will go after Saturday</span></a>
+</section>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n2: 2, n4: 4, n7: 7, n16: 16, n18: 18, n41: 41, n58: 58, n96: 96, n412: 412,
+      chidi: { handle: '@chidi.e', name: 'Chidi Eze' },
+      kemi: { handle: '@kemi.b', name: 'Kemi Bello' },
+      emeka: { handle: '@emeka.n', name: 'Emeka Nwosu' },
+      v1: { duration: 11, seed: 12, transcript: 'I passed there at 9. Queue dey, but e dey move. Station by the bus stop is selling.' },
+      r1: { top: ['😮', '😢'], total: 188 }
+    };
+  }
+}
+</script>
+</body>
+</html>

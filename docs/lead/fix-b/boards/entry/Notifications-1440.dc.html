@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Notifications, desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="max-width: 1440px; margin: 0 auto; min-height: 1100px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--bg); color: var(--ink); font-family: var(--font-body);">
+<div style="flex: 0 0 248px; display: flex;">
+<x-import component-from-global-scope="Voices.SideNav" active="home" units="12.5" free-left="{{free}}"></x-import>
+</div>
+<div style="flex: 999 1 640px; min-width: 0; display: flex; flex-wrap: wrap; align-items: stretch;">
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 0 32px 48px;">
+<div style="max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 76px;">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="Voices.SearchField" placeholder="Search questions, voices and handles"></x-import></div>
+<button type="button" class="vx-country" aria-label="Country: Nigeria. Change country"><x-import component-from-global-scope="Voices.Icon" name="globe" size="{{s18}}"></x-import>Nigeria<x-import component-from-global-scope="Voices.Icon" name="chevron-down" size="{{s16}}"></x-import></button>
+<a href="../talk/Messages-1440.dc.html" class="vx-iconbtn" aria-label="Messages"><x-import component-from-global-scope="Voices.Icon" name="message-circle" size="{{s22}}"></x-import></a>
+<a href="Notifications-1440.dc.html" class="vx-iconbtn" aria-label="Notifications" aria-current="page" style="background: var(--mint); color: var(--green-text); box-shadow: none;"><x-import component-from-global-scope="Voices.Icon" name="bell" size="{{s22}}"></x-import></a>
+</div>
+<div style="display: flex; align-items: center; gap: 12px;">
+<h1 style="flex: 1; margin: 0; font: 400 32px/36px var(--font-display);">Notifications</h1>
+<button type="button" class="vx-link">Mark all as read</button>
+<x-import component-from-global-scope="Voices.Button" variant="secondary" size="s" icon="settings" href="../more/Settings-1440.dc.html">Settings</x-import>
+</div>
+<x-import component-from-global-scope="Voices.Tabs" items="{{tabs}}" default-value="all" label="Filter notifications"></x-import>
+<section aria-labelledby="h-today" style="display: flex; flex-direction: column; gap: 10px;">
+<h2 id="h-today" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">Today</h2>
+<div class="vx-notes">
+<x-import component-from-global-scope="Voices.NotificationRow" type="daily" time="8:00" unread="{{yes}}"><b>Today's question is live.</b> When salary arrives, how many hours pass before it disappears?</x-import>
+<x-import component-from-global-scope="Voices.NotificationRow" type="reply" actor="Kemi Bello" time="12 min" unread="{{yes}}"><b>@kemi.b</b> replied to your voice: "Two hours is generous. Mine is gone before I reach the bus stop."</x-import>
+<x-import component-from-global-scope="Voices.NotificationRow" type="reaction" actor="Tunde Adewale" emoji="💯" time="1 h"><b>@tunde.a</b> and 41 others reacted to your voice</x-import>
+<x-import component-from-global-scope="Voices.NotificationRow" type="poll" time="3 h"><b>Poll closed.</b> Should the minimum wage rise automatically with inflation? See how 4,900 voters answered.</x-import>
+</div>
+</section>
+<section aria-labelledby="h-earlier" style="display: flex; flex-direction: column; gap: 10px;">
+<h2 id="h-earlier" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">Earlier</h2>
+<div class="vx-notes">
+<x-import component-from-global-scope="Voices.NotificationRow" type="tag" time="Yesterday">An editor changed the tag on your post to <b>Gossip</b>. Click to see why.</x-import>
+<x-import component-from-global-scope="Voices.NotificationRow" type="units" time="Mon"><b>55 Voice Units</b> added to your wallet. Your receipt is in Wallet.</x-import>
+<x-import component-from-global-scope="Voices.NotificationRow" type="reply" actor="Ifeoma Nnaji" time="Sun"><b>@ifeoma.n</b> replied to your voice: "Same here. I keep a separate account for rent."</x-import>
+</div>
+</section>
+</div>
+</main>
+<aside aria-label="This week" style="flex: 0 0 340px; box-sizing: border-box; border-left: 1px solid var(--line); padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+<x-import component-from-global-scope="Voices.TopicOfWeek" variant="rail" title="Are You Really Fine? You Dey Okay?" meta="Week 1 · 10 questions · Poll open"></x-import>
+<x-import component-from-global-scope="Voices.TrendingList" items="{{trend}}"></x-import>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+yes: true, free: 7, s16: 16, s18: 18, s22: 22,
+tabs: [
+{ id: 'all', label: 'All' },
+{ id: 'replies', label: 'Replies' },
+{ id: 'reactions', label: 'Reactions' },
+{ id: 'polls', label: 'Polls' }
+],
+trend: [
+{ question: 'Should failed transfers be refunded within one hour by law?', voices: 8200, category: 'Money' },
+{ question: 'Is a tithe a rule or a choice?', voices: 6100, category: 'Faith' },
+{ question: 'Should the minimum wage rise automatically with inflation?', voices: 4900, category: 'Work' }
+]
+};
+}
+}
+</script>
+</body>
+</html>
