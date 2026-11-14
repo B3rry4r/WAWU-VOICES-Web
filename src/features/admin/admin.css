@@ -1,2 +1,35 @@
 /* The weekly card's Share and Download PDF buttons are for readers; the approval page shows the card only (V-10: no PDF at launch). */
 .ad-report .vx-report__btns { display: none; }
+
+/* The sidebar list. It scrolls inside the sidebar, with a visible bar and a fade at any cut edge (checked at 1366x768 and 1280x720). */
+.ad-nav {
+  gap: var(--space-1);
+  padding-right: var(--space-1);
+}
+/* A bar that stays on screen (not the overlay kind that hides until you scroll). Chrome and Safari read the first block, Firefox the second. */
+.ad-nav::-webkit-scrollbar { width: var(--space-2); }
+.ad-nav::-webkit-scrollbar-track { background: var(--forest-2); border-radius: var(--radius-pill); }
+.ad-nav::-webkit-scrollbar-thumb { background: var(--on-forest-2); border-radius: var(--radius-pill); }
+@supports not selector(::-webkit-scrollbar) {
+  .ad-nav { scrollbar-width: thin; scrollbar-color: var(--on-forest-2) var(--forest-2); }
+}
+.ad-nav-item { min-height: var(--space-10); }
+.ad-nav-head { margin-top: var(--space-4); padding-bottom: var(--space-1); }
+.ad-nav[data-more-below="true"] {
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - var(--space-10)), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - var(--space-10)), transparent);
+}
+.ad-nav[data-more-above="true"] {
+  -webkit-mask-image: linear-gradient(to top, black calc(100% - var(--space-10)), transparent);
+  mask-image: linear-gradient(to top, black calc(100% - var(--space-10)), transparent);
+}
+.ad-nav[data-more-above="true"][data-more-below="true"] {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--space-10), black calc(100% - var(--space-10)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, black var(--space-10), black calc(100% - var(--space-10)), transparent);
+}
+/* Short windows: tighter rows so most of the list is in view without scrolling. */
+@media (max-height: 800px) {
+  .ad-nav { gap: 0; }
+  .ad-nav-item { min-height: var(--space-8); }
+  .ad-nav-head { margin-top: var(--space-2); padding-bottom: 0; }
+}
