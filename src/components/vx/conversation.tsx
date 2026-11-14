@@ -1,4 +1,5 @@
 'use client';
+import { pauseSongForVoice } from "@/lib/theme-song";
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent, KeyboardEvent, ReactElement } from 'react';
 import { Button, IconButton } from './actions';
@@ -82,7 +83,7 @@ export function VoicePlayer(p: VoicePlayerProps): ReactElement {
     const a = audio.current;
     if (!a) return;
     a.playbackRate = speed;
-    if (playing) a.play().catch(() => setRef.current(false));
+    if (playing) { pauseSongForVoice(); a.play().catch(() => setRef.current(false)); }
     else a.pause();
   }, [playing, speed, p.src]);
   function toggle() {

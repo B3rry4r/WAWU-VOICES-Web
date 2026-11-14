@@ -37,6 +37,8 @@ export function PostedScreen({ qid }: { qid: string }) {
   const [storyHelp, setStoryHelp] = useState(false);
   // LCH-04 and LCH-03: on a mood answer, where the person sits and the "Show my name on the card" switch.
   const mood = a.state === "ready" ? a.data?.mood ?? null : null;
+  // V-ANON: an anonymous answer comes back with no author. Its invite link (a code that leads to the person's handle) is never offered.
+  const anonymous = a.state === "ready" && !!a.data && a.data.author === null;
   const [sit, setSit] = useState<WhereYouSit | null>(null);
   const [nameOn, setNameOn] = useState(false);
   const [nameBusy, setNameBusy] = useState(false);
@@ -85,7 +87,7 @@ export function PostedScreen({ qid }: { qid: string }) {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [firstFriend, setFirstFriend] = useState<string | null>(null);
   useEffect(() => {
-    if (!signedIn || !mood) return undefined;
+    if (!signedIn || !mood || a.state !== "ready" || anonymous) return undefined;
     let live = true;
     setInviteFailed(false);
     getMyInvite().then((i) => {
@@ -94,7 +96,7 @@ export function PostedScreen({ qid }: { qid: string }) {
       if (i.friendsAnswered > 0) listFriends(undefined, 1).then((f) => { if (live && f.items[0]) setFirstFriend(f.items[0].displayName || f.items[0].handle); }, () => undefined);
     }, (e) => { if (live) { setInviteBusy(isBusy(e)); setInviteFailed(true); } });
     return () => { live = false; };
-  }, [signedIn, mood, inviteTries, settled]);
+  }, [signedIn, mood, anonymous, a.state, inviteTries, settled]);
   useEffect(() => {
     if (!aid || !signedIn) return;
     let live = true;
@@ -116,6 +118,7 @@ export function PostedScreen({ qid }: { qid: string }) {
   if (a.state === "loading") return <>{header}<div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="answer" /></div></>;
   if (a.state === "error") return <>{header}<div className="mt-4"><Problem error={a.error} onRetry={a.retry} /></div></>;
   const ans = a.data;
+  // V-ANON: an anonymous post comes back with no author. It shows no name and offers no "Show my name" switch.
   const url = link?.url;
   async function copy() {
     if (!url || !link) return;
@@ -168,20 +171,20 @@ export function PostedScreen({ qid }: { qid: string }) {
             </div>
           </div>
           {sit ? <WhereYouSitCard key={sit.updatedAt} sit={sit} /> : null}
-          <InviteShare word={mood} url={invite?.url ?? null} onIntent={intentOf} onCopied={() => push("Link copied.", "success")} onFail={() => push("We could not copy that. Try again.", "danger")} />
-          {inviteFailed ? (
+          {anonymous ? null : <InviteShare word={mood} url={invite?.url ?? null} onIntent={intentOf} onCopied={() => push("Link copied.", "success")} onFail={() => push("We could not copy that. Try again.", "danger")} />}
+          {inviteFailed && !anonymous ? (
             <Banner tone="danger" title={inviteBusy ? BUSY_TITLE : "We could not get your link"} action="Try again" onAction={() => setInviteTries((n) => n + 1)}>{inviteBusy ? BUSY_TEXT : "Check your connection and try again."}</Banner>
           ) : null}
           {sit ? (
             <section aria-label="Your share card" className="grid gap-3">
               <MoodCardPreview word={mood} line={sit.cardLine} />
-              <CardNameSwitch on={nameOn} busy={nameBusy} onChange={(v) => void toggleName(v)} />
+              {anonymous ? <p data-testid="anon-posted" className="m-0 text-body text-[var(--ink-2)]">Posted without your name. The card shows no name.</p> : <CardNameSwitch on={nameOn} busy={nameBusy} onChange={(v) => void toggleName(v)} />}
               <Button variant="secondary" disabled={!link?.squareImageUrl} onClick={() => void saveStoryCard(true)}>Save the card as a picture</Button>
             </section>
           ) : null}
           {ans?.kind === "VOICE" && aid ? <VoiceVideoPanel answerId={aid} onNote={push} /> : null}
-          <FriendsRow count={invite?.friendsAnswered ?? 0} firstName={firstFriend} />
-          <InviteQr url={invite?.url ?? null} />
+          {anonymous ? null : <FriendsRow count={invite?.friendsAnswered ?? 0} firstName={firstFriend} />}
+          {anonymous ? null : <InviteQr url={invite?.url ?? null} />}
         </div>
         {storyHelp ? null : toast}
       </>
@@ -215,7 +218,7 @@ export function PostedScreen({ qid }: { qid: string }) {
           <>
             <p className="m-0 text-caption text-[var(--ink-2)]">{ans?.clip ? "People get this card and a link. Your recording itself is never shared as a file." : "People get this card and a link."}</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`${API_BASE}/share/${link.code}/card?v=${nameOn ? "n" : "a"}`} alt="The share card for your voice" className="w-full rounded-[var(--radius-l)]" />
+            <img src={`${API_BASE}/share/${link.code}/card?v=${nameOn && !anonymous ? "n" : "a"}`} alt="The share card for your voice" className="w-full rounded-[var(--radius-l)]" />
           </>
         ) : null}
         <Link href={`/q/${qid}`} className="link-more justify-center text-label">Back to the conversation</Link>

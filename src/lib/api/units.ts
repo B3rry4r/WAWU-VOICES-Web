@@ -2,6 +2,7 @@ import { apiFetch, ApiError, NetworkError } from "./client";
 import { API_BASE, REQUEST_TIMEOUT_MS } from "./config";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import type { components } from "./types";
+import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 
 /* tokens routes (contract tag voice-units), plus the three neighbours the tokens screens read:
  * GET /config/public, GET /ads/placement and POST /questions/{id}/answers (a held draft posts after a purchase, V-19).
@@ -69,8 +70,9 @@ export const postHeldAnswer = (questionId: string, body: string, idempotencyKey:
     method: "POST",
     authed: true,
     idempotencyKey,
-    body: { kind: "TEXT", body },
-  });
+    // V-ANON: a draft held while the person bought tokens keeps their "Post without my name" choice.
+    body: { kind: "TEXT", body, ...(readAnonPref(questionId) ? { anonymous: true } : {}) },
+  }).then((r) => { writeAnonPref(questionId, false); return r; });
 
 async function csvOnce(): Promise<Response> {
   const headers = new Headers({ Accept: "text/csv" });

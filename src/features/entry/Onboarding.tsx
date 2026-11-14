@@ -143,7 +143,7 @@ export function Onboarding() {
       {/* desktop: one centred card */}
       <div className="hidden min-h-0 flex-1 flex-col overflow-y-auto dt:flex">
         <header className="mx-auto flex w-full max-w-[1120px] items-center justify-between px-0 py-6">{logo}{skip}</header>
-        <div className="mx-auto my-auto grid w-full max-w-[1120px] grid-cols-2 overflow-hidden rounded-[32px] border border-line bg-surface">
+        <div className="mx-auto my-auto grid w-full max-w-[1120px] flex-none grid-cols-2 overflow-hidden rounded-[32px] border border-line bg-surface">
           <div className="relative flex flex-col justify-end gap-5 overflow-hidden bg-forest p-10 text-forest-on">
             <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">Today’s question</span>
             <p className="relative m-0 font-display text-display-xl">{q.text}</p>
