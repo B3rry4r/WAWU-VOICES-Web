@@ -7,13 +7,14 @@ import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react"
 import { DeskSearch } from "./DeskSearch";
 import { ShellSlotsContext } from "./ShellSlots";
 import { Bell, UnreadProvider } from "./Bell";
+import { DmUnreadProvider, MessagesIcon } from "./Messages";
 import { SoundButton } from "./SoundButton";
 import { GuestEntry } from "./GuestEntry";
 import { NAV, activeNav, hidesTabBar, isChromeless, onWeekly, showsLogoBar, type NavId } from "./nav";
 
 const ICONS: Record<Exclude<NavId, "speak">, typeof House> = { home: House, discover: Compass, profile: User };
 
-/** Messages never (V-10). The bell shows for a signed-in person; a guest gets the country pill and Sign in (GuestEntry).
+/** Messages (V-DM): the messages icon sits beside the bell for a signed-in person. The bell shows for a signed-in person; a guest gets the country pill and Sign in (GuestEntry).
  *  Phone chrome below 1024 px, desktop chrome (left nav, centre, right rail) from 1024 px. Page content goes in children; `rail` fills the right rail. */
 export function AppShell({ children, rail }: { children: ReactNode; rail?: ReactNode }) {
   const [railEl, setRailEl] = useState<HTMLElement | null>(null);
@@ -40,6 +41,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
 
   return (
     <UnreadProvider>
+    <DmUnreadProvider>
     <div className="sh-root">
       {/* desktop left nav */}
       <nav className="sh-desk sh-sidenav" aria-label="Main">
@@ -81,7 +83,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
           </Link>
         )}
         <div ref={setBarEl} className="sh-topbar__slot" />
-        {logoBar ? <><SoundButton /><GuestEntry /><Bell /></> : null}
+        {logoBar ? <><SoundButton /><GuestEntry /><MessagesIcon /><Bell /></> : null}
       </header>
 
       <div className="sh-centre">
@@ -117,6 +119,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
         </nav>
       )}
     </div>
+    </DmUnreadProvider>
     </UnreadProvider>
   );
 }

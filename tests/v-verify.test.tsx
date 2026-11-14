@@ -322,13 +322,14 @@ describe("what the person reads", () => {
     expect(await screen.findByText("Your request ran out")).toBeTruthy();
     expect(screen.getByText("Send your documents")).toBeTruthy();
   });
-  it("no screen promises DMs", async () => {
+  it("the not-subscribed and the verified screens both say verified people can message other people", async () => {
     signIn();
     for (const st of [withState({ state: "NOT_SUBSCRIBED", subscription: null }), withState({ state: "VERIFIED", verified: true, verifiedUntil: "2027-02-13T23:00:00.000Z" })]) {
       stubVerify(() => st);
       const { unmount } = render(<VerifyScreen />);
       await screen.findByRole("heading", { level: 2 });
-      expect(document.body.textContent).not.toMatch(/\bDMs?\b|chat/i);
+      expect(document.body.textContent).toContain("message other people");
+      expect(document.body.textContent).not.toMatch(/[\u2013\u2014]/);
       unmount();
     }
   });

@@ -1,0 +1,8 @@
+390 200 chat open {"y":1665,"max":1665,"header":40,"tick":true}
+390 older: first on screen {"t":"Message number 20: my words about pay, rent and the landlord.","top":206} after {"top":206,"y":2160}
+390 link200 {"sw":390,"iw":390,"newestBottom":677,"composerTop":710,"y":1815}
+390 link660 {"sw":390,"iw":390,"newestBottom":677,"composerTop":710,"y":2165}
+1440 200 chat open {"y":1260,"max":1260,"header":40,"tick":true}
+1440 older: first on screen {"t":"Message number 20: my words about pay, rent and the landlord.","top":329} after {"top":329,"y":1660}
+1440 link200 {"sw":1440,"iw":1440,"newestBottom":705,"composerTop":746,"y":1335}
+1440 link660 {"sw":1440,"iw":1440,"newestBottom":705,"composerTop":746,"y":1535}

@@ -112,7 +112,7 @@ function NewsBody() {
                     {i.verifiedRequested ? "Source sent for Verified News" : `Flagged ${i.flagCount} ${i.flagCount === 1 ? "time" : "times"}`}
                   </span>
                 </span>
-                <span className="mt-2 block text-body">{i.answer.body}</span>
+                <span className="mt-2 block whitespace-pre-wrap break-words text-body">{i.answer.body}</span>
                 <span className="mt-1 block text-caption text-ink-2">{`@${i.answer.author?.handle ?? "removed"} · ${ago(i.answer.createdAt)} · ${countText(i.answer.likeCount, "like")}${i.evidenceUrl ? " · source photo attached" : ""}`}</span>
               </button>
             ))}
@@ -162,7 +162,7 @@ function Decide({ item, readOnly, onDone }: { item: AdminNewsItem; readOnly: boo
           </div>
         </div>
         <div className="mt-3"><NewsTag kind={KIND[cur]} /></div>
-        <p className="m-0 mt-3 text-body-l">{a.body}</p>
+        <p className="m-0 mt-3 whitespace-pre-wrap break-words text-body-l">{a.body}</p>
         <div className="mt-3 flex gap-5 text-caption text-ink-2">
           <span className="inline-flex items-center gap-1.5"><Icon name="heart" size={18} />{a.likeCount}</span>
           <span className="inline-flex items-center gap-1.5"><Icon name="message-circle" size={18} />{a.replyCount}</span>
