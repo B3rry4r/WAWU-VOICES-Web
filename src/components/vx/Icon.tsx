@@ -4,7 +4,7 @@ import {
   ArrowLeft, ArrowUp, BadgeCheck, Bell, Bookmark, Captions, ChartColumn, Check, ChevronDown, ChevronLeft, ChevronRight,
   CircleCheck, CircleDashed, CircleX, ClipboardList, Clock, Coins, Compass, Copy, Ellipsis, Eye, FileDown, Flag, Globe,
   Headphones, Heart, House, Info, Lightbulb, Link, Lock, MapPin, Megaphone, MessageCircle, MessageSquare, MessagesSquare,
-  Mic, MicOff, Minus, Moon, Pause, Play, Plus, Radio, RefreshCw, RotateCcw, Search, Send, Settings, Share2, ShieldAlert,
+  Menu, Mic, MicOff, Minus, Moon, Pause, Play, Plus, Radio, RefreshCw, RotateCcw, Search, Send, Settings, Share2, ShieldAlert,
   ShieldCheck, SmilePlus, Square, Sun, Trash2, TrendingUp, TriangleAlert, User, UserCheck, Volume2, Vote, Wallet, WifiOff, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -13,7 +13,7 @@ import { cx } from './helpers';
 const ICONS = {
   house: House, compass: Compass, mic: Mic, user: User, bell: Bell, globe: Globe, search: Search, play: Play, pause: Pause,
   heart: Heart, 'smile-plus': SmilePlus, 'message-circle': MessageCircle, 'share-2': Share2, flag: Flag, ellipsis: Ellipsis,
-  x: X, check: Check, 'chevron-right': ChevronRight, 'chevron-left': ChevronLeft, 'chevron-down': ChevronDown,
+  x: X, menu: Menu, check: Check, 'chevron-right': ChevronRight, 'chevron-left': ChevronLeft, 'chevron-down': ChevronDown,
   'arrow-left': ArrowLeft, 'arrow-up': ArrowUp, 'rotate-ccw': RotateCcw, 'trash-2': Trash2, square: Square,
   'shield-check': ShieldCheck, 'shield-alert': ShieldAlert, 'messages-square': MessagesSquare, 'badge-check': BadgeCheck,
   'circle-dashed': CircleDashed, 'wifi-off': WifiOff, 'triangle-alert': TriangleAlert, info: Info, 'circle-check': CircleCheck,

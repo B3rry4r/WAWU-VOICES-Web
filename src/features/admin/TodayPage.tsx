@@ -125,7 +125,7 @@ export function AdminTodayPage() {
         </Banner>
       ) : null}
 
-      <div className="mb-5 grid grid-cols-4 gap-5">
+      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 dt:grid-cols-4 dt:gap-5">
         <Tile label="Voices today" value={t.stats.voicesToday.toLocaleString("en-NG")} sub={`${t.stats.voicePercent}% voice, ${100 - t.stats.voicePercent}% text`} />
         <Tile label="Poll votes" value={t.stats.pollVotes.toLocaleString("en-NG")} sub={`Week ${t.weekNumber} poll`} />
         <Tile label="Shares" value={t.stats.shares.toLocaleString("en-NG")} sub={top && top.count > 0 ? `${TARGET_WORDS[top.target] ?? top.target} leads` : "None yet"} />
@@ -137,10 +137,10 @@ export function AdminTodayPage() {
         />
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] items-start gap-5">
+      <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-5">
           {hasQuestion ? (
-            <section className="rounded-xl bg-green p-6 text-green-on">
+            <section className="rounded-xl bg-green p-4 text-green-on dt:p-6">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-xs bg-forest px-2.5 py-1 text-eyebrow uppercase text-forest-on">Today’s question</span>
                 {q.startsAt && q.endsAt ? <span className="text-count">{`Live since ${clock(q.startsAt)} · closes ${closesAt(q.endsAt)}`}</span> : null}

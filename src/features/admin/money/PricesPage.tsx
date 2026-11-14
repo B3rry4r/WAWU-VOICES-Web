@@ -27,7 +27,7 @@ function SettingEditor({ def, entry, onSave, onCancel, busy, error }: { def: Def
   const same = next !== null && next === entry.value;
   const ready = next !== null && !same && reasonOk(reason);
   return (
-    <div className="mt-3 flex max-w-[560px] flex-col gap-4 rounded-xl border border-line-strong bg-surface-2 p-5">
+    <div className="mt-3 flex max-w-[560px] flex-col gap-4 rounded-xl border border-line-strong bg-surface-2 p-4 dt:p-5">
       <TextField label={def.label} value={text} onChange={(v) => { setText(v); setReview(false); }} inputMode="decimal" error={bad} hint={bad ? undefined : unitHint[def.unit]} />
       <TextField label="Reason" multiline value={reason} onChange={(v) => { setReason(v); setReview(false); }} maxLength={500} hint={REASON_HINT} />
       {review && ready ? (
@@ -63,15 +63,15 @@ function PacksEditor({ entry, onSave, onCancel, busy, error }: { entry: ConfigEn
   const ready = !!value && changed.length > 0 && reasonOk(reason);
   const set = (i: number, k: "price" | "units" | "bonus", v: string) => { setRows((x) => x.map((r, j) => (j === i ? { ...r, [k]: v } : r))); setReview(false); };
   return (
-    <div className="mt-3 flex flex-col gap-4 rounded-xl border border-line-strong bg-surface-2 p-5">
-      <div className="grid grid-cols-[120px_1fr_1fr_1fr] items-end gap-3">
-        <Eyebrow>Pack</Eyebrow>
-        <Eyebrow>Price in naira</Eyebrow>
-        <Eyebrow>Tokens</Eyebrow>
-        <Eyebrow>Bonus tokens</Eyebrow>
+    <div className="mt-3 flex flex-col gap-4 rounded-xl border border-line-strong bg-surface-2 p-4 dt:p-5">
+      <div className="grid grid-cols-1 gap-3 dt:grid-cols-[120px_1fr_1fr_1fr] dt:items-end">
+        <Eyebrow className="max-dt:hidden">Pack</Eyebrow>
+        <Eyebrow className="max-dt:hidden">Price in naira</Eyebrow>
+        <Eyebrow className="max-dt:hidden">Tokens</Eyebrow>
+        <Eyebrow className="max-dt:hidden">Bonus tokens</Eyebrow>
         {packs.map((p, i) => (
-          <div key={p.slug} className="contents">
-            <div className="pb-4 text-body-strong">{p.name}</div>
+          <div key={p.slug} className="flex flex-col gap-3 border-t border-line pt-3 dt:contents">
+            <div className="text-body-strong dt:pb-4">{p.name}</div>
             <TextField label={`${p.name} price`} value={rows[i].price} onChange={(v) => set(i, "price", v)} inputMode="decimal" error={koboFromNaira(rows[i].price) === null ? "Use naira, like 183" : undefined} />
             <TextField label={`${p.name} tokens`} value={rows[i].units} onChange={(v) => set(i, "units", v)} inputMode="decimal" error={milliFromTokens(rows[i].units) === null ? "Use tokens" : undefined} />
             <TextField label={`${p.name} bonus`} value={rows[i].bonus} onChange={(v) => set(i, "bonus", v)} inputMode="decimal" error={milliFromTokens(rows[i].bonus) === null ? "Use tokens" : undefined} />
@@ -120,14 +120,14 @@ function PlansEditor({ entry, onSave, onCancel, busy, error }: { entry: ConfigEn
   const ready = !!value && changed.length > 0 && reasonOk(reason);
   const set = (i: number, patch: Partial<(typeof rows)[number]>) => { setRows((x) => x.map((r, j) => (j === i ? { ...r, ...patch } : r))); setReview(false); };
   return (
-    <div className="mt-3 flex flex-col gap-4 rounded-xl border border-line-strong bg-surface-2 p-5">
+    <div className="mt-3 flex flex-col gap-4 rounded-xl border border-line-strong bg-surface-2 p-4 dt:p-5">
       <p className="m-0 text-caption text-ink-2">A plan keeps its months and the tokens it gives each month, because people have already been shown them. Switch a plan off to stop selling it.</p>
-      <div className="grid grid-cols-[1fr_1fr_160px] items-start gap-3">
-        <Eyebrow>Name</Eyebrow>
-        <Eyebrow>Price in naira (whole naira)</Eyebrow>
-        <Eyebrow>On sale</Eyebrow>
+      <div className="grid grid-cols-1 gap-3 dt:grid-cols-[1fr_1fr_160px] dt:items-start">
+        <Eyebrow className="max-dt:hidden">Name</Eyebrow>
+        <Eyebrow className="max-dt:hidden">Price in naira (whole naira)</Eyebrow>
+        <Eyebrow className="max-dt:hidden">On sale</Eyebrow>
         {plans.map((p, i) => (
-          <div key={p.slug} className="contents">
+          <div key={p.slug} className="flex flex-col gap-3 border-t border-line pt-3 dt:contents">
             <TextField label={`${p.slug} name`} value={rows[i].name} onChange={(v) => set(i, { name: v })} maxLength={40} hint={`${p.months} months, ${tokens(p.monthlyMilli)} tokens a month`} />
             <TextField label={`${p.slug} price`} value={rows[i].price} onChange={(v) => set(i, { price: v })} inputMode="decimal" error={prices[i] === null || prices[i]! < 100 || prices[i]! % 100 !== 0 ? "Whole naira, like 2999" : undefined} />
             <Switch checked={rows[i].active} onChange={(v) => set(i, { active: v })} label={rows[i].active ? "On sale" : "Off"} />
@@ -275,13 +275,13 @@ function PricesBody() {
               const isEditing = editing?.kind === "setting" && editing.key === d.key;
               return (
                 <li key={d.key} className="border-t border-line py-4 first:border-t-0">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-4 max-dt:flex-col">
                     <div className="min-w-0">
                       <div className="text-body-strong text-ink">{d.label}</div>
                       <div className="text-caption text-ink-2">{d.help}</div>
                       {e.version > 1 && e.updatedBy ? <div className="text-caption text-ink-2">{`Last changed by ${e.updatedBy}, ${slot(e.updatedAt)}`}</div> : null}
                     </div>
-                    <div className="flex flex-none items-center gap-3">
+                    <div className="flex flex-none flex-wrap items-center gap-3">
                       {e.placeholder ? <Pill tone="sun">Owner to confirm</Pill> : null}
                       <span className="font-display text-num-m text-ink">{show(d.unit, e.value, d.noun)}</span>
                       <Button size="s" variant="secondary" icon="settings" onClick={() => open({ kind: "setting", key: d.key })}>
@@ -300,12 +300,12 @@ function PricesBody() {
 
       {entries[PACKS_KEY] ? (
         <Card>
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-4 max-dt:flex-wrap">
             <div>
               <CardTitle>Token packs</CardTitle>
               <p className="m-0 mb-2 text-caption text-ink-2">A pack price is in whole naira, from the smallest purchase up to 1,000,000 naira.</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button size="s" variant="secondary" icon="settings" onClick={() => open({ kind: "packs" })}>
                 Change
               </Button>
@@ -338,9 +338,9 @@ function PricesBody() {
 
       {entries[PLANS_KEY] ? (
         <Card>
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-4 max-dt:flex-wrap">
             <CardTitle>Subscription plans</CardTitle>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button size="s" variant="secondary" icon="settings" onClick={() => open({ kind: "plans" })}>
                 Change
               </Button>
@@ -374,12 +374,12 @@ function PricesBody() {
       ) : null}
 
       <Card className="!p-0 overflow-hidden">
-        <div className="px-6 pt-5">
+        <div className="px-4 pt-5 dt:px-6">
           <CardTitle>Change log</CardTitle>
           <p className="m-0 mb-2 text-caption text-ink-2">Every change to a price or a limit, newest first. Put back restores the value before the newest change of that setting.</p>
         </div>
         {log.length === 0 ? (
-          <p className="m-0 px-6 pb-5 text-body text-ink-2">Nothing has been changed yet.</p>
+          <p className="m-0 px-4 pb-5 text-body dt:px-6 text-ink-2">Nothing has been changed yet.</p>
         ) : (
           <TableFrame label="Change log">
             <thead>
