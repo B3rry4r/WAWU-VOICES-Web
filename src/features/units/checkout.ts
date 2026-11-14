@@ -7,7 +7,8 @@ import { attemptFor, choiceId, dropAttempt, safePath, saveAttempt } from "./atte
 
 export type CheckoutSpec =
   | { kind: "UNITS"; tierId: string; method?: PayMethod }
-  | { kind: "EXTRA_VOICE"; tokenKind: ExtraVoiceTokenKind; method?: PayMethod };
+  | { kind: "EXTRA_VOICE"; tokenKind: ExtraVoiceTokenKind; method?: PayMethod }
+  | { kind: "SUBSCRIPTION"; planId: string; method?: PayMethod };
 
 export const RETURN_PATH = "/units/done";
 const REFUSED = new Set([400, 401, 403, 404, 422]);
@@ -33,7 +34,7 @@ function checkoutHref(url: string): string | null {
 
 /** Begin a payment and go to the hosted checkout. One Idempotency-Key per choice, kept across retries (see attempt.ts). */
 export function startCheckout(spec: CheckoutSpec, from?: string, go: (url: string) => void = (u) => window.location.assign(u), draftQuestionId?: string): Promise<void> {
-  const choice = choiceId(spec.kind === "UNITS" ? spec : { kind: "EXTRA_VOICE", tokenKind: spec.tokenKind });
+  const choice = choiceId(spec);
   // Only a token purchase carries a draft: a token purchase never posts one.
   const attempt = attemptFor(choice, safePath(from), Date.now(), spec.kind === "UNITS" ? draftQuestionId : undefined);
   const known = attempt.checkoutUrl && attempt.expiresAt && attempt.expiresAt > Date.now() ? checkoutHref(attempt.checkoutUrl) : null;
@@ -42,7 +43,9 @@ export function startCheckout(spec: CheckoutSpec, from?: string, go: (url: strin
     return Promise.resolve();
   }
   const body =
-    spec.kind === "UNITS"
+    spec.kind === "SUBSCRIPTION"
+      ? { kind: "SUBSCRIPTION" as const, planId: spec.planId, ...(spec.method ? { method: spec.method } : {}), returnPath: RETURN_PATH }
+      : spec.kind === "UNITS"
       ? { kind: "UNITS" as const, tierId: spec.tierId, ...(spec.method ? { method: spec.method } : {}), returnPath: RETURN_PATH }
       : { kind: "EXTRA_VOICE" as const, tokenKind: spec.tokenKind, ...(spec.method ? { method: spec.method } : {}), returnPath: RETURN_PATH };
   return initPayment(body, attempt.key).then(
@@ -59,7 +62,7 @@ export function startCheckout(spec: CheckoutSpec, from?: string, go: (url: strin
       // The server refused the request itself (bad choice, no pack, key used for something else): the next tap is a clean
       // attempt. A 409 CONFLICT (a simultaneous request with this key won the race), a rate limit or a 5xx keeps the key,
       // so the retry gets the first payment back instead of making a second one.
-      if (e instanceof ApiError && (REFUSED.has(e.status) || e.code === "IDEMPOTENCY_KEY_REUSED")) dropAttempt(choice);
+      if (e instanceof ApiError && (REFUSED.has(e.status) || e.code === "IDEMPOTENCY_KEY_REUSED" || e.code === "SUBSCRIPTION_ACTIVE")) dropAttempt(choice);
       throw e;
     },
   );

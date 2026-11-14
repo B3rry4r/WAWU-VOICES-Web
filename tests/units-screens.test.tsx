@@ -264,7 +264,7 @@ describe("Get tokens screen", () => {
     api();
     render(<BuyUnitsScreen />);
     expect(await screen.findByRole("button", { name: /Pay ₦732 for 732 tokens/ })).toBeTruthy();
-    expect(screen.getByText("1 token is ₦1. You get exactly the tokens you pay for.")).toBeTruthy();
+    expect(screen.getByText(/^1 token is ₦1\. You get exactly the tokens you pay for\. VAT and the payment charge are added at checkout/)).toBeTruthy();
     expect(screen.queryByText(/bonus/)).toBeNull();
     expect(screen.queryByText(/a unit/)).toBeNull();
     await userEvent.click(screen.getByRole("radio", { name: /Entry/ }));
