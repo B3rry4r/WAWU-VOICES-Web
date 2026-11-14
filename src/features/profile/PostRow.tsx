@@ -37,6 +37,12 @@ function Transcript({ text }: { text: string }) {
   );
 }
 
+/** Tells one post from the next for a screen reader: its first words, else when it was sent. */
+function postName(a: Answer): string {
+  const words = (a.body ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
+  return words ? `Post: ${words}` : `Voice from ${ago(a.createdAt)}`;
+}
+
 /** One of a person's voices, with the question it answers ("On:" link). Only what is live: counts are shown, not buttons. */
 export function PostRow({ a: first, own }: { a: Answer; /** On my own Profile only: the three dots, and what to do when I delete one. */ own?: { push: PushToast; onDeleted: (id: string) => void } }) {
   const [a, setA] = useState(first);
@@ -49,7 +55,7 @@ export function PostRow({ a: first, own }: { a: Answer; /** On my own Profile on
   const emoji = (k: string) => REACTIONS.find((r) => r.name === KIND_NAME[k])?.e ?? "";
   const transcript = a.clip?.transcript?.status === "READY" ? a.clip.transcript.text : null;
   return (
-    <div className="pf-post">
+    <div className="pf-post" data-post-id={a.id}>
       {a.questionText ? <Link className="pf-on" href={`/q/${a.questionId}`}>On: {a.questionText}</Link> : null}
       {a.mood ? <MoodChip mood={a.mood} className="mb-[6px]" /> : null}
       <article className="vx-answer" aria-label={`Voice from ${who?.handle ?? "this person"}`}>
@@ -61,7 +67,7 @@ export function PostRow({ a: first, own }: { a: Answer; /** On my own Profile on
             {!who && a.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
             <span className="vx-answer__time">{ago(a.createdAt) + (place ? " · " + place : "")}</span>
           </div>
-          {own && a.isMine ? <IconButton icon="ellipsis" label="More: edit, delete, copy link" variant="ghost" size="s" onClick={() => setMore(true)} /> : null}
+          {own && a.isMine ? <IconButton icon="ellipsis" label={`More: edit, delete, copy link. ${postName(a)}`} variant="ghost" size="s" onClick={() => setMore(true)} /> : null}
         </div>
         {label || a.news ? (
           <div className="vx-answer__labels">

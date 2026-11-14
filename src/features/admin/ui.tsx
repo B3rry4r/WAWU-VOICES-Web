@@ -101,9 +101,11 @@ export function Switch({ checked, onChange, label, hint, disabled }: { checked: 
         aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative h-8 w-14 flex-none cursor-pointer rounded-pill border-0 p-0 transition-colors ${checked ? "bg-green" : "bg-surface-3"} disabled:opacity-50`}
+        className="relative flex h-11 w-14 flex-none cursor-pointer items-center rounded-pill border-0 bg-transparent p-0 disabled:opacity-50 dt:h-8"
       >
-        <span className={`absolute top-1 h-6 w-6 rounded-pill bg-surface shadow-1 transition-all ${checked ? "left-7" : "left-1"}`} />
+        <span className={`relative block h-8 w-14 rounded-pill transition-colors ${checked ? "bg-green" : "bg-surface-3"}`}>
+          <span className={`absolute top-1 h-6 w-6 rounded-pill bg-surface shadow-1 transition-all ${checked ? "left-7" : "left-1"}`} />
+        </span>
       </button>
     </div>
   );
