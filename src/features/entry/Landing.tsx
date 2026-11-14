@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useShareSheet } from "@/features/talk/TalkCard";
 import { Button, Icon, Logo, QuestionHero, Skeleton, type IconName } from "@/components/vx";
 import { Answers } from "@/components/feed/parts";
 import { useLoad } from "@/components/feed/useLoad";
@@ -27,6 +28,7 @@ const TRUST: { icon: IconName; text: string }[] = [
 /** Guest welcome page (/welcome): the Landing board at 390 and 1440. */
 export function Landing() {
   const router = useRouter();
+  const [shareNode, share] = useShareSheet();
   const skipping = useSkipIfSignedIn();
   const load = useLoad(() => Promise.all([getTodaysQuestion(), getTrending(1), getPublicConfig()]), []);
   if (skipping) return null;
@@ -75,6 +77,7 @@ export function Landing() {
           voices={voicesOf(q)}
           closesIn={closesIn(q.endsAt)}
           opensLabel={comingUp(q)}
+          onShare={() => share("QUESTION", q.id)}
           speakLabel="Add your voice"
           onSpeak={() => router.push("/")}
           onListen={() => router.push(`/q/${q.id}`)}
@@ -141,6 +144,7 @@ export function Landing() {
     <EntryFrame>
       {header}
       <EntryScroll>{body}</EntryScroll>
+      {shareNode}
       <div className="dt:hidden">
         <BottomBar>
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-[10px]">

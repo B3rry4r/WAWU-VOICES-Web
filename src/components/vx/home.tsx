@@ -21,6 +21,8 @@ export interface QuestionHeroProps {
   speakIcon?: IconName;
   /** V-PRELAUNCH: set while the question has not opened ("Opens Sunday 15 November"). The card says "Coming up", shows this in place of the counts and has no buttons. */
   opensLabel?: string;
+  /** The one thing a coming-up card can do: share the question. */
+  onShare?: () => void;
   /** True once the viewer has answered: the card says so and the quick Listen button (now the big one) is not repeated. */
   answered?: boolean;
   onSpeak?: () => void;
@@ -38,7 +40,7 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
         <span className="vx-hero__sticker">{p.opensLabel ? "Coming up" : p.eyebrow || "Today’s question"}</span>
         <h2 className="vx-hero__q" id="vx-hero-q">{p.question}</h2>
         {p.opensLabel ? (
-          <div className="vx-hero__meta"><span>{p.opensLabel}</span></div>
+          <div className="vx-hero__meta"><span>{p.opensLabel}</span>{p.onShare ? <Button size="s" icon="share-2" onClick={p.onShare}>Share</Button> : null}</div>
         ) : (
         <div className="vx-hero__meta">
           {p.avatars ? <AvatarStack names={p.avatars} /> : null}

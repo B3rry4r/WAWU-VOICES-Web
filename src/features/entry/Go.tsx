@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useShareSheet } from "@/features/talk/TalkCard";
 import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { Avatar, Button, Icon, Logo, QuestionHero, Skeleton } from "@/components/vx";
@@ -25,6 +26,7 @@ import { LANDING_EYEBROW, LANDING_HEADLINE_EN, LANDING_HEADLINE_YO, LANDING_INTR
  */
 export function Go() {
   const router = useRouter();
+  const [shareNode, share] = useShareSheet();
   const load = useLoad(() => getTodaysQuestion(), []);
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => setSignedIn(isSignedIn()), []);
@@ -83,6 +85,7 @@ export function Go() {
             <span className="vx-eyebrow text-sun">{opens ? "Coming up" : "Today’s question"}</span>
             <h2 id="lq-h" className="m-0 font-display text-display-l">{q.text}</h2>
             {opens ? <p data-testid="go-opens" className="m-0 text-[17px] font-bold leading-6">{opens}</p> : null}
+            {opens ? <Button size="s" icon="share-2" onClick={() => share("QUESTION", q.id)}>Share</Button> : null}
             {opens ? null : <div role="group" aria-labelledby="lq-h" className="grid grid-cols-2 gap-2">
               {(q.moodOptions as Mood[]).map((m) => (
                 <button
@@ -103,6 +106,7 @@ export function Go() {
               voices={voicesOf(q)}
               closesIn={closesIn(q.endsAt)}
               opensLabel={comingUp(q)}
+              onShare={() => share("QUESTION", q.id)}
               speakLabel="Add your voice"
               onSpeak={() => router.push("/speak")}
               onListen={() => router.push(`/q/${q.id}`)}
@@ -121,6 +125,7 @@ export function Go() {
     <EntryFrame>
       {header}
       <EntryScroll>{body}</EntryScroll>
+      {shareNode}
       <div className="dt:hidden">
         <BottomBar>
           <div className={signedIn ? "grid grid-cols-1" : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-[10px]"}>

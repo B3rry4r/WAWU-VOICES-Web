@@ -15,6 +15,7 @@ import { WeekCard } from "@/components/feed/parts";
 import { HomeScreen } from "@/components/feed/HomeScreen";
 import { Go } from "@/features/entry/Go";
 import { Landing } from "@/features/entry/Landing";
+import { SharePageView } from "@/features/share/SharePageView";
 import { QuestionScreen } from "@/features/talk/QuestionScreen";
 import { comingUp, notOpenYet, startsLabel, topicNotStarted } from "@/lib/feed-format";
 
@@ -126,6 +127,27 @@ describe("V-PRELAUNCH screens with the API stubbed", () => {
     expect(text).toContain("Say it in your voice.");
     expect(text).toContain("Opens Sunday 15 November");
     expect(text).not.toMatch(/so far|Closes in|No voices yet|Write instead|Speak|has closed/);
+  });
+  it("Share is on the coming-up card and the question page, and nothing else acts", async () => {
+    const h = render(<HomeScreen />);
+    await screen.findByText("Coming up");
+    expect(screen.getAllByRole("button", { name: "Share" }).length).toBeGreaterThan(0);
+    h.unmount();
+    const q = render(<QuestionScreen id="q9" />);
+    await waitFor(() => expect(q.container.querySelector("[data-testid='q-coming-up']")).toBeTruthy());
+    expect(screen.getAllByRole("button", { name: "Share this question" }).length).toBeGreaterThan(0);
+  });
+  it("the share page for a link to a coming-up question draws the coming-up card, with no counts and no buttons that act", () => {
+    const page = { code: "abc1234", objectType: "QUESTION", topicLine: LAUNCH.text, countryAndTheme: "Nigeria", arguments: [], leanLine: null, poll: null, proposalCount: null, topProposal: null, news: null, basedOnVoices: 0, summaryUpdatedAt: "2026-11-14T05:00:00Z", summaryLabel: "Opens Sunday 15 November", featuredVoice: null, transcript: null, question: { ...LAUNCH }, report: null, cardFallback: false, ctaLabel: "Add your voice", openGraph: { title: LAUNCH.text, description: "Opens Sunday 15 November", imageUrl: "x", url: "x" } };
+    const { container } = render(<SharePageView page={page as never} now={BEFORE} />);
+    const text = container.textContent ?? "";
+    expect(text).toContain("Opens Sunday 15 November");
+    expect(text).toContain(LAUNCH.text);
+    expect(text).not.toMatch(/voices?\b.*so far|Add your voice|What do you think|We could not find/);
+    expect(screen.queryByRole("button", { name: /Add your voice/ })).toBeNull();
+    cleanup();
+    const open = render(<SharePageView page={{ ...page, question: { ...LAUNCH, status: "LIVE" } } as never} now={BEFORE} />);
+    expect(open.container.textContent).toContain("Add your voice");
   });
   it("the landing page and /go before it opens", async () => {
     const a = render(<Landing />);
