@@ -7,6 +7,7 @@ import * as api from "@/lib/api/dm";
 import { ApiError } from "@/lib/api/client";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { announceDmUnread } from "@/components/shell/Messages";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { Problem, SignInNote, uuidKey, useClipPlayback, useSignedIn } from "@/features/talk/lib";
 import { DM_MAX_CHARS, PLANS_HREF, caption, clockOf, dayLabel, dmFailure, personName, textPrice, tokensText, voicePrice, type DmCosts, type DmFailure } from "./dm-logic";
 import { uploadDmVoice } from "./dm-voice";
@@ -142,7 +143,7 @@ function Composer({ costs, canType, blockedText, onSend }: { costs: DmCosts | nu
     <div className="dm-compose">
       {fail ? (
         <Banner tone="danger" title={fail.text}>
-          {fail.plans ? <Link href={PLANS_HREF} className="link">See subscription plans</Link> : null}
+          {fail.plans ? <Link href={PLANS_HREF} className="link">See how to get verified</Link> : null}
           {fail.buy ? <Link href={`${PLANS_HREF}?from=${encodeURIComponent("/messages")}`} className="link">Get tokens</Link> : null}
         </Banner>
       ) : null}
@@ -308,7 +309,7 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
       <div className="dm-head">
         {person ? <Avatar name={personName(person)} /> : null}
         <div className="dm-head__who">
-          <span className="dm-head__name">{person ? personName(person) : "Message"}</span>
+          <span className="dm-head__name">{person ? personName(person) : "Message"}<VerifiedTick verified={person?.verified} /></span>
           {person && !person.deleted ? <span className="dm-head__sub">{`${handle}${person.place ? ` · ${person.place}` : ""}`}</span> : null}
         </div>
       </div>

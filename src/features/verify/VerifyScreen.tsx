@@ -114,7 +114,7 @@ function Body({ state, onState }: { state: VerificationState; onState: (s: Verif
       return (
         <Card label="Subscribe first" className="flex flex-col gap-3">
           <h2 className="m-0 text-body-strong">Verification comes with a subscription</h2>
-          <p className="m-0 text-body text-ink-2">Subscribe to a plan, then send your government ID and a utility bill. When the team has checked them you get a verified tick, and you can suggest ideas on What Next.</p>
+          <p className="m-0 text-body text-ink-2">Subscribe to a plan, then send your government ID and a utility bill. When the team has checked them you get a verified tick, you can suggest ideas on What Next, and you can message other people.</p>
           <Button size="l" block href="/units/buy#plans">
             See the plans
           </Button>
@@ -143,7 +143,7 @@ function Body({ state, onState }: { state: VerificationState; onState: (s: Verif
           </div>
           <p className="m-0 text-body text-ink-2">
             {state.verifiedUntil ? `Your tick shows beside your name until ${dayLabel(state.verifiedUntil)}, when your plan ends. ` : ""}
-            Renew your plan to stay verified. You can suggest ideas on What Next.
+            Renew your plan to stay verified. You can suggest ideas on What Next and message other people.
           </p>
           <div>
             <Button variant="secondary" size="s" href="/units/buy#plans">

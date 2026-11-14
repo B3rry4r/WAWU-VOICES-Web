@@ -32,7 +32,7 @@ const err = (status: number, code: string, message: string) => json({ error: { c
 
 const FREE: DmCosts & { maxChars: number; messagesPerDay: number; balanceMilli: number } = { textPriceMilli: 0, textPriceChars: 150, voicePriceMilli: 0, voiceMaxSeconds: 60, messagesLeftToday: 100, maxChars: 5000, messagesPerDay: 100, balanceMilli: 0 };
 const PRICED = { ...FREE, textPriceMilli: 5000, voicePriceMilli: 78000 };
-const PERSON = { id: "u2", handle: "ada", displayName: "Ada", place: "Abuja", deleted: false };
+const PERSON = { id: "u2", handle: "ada", displayName: "Ada", place: "Abuja", verified: true, deleted: false };
 const MSG = (o: object = {}) => ({ id: "m1", conversationId: "c1", senderId: "u2", mine: false, kind: "TEXT", body: "Hello there", clip: null, status: "PUBLISHED", readAt: null, createdAt: new Date().toISOString(), ...o });
 
 beforeEach(() => {
@@ -140,6 +140,17 @@ describe("inbox", () => {
     await userEvent.click(screen.getByRole("tab", { name: /Unread/ }));
     expect(screen.queryByText("Voice message · 0:09")).toBeNull();
     expect(screen.getByText("Perfect. Send me the link when you post.")).toBeTruthy();
+  });
+  it("the verified tick shows beside the name in the rows and in the chat header", async () => {
+    stub((c) => (c.url.includes("/dm/conversations") && !c.url.includes("/messages") ? json(convs()) : c.url.endsWith("/dm/unread") ? json({ unread: 2 }) : undefined));
+    const { unmount } = render(<InboxPage />);
+    await screen.findByText("Voice message · 0:09");
+    expect(screen.getAllByLabelText("Verified")).toHaveLength(3);
+    unmount();
+    stub((c) => (c.url.includes("/dm/conversations/c1/messages") ? json({ person: PERSON, muted: false, items: [MSG()], nextCursor: null }) : c.url.endsWith("/dm/limits") ? json(FREE) : json({ unread: 0 })));
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    expect(screen.getAllByLabelText("Verified").length).toBeGreaterThan(0);
   });
   it("an empty inbox says how to start", async () => {
     stub((c) => (c.url.includes("/dm/conversations") ? json({ items: [], nextCursor: null }) : json({ unread: 0 })));
@@ -250,14 +261,14 @@ describe("conversation", () => {
     expect(screen.getByTestId("dm-caption").textContent).toBe("150 of 5,000 characters. Costs 5 tokens.");
   });
 
-  it("a 403 verification_required becomes a prompt that links to the subscription plans, and keeps the words", async () => {
+  it("a 403 verification_required becomes a prompt that links to /verify, and keeps the words", async () => {
     stub(routes(() => err(403, "verification_required", "Subscribe and get verified to send messages.")));
     render(<ConversationPage conversationId="c1" />);
     await screen.findByText("Hello there");
     await userEvent.type(screen.getByLabelText("Your message"), "Hi Ada");
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
     expect(await screen.findByText("Subscribe and get verified to send messages.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "See subscription plans" }).getAttribute("href")).toBe("/units/buy");
+    expect(screen.getByRole("link", { name: "See how to get verified" }).getAttribute("href")).toBe("/verify");
     expect((screen.getByLabelText("Your message") as HTMLInputElement).value).toBe("Hi Ada");
   });
 

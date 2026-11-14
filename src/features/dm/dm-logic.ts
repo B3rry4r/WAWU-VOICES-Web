@@ -6,8 +6,8 @@ import { countChars, textCostMilli, tokensLabel } from "@/lib/shared/text-price"
 export const DM_MAX_CHARS = 5000;
 /** How often the unread number on the messages icon is asked for while a page is open. */
 export const UNREAD_POLL_MS = 30_000;
-/** The page a refused sender is sent to for the subscription plans. */
-export const PLANS_HREF = "/units/buy";
+/** The page a refused sender is sent to: it explains the plan and the ID check. */
+export const PLANS_HREF = "/verify";
 
 /** What a direct message costs, from GET /dm/limits (config on the server, 0 is free). Never typed into a screen. */
 export type DmCosts = Pick<DmLimits, "textPriceMilli" | "textPriceChars" | "voicePriceMilli" | "voiceMaxSeconds" | "messagesLeftToday">;

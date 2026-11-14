@@ -6,6 +6,7 @@ import { Avatar, Badge, Button, EmptyState, Icon, IconButton, Sheet, Skeleton, T
 import * as api from "@/lib/api/dm";
 import { AppBar, Problem, SignInNote, useSignedIn } from "@/features/talk/lib";
 import { announceDmUnread } from "@/components/shell/Messages";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { personName, when } from "./dm-logic";
 import "./dm.css";
 
@@ -129,6 +130,7 @@ export function InboxPage() {
                   <span className="dm-row__txt">
                     <span className="dm-row__top">
                       <span className="dm-row__name">{personName(c.person)}</span>
+                      <VerifiedTick verified={c.person.verified} />
                       {c.person.deleted ? null : <span className="dm-row__handle">{`@${c.person.handle}`}</span>}
                       <span className="dm-row__time">{when(c.updatedAt)}</span>
                     </span>
