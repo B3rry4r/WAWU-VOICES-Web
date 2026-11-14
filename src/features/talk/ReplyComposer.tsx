@@ -12,8 +12,10 @@ const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "
 
 /** The reply box drawn inside the Thread at 1440. A reply spends a free post or tokens like an answer, so a 402 keeps the words in this browser
  *  and sends the person to buy tokens, then back here. */
-export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy }: {
+export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, onVoice }: {
   aid: string; qid: string; who: string; stance?: ReplyStance; allow: Allowances; onPosted: () => void; onBuy: (href: string) => void;
+  /** Opens the voice reply (the same recorder as an answer). */
+  onVoice?: () => void;
 }) {
   const busy = useRef(false);
   const key = useRef<{ text: string; k: string } | null>(null);
@@ -66,7 +68,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy }:
         paid={price.paid}
         postDisabled={allow.messagesLeftToday === 0}
         balance={unitsText(allow.balanceMilli)}
-        onVoice={false}
+        onVoice={onVoice ?? false}
         onSubmit={() => void send()}
       />
       {sending ? <Banner tone="info">Posting your reply.</Banner> : null}

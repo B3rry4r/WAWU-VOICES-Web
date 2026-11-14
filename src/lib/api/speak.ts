@@ -24,17 +24,17 @@ export const getPublicConfig = () => apiFetch<PublicConfig>("/config/public");
 export const getAllowance = () => apiFetch<Allowances>("/me/allowance", { authed: true });
 export const getTiers = () => apiFetch<TiersResponse>("/units/tiers", { authed: true });
 
-export const createVoiceClip = (b: { mime: S["CreateVoiceClipRequest"]["mime"]; sizeBytes: number; durationMs: number; extraVoiceTokenId?: string }) =>
+export const createVoiceClip = (b: { mime: S["CreateVoiceClipRequest"]["mime"]; sizeBytes: number; durationMs: number; extraVoiceTokenId?: string; purpose?: S["CreateVoiceClipRequest"]["purpose"] }) =>
   apiFetch<VoiceUpload>("/voice-clips", { method: "POST", authed: true, body: { purpose: "ANSWER", ...b } });
 export const completeVoiceClip = (id: string) => apiFetch<VoiceClip>(`/voice-clips/${id}/complete`, { method: "POST", authed: true });
 export const getVoiceClip = (id: string) => apiFetch<VoiceClip>(`/voice-clips/${id}`, { authed: true });
 export const deleteVoiceClip = (id: string) => apiFetch<void>(`/voice-clips/${id}`, { method: "DELETE", authed: true });
 
-export const createVoiceAnswer = (questionId: string, clipId: string, key: string, extraVoiceTokenId?: string, mood?: S["Mood"] | null) =>
+export const createVoiceAnswer = (questionId: string, clipId: string, key: string, extraVoiceTokenId?: string, mood?: S["Mood"] | null, anonymous = false) =>
   apiFetch<PostReceipt>(`/questions/${questionId}/answers`, {
     method: "POST",
     authed: true,
     idempotencyKey: key,
-    body: { kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}), ...(mood ? { mood } : {}) },
+    body: { kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}), ...(mood ? { mood } : {}), ...(anonymous ? { anonymous: true } : {}) },
   });
 
