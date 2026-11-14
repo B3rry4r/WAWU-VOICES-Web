@@ -45,7 +45,7 @@ export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: 
   { id: "results", label: "Posted results", href: "/admin/results", icon: "circle-check" },
   { id: "ads", label: "Adverts", href: "/admin/ads", icon: "megaphone" },
   { id: "surveys", label: "Sponsored Surveys", href: "/admin/surveys", icon: "vote" },
-  { id: "brands", label: "Brands", href: "/admin/brands", icon: "badge-check" },
+  { id: "brands", label: "Brand pages", href: "/admin/brands", icon: "badge-check" },
   { id: "weekly", label: "Weekly report", href: "/admin/weekly", icon: "chart-column" },
   { id: "moderation", label: "Moderation", href: "/admin/moderation", icon: "shield-alert" },
 ];

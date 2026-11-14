@@ -36,7 +36,7 @@ function BrandsBody() {
     <div>
       <PageHead
         eyebrow="Ad manager"
-        title="Brands"
+        title="Brand pages"
         sub="A brand page shows the brand, its live surveys and its live adverts."
         right={error && isSuspendedError(error) ? undefined : (
           <Button icon="plus" onClick={() => { setEditing("new"); setSaved(null); }}>
