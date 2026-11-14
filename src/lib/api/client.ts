@@ -87,8 +87,8 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   idempotencyKey?: string;
   /**
    * Opt in: send only with the sign-in of this person (a token subject). Checked right before the first send and again before any
-   * retry after a refresh; on a mismatch nothing is sent and WrongPersonError is thrown. A refresh started by this call never
-   * overwrites or clears a sign-in that belongs to someone else. Only meaningful with `authed`.
+   * retry after a refresh; on a mismatch nothing is sent and WrongPersonError is thrown. A refresh never
+   * overwrites or clears a sign-in that belongs to someone else (for every call, see doRefresh). Only meaningful with `authed`.
    */
   expectSubject?: string;
 }
@@ -128,11 +128,20 @@ async function rotatedElsewhere(before: string): Promise<boolean> {
   return false;
 }
 
-async function doRefresh(before: string, retried = false, expect?: string): Promise<boolean | null> {
+/**
+ * One refresh, as compare and set. It remembers the refresh token it started from (`current`) and writes the answer
+ * only if storage still holds that same token. If someone else changed storage meanwhile (another tab of the same person
+ * refreshed first, or another person signed in), the answer is dropped and `true` is returned: the caller then retries
+ * with whatever is in storage now, and a call tied to one person (expectSubject) checks that sign-in is still theirs.
+ * A refused refresh clears the shared session only if storage still holds the token it started from.
+ */
+async function doRefresh(before: string, retried = false): Promise<boolean | null> {
   const current = sessionStorage.getRefreshToken();
   if (!current) return false;
   // Another tab won while we waited for the lock: its tokens are already in storage.
   if (current !== before) return true;
+  // Storage moved on (or was emptied) while we were away: drop our answer. true means "use what is in storage now".
+  const moved = (): boolean | null => (sessionStorage.getRefreshToken() === current ? null : sessionStorage.getRefreshToken() ? true : false);
   try {
     const res = await fetch(`${WAWU_ID_BASE}/auth/refresh`, {
       method: "POST",
@@ -150,37 +159,42 @@ async function doRefresh(before: string, retried = false, expect?: string): Prom
         /* no body */
       }
       await wait(Math.min(Math.max(secs, 0), 30) * 1000);
-      return doRefresh(before, true, expect);
+      return doRefresh(before, true);
     }
     if (!res.ok) {
       if (res.status >= 500) return null;
-      // Refused: if another tab rotated meanwhile, use its tokens; sign out only when nothing changed.
-      return (await rotatedElsewhere(current)) ? true : false;
+      // Refused: if another tab rotated meanwhile, use its tokens; sign out only when storage still holds the token we started from.
+      if (await rotatedElsewhere(current)) return true;
+      const m = moved();
+      if (m !== null) return m;
+      sessionStorage.clear();
+      return false;
     }
     const raw = (await res.json()) as { data?: { accessToken?: string; refreshToken?: string }; accessToken?: string; refreshToken?: string };
     const d = raw.data ?? raw;
     if (!d.accessToken || !d.refreshToken) return false;
+    // Compare and set: if storage no longer holds the refresh token we started from, our answer belongs to a sign-in that is gone. Drop it.
+    const m = moved();
+    if (m !== null) return m;
     // A token refreshed into a suspended state is not kept.
     if (isBlockedStatus(d.accessToken)) {
       sessionStorage.clear();
       throw new AccountBlockedError();
     }
-    // A call tied to one person: never write tokens over a sign-in that is not theirs (someone signed in meanwhile), or tokens that are not theirs.
-    if (expect !== undefined && (tokenSubject(sessionStorage.getToken()) !== expect || tokenSubject(d.accessToken) !== expect)) throw new WrongPersonError();
     sessionStorage.setTokens(d.accessToken, d.refreshToken);
     return true;
   } catch (e) {
-    if (e instanceof AccountBlockedError || e instanceof WrongPersonError) throw e;
+    if (e instanceof AccountBlockedError) throw e;
     return null;
   }
 }
 
-/** One refresh at a time across tabs (Web Locks), and one per tab. true: new tokens in storage. false: refused. null: could not ask. */
-async function refreshSession(expect?: string): Promise<boolean | null> {
+/** One refresh at a time across tabs (Web Locks), and one per tab. true: use the tokens in storage now. false: refused. null: could not ask. */
+async function refreshSession(): Promise<boolean | null> {
   const before = sessionStorage.getRefreshToken();
   if (!before) return false;
   const locks = typeof navigator !== "undefined" ? (navigator as Navigator & { locks?: { request: <T>(name: string, cb: () => Promise<T>) => Promise<T> } }).locks : undefined;
-  return locks ? locks.request("voices-refresh", () => doRefresh(before, false, expect)) : doRefresh(before, false, expect);
+  return locks ? locks.request("voices-refresh", () => doRefresh(before)) : doRefresh(before);
 }
 
 async function raw(path: string, opts: RequestOptions, isRetry = false): Promise<Response> {
@@ -217,11 +231,10 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   if (res.status === 401 && authed && !token && !isRetry) {
     // Tied to one person: if the stored sign-in is no longer theirs, do not refresh with it, and leave it alone.
     if (expectSubject !== undefined && tokenSubject(sessionStorage.getToken()) !== expectSubject) throw new WrongPersonError();
-    if (!refreshing) refreshing = refreshSession(expectSubject).finally(() => { refreshing = null; });
+    if (!refreshing) refreshing = refreshSession().finally(() => { refreshing = null; });
     const ok = await refreshing;
     if (ok) return raw(path, opts, true);
-    // A refused refresh clears the shared session, but never one that belongs to someone else by now.
-    if (ok === false && (expectSubject === undefined || tokenSubject(sessionStorage.getToken()) === expectSubject)) sessionStorage.clear();
+    // A refused refresh has already cleared the shared session, and only if it was still the one that refused (see doRefresh).
   }
   if (!res.ok) {
     const err = await readError(res);
