@@ -10,6 +10,34 @@ export function makePlayer(url: string): HTMLAudioElement {
   return a;
 }
 
+/**
+ * One clip at a time (V-FIX-B round 2). Whatever starts playing, an answer, a reply, the override's voice note or an audio
+ * advert, first stops the clip that is playing: its audio is paused and its own `stop` runs so its button shows Play again.
+ */
+let current: { a: HTMLAudioElement; stop: () => void } | null = null;
+export function claimPlayback(a: HTMLAudioElement, stop: () => void): void {
+  if (current && current.a !== a) {
+    const prev = current;
+    current = null;
+    try { prev.stop(); } catch { /* a card that is gone */ }
+    prev.a.pause();
+  }
+  current = { a, stop };
+  a.addEventListener("ended", () => { if (current?.a === a) current = null; }, { once: true });
+}
+/** Stops whatever clip is playing (an advert's link was opened). */
+export function stopPlayback(): void {
+  if (!current) return;
+  const prev = current;
+  current = null;
+  try { prev.stop(); } catch { /* gone */ }
+  prev.a.pause();
+}
+/** The clip that is playing lets go (it was paused or unmounted). */
+export function releasePlayback(a: HTMLAudioElement): void {
+  if (current?.a === a) current = null;
+}
+
 /** Re-sign once when the URL lapses mid-session. */
 export async function playWithResign(a: HTMLAudioElement, resign: () => Promise<string>): Promise<void> {
   pauseSongForVoice();

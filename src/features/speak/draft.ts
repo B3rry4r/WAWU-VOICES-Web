@@ -13,9 +13,12 @@ export interface Draft {
   /** Stays the same for this recording so a retried post cannot post twice. */
   key: string;
   savedAt: number;
+  /** V-FIX-B round 2: the tag chosen so far (and the source named for a Verified News request) survives signing in. */
+  tag?: TagChoice;
 }
 
 import { sessionStorage } from "@/lib/auth/session-storage";
+import type { TagChoice } from "@/features/news/tag-choice";
 
 /** Who is signed in, read from the token's subject (only to match a draft, never trusted for anything else). */
 export function currentOwner(): string | null {

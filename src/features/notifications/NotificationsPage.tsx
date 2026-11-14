@@ -55,6 +55,10 @@ export function targetHref(n: Pick<Notification, "targetType" | "targetId"> & { 
   if (t === "weekly_report") return `/weekly/${n.targetId}`;
   if (t === "question") return `/q/${n.targetId}`;
   if (t === "poll" && n.type === "FLASH_POLL") return "/"; // the open flash poll sits on Home
+  // V-FIX-B round 2: the API writes targetType "poll" and the poll's id for POLL_CLOSED, with the question it belongs to in questionId:
+  // the results of that question. A new post under a tag followed opens in the Newsroom; a new question in a category is a "question" target.
+  if (t === "poll" && n.type === "POLL_CLOSED") return n.questionId ? `/q/${n.questionId}/results` : null;
+  if (t === "answer" && n.type === "TAG_FOLLOW") return `/news/${n.targetId}`;
   // LCH-07: a video notice opens that answer's share screen, where the video is
   if (t === "answer" && n.type === "VIDEO_READY") return n.questionId ? `/q/${n.questionId}/posted?a=${n.targetId}` : null;
   if (t === "answer") return n.questionId ? `/q/${n.questionId}/a/${n.targetId}` : null;

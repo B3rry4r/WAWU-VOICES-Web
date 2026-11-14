@@ -137,10 +137,19 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     loadDraft().then((d) => {
       if (!live || !d || d.questionId !== qid) return;
       setTake({ blob: d.blob, mime: d.mime, seconds: d.seconds, peaks: d.peaks, key: d.key });
+      if (d.tag) setTag(d.tag); // the tag (and the source of a Verified News request) chosen before the join comes back with it
       setPhase("preview");
     });
     return () => { live = false; };
   }, [qid]);
+
+  // V-FIX-B round 2: a tag picked after recording is kept with the held recording, so it survives signing in.
+  useEffect(() => {
+    if (!qid || !take || phase !== "preview") return;
+    const h = window.setTimeout(() => void saveDraft({ ...take, questionId: qid, savedAt: Date.now(), tag }), 300);
+    return () => window.clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tag]);
 
   // WF-6b (A-L6): "Finish and post my voice" returns here with autopost=1 and the held recording: send it once, without a second tap.
   const autoPosted = useRef(false);
@@ -176,7 +185,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     const t: Take = { blob: r.blob, mime: r.mime, seconds: r.realSeconds, peaks: peaksFromLevels(levelsRef.current), key: uuidKey() };
     setTake(t);
     setPhase("preview");
-    if (qid) void saveDraft({ ...t, questionId: qid, savedAt: Date.now() } satisfies Draft);
+    if (qid) void saveDraft({ ...t, questionId: qid, savedAt: Date.now(), tag } satisfies Draft);
     if (r.overLimit) {
       interrupted.current = false;
       pushNote({ tone: "info", text: `That recording ran past ${wasLimit} seconds, so it cannot be sent as it is. Record it again.` });
@@ -184,7 +193,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       interrupted.current = false;
       pushNote({ tone: "info", text: "Your recording stopped when you left the page. Listen back, then send it or record again." });
     }
-  }, [qid, untrap]);
+  }, [qid, untrap, tag]);
 
   async function startRecording() {
     if (!qid || phase === "recording" || starting.current || rec.current) return;
@@ -336,7 +345,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     // V-FIX-B (addendum 1): a post cannot publish without a tag the person chose.
     if (!tagReady(tag)) return;
     if (!signedIn) {
-      await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
+      await saveDraft({ ...take, questionId: qid, savedAt: Date.now(), tag });
       window.location.assign(joinHref());
       return;
     }
@@ -399,13 +408,13 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           text: refusalText(e),
           action: "Get tokens",
           onAction: () => {
-            void saveDraft({ ...take, questionId: qid, savedAt: Date.now() }).finally(() => router.push(`/units/buy?from=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}`));
+            void saveDraft({ ...take, questionId: qid, savedAt: Date.now(), tag }).finally(() => router.push(`/units/buy?from=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}`));
           },
         });
         return;
       }
       if (e instanceof ApiError && (e.code === "UNAUTHENTICATED" || e.code === "TOKEN_EXPIRED")) {
-        await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
+        await saveDraft({ ...take, questionId: qid, savedAt: Date.now(), tag });
         window.location.assign(joinHref());
         return;
       }
