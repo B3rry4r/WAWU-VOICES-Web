@@ -10,6 +10,8 @@ export interface CountryPickerProps {
   selected: string;
   onPick: (code: string) => void;
   onClose: () => void;
+  /** A tap outside: closes without taking focus back. Defaults to onClose. */
+  onOutside?: () => void;
   /** Names the search box for a screen reader. */
   label?: string;
 }
@@ -21,20 +23,40 @@ export function CountryPicker(p: CountryPickerProps): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
   const listId = useId();
   const { onClose } = p;
+  const onOutside = p.onOutside ?? onClose;
   useEffect(() => {
     ref.current?.querySelector('input')?.focus();
     ref.current?.scrollIntoView?.({ block: 'nearest' });
     function outside(e: MouseEvent) {
-      if (ref.current && !ref.current.parentElement?.contains(e.target as Node)) onClose();
+      if (ref.current && !ref.current.parentElement?.contains(e.target as Node)) onOutside();
     }
     document.addEventListener('mousedown', outside);
     return () => document.removeEventListener('mousedown', outside);
-  }, [onClose]);
+  }, [onOutside]);
   return (
     <div
       ref={ref}
       className="vx-dial__list"
       onKeyDown={(e) => {
+        const rowsEls = Array.from(ref.current?.querySelectorAll<HTMLElement>('.vx-dial__row') ?? []);
+        const at = rowsEls.indexOf(document.activeElement as HTMLElement);
+        const go = (i: number) => {
+          e.preventDefault();
+          rowsEls[Math.max(0, Math.min(rowsEls.length - 1, i))]?.focus();
+        };
+        if (e.key === 'ArrowDown') go(at + 1);
+        else if (e.key === 'ArrowUp') {
+          if (at <= 0) {
+            e.preventDefault();
+            ref.current?.querySelector('input')?.focus();
+          } else go(at - 1);
+        } else if (e.key === 'Home' && at >= 0) go(0);
+        else if (e.key === 'End' && at >= 0) go(rowsEls.length - 1);
+        else if (e.key === 'Enter' && at < 0 && rowsEls.length > 0) {
+          // Enter in the search box picks the first country listed.
+          e.preventDefault();
+          rowsEls[0].click();
+        }
         if (e.key === 'Escape') {
           // Closes this list only, not the sheet around the field.
           e.stopPropagation();
@@ -51,10 +73,10 @@ export function CountryPicker(p: CountryPickerProps): ReactElement {
       {rows.length === 0 ? (
         <p className="vx-dial__none" role="status">Nothing matches. Check the spelling, or search by code.</p>
       ) : (
-        <ul className="vx-dial__rows" id={listId} role="listbox" aria-label="Countries">
+        <ul className="vx-dial__rows" id={listId} aria-label="Countries">
           {rows.map((c) => (
-            <li key={c.code} role="presentation">
-              <button type="button" role="option" aria-selected={c.code === p.selected} className="vx-dial__row" data-country={c.code} onClick={() => p.onPick(c.code)}>
+            <li key={c.code}>
+              <button type="button" aria-current={c.code === p.selected ? 'true' : undefined} aria-label={`${c.name} +${c.dial}`} className="vx-dial__row" data-country={c.code} onClick={() => p.onPick(c.code)}>
                 <span className="vx-dial__flag" aria-hidden="true">{c.flag}</span>
                 <span className="vx-dial__name">{c.name}</span>
                 <span className="vx-dial__code">+{c.dial}</span>
@@ -92,15 +114,20 @@ const EXAMPLE: Record<string, string> = { NG: '803 214 7720', GH: '24 123 4567',
 /** A phone field: the chosen country's flag and dial code as the prefix, a button that opens the list, and the number. */
 export function PhoneField(p: PhoneFieldProps): ReactElement {
   const [open, setOpen] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
   const c = countryByCode(p.country);
-  const close = () => setOpen(false);
+  const close = (refocus = true) => {
+    setOpen(false);
+    if (refocus) setTimeout(() => btn.current?.focus(), 0);
+  };
   const slot =
     p.showCountry === false ? undefined : (
       <span className="vx-dial">
         <button
+          ref={btn}
           type="button"
           className="vx-dial__btn"
-          aria-haspopup="listbox"
+          aria-haspopup="true"
           aria-expanded={open}
           aria-label={`Country code, ${c.name} +${c.dial}. Change`}
           onClick={() => setOpen((o) => !o)}
@@ -112,7 +139,8 @@ export function PhoneField(p: PhoneFieldProps): ReactElement {
         {open ? (
           <CountryPicker
             selected={c.code}
-            onClose={close}
+            onClose={() => close()}
+            onOutside={() => close(false)}
             onPick={(code) => {
               p.onCountry(code);
               close();

@@ -90,6 +90,8 @@ export function countryByCode(code: string | null | undefined): DialCountry {
 }
 
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+/** Where several countries share one dial code, the ones people mean first. */
+export const MAIN_COUNTRIES: ReadonlySet<string> = new Set(["US", "GB", "RU", "IT", "RE"]);
 const NICKNAMES: Record<string, string> = { uk: "GB", usa: "US", uae: "AE" };
 
 /** The rows that answer a search: a name that starts with it, then one that holds it, a code, or a dial code. Empty search: the whole list. */
@@ -100,11 +102,16 @@ export function searchCountries(query: string, list: readonly DialCountry[] = DI
   const nick = NICKNAMES[q];
   const starts: DialCountry[] = [];
   const holds: DialCountry[] = [];
+  const exact: DialCountry[] = [];
+  const exactMain: DialCountry[] = [];
   for (const c of list) {
     const n = fold(c.name);
     if (c.code === nick || c.code.toLowerCase() === q) starts.unshift(c);
+    else if (/^\d+$/.test(digits) && c.dial === digits) (MAIN_COUNTRIES.has(c.code) ? exactMain : exact).push(c);
     else if (n.startsWith(q)) starts.push(c);
     else if (n.includes(q) || (/^\d+$/.test(digits) && c.dial.startsWith(digits))) holds.push(c);
   }
-  return [...starts, ...holds];
+  // Canada's +1 is United States and Canada first; the nickname or code hit stays on top of them.
+  const top = starts.filter((c) => c.code === nick || c.code.toLowerCase() === q);
+  return [...top, ...exactMain, ...exact, ...starts.filter((c) => !top.includes(c)), ...holds];
 }

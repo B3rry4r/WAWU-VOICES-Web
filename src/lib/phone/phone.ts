@@ -1,4 +1,4 @@
-import { countryByCode, DIAL_COUNTRIES, type DialCountry } from "./countries";
+import { countryByCode, DIAL_COUNTRIES, MAIN_COUNTRIES, type DialCountry } from "./countries";
 
 export type PhoneRead = { ok: true; e164: string; national: string } | { ok: false; reason: "empty" | "invalid" };
 
@@ -9,17 +9,22 @@ export type PhoneRead = { ok: true; e164: string; national: string } | { ok: fal
  */
 export function readPhone(typed: string, country: DialCountry | string = "NG"): PhoneRead {
   const c = typeof country === "string" ? countryByCode(country) : country;
-  let s = typed.trim().replace(/[\s\-().]/g, "");
+  let s = typed.trim().replace(/\s+/g, "");
   if (s === "" || s === "+") return { ok: false, reason: "empty" };
-  if (!/^\+?\d+$/.test(s)) return { ok: false, reason: "invalid" };
   if (s.startsWith("00")) s = `+${s.slice(2)}`;
+  // An explicit "(0)" after the code ("+44 (0) 7400 123456") is the trunk 0 and is removed.
+  if (s.startsWith("+")) s = s.replace(/\(0\)/, "");
+  s = s.replace(/[\-().]/g, "");
+  if (!/^\+?\d+$/.test(s)) return { ok: false, reason: "invalid" };
+  // A dial code never starts with 0.
+  if (s.startsWith("+0")) return { ok: false, reason: "invalid" };
   const digits = s.replace(/\D/g, "");
   let full: string;
   if (s.startsWith("+")) full = digits;
   else if (digits.startsWith(c.dial) && digits.length >= c.dial.length + 8) full = digits;
   else full = c.dial + digits.replace(/^0+/, "");
-  // A trunk 0 kept after the code ("+234 0803...") is the same number without it.
-  if (full.startsWith(c.dial) && full[c.dial.length] === "0") full = c.dial + full.slice(c.dial.length + 1);
+  // A bare trunk 0 kept after Nigeria's code ("+234 0803...") is the same number without it. Other countries keep a 0 (Italy's is part of the number).
+  if (full.startsWith("234") && full[3] === "0") full = "234" + full.slice(4);
   if (full.length < 8 || full.length > 15) return { ok: false, reason: "invalid" };
   // Nigeria: ten digits after 234, starting 7, 8 or 9 (the rule WAWU ID applies).
   if (full.startsWith("234") && !/^234[789]\d{9}$/.test(full)) return { ok: false, reason: "invalid" };
@@ -32,9 +37,6 @@ export function looksLikePhone(text: string): boolean {
   return t.length > 0 && /^\+?[\d\s\-().]+$/.test(t) && /\d/.test(t);
 }
 
-/** Where several countries share one code, the one people mean. */
-const MAIN = new Set(["GB", "US", "RU", "IT", "RE"]);
-
 /** The country a full number belongs to: the one whose dial code starts it, the longest code first, the chosen country winning a tie. */
 export function countryForNumber(e164: string, preferred: string = "NG"): DialCountry {
   const digits = e164.replace(/\D/g, "");
@@ -42,5 +44,5 @@ export function countryForNumber(e164: string, preferred: string = "NG"): DialCo
   if (hits.length === 0) return countryByCode(preferred);
   const longest = Math.max(...hits.map((c) => c.dial.length));
   const best = hits.filter((c) => c.dial.length === longest);
-  return best.find((c) => c.code === preferred) ?? best.find((c) => MAIN.has(c.code)) ?? best[0];
+  return best.find((c) => c.code === preferred) ?? best.find((c) => MAIN_COUNTRIES.has(c.code)) ?? best[0];
 }

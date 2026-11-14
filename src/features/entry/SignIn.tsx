@@ -14,9 +14,12 @@ import { ErrorBanner, isOffline, useSkipIfSignedIn } from "./ui";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-/** What sign in sends: an email as typed, a phone number in full international form (+<code><number>), anything unclear as typed. */
-function idAsSent(identifier: string, country: string): string {
-  if (!looksLikePhone(identifier)) return identifier;
+/**
+ * What sign in sends. An email, and any number typed with Nigeria chosen, go exactly as typed (what people have always typed
+ * keeps working). A number with another country chosen goes in full international form (+<code><number>), unless it is unclear.
+ */
+export function idAsSent(identifier: string, country: string): string {
+  if (!looksLikePhone(identifier) || country === DEFAULT_COUNTRY) return identifier;
   const read = readPhone(identifier, country);
   return read.ok ? read.e164 : identifier;
 }
