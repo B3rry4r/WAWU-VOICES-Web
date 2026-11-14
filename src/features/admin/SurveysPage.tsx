@@ -121,7 +121,7 @@ function SurveysBody() {
       ) : (
         <>
           {items.length ? (
-            <div className="mb-5 overflow-hidden rounded-xl border border-line bg-surface">
+            <div className="mb-5 overflow-x-auto rounded-xl border border-line bg-surface">
               <table className="w-full border-collapse text-left text-caption">
                 <thead>
                   <tr className="text-ink-2">
@@ -153,7 +153,7 @@ function SurveysBody() {
           ) : creating ? (
             <SurveyForm cats={cats} brands={brands} onClose={() => setCreating(false)} onSaved={(s) => { setCreating(false); setSelected(s.id); setSaved("Survey saved as a draft. Send it for approval when it is ready."); reloadToday(); void load(); }} />
           ) : sv ? (
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
+            <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <Preview survey={sv} />
               <Review key={sv.id + sv.status} survey={sv} cats={cats} onDone={changed} onEdit={() => { setEditing(true); setSaved(null); }} />
             </div>
@@ -211,11 +211,11 @@ function Review({ survey, cats, onDone, onEdit }: { survey: AdminSurvey; cats: R
           </li>
         ))}
       </ul>
-      <dl className="m-0 mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-caption">
+      <dl className="m-0 mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 text-caption">
         <dt className="text-ink-2">Brand contact</dt>
         <dd className="m-0 break-words">{survey.contactEmail}</dd>
         <dt className="text-ink-2">Targeting</dt>
-        <dd className="m-0">{[names, survey.states.length ? survey.states.join(", ") : "Nigeria"].join(" · ")}</dd>
+        <dd className="m-0 break-words">{[names, survey.states.length ? survey.states.join(", ") : "Nigeria"].join(" · ")}</dd>
         <dt className="text-ink-2">Most shown a day</dt>
         <dd className="m-0">{`${survey.frequencyCapPerDay} a day per person`}</dd>
         <dt className="text-ink-2">Answers wanted</dt>
@@ -223,7 +223,7 @@ function Review({ survey, cats, onDone, onEdit }: { survey: AdminSurvey; cats: R
         <dt className="text-ink-2">Price</dt>
         <dd className="m-0">{survey.priceKobo != null ? naira(survey.priceKobo) : "From the admin price list"}</dd>
         <dt className="text-ink-2">So far</dt>
-        <dd className="m-0 tabular-nums">{`${survey.views} seen, ${survey.starts} started, ${survey.skips} skipped, ${survey.responses} answered`}</dd>
+        <dd className="m-0 break-words tabular-nums">{`${survey.views} seen, ${survey.starts} started, ${survey.skips} skipped, ${survey.responses} answered`}</dd>
       </dl>
       {survey.changeRequest ? <p className="m-0 mt-4 rounded-m bg-surface-2 p-3 text-caption">{`Changes asked: ${survey.changeRequest}`}</p> : null}
 

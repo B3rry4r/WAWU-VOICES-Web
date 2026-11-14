@@ -230,7 +230,7 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
         </div>
       ) : null}
 
-      <div className={`grid gap-4 ${full ? "grid-cols-5" : "grid-cols-3"}`}>
+      <div className={`grid gap-4 ${full ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-3"}`}>
         <Stat label="Seen" value={num(t?.views)} />
         <Stat label="Started" value={num(t?.starts)} />
         <Stat label="Skipped" value={num(t?.skips)} />
@@ -348,7 +348,7 @@ function ResultsBody({ id }: { id: string }) {
     void load();
   }, [load]);
 
-  const back = <Link href="/admin/surveys" className="text-label text-green-text">Back to Sponsored Surveys</Link>;
+  const back = <Link href="/admin/surveys" className="inline-flex min-h-[44px] items-center text-label text-green-text">Back to Sponsored Surveys</Link>;
   if (error) {
     if (error instanceof ApiError && error.status === 404) {
       return <EmptyState icon="compass" title="We could not find that survey" body="Go back to the list and pick another." />;

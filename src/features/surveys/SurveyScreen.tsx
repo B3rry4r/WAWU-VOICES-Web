@@ -112,6 +112,7 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
   const finished = useRef(false); // the answers were sent (or the survey was already answered): nothing more to count
   const sendKey = useRef<{ key: string; body: string } | null>(null); // the Idempotency-Key of the answer in flight: kept after a failure so a retry is the same request, dropped only after success or when the server asks for a new one
   const skipSent = useRef(false); // SKIP goes once
+  const sending = useRef(false); // set in the same tick as the tap, so three quick taps are one request
   const alive = useRef(false);
   const guard = useRef(false); // the history entry that lets Back ask first is in place
   const hasAnswers = useRef(false);
@@ -208,6 +209,8 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
       const answers = toInputs(qs, all);
       // Every question skipped: nothing to send. The person has skipped the survey.
       if (answers.length === 0) return leave();
+      if (sending.current) return;
+      sending.current = true;
       setBusy(true);
       setProblem(null);
       const body = {
@@ -245,6 +248,7 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
           setRecap(null);
         } else setProblem(surveySendFailText(e));
       } finally {
+        sending.current = false;
         setBusy(false);
       }
     },
