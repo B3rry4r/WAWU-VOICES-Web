@@ -234,7 +234,7 @@ paths:
       summary: My settings
       security:
       - wawuId: []
-      description: 'Auth: signed in with a finished profile.'
+      description: 'useMyStateForSurveys (default false): allow Sponsored Surveys aimed at states to be shown to me when my state is one of them. Auth: signed in with a finished profile.'
       responses:
         '200':
           description: OK
@@ -6603,8 +6603,9 @@ paths:
       x-wawu-roles:
       - AD_MANAGER
       - ADMIN
-      description: 'Any subset of the fields. 409 for an approved or rejected survey, and for new questions once anyone has answered. Changing
-        the words of a paused survey sends it back to the approval queue. Auth: signed in with role AD_MANAGER or ADMIN.'
+      description: 'Any subset of the fields. 409 for an approved or rejected survey, for a survey whose results are fixed, and for new questions
+        once anyone has answered. Changing the words of a paused survey sends it back to the approval queue. Auth: signed in with role AD_MANAGER
+        or ADMIN.'
       parameters:
       - name: surveyId
         in: path
@@ -6725,16 +6726,21 @@ paths:
       operationId: adminSurveyReport
       tags:
       - admin
-      summary: The brand's results, combined and anonymous
+      summary: The brand's results, combined and anonymous (once released)
       security:
       - wawuId: []
       x-wawu-roles:
       - AD_MANAGER
       - ADMIN
-      description: 'No name, handle, photo or id is ever returned. Free answers and transcripts have emails, phone numbers, @handles and links
-        removed. State and age band appear only for people who agreed to share them. No group smaller than weekly.min_group_size is shown: while
-        fewer people than that have answered, belowMinimum is true and only the view, start and skip counts are returned. The web builds the CSV
-        from this body. Auth: signed in with role AD_MANAGER or ADMIN.'
+      description: 'Nothing is worked out while the survey runs: stage RUNNING (or NOT_LIVE), ready false, only answeredSoFar. When the survey
+        is over (end date passed or response target reached) its results are fixed once and no answer is accepted after that; until staff release
+        them the report is stage REVIEW, ready true, released false, answeredSoFar only. After POST /admin/surveys/{surveyId}/release it is stage
+        RELEASED, released true, and every read returns the same stored report. No name, handle, photo or id is ever returned. Free answers and
+        transcripts are scrubbed and any staff hid are left out. State and age band appear only for people who agreed to share them. No group
+        smaller than weekly.min_group_size is shown, and no hidden group can be worked out by subtraction: a hidden total that is under the minimum
+        pulls the next smallest group in, and hidden groups are shown together as other only when their sum is at least the minimum. Every read
+        writes an audit row (who, when, which survey). The web builds the CSV from a released body only. Auth: signed in with role AD_MANAGER
+        or ADMIN.'
       parameters:
       - name: surveyId
         in: path
@@ -6755,6 +6761,134 @@ paths:
           $ref: '#/components/responses/E403'
         '404':
           $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/surveys/{surveyId}/release:
+    post:
+      operationId: adminReleaseSurvey
+      tags:
+      - admin
+      summary: 'Staff have read the free answers: release the results to the brand'
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'Once only (409 after). Builds and stores the brand''s report from the fixed results and the free answers left in, writes an
+        audit row (who, when, how many hidden), then sends email F04 to the brand contact. mailed is false when the mail could not go yet: it
+        is tried again every ten minutes and never sent twice. F04 is never sent before release. Auth: signed in with role AD_MANAGER or ADMIN.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurveyReleaseResult'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/surveys/{surveyId}/free-answers/{answerId}:
+    patch:
+      operationId: adminHideSurveyFreeAnswer
+      tags:
+      - admin
+      summary: Hide one free answer from the brand (or show it again)
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'One call per answer. 409 before the survey is over and after release. Audited (the answer id, never its words). Auth: signed
+        in with role AD_MANAGER or ADMIN.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HideFreeAnswerRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HideFreeAnswerResult'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/surveys/{surveyId}/free-answers:
+    get:
+      operationId: adminSurveyFreeAnswers
+      tags:
+      - admin
+      summary: Every free answer and transcript, for staff to read before release
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: '409 while the survey is still running. Scrubbed (emails, links, bare domains, t.me and wa.me, ''name at provider dot com'',
+        numbers also in words, handles after insta, ig, twitter, x, tiktok, snap). A name or address typed in plain words is not found by pattern:
+        read each one. Listed alphabetically inside a question, never in the order people answered. Audited. Auth: signed in with role AD_MANAGER
+        or ADMIN.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurveyFreeAnswers'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
         '429':
           $ref: '#/components/responses/E429'
   /admin/brands:
@@ -6792,7 +6926,7 @@ paths:
       x-wawu-roles:
       - AD_MANAGER
       - ADMIN
-      description: 'Auth: signed in with role AD_MANAGER or ADMIN.'
+      description: '409 when another brand has the same name ignoring case and spaces. Auth: signed in with role AD_MANAGER or ADMIN.'
       requestBody:
         required: true
         content:
@@ -6810,6 +6944,8 @@ paths:
           $ref: '#/components/responses/E401'
         '403':
           $ref: '#/components/responses/E403'
+        '409':
+          $ref: '#/components/responses/E409'
         '422':
           $ref: '#/components/responses/E422'
         '429':
@@ -6825,7 +6961,7 @@ paths:
       x-wawu-roles:
       - AD_MANAGER
       - ADMIN
-      description: 'Auth: signed in with role AD_MANAGER or ADMIN.'
+      description: '409 when the new name matches another brand ignoring case and spaces. Auth: signed in with role AD_MANAGER or ADMIN.'
       parameters:
       - name: brandId
         in: path
@@ -6852,6 +6988,8 @@ paths:
           $ref: '#/components/responses/E403'
         '404':
           $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
         '422':
           $ref: '#/components/responses/E422'
         '429':
@@ -6900,8 +7038,8 @@ paths:
       summary: A sponsored survey to answer
       security:
       - wawuId: []
-      description: '404 unless the survey is live, in the person''s state and not skipped twice. myStatus ANSWERED returns no questions. Auth:
-        signed in with a finished profile.'
+      description: '404 unless the survey is live, not skipped twice, and, when it is aimed at states, the person turned on useMyStateForSurveys
+        (PATCH /me/settings) and their state is one of them. myStatus ANSWERED returns no questions. Auth: signed in with a finished profile.'
       parameters:
       - name: surveyId
         in: path
@@ -7005,8 +7143,9 @@ paths:
       - admin
       summary: A brand's public page
       security: []
-      description: 'V-SURVEYS: name, logo, one line, its live Sponsored Surveys and live adverts, labelled as a brand. Never a contact address.
-        Auth: none (public).'
+      description: 'V-SURVEYS: name, logo, one line, its live Sponsored Surveys and the live adverts the ad manager tied to this brand (Ad.brandId;
+        a matching name alone adds nothing), labelled as a brand. Never a contact address. A slug that is not 1 to 60 of a-z, 0-9 and - answers
+        404. Auth: none (public).'
       parameters:
       - name: slug
         in: path
@@ -7992,6 +8131,8 @@ components:
           type: integer
         shareMyWord:
           type: boolean
+        useMyStateForSurveys:
+          type: boolean
       additionalProperties: false
       required:
       - language
@@ -8008,6 +8149,7 @@ components:
       - notifyCategoryAlerts
       - dailyQuestionMinute
       - shareMyWord
+      - useMyStateForSurveys
     UpdateSettingsRequest:
       type: object
       properties:
@@ -8046,6 +8188,8 @@ components:
         dailyQuestionMinute:
           type: integer
         shareMyWord:
+          type: boolean
+        useMyStateForSurveys:
           type: boolean
       additionalProperties: false
     CategoryFollow:
@@ -12618,6 +12762,11 @@ components:
           format: uuid
         brand:
           type: string
+        brandId:
+          type:
+          - string
+          - 'null'
+          format: uuid
         kind:
           $ref: '#/components/schemas/AdKind'
         status:
@@ -12694,6 +12843,7 @@ components:
       - checks
       - id
       - brand
+      - brandId
       - kind
       - status
       - headline
@@ -12740,6 +12890,11 @@ components:
             type: string
         brand:
           type: string
+        brandId:
+          type:
+          - string
+          - 'null'
+          format: uuid
         kind:
           $ref: '#/components/schemas/AdKind'
         headline:
@@ -13585,6 +13740,16 @@ components:
           - string
           - 'null'
           format: date-time
+        snapshotAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        releasedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
       additionalProperties: false
       required:
       - id
@@ -13613,6 +13778,8 @@ components:
       - changeRequest
       - submittedAt
       - approvedAt
+      - snapshotAt
+      - releasedAt
     AdminSurveyPage:
       type: object
       properties:
@@ -13656,6 +13823,33 @@ components:
       - count
       - share
       - hidden
+    SurveyBreakdownOther:
+      type: object
+      properties:
+        responses:
+          type: integer
+        share:
+          type: integer
+      additionalProperties: false
+      required:
+      - responses
+      - share
+    SurveyReportOther:
+      type: object
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+        share:
+          type: integer
+      additionalProperties: false
+      required:
+      - label
+      - count
+      - share
+      description: The choices that are hidden, together. Present only when their sum is at least weekly.min_group_size. When a hidden group would
+        follow from the totals, the next smallest shown group is hidden too and joins this line.
     SurveyReportVoice:
       type: object
       properties:
@@ -13691,6 +13885,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SurveyReportOption'
+        other:
+          oneOf:
+          - $ref: '#/components/schemas/SurveyReportOther'
+          - type: 'null'
         texts:
           type: array
           items:
@@ -13707,6 +13905,7 @@ components:
       - prompt
       - answered
       - options
+      - other
       - texts
       - voices
     SurveyReportTotals:
@@ -13801,6 +14000,22 @@ components:
       properties:
         survey:
           $ref: '#/components/schemas/SurveyReportHead'
+        stage:
+          type: string
+          enum:
+          - NOT_LIVE
+          - RUNNING
+          - REVIEW
+          - RELEASED
+        ready:
+          type: boolean
+        released:
+          type: boolean
+        answeredSoFar:
+          type: integer
+        releasedAt:
+          type: string
+          format: date-time
         minGroupSize:
           type: integer
         belowMinimum:
@@ -13815,22 +14030,119 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SurveyReportState'
+        byStateOther:
+          oneOf:
+          - $ref: '#/components/schemas/SurveyBreakdownOther'
+          - type: 'null'
         byAgeBand:
           type: array
           items:
             $ref: '#/components/schemas/SurveyReportAge'
+        byAgeBandOther:
+          oneOf:
+          - $ref: '#/components/schemas/SurveyBreakdownOther'
+          - type: 'null'
         note:
           type: string
       additionalProperties: false
       required:
       - survey
-      - minGroupSize
-      - belowMinimum
-      - totals
-      - questions
-      - byState
-      - byAgeBand
+      - stage
+      - ready
+      - released
       - note
+      description: While the survey runs (and until staff release it) only stage, ready, released, answeredSoFar and note are present. The counts,
+        shares, free answers and breakdowns exist only when released is true, and are then the stored report, never recomputed.
+    SurveyReleaseResult:
+      type: object
+      properties:
+        released:
+          type: boolean
+        releasedAt:
+          type: string
+          format: date-time
+        hiddenCount:
+          type: integer
+        mailed:
+          type: boolean
+      additionalProperties: false
+      required:
+      - released
+      - releasedAt
+      - hiddenCount
+      - mailed
+    HideFreeAnswerResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hidden:
+          type: boolean
+      additionalProperties: false
+      required:
+      - id
+      - hidden
+    HideFreeAnswerRequest:
+      type: object
+      properties:
+        hidden:
+          type: boolean
+      additionalProperties: false
+      required:
+      - hidden
+    SurveyFreeAnswers:
+      type: object
+      properties:
+        released:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyFreeItem'
+        total:
+          type: integer
+        hiddenCount:
+          type: integer
+      additionalProperties: false
+      required:
+      - released
+      - items
+      - total
+      - hiddenCount
+    SurveyFreeItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        questionId:
+          type: string
+          format: uuid
+        prompt:
+          type: string
+        kind:
+          type: string
+          enum:
+          - TEXT
+          - VOICE
+        text:
+          type: string
+        seconds:
+          type:
+          - integer
+          - 'null'
+        hidden:
+          type: boolean
+      additionalProperties: false
+      required:
+      - id
+      - questionId
+      - prompt
+      - kind
+      - text
+      - seconds
+      - hidden
     SurveyCard:
       type: object
       properties:
