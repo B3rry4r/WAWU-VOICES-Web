@@ -41,7 +41,9 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
     api.getAnswer(id).then(setAns, setErr);
   }, [id, target, tries]);
 
-  const handle = ans?.author?.handle;
+  // V-HOTFIX-1: a post without a name (no author, or flagged anonymous) never offers or sends "also block", and never names anyone.
+  const anon = !!ans && (!ans.author || (ans as { anonymous?: boolean }).anonymous === true);
+  const handle = anon ? undefined : ans?.author?.handle;
   const back = ans ? `/q/${ans.questionId}` : "/";
   const noun = target === "REPLY" ? "reply" : "voice";
   const header = <><AppBar title={`Report this ${noun}`} sub={handle ? `From @${handle}` : undefined} close={back} /></>;
@@ -54,8 +56,8 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
     setBusy(true);
     setMsg(null);
     try {
-      const r = await api.createReport({ targetType: target, targetId: id, reason, note: note.trim() || undefined, alsoBlock: block && !!handle });
-      setBlocked(r.blocked);
+      const r = await api.createReport({ targetType: target, targetId: id, reason, note: note.trim() || undefined, ...(anon ? {} : { alsoBlock: block && !!handle }) });
+      setBlocked(!anon && r.blocked);
       setDone({ r, at: new Date() });
     } catch (e) {
       setMsg(e instanceof ApiError && e.status === 409 ? "You already reported this. Our team has it." : failText(e));
@@ -64,7 +66,7 @@ export function ReportScreen({ type, id }: { type: string; id: string }) {
     }
   }
   async function undo() {
-    if (!ans?.author) return;
+    if (anon || !ans?.author) return;
     try { await api.unblockUser(ans.author.id); setBlocked(false); } catch (e) { setMsg(failText(e)); }
   }
 
