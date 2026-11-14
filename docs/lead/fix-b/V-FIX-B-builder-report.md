@@ -67,3 +67,32 @@ Both branches merged with origin/main first (web conflicts in talk.ts, speak.ts,
 
 Checks: tsc clean in both repos; API specs fixb-news, fixb-media, fixb-alerts and contract-source: 24 pass (migrations applied from the renamed folder); web vitest for fixb-web, wf6b-people, talk, mood, wf-web, fix-text, fixa-web: 111 pass; lint clean; one `next build` OK; Playwright 12 of 12 pass.
 Heads: API f3eeb56, web 1ad938b.
+
+## Round 2
+
+Both branches merged with origin/main first (API clean; contract regenerated, not hand-edited). Heads: API 4e5340e, web cf2c175.
+
+API
+1. HIGH edit lock: api/src/talk/posts.service.ts editAnswer. A poster gets 409 "This post was checked as Verified News and can no longer be edited." or "An editor is checking this post. It cannot be edited until they decide." (open request row or VERIFIED_REQUESTED). An editor or admin edits their own Verified post as before. Spec: test/admin/fixb-r2.spec.ts (request open, approved, editor edit, decline frees it).
+2. Readable questions: new `isQuestionReadable` and `questionReadableWhere` in api/src/feed/question-window.ts (open or over). Used by /news lists and /news/{id}, the request route, flag, admin approve (APPROVE_VERIFIED and CHANGE_TAG to Verified: 404), tagPost and pollClosed. Only a post first published under a tag and a post first approved as Verified News send TAG_FOLLOW; any other tag change does not (news.service.ts `first`).
+3. notifyTagFollows (UserSettings, default true, settings DTO, response, contract) honoured in fanOut; config `alerts.tag_follow_per_day` (default 6, max 24, 0 sends none) as a per-tag per-Lagos-day cap read with one grouped query per page. Migration api/prisma/migrations/20261114230000_fixb_alerts_2 (column and the AlertMarker table) with rollback.down.sql (refuses while anyone has switched the alerts off). First migration untouched.
+4. One fan-out per tag per hour: the first post claims an AlertMarker row (insert, do nothing on conflict) before any page is read; a second post reads no followers (spec spies on newsTagFollow.findMany); ten posts at once do one fan-out; an in-process busy flag per tag; a failed fan-out gives the marker back. A database marker was used instead of Redis because it needs no new client and also holds across processes. Old markers are swept after 3 days.
+5. Advert links: what was accepted before: https only on create and update for every kind, but a host without a dot, a sign-in part and "https:x" passed. Now a real https address with a dotted host and no credentials, for every kind, on create and update (spec runs 8 bad links through all 4 kinds, both routes). The public placement also hands the page only http(s) links.
+Also: a POLL_CLOSED notice now carries the question whose results it opens (questionId, via the poll or the topic's first question), so the web can open it.
+
+Web
+6. playback.ts `claimPlayback`, `stopPlayback`: used by ClipPlayer (answers, override note, advert), talk/lib.tsx answer cards and ProfileCard. Test tests/fixb-one-clip.test.tsx: note then advert, one playing.
+7. NewsPage: "Asking for Verified News" is first when it has items (the page opens on it, and on Flagged when it is empty), the poster's source is shown on the row and in the form, approve and decline work.
+8. The draft keeps the tag and the Verified News source (draft.ts, SpeakScreen); "Finish and post my voice" sends them; with no tag it posts as Not news in one tap (e2e both).
+9. targetHref: POLL_CLOSED opens /q/{questionId}/results, CATEGORY_ALERT its question, TAG_FOLLOW /news/{answerId}; tested with the API's real shapes (tests/fixb-r2-web.test.tsx) and the API shape in test/reach/fixb-alerts.spec.ts.
+10. Settings: "News tag alerts" switch (notifyTagFollows).
+11. Advert text and button wrap (vx.css, a 60 character label and 100 character words), the override text breaks long strings, links only for http and https, new tab with rel noopener noreferrer, opening the link pauses the advert. E2E at 390 and 1440 asserts no sideways scroll.
+
+Existing assertions changed (old to new)
+- api/test/me/me.spec.ts settings toEqual: gains `notifyTagFollows: true`.
+- api/test/news/news.spec.ts: its question was a draft (default status) and news posts under it were listed; now the question is LIVE (a news post lives under a readable question).
+- web tests/wf-admin.test.tsx RW3 "News shows Flagged ... only": old `not.toContain("Asking for Verified News")`; new it is shown and listed before Flagged.
+- web tests/listen-track.test.tsx: its mock of playback.ts gains claimPlayback, releasePlayback, stopPlayback (assertions unchanged).
+
+Checks: tsc and lint clean in both repos. API on a fresh scratch Postgres/Redis: test/talk, feed, admin, reach, me, launch, news, mail, shared: 75 suites, 868 passed, 0 failed (before the last two small commits; reach and the poll notice spec rerun: 114 passed). New specs fixb-r2 (8) plus the round 1 specs pass. Web: whole vitest run once, then the 3 failures fixed as above and re-run green (88 files); one next build OK; Playwright e2e/fixb.e2e.mts 20 of 20 pass. Pictures (390 and 1440) in the scratchpad: fixb-home-long-*.png, fixb-admin-news-asking-1440.png, fixb-settings-tag-alerts-390.png.
+Stopped: my next server, my redis, my scratch database. No pkill. I used explicit paths for every git add.
