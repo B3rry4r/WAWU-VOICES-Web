@@ -6579,7 +6579,8 @@ paths:
       - wawuId: []
       x-wawu-roles:
       - ADMIN
-      description: 'Writes an ADJUSTMENT ledger transaction and an audit entry. Cannot take a balance below zero. Auth: signed in with role ADMIN.'
+      description: 'Writes an ADJUSTMENT ledger transaction and an audit entry. Cannot take a balance below zero. The answer carries `adjustment`
+        with the audit id and the ledger transaction id. Auth: signed in with role ADMIN.'
       parameters:
       - name: userId
         in: path
@@ -6623,7 +6624,8 @@ paths:
       - wawuId: []
       x-wawu-roles:
       - ADMIN
-      description: 'Auth: signed in with role ADMIN.'
+      description: 'V-ADMIN-MONEY: newest first, each with the person and the payment''s own price, VAT, charge and total. Auth: signed in with
+        role ADMIN.'
       parameters:
       - name: cursor
         in: query
@@ -6646,6 +6648,12 @@ paths:
         schema:
           type: string
         description: PaymentStatus
+      - name: kind
+        in: query
+        required: false
+        schema:
+          type: string
+        description: PaymentKind
       responses:
         '200':
           description: OK
@@ -6684,7 +6692,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Payment'
+                $ref: '#/components/schemas/AdminPayment'
         '401':
           $ref: '#/components/responses/E401'
         '403':
@@ -6693,6 +6701,78 @@ paths:
           $ref: '#/components/responses/E404'
         '409':
           $ref: '#/components/responses/E409'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/money/overview:
+    get:
+      operationId: adminMoneyOverview
+      tags:
+      - admin
+      summary: Money received, payments and tokens for today, 7 and 30 days
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - ADMIN
+      description: 'V-ADMIN-MONEY: received money split into token packs and subscriptions, with VAT and the payment charge apart from WAWU''s
+        own revenue (price), payment counts, new paying people, and tokens sold against spent. Days are Lagos days; the last 7 and 30 days include
+        today. Auth: signed in with role ADMIN.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoneyOverview'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/subscriptions:
+    get:
+      operationId: adminListSubscriptions
+      tags:
+      - admin
+      summary: Current and ended subscription plans
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - ADMIN
+      description: 'V-ADMIN-MONEY: read only. Newest first, with the next credit day of a plan still running. Auth: signed in with role ADMIN.'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Opaque cursor from nextCursor
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+        description: 1 to 50, default 20
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+        description: SubscriptionStatus
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSubscriptionPage'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
         '429':
           $ref: '#/components/responses/E429'
   /admin/audit:
@@ -8026,6 +8106,8 @@ components:
           - 'null'
         notifyDailyQuestion:
           type: boolean
+        notifyWeeklyTopic:
+          type: boolean
         notifyReplies:
           type: boolean
         notifyReactions:
@@ -8051,6 +8133,7 @@ components:
       - quietHoursStart
       - quietHoursEnd
       - notifyDailyQuestion
+      - notifyWeeklyTopic
       - notifyReplies
       - notifyReactions
       - notifyPollResults
@@ -8083,6 +8166,8 @@ components:
           - integer
           - 'null'
         notifyDailyQuestion:
+          type: boolean
+        notifyWeeklyTopic:
           type: boolean
         notifyReplies:
           type: boolean
@@ -11524,6 +11609,12 @@ components:
           type:
           - integer
           - 'null'
+        dailyQuestionMailsToday:
+          type: integer
+        weeklyTopicMailsToday:
+          type: integer
+        topicMailBudgetLeftToday:
+          type: integer
       additionalProperties: false
       required:
       - sharesByTarget
@@ -11533,6 +11624,9 @@ components:
       - shares
       - openReports
       - oldestReportMinutes
+      - dailyQuestionMailsToday
+      - weeklyTopicMailsToday
+      - topicMailBudgetLeftToday
     ShareTargetCount:
       type: object
       properties:
@@ -12973,11 +13067,175 @@ components:
       required:
       - deltaMilli
       - reason
+    PaymentPerson:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        handle:
+          type: string
+      additionalProperties: false
+      required:
+      - id
+      - handle
+    AdminPayment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/PaymentKind'
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        amountKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        vatKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        chargeKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        totalKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        txRef:
+          type: string
+        reference:
+          type: string
+        title:
+          type: string
+        unitsMilli:
+          type:
+          - integer
+          - 'null'
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        bonusMilli:
+          type:
+          - integer
+          - 'null'
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        method:
+          type:
+          - string
+          - 'null'
+        cardLast4:
+          type:
+          - string
+          - 'null'
+        receiptNo:
+          type:
+          - string
+          - 'null'
+        failureReason:
+          type:
+          - string
+          - 'null'
+        balanceMilli:
+          type:
+          - integer
+          - 'null'
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        createdAt:
+          type: string
+          format: date-time
+        verifiedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        token:
+          oneOf:
+          - $ref: '#/components/schemas/ExtraVoiceToken'
+          - type: 'null'
+        plan:
+          oneOf:
+          - $ref: '#/components/schemas/PaymentPlan'
+          - type: 'null'
+        user:
+          $ref: '#/components/schemas/PaymentPerson'
+        overpaidKobo:
+          type: integer
+        refundNeeded:
+          type: boolean
+      additionalProperties: false
+      required:
+      - id
+      - kind
+      - status
+      - amountKobo
+      - txRef
+      - title
+      - unitsMilli
+      - bonusMilli
+      - method
+      - cardLast4
+      - receiptNo
+      - failureReason
+      - balanceMilli
+      - createdAt
+      - verifiedAt
+      - token
+      - user
+      - overpaidKobo
+      - refundNeeded
+      description: 'V-ADMIN-MONEY: a payment as the admin sees it: the person, the price, VAT, charge and total it was started with (null on a
+        payment made before the customer paid charges), and what was paid over the total (V-23), to refund by hand.'
+    WalletAdjustment:
+      type: object
+      properties:
+        auditId:
+          type: string
+          format: uuid
+        txnId:
+          type: string
+          format: uuid
+        deltaMilli:
+          type: integer
+          minimum: -1000000
+          maximum: 1000000
+          description: Admin adjustment in milli-units, at most 1,000 units either way per call.
+        balanceMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+      additionalProperties: false
+      required:
+      - auditId
+      - txnId
+      - deltaMilli
+      - balanceMilli
+      description: 'What an adjust call did: the audit entry and the ledger transaction it wrote, and the balance after.'
     AdminWallet:
       type: object
       properties:
         user:
           $ref: '#/components/schemas/Profile'
+        status:
+          $ref: '#/components/schemas/AccountStatus'
         balanceMilli:
           type: integer
           minimum: -2000000000
@@ -12992,14 +13250,17 @@ components:
         payments:
           type: array
           items:
-            $ref: '#/components/schemas/Payment'
+            $ref: '#/components/schemas/AdminPayment'
         nextCursor:
           type:
           - string
           - 'null'
+        adjustment:
+          $ref: '#/components/schemas/WalletAdjustment'
       additionalProperties: false
       required:
       - user
+      - status
       - balanceMilli
       - freePostsRemaining
       - ledger
@@ -13011,7 +13272,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Payment'
+            $ref: '#/components/schemas/AdminPayment'
         nextCursor:
           type:
           - string
@@ -13020,6 +13281,279 @@ components:
       required:
       - items
       - nextCursor
+    MoneySlice:
+      type: object
+      properties:
+        count:
+          type: integer
+        priceKobo:
+          type: integer
+        vatKobo:
+          type: integer
+        chargeKobo:
+          type: integer
+        totalKobo:
+          type: integer
+      additionalProperties: false
+      required:
+      - count
+      - priceKobo
+      - vatKobo
+      - chargeKobo
+      - totalKobo
+      description: Paid payments, summed by the database from the payment rows' own amounts. priceKobo is WAWU's own revenue; VAT and the payment
+        charge are paid by the customer on top and shown apart; totalKobo is what the customer paid.
+    MoneyReceived:
+      type: object
+      properties:
+        packs:
+          $ref: '#/components/schemas/MoneySlice'
+        subscriptions:
+          $ref: '#/components/schemas/MoneySlice'
+        other:
+          $ref: '#/components/schemas/MoneySlice'
+        total:
+          $ref: '#/components/schemas/MoneySlice'
+      additionalProperties: false
+      required:
+      - packs
+      - subscriptions
+      - other
+      - total
+    MoneyPaymentCounts:
+      type: object
+      properties:
+        paid:
+          type: integer
+        failed:
+          type: integer
+        pending:
+          type: integer
+        expired:
+          type: integer
+        refunded:
+          type: integer
+      additionalProperties: false
+      required:
+      - paid
+      - failed
+      - pending
+      - expired
+      - refunded
+      description: 'paid: confirmed in the window. The others: started in the window and in that state now. pending is initiated plus pending.'
+    MoneyTokens:
+      type: object
+      properties:
+        soldMilli:
+          type: integer
+        fromPlansMilli:
+          type: integer
+        spentMilli:
+          type: integer
+        reversedMilli:
+          type: integer
+        adjustedInMilli:
+          type: integer
+        adjustedOutMilli:
+          type: integer
+        otherMilli:
+          type: integer
+        netSpentMilli:
+          type: integer
+        walletChangeMilli:
+          type: integer
+      additionalProperties: false
+      required:
+      - soldMilli
+      - fromPlansMilli
+      - spentMilli
+      - reversedMilli
+      - adjustedInMilli
+      - adjustedOutMilli
+      - otherMilli
+      - netSpentMilli
+      - walletChangeMilli
+      description: 'Wallet movements in the window from the ledger entries: bought in packs, credited from plans, spent, spends reversed, admin
+        adjustments up and down, anything else, spent net of reversals, and the net change of all wallets.'
+    MoneyWindow:
+      type: object
+      properties:
+        label:
+          type: string
+        fromDay:
+          type: string
+          format: date
+        toDay:
+          type: string
+          format: date
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        received:
+          $ref: '#/components/schemas/MoneyReceived'
+        overpaidKobo:
+          type: integer
+        payments:
+          $ref: '#/components/schemas/MoneyPaymentCounts'
+        newPayers:
+          type: integer
+        tokens:
+          $ref: '#/components/schemas/MoneyTokens'
+      additionalProperties: false
+      required:
+      - label
+      - fromDay
+      - toDay
+      - from
+      - to
+      - received
+      - overpaidKobo
+      - payments
+      - newPayers
+      - tokens
+      description: 'A window of whole Lagos days from fromDay''s start to now. newPayers: people whose first confirmed payment ever is in the
+        window.'
+    MoneyWindows:
+      type: object
+      properties:
+        today:
+          $ref: '#/components/schemas/MoneyWindow'
+        last7:
+          $ref: '#/components/schemas/MoneyWindow'
+        last30:
+          $ref: '#/components/schemas/MoneyWindow'
+      additionalProperties: false
+      required:
+      - today
+      - last7
+      - last30
+    MoneyOverview:
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        lagosDay:
+          type: string
+          format: date
+        tokensHeldMilli:
+          type: integer
+        windows:
+          $ref: '#/components/schemas/MoneyWindows'
+      additionalProperties: false
+      required:
+      - asOf
+      - lagosDay
+      - tokensHeldMilli
+      - windows
+      description: 'V-ADMIN-MONEY: every figure comes from the payment and ledger tables; a screen adds nothing up.'
+    AdminSubscriptionPerson:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        handle:
+          type: string
+        displayName:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      required:
+      - id
+      - handle
+      - displayName
+    AdminSubscriptionPlan:
+      type: object
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+      additionalProperties: false
+      required:
+      - slug
+      - name
+    AdminSubscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/AdminSubscriptionPerson'
+        plan:
+          $ref: '#/components/schemas/AdminSubscriptionPlan'
+        status:
+          $ref: '#/components/schemas/SubscriptionStatus'
+        startDay:
+          type: string
+          format: date
+        endDay:
+          type: string
+          format: date
+        months:
+          type: integer
+        creditedMonths:
+          type: integer
+        monthlyMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        priceKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        nextCreditDay:
+          type:
+          - string
+          - 'null'
+          format: date
+        paymentId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+      required:
+      - id
+      - user
+      - plan
+      - status
+      - startDay
+      - endDay
+      - months
+      - creditedMonths
+      - monthlyMilli
+      - priceKobo
+      - nextCreditDay
+      - paymentId
+      - createdAt
+    AdminSubscriptionPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSubscription'
+        counts: {}
+        nextCursor:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      required:
+      - items
+      - counts
+      - nextCursor
+      description: 'counts: the number of plans in each status, whatever the page or filter.'
     VerificationState:
       type: object
       properties:

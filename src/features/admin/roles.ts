@@ -1,6 +1,21 @@
 import type { Role } from "@/lib/api/admin";
 
-export type AdminPageId = "today" | "override" | "calendar" | "pool" | "news" | "results" | "ads" | "weekly" | "moderation" | "verification";
+export type AdminPageId =
+  | "today"
+  | "override"
+  | "calendar"
+  | "pool"
+  | "news"
+  | "results"
+  | "ads"
+  | "weekly"
+  | "moderation"
+  | "money"
+  | "money-payments"
+  | "money-wallets"
+  | "money-subscriptions"
+  | "money-prices"
+  | "verification";
 
 /** Who may open each admin page: the roles the API's operations for that page accept (docs/contract/openapi.yaml, x-wawu-roles). */
 export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
@@ -15,6 +30,12 @@ export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
   ads: ["AD_MANAGER", "ADMIN"],
   // V-46: identity documents are for admins only (the API route is ADMIN only).
   verification: ["ADMIN"],
+  // V-ADMIN-MONEY: the API's money routes are ADMIN only, so the pages are too.
+  money: ["ADMIN"],
+  "money-payments": ["ADMIN"],
+  "money-wallets": ["ADMIN"],
+  "money-subscriptions": ["ADMIN"],
+  "money-prices": ["ADMIN"],
 };
 
 export function canOpen(roles: readonly Role[], page: AdminPageId): boolean {
@@ -36,7 +57,7 @@ export function roleLine(roles: readonly Role[]): string {
   return joined;
 }
 
-export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: string }[] = [
+export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: string; group?: string }[] = [
   { id: "today", label: "Today", href: "/admin", icon: "house" },
   { id: "override", label: "Override the day", href: "/admin/override", icon: "clock" },
   { id: "calendar", label: "Topic calendar", href: "/admin/calendar", icon: "clipboard-list" },
@@ -47,4 +68,9 @@ export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: 
   { id: "weekly", label: "Weekly report", href: "/admin/weekly", icon: "chart-column" },
   { id: "moderation", label: "Moderation", href: "/admin/moderation", icon: "shield-alert" },
   { id: "verification", label: "Verification", href: "/admin/verification", icon: "badge-check" },
+  { id: "money", label: "Overview", href: "/admin/money", icon: "wallet", group: "Money" },
+  { id: "money-payments", label: "Payments", href: "/admin/money/payments", icon: "coins", group: "Money" },
+  { id: "money-wallets", label: "A person's wallet", href: "/admin/money/wallets", icon: "user-check", group: "Money" },
+  { id: "money-subscriptions", label: "Subscriptions", href: "/admin/money/subscriptions", icon: "clipboard-list", group: "Money" },
+  { id: "money-prices", label: "Prices and limits", href: "/admin/money/prices", icon: "settings", group: "Money" },
 ];
