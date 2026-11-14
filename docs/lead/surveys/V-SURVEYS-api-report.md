@@ -245,3 +245,80 @@ The config key and environment: `BRAND_MAIL_DAILY_MAX` (environment, default 50)
 
 ### Not done
 Age-band targeting; alcohol and finance extra checks; the web half; a CSV route; the brand voice note; privacy page wording (suggested line above); a way to hide a survey's free answers after release (release is final by design).
+
+## Round 3 (server side)
+
+Branch `v/surveys` from `1fb9c1d`. `origin/main` (`4fa9d50`) was already merged in; nothing to merge. Everything is additive: a request that uses none of the new things behaves as on `origin/main` (poll explanation and proposal included, see M-F).
+
+### Findings and what closed each (file:line are in `api/`)
+
+| # | What closed it |
+|---|---|
+| M-A | `src/surveys/survey-report.ts:137-200` (`smallGap`, `okFree`): for a written or voice question `answered` is the number of items in the list the brand gets; hidden, empty and scrubbed-to-nothing answers are in neither. At release the stored report takes `answered` for those questions from the free list: `src/surveys/surveys-results.service.ts` (release, the `answered:` line). In the stored snapshot (no free lists) it is null. |
+| M-B | `survey-report.ts:144` (`okChoice`): `answered` is null when `responses - answered` is above 0 and under the floor. **Choice made (see Choices 1):** in that case the question's options, shares and "Other" are left out too, because the shown counts add up to `answered` and would give the same small number away. |
+| L-A | `survey-report.ts:79-98` (`suppressSmall`): hidden sum under twice the floor hides the next smallest shown group, repeated. Exhaustive spec below. |
+| L-B | `survey-report.ts:250-262`: state breakdown first, then the age band; the age band is left out whole when its shared total differs from the state breakdown's by 1 to floor-1 (the existing check against the total is kept for both). Exhaustive spec over four group sizes. |
+| M-C | `src/surveys/survey-rules.ts:29` (`reviewHandle`): HMAC-SHA256 of `survey-review-handle|surveyId|answerId` under `phonePepper()`, the secret `respondentKey` already uses (`PHONE_PEPPER` / its fallback in `src/me/phone.ts`); **no new environment variable.** First 32 hex characters. Items (`surveys-results.service.ts` `items()`), the hide route (`setHidden`, matches handles in memory), the audit row (`after: {handle}`) and the hide result all use the handle; the answer id never leaves the server. List stays alphabetical (ties by handle). |
+| M-D | Columns `SponsoredSurvey.reviewedAt`, `reviewedById` (migration `20261114260000_sponsored_surveys_3`). `GET free-answers` is now paged (`limit` 1 to 50, default 50; `cursor`); the cursor is signed (`reviewCursor`, same secret, bound to survey and admin) so the last page can only be reached by walking every page in order. When the last page is served (`nextCursor` null) `reviewedAt/ById` are stored (`surveys-results.service.ts:329-362`). `release` without it: 409 "Read the written answers before releasing the results." (`:438-448`); only when the survey has a written or voice answer; hide and show clear nothing. |
+| M-F | `src/vote/post-content.ts:42`: only `SURVEY_ANSWER` (and a clip already on a survey answer) is refused. `poll.service.ts` and `proposal.service.ts` are byte-identical to `origin/main` again. |
+| M-E | `src/surveys/survey-rules.ts:61-205`: see "Scrub" below. |
+| L-C | `src/surveys/dto.ts:28` (`NO_CONTROL`, `\p{Cc}` except tab, line feed, carriage return) on brand name, tagline, website, contact address, survey title, brand name, question prompt, option, state, decision reason and a person's written answer: 422 `VALIDATION_FAILED`. |
+| L-E | scrub input cut to `SCRUB_MAX` = 2000 characters, every expression bounded, phone scan is one pass: 200 000 characters of 11 worst shapes each under 50 ms (spec). |
+| L-F | `src/surveys/brands.service.ts:23` (`nameKey`): NFKC, lower case, spaces and `\p{Cf}` removed; compared in code against every brand name (the table is small), under the same advisory lock. |
+| L-G | `src/mail/mail.service.ts:316`: empty or spaces-only `BRAND_MAIL_DAILY_MAX` is unset (50). |
+| L-H | `surveys-admin.service.ts:397` and `:523`: `update` and `decide` take the snapshot first (own transaction, committed) when the survey is over, then answer 409 as before. |
+| L-I | `surveys-public.service.ts:216-224`: the answer route answers 409 "This survey has closed." for an approved survey that ended, reached its target or is fixed; not-live for other reasons (not approved, not started, wrong state or consent) stays 404. Events, `GET` and the feed still answer 404. |
+| L-J | `surveys-public.service.ts:338, 407`: a clip used twice in one request is 422 on the second use. |
+| L-L | `brands.service.ts:193`: the brand page query keeps only approved surveys inside their dates with no snapshot (and the target check stays), so ended ones no longer crowd the 20 slots. |
+| Left as they are | L-D (rows tying a response to a person exist only in the database), L-K (staff see counts while a survey runs), L2, L3, L6, L7 from the first check. |
+
+### Scrub (M-E)
+
+NFKC first (full-width digits and "＠"; "。" and the half-width "｡" become "."); zero-width and other `\p{Cf}` characters are dropped. Removed whole: emails in symbol form (`@`, `(at)`, `[at]`, `{at}`, with spaces, with `(dot)`/`dot`/`.`) and in words (`chidi at gmail.com`, `chidi at gmail dot com`; the word form needs a listed ending, so "meet at the cafe" stays), with up to two earlier local-part words ("chidi dot okafor"). Links: any `scheme://`, `www.`, `label.label/path`, `label.ending` and `word dot ending` for the list (com ng org net io co me app ly tv info biz xyz africa uk us gov edu ai dev shop store online site link page ke gh za ee ca live cc to gg blog club top pro tech studio), IPv4. Never every `word.Word`: "I went home.Then I slept" stays. Phones: a run of digits (any Unicode decimal digit) and number words (zero oh one..nine, double, triple, o) of weight 10 or more with up to 6 non-letter characters between parts; O/o/I/i between digits count as 0/1. Handles: `@` + 2 or more word characters; a platform word (fb facebook tg telegram wa whatsapp ig insta instagram twitter x tiktok snap snapchat threads linkedin yt youtube discord) only before `:` or `@`, or (after up to two filler words such as is, handle, me, my, at, on) before a token holding a digit, `_` or an inner `.`. "the x factor", "handle with care", "snap out of it" come out unchanged (spec).
+
+Not done by pattern, left to the admin's read (M-D): names and street addresses in plain words ("I am Adaeze Nwosu of 12 Allen Avenue Ikeja"), and "chidi okafor at gmail dot com" leaves the first name "chidi" (the surname part is removed). Known over-removal: any 10 digits with separators (dates with times, long lists of numbers) and "x: ..." after the letter x. Both show less, not more.
+
+### Specs added
+- `src/surveys/survey-round3.spec.ts` (53 tests): M-A and M-B cases; the **exhaustive** check of `suppressSmall` (every count vector for 2 options 0..14, 3 options 0..11, 4 options 0..8, floor 3: 8 483 vectors with at least one answer) asserting a hidden sum is 0 or at least twice the floor with two or more hidden groups, or everything is hidden; the **exhaustive pair check** of two breakdowns (both, state only, age only, none, each 0..7: 4 081 combinations) asserting every shown shared total equals the total or differs by at least the floor, and the two shown breakdowns equal or differ by at least the floor; handles and page links; 27 removed and 10 untouched scrub strings; the 200 000 character timing.
+- `test/admin/surveys-round3.spec.ts` (13 tests): handles never equal the answer id and the hide route refuses the id; paged review, forged and foreign cursors 422, release 409 until the last page, later hide and show keep the read; a survey with no free answers releases without it; running survey list 409; hide enough that the gap is not small keeps the list; NUL and control characters 422 on every new input; zero-width space duplicate brand name 409; empty `BRAND_MAIL_DAILY_MAX`; brand page lists only live surveys; paused-over survey cannot be reopened by a date edit or resume (snapshot taken in that request); four answers at once to a target of 2: 201, 201, 409, 409 "This survey has closed."; one clip two questions 422; a survey clip refused by `ClipsService.forPublish` (answers, replies), `PATCH /me/profile` voice card and advert audio.
+- `test/vote/vote.spec.ts`: the survey clip is still refused as explanation and as proposal (kept); see changes below.
+
+### Specs changed because a ruling changed (old assertion, then new)
+| Spec | Old | New |
+|---|---|---|
+| `src/surveys/survey-report.spec.ts` "three choices with two small" | 40, 30, 5, 4: counts `[40,null,null,null]`, other 39 | `[null,null,null,null]`, other `{79, share 100}` (L-A: 39 hidden is under twice the floor 40, so the 40 joins) |
+| same file "two small groups that together reach the floor" | 50, 12, 10: `[50,null,null]`, other 22 share 31 | `[null,null,null]`, other `{72, share 100}` (L-A) |
+| `test/admin/surveys.spec.ts` free answers after release | `r.questions[1].texts` has 4 (1 of 5 hidden) | 0 texts and `answered` null: the 1 left out is a gap under the floor of 3 (M-A, M-B; Choices 1) |
+| `test/admin/surveys-round2.spec.ts` "staff read every free answer..." | `texts` has 4 and contains "plain and useful" | 0 texts, `answered` null (same reason) |
+| same file "reaching the response target..." | answer after the target: 404 | 409 with "This survey has closed." (L-I); `GET`, events stay 404 |
+| same file "a survey whose end date passed..." | late answer: 404 | 409 (L-I) |
+| same file "F04 is never sent before release..." | release straight after the survey ends | the free-answer list is fetched first (M-D); the rest unchanged |
+| `test/vote/vote.spec.ts` explanation spec | a `PROPOSAL` and an `AD_AUDIO` clip as explanation: 422 | 201 (M-F: as on `origin/main`); `SURVEY_ANSWER` and a clip held by a survey answer stay 422; added the 201 for `PROPOSAL`, `AD_AUDIO`, `ANSWER` |
+| same file proposal spec | an `ANSWER` clip as proposal: 422 | 201 (M-F) |
+No other assertion was edited. The earlier exact-text scrub spec still passes unedited.
+
+### What the web must follow (contract in `docs/contract/openapi.yaml`, regenerated; second regeneration is byte-identical)
+- **Review handle.** `GET /admin/surveys/{surveyId}/free-answers` items have `id` = a 32-character hex handle (type is now `str`, was `uuid`). `PATCH /admin/surveys/{surveyId}/free-answers/{handle}` takes that handle (path parameter renamed from `answerId`); the answer's own id is 404. The result `id` is the handle.
+- **Paging.** The same list now takes `limit` (1 to 50, default 50) and `cursor`; the body has `nextCursor` (null on the last page). Walk every page: the last page being served is what unlocks release. A cursor that is not valid is 422.
+- **Release.** `POST .../release` answers **409 "Read the written answers before releasing the results."** until the whole list was fetched, if the survey has any written or voice answer. Show the message and the list.
+- **Nullable.** `answered` on a report question was already `~int`; it is now null more often (small gap, list under the floor, or a question whose answers were all hidden). When it is null the question's options are all `hidden`, `other` is null and `texts` and `voices` are empty: show "Too few answers to show".
+- **Answering.** `POST /surveys/{id}/responses`: 409 "This survey has closed." (show it as closed, not as an error); 422 for a control character or a recording used twice.
+- Brand page lists only live surveys.
+
+### Migration `20261114260000_sponsored_surveys_3`
+Two nullable columns on `SponsoredSurvey` (`reviewedAt`, `reviewedById`); `docs/contract/schema.prisma` has them. `rollback.down.sql` in the style of `_2`: refuses when any row has either set; otherwise drops both.
+
+### Runs (own PostgreSQL 16 on 16432, Redis on 16379; both stopped and the data directory deleted at the end)
+RUNS_PLACEHOLDER
+
+### Choices
+1. **Hiding the whole question when `answered` is nulled by M-B, and the free list when its gap is small.** The lead's M-B nulls `answered` only, but the option counts (and the length of a text list) add up to the same number, so showing them gives the small difference away anyway. I took the plainest safe thing: left them out. The effect is large for written answers: staff hiding one answer out of 30 makes the whole list disappear (the gap would be 1); the list is shown only when the answers left out are none, or at least the floor (default 20) many. If the lead would rather accept that a count of left-out answers is visible, the one line to relax is `smallGap` in `survey-report.ts:137`.
+2. Release needs the read only when the survey has a written or voice answer (counting hidden and empty ones). A survey whose free list is empty still needs the last page to be fetched once.
+3. The review cursor is signed with `phonePepper()`, not stored: no table. A page link works for the admin it was given to, so a second admin starts from the first page.
+4. Brand names are compared in code (all brands, not an indexed query): the table is a few hundred rows at most.
+5. `answered` for a survey with no snapshot yet stays absent (report is count only until release).
+6. L-I: only the answer route answers 409; viewing, events and placement still hide a closed survey with 404.
+7. L-L also pushes the date and snapshot conditions into the query (not only the post-filter), so older ended surveys cannot hide live ones behind the 20-row limit.
+
+### Not done
+Names and street addresses by pattern (M-D read instead); age-band targeting; alcohol and finance extra checks; the web half; a CSV route; privacy page wording. L-D, L-K, L2, L3, L6, L7 left as they were.
