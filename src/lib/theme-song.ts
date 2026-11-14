@@ -80,6 +80,19 @@ export function songTurnedOff(): boolean {
  * A voice is about to play or be recorded: the song steps aside. It does not write the person's "off" choice and does not come back by
  * itself; the speaker button brings it back. It never creates the audio element.
  */
+/**
+ * V-FIX-B round 3: the other direction of "one clip at a time". Something that plays voices (features/profile/playback.ts) registers
+ * here, and starting the song calls it first, so the song never plays over a clip or the recorder's preview.
+ */
+const songStartHooks = new Set<() => void>();
+export function onSongStart(fn: () => void): () => void {
+  songStartHooks.add(fn);
+  return () => { songStartHooks.delete(fn); };
+}
+function songAboutToStart() {
+  for (const h of songStartHooks) { try { h(); } catch { /* a player that is gone */ } }
+}
+
 export function pauseSongForVoice() {
   if (el && !el.paused) el.pause();
   if (state.playing || state.loading) set({ playing: false, loading: false });
@@ -98,6 +111,7 @@ export async function toggleSong(): Promise<void> {
   if (state.playing || state.loading) { setOffChoice(true); stopSong(); return; }
   set({ loading: true, error: null });
   try {
+    songAboutToStart();
     await audio.play();
     setOffChoice(false);
     remember(true);
@@ -127,6 +141,7 @@ function onFirstTap(e: Event) {
   if (!audio) return;
   trying = true;
   set({ loading: true, error: null });
+  songAboutToStart();
   audio.play().then(
     () => { remember(true); set({ playing: true, loading: false, error: null }); stopListening(); },
     // The browser did not count this gesture: stay quiet (no error, no remembered choice) and try again on the next one.

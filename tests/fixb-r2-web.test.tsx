@@ -18,6 +18,9 @@ describe("V-FIX-B round 2: every new notice opens something (the API's real payl
   it("POLL_CLOSED: targetType poll, the poll's id, the question in questionId: opens that question's results", () => {
     expect(targetHref({ type: "POLL_CLOSED", targetType: "poll", targetId: P, questionId: Q })).toBe(`/q/${Q}/results`);
   });
+  it("POLL_CLOSED with no question opens the weekly page instead of nothing", () => {
+    expect(targetHref({ type: "POLL_CLOSED", targetType: "poll", targetId: P, questionId: null })).toBe("/weekly");
+  });
   it("CATEGORY_ALERT: targetType question opens the question", () => {
     expect(targetHref({ type: "CATEGORY_ALERT", targetType: "question", targetId: Q, questionId: Q })).toBe(`/q/${Q}`);
   });

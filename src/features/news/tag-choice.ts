@@ -70,3 +70,10 @@ export function tagFields(c: TagChoice): TagFields | null {
       return null;
   }
 }
+
+const PICKS = ["NONE", "UNVERIFIED_NEWS", "GOSSIP", "REQUEST_VERIFIED", "VERIFIED_NEWS"];
+/** A tag read back from storage is used only if it has the shape we wrote (a hand-edited draft never breaks the screen). */
+export function validTag(t: unknown): boolean {
+  const c = t as TagChoice | null | undefined;
+  return !!c && typeof c === "object" && typeof c.pick === "string" && PICKS.includes(c.pick) && typeof c.sourceName === "string" && typeof c.sourceUrl === "string";
+}

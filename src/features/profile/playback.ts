@@ -1,4 +1,4 @@
-import { pauseSongForVoice } from "@/lib/theme-song";
+import { onSongStart, pauseSongForVoice } from "@/lib/theme-song";
 /* Playback helpers (local copy of the reference audio player: its sibling index does not build, see voiceCardRecorder.ts). */
 export function makePlayer(url: string): HTMLAudioElement {
   const a = new Audio();
@@ -25,6 +25,9 @@ export function claimPlayback(a: HTMLAudioElement, stop: () => void): void {
   current = { a, stop };
   a.addEventListener("ended", () => { if (current?.a === a) current = null; }, { once: true });
 }
+// Starting the theme song stops a playing clip or preview (the song side of one clip at a time).
+onSongStart(() => stopPlayback());
+
 /** Stops whatever clip is playing (an advert's link was opened). */
 export function stopPlayback(): void {
   if (!current) return;

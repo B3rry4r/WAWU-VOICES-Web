@@ -209,18 +209,41 @@ try {
     assert.deepEqual(tag, { pick: 'REQUEST_VERIFIED', sourceName: 'Lagos State Emergency Agency', sourceUrl: '' });
     await ctx.close();
   });
-  await t('Finish and post my voice sends the held tag and source in one tap', async () => {
-    const { page, posts, ctx } = await open();
+  const held: [string, object | null, Record<string, unknown>][] = [
+    ['no tag', null, { kind: 'VOICE', clipId: 'c1' }],
+    ['Gossip', { pick: 'GOSSIP', sourceName: '', sourceUrl: '' }, { kind: 'VOICE', clipId: 'c1', isNews: true, newsTag: 'GOSSIP' }],
+    ['Unverified News', { pick: 'UNVERIFIED_NEWS', sourceName: '', sourceUrl: '' }, { kind: 'VOICE', clipId: 'c1', isNews: true, newsTag: 'UNVERIFIED_NEWS' }],
+    ['a Verified News request', { pick: 'REQUEST_VERIFIED', sourceName: 'Lagos State Emergency Agency', sourceUrl: 'https://example.com/s' }, { kind: 'VOICE', clipId: 'c1', isNews: true, newsTag: 'UNVERIFIED_NEWS', requestVerified: true, newsSourceName: 'Lagos State Emergency Agency', newsSourceUrl: 'https://example.com/s' }],
+  ];
+  for (const [label, tagValue, expected] of held) {
+    await t(`Finish and post my voice with ${label} kept: one tap, one post`, async () => {
+      const { page, posts, ctx } = await open();
+      await page.goto(`${ORIGIN}/welcome`);
+      await page.evaluate((tg) => new Promise<void>((res, rej) => {
+        const r = indexedDB.open('voices-speak', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('drafts');
+        r.onsuccess = () => { const tx = r.result.transaction('drafts', 'readwrite'); const d: Record<string, unknown> = { owner: null, questionId: 'q1', blob: new Blob([new Uint8Array(3000)], { type: 'audio/webm' }), mime: 'audio/webm', seconds: 4, peaks: [1, 2, 3], key: 'k-held-' + Math.random(), savedAt: Date.now() }; if (tg) d.tag = tg; tx.objectStore('drafts').put(d, 'current'); tx.oncomplete = () => { r.result.close(); res(); }; tx.onerror = () => rej(tx.error); };
+        r.onerror = () => rej(r.error);
+      }), tagValue);
+      await page.goto(`${ORIGIN}/q/q1/speak?autopost=1`);
+      await page.waitForURL('**/posted?a=new1', { timeout: 20000 });
+      assert.equal(posts.length, 1);
+      assert.deepEqual({ ...posts[0] }, expected);
+      await ctx.close();
+    });
+  }
+  await t('a held draft with a malformed tag does not break the record page', async () => {
+    const { page, ctx } = await open();
     await page.goto(`${ORIGIN}/welcome`);
     await page.evaluate(() => new Promise<void>((res, rej) => {
       const r = indexedDB.open('voices-speak', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('drafts');
-      r.onsuccess = () => { const tx = r.result.transaction('drafts', 'readwrite'); tx.objectStore('drafts').put({ owner: null, questionId: 'q1', blob: new Blob([new Uint8Array(3000)], { type: 'audio/webm' }), mime: 'audio/webm', seconds: 4, peaks: [1, 2, 3], key: 'k-held2', savedAt: Date.now(), tag: { pick: 'REQUEST_VERIFIED', sourceName: 'Lagos State Emergency Agency', sourceUrl: 'https://example.com/s' } }, 'current'); tx.oncomplete = () => { r.result.close(); res(); }; tx.onerror = () => rej(tx.error); };
+      r.onsuccess = () => { const tx = r.result.transaction('drafts', 'readwrite'); tx.objectStore('drafts').put({ owner: null, questionId: 'q1', blob: new Blob([new Uint8Array(3000)], { type: 'audio/webm' }), mime: 'audio/webm', seconds: 4, peaks: [1], key: 'k-bad', savedAt: Date.now(), tag: { pick: 42 } }, 'current'); tx.oncomplete = () => { r.result.close(); res(); }; };
       r.onerror = () => rej(r.error);
     }));
-    await page.goto(`${ORIGIN}/q/q1/speak?autopost=1`);
-    await page.waitForURL('**/posted?a=new1', { timeout: 20000 });
-    assert.deepEqual({ ...posts[0] }, { kind: 'VOICE', clipId: 'c1', isNews: true, newsTag: 'UNVERIFIED_NEWS', requestVerified: true, newsSourceName: 'Lagos State Emergency Agency', newsSourceUrl: 'https://example.com/s' });
+    await page.goto(`${ORIGIN}/q/q1/speak`);
+    await page.getByRole('button', { name: /^Send/ }).waitFor();
+    assert.equal(await page.getByText('Application error').count(), 0);
     await ctx.close();
   });
   for (const [w, h, tag] of [[1440, 900, '1440']] as const) {
@@ -248,6 +271,25 @@ try {
       await ctx.close();
     });
   }
+  await t('admin news: a 409 or 404 on approve removes the row and says what happened', async () => {
+    for (const [status, words] of [[409, 'Someone else already decided this one.'], [404, 'This request is no longer there.']] as const) {
+      const state = { decided: false };
+      const item = { answer: answer({ id: 'n1', news: { tag: 'UNVERIFIED_NEWS', sourceName: null, sourceUrl: null, chosenBy: '@me.handle', chosenAt: new Date().toISOString() } }), flagCount: 0, flagReasons: [], verifiedRequested: true, sourceName: 'Agency', sourceUrl: null, evidenceUrl: null, changeLog: [], summary: 'x' };
+      const { page, ctx } = await open({ w: 1440, h: 900, roles: ['EDITOR'], extra: async (p, m, _b, ok) => {
+        if (p === '/admin/today') { await ok({ date: '2026-11-15', weekNumber: 1, topic, flowState: 'NORMAL', todaysQuestion: question(), stats: { sharesByTarget: [], voicesToday: 0, voicePercent: 0, pollVotes: 0, shares: 0, openReports: 0, oldestReportMinutes: null, dailyQuestionMailsToday: 0, weeklyTopicMailsToday: 0, topicMailBudgetLeftToday: 0 }, schedule: [], nextQuestion: null, needsAttention: { flaggedNews: 0, askingVerified: 1, openReports: 0, adsAwaiting: 0, resultsToCheck: 0, newsTags: 1 } }); return true; }
+        if (p === '/admin/news/items') { await ok({ items: state.decided ? [] : [item], nextCursor: null, waiting: state.decided ? 0 : 1, counts: { flagged: 0, askingVerified: state.decided ? 0 : 1, allChanges: 0 } }); return true; }
+        if (p === '/admin/news/n1/decision' && m === 'POST') { state.decided = true; await ok({ error: { code: status === 409 ? 'CONFLICT' : 'NOT_FOUND' } }, status); return true; }
+        return false;
+      } });
+      await page.goto(`${ORIGIN}/admin/news`);
+      await page.getByLabel('Reason (the poster sees this)').fill('Checked.');
+      await page.getByRole('button', { name: 'Approve Verified News' }).click();
+      await page.getByText(words).waitFor();
+      await page.getByText('Nothing is waiting here').waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Approve Verified News' }).count(), 0);
+      await ctx.close();
+    }
+  });
   await t('settings: the News tag alerts switch saves notifyTagFollows', async () => {
     const patches: Record<string, unknown>[] = [];
     const settings = { language: 'en', dataSaver: false, theme: 'system', timezone: 'Africa/Lagos', quietHoursStart: null, quietHoursEnd: null, notifyDailyQuestion: true, notifyWeeklyTopic: true, notifyReplies: true, notifyReactions: true, notifyPollResults: true, notifyFlashPolls: false, notifyCategoryAlerts: true, notifyTagFollows: true, dailyQuestionMinute: 480, shareMyWord: true };
