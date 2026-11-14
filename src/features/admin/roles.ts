@@ -18,7 +18,9 @@ export type AdminPageId =
   | "verification"
   | "surveys"
   | "brands"
-  | "users";
+  | "users"
+  | "ideas"
+  | "people";
 
 /** Who may open each admin page: the roles the API's operations for that page accept (docs/contract/openapi.yaml, x-wawu-roles). */
 export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
@@ -30,6 +32,8 @@ export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
   results: ["EDITOR", "ADMIN"],
   weekly: ["EDITOR", "ADMIN"],
   moderation: ["MODERATOR", "ADMIN"],
+  ideas: ["MODERATOR", "ADMIN"],
+  people: ["ADMIN"],
   ads: ["AD_MANAGER", "ADMIN"],
   surveys: ["AD_MANAGER", "ADMIN"],
   brands: ["AD_MANAGER", "ADMIN"],
@@ -83,4 +87,6 @@ export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: 
   { id: "money-wallets", label: "A person's wallet", href: "/admin/money/wallets", icon: "user-check", group: "Money" },
   { id: "money-subscriptions", label: "Subscriptions", href: "/admin/money/subscriptions", icon: "clipboard-list", group: "Money" },
   { id: "money-prices", label: "Prices and limits", href: "/admin/money/prices", icon: "settings", group: "Money" },
+  { id: "ideas", label: "Group ideas", href: "/admin/ideas", icon: "messages-square" },
+  { id: "people", label: "People and roles", href: "/admin/people", icon: "user-check" },
 ];

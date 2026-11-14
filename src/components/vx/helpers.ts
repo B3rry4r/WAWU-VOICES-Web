@@ -78,6 +78,8 @@ export interface Person {
   handle?: string;
   name?: string;
   avatar?: string;
+  /** An account with the admin role: draws the "Admin" pill after the name. Read as `=== true`. */
+  admin?: boolean;
   /** V-46: an admin approved their ID and bill and their subscription runs: a tick shows beside the name. */
   verified?: boolean;
 }

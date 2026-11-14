@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } 
 import { Banner, Button, Icon } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { confirmEmailVerification, isAccountBlocked, isSignedIn, startEmailVerification } from "@/lib/api/auth";
-import { peekHeldPost, readDraft, saveDraft } from "@/lib/auth/entry-draft";
+import { peekAdminReturn, peekHeldPost, readDraft, saveDraft, takeAdminReturn } from "@/lib/auth/entry-draft";
 import { AuthSheet } from "./AuthSheet";
 import { afterSession } from "./SignIn";
 import { ErrorBanner, isOffline, refusalWords, sendSignedIn } from "./ui";
@@ -41,7 +41,7 @@ export function Verify() {
     setPosting(peekHeldPost());
     // Already signed in: a code that was accepted only needs its next step again; anything else moves on.
     if (isSignedIn()) {
-      if (d.verified) {
+      if (d.verified || peekAdminReturn()) {
         setPhase("verified");
         void goOn();
       } else void sendSignedIn((p) => router.replace(p));
@@ -57,6 +57,12 @@ export function Verify() {
   async function goOn() {
     setFailure(null);
     try {
+      // An admin sign-in that went through the code returns to the admin address asked for, profile or not.
+      const adminBack = takeAdminReturn();
+      if (adminBack) {
+        router.replace(adminBack);
+        return;
+      }
       await afterSession((p) => router.replace(p));
     } catch (err) {
       setFailure(err); // only this step is retried, never the used code

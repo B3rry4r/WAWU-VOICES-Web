@@ -30,11 +30,12 @@ export const completeVoiceClip = (id: string) => apiFetch<VoiceClip>(`/voice-cli
 export const getVoiceClip = (id: string) => apiFetch<VoiceClip>(`/voice-clips/${id}`, { authed: true });
 export const deleteVoiceClip = (id: string) => apiFetch<void>(`/voice-clips/${id}`, { method: "DELETE", authed: true });
 
-export const createVoiceAnswer = (questionId: string, clipId: string, key: string, extraVoiceTokenId?: string, mood?: S["Mood"] | null, anonymous = false) =>
+/** `news` is the tag the person picked (nothing is sent for "Not news"). */
+export const createVoiceAnswer = (questionId: string, clipId: string, key: string, extraVoiceTokenId?: string, mood?: S["Mood"] | null, anonymous = false, news?: Partial<S["CreateAnswerRequest"]> | null) =>
   apiFetch<PostReceipt>(`/questions/${questionId}/answers`, {
     method: "POST",
     authed: true,
     idempotencyKey: key,
-    body: { kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}), ...(mood ? { mood } : {}), ...(anonymous ? { anonymous: true } : {}) },
+    body: { kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}), ...(mood ? { mood } : {}), ...(anonymous ? { anonymous: true } : {}), ...(news ?? {}) },
   });
 

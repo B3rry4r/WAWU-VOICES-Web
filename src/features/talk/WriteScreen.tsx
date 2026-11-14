@@ -2,7 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Banner, Button, Composer, FreePosts, NotFoundState, Skeleton } from "@/components/vx";
-import type { ComposerTag, IntentKind } from "@/components/vx";
+import type { IntentKind } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
@@ -11,6 +11,8 @@ import { clearDraft, renewDraftKey, saveDraft } from "@/features/units/draft";
 import { StageNav } from "@/features/stage/StageNav";
 import { countChars } from "@/lib/shared/text-price";
 import { FixPanel } from "./FixPanel";
+import { TagPicker, useIsEditor } from "@/features/news/TagPicker";
+import { NO_TAG, tagFields, tagReady, type TagChoice } from "@/features/news/tag-choice";
 import { AnonymousSwitch } from "./AnonymousSwitch";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 import { OWN_NAMELESS_NOTE, useReplyAnon } from "./reply-anon";
@@ -18,6 +20,7 @@ import { notePublished } from "@/features/share/share-visit";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { AppBar, Problem, failText, needsNewKey, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
+import { textLimit } from "./textLimit";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -37,7 +40,8 @@ export function WriteScreen({ qid }: { qid: string }) {
   const [sending, setSending] = useState(false);
   const busy = useRef(false);
   const [text, setText] = useState("");
-  const [tag, setTag] = useState<ComposerTag>("none");
+  const [tag, setTag] = useState<TagChoice>(NO_TAG);
+  const editor = useIsEditor(!!signedIn);
   const [intent, setIntent] = useState<IntentKind | null>(stanceQ ? INTENT_OF[stanceQ] ?? null : null);
   const key = useRef<{ text: string; anon: boolean; st: string | null; k: string } | null>(null);
   // V-ANON: "Post without my name" on a new answer, off until turned on. V-FIX-D: the same switch on a reply (useReplyAnon, read at send time).
@@ -101,7 +105,7 @@ export function WriteScreen({ qid }: { qid: string }) {
         replyAnon.clear();
         router.push(`/q/${qid}/a/${replyTo}`);
       } else {
-        const r = await api.createAnswer(qid, body, { isNews: tag === "unverified" || tag === "gossip", newsTag: tag === "unverified" ? "UNVERIFIED_NEWS" : tag === "gossip" ? "GOSSIP" : undefined }, key.current.k, mood.word, anon);
+        const r = await api.createAnswer(qid, body, tagFields(tag) ?? { isNews: false }, key.current.k, mood.word, anon);
         writeAnonPref(qid, false);
         notePublished();
         saveTyped(slot, "");
@@ -148,7 +152,7 @@ export function WriteScreen({ qid }: { qid: string }) {
         <div>
           <Composer
             freeLeft={left}
-            maxChars={c?.textMaxChars}
+            maxChars={textLimit(c)}
             countChars={countChars}
             value={text}
             onChange={(t) => { setText(t); saveTyped(slot, t); }}
@@ -156,13 +160,12 @@ export function WriteScreen({ qid }: { qid: string }) {
             intent={intent ?? undefined}
             onIntentChange={setIntent}
             showTags={!replyTo}
-            newsTag={tag}
-            onTagChange={setTag}
+            tagSlot={<TagPicker value={tag} onChange={setTag} editor={editor} />}
             cost={price?.text}
             costShort={price?.short}
             postLabel={price?.label}
             paid={price?.paid}
-            postDisabled={dayLeft === 0}
+            postDisabled={dayLeft === 0 || (!replyTo && !tagReady(tag))}
             extra={signedIn && c ? <FixPanel text={text} costMilli={c.textFixMilli ?? 5000} buyHref={buyHref} onUse={(fixed) => { setText(fixed); saveTyped(slot, fixed); }} /> : undefined}
             balance={allow ? unitsText(allow.balanceMilli) : undefined}
             onVoice={false}

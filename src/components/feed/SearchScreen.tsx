@@ -103,7 +103,7 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
             {r.people.map((p) => {
               const inner = (
                 <>
-                  <Avatar name={p.displayName ?? p.handle} />
+                  <Avatar name={p.displayName ?? p.handle} src={p.avatarUrl ?? undefined} />
                   <span className="flex flex-1 flex-col">
                     <b className="text-title">{`@${p.handle}`}<VerifiedTick verified={p.verified} /></b>
                     <span className="text-caption text-[var(--ink-2)]">{[p.state, voicesShort(voicesOf(p))].filter(Boolean).join(" · ")}</span>

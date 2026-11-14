@@ -3,7 +3,7 @@ import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { countText } from "@/lib/format/plural";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Avatar, Badge, Icon, IconButton, NewsTag, REACTIONS } from "@/components/vx";
+import { AdminPill, Avatar, Badge, Icon, IconButton, NewsTag, REACTIONS } from "@/components/vx";
 import { OwnVoiceFlow, type PushToast } from "@/features/talk/TalkCard";
 import type { Answer, Reply } from "@/lib/api/profile";
 import { MoodChip } from "@/features/mood/MoodChip";
@@ -37,6 +37,12 @@ function Transcript({ text }: { text: string }) {
   );
 }
 
+/** Tells one post from the next for a screen reader: its first words, else when it was sent. */
+function postName(a: Answer): string {
+  const words = (a.body ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
+  return words ? `Post: ${words}` : `Voice from ${ago(a.createdAt)}`;
+}
+
 /** One of a person's voices, with the question it answers ("On:" link). Only what is live: counts are shown, not buttons. */
 export function PostRow({ a: first, own }: { a: Answer; /** On my own Profile only: the three dots, and what to do when I delete one. */ own?: { push: PushToast; onDeleted: (id: string) => void } }) {
   const [a, setA] = useState(first);
@@ -49,19 +55,19 @@ export function PostRow({ a: first, own }: { a: Answer; /** On my own Profile on
   const emoji = (k: string) => REACTIONS.find((r) => r.name === KIND_NAME[k])?.e ?? "";
   const transcript = a.clip?.transcript?.status === "READY" ? a.clip.transcript.text : null;
   return (
-    <div className="pf-post">
+    <div className="pf-post" data-post-id={a.id}>
       {a.questionText ? <Link className="pf-on" href={`/q/${a.questionId}`}>On: {a.questionText}</Link> : null}
       {a.mood ? <MoodChip mood={a.mood} className="mb-[6px]" /> : null}
       <article className="vx-answer" aria-label={`Voice from ${who?.handle ?? "this person"}`}>
         <div className="vx-answer__head">
           <Avatar name={who?.displayName || who?.handle} src={who?.avatarUrl ?? undefined} />
           <div className="vx-answer__who">
-            <span className="vx-answer__name">{who ? "@" + who.handle : "Anonymous"}</span>
+            <span className="vx-answer__name"><span className="vx-answer__nm">{who ? "@" + who.handle : "Anonymous"}</span>{who ? <AdminPill admin={(who as { admin?: boolean }).admin} /> : null}</span>
             {/* V-ANON: the API lists a person's anonymous posts on their own page only; the tag is theirs alone. */}
             {!who && a.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
             <span className="vx-answer__time">{ago(a.createdAt) + (place ? " · " + place : "")}</span>
           </div>
-          {own && a.isMine ? <IconButton icon="ellipsis" label="More: edit, delete, copy link" variant="ghost" size="s" onClick={() => setMore(true)} /> : null}
+          {own && a.isMine ? <IconButton icon="ellipsis" label={`More: edit, delete, copy link. ${postName(a)}`} variant="ghost" size="s" onClick={() => setMore(true)} /> : null}
         </div>
         {label || a.news ? (
           <div className="vx-answer__labels">
@@ -88,15 +94,16 @@ export function PostRow({ a: first, own }: { a: Answer; /** On my own Profile on
 /** A reply someone wrote. Replies do not carry their question, so there is no "On:" link. */
 export function ReplyRow({ r }: { r: Reply }) {
   const stance = { AGREE: "Agrees", DISAGREE: "Disagrees", EXPERIENCE: "Shares an experience" }[r.stance];
+  const au = r.author; // null: posted without a name, so nothing of the writer shows
   return (
     <div className="pf-post">
-      <article className="vx-answer" aria-label={`Reply from ${r.author ? r.author.handle : "an anonymous poster"}`}>
+      <article className="vx-answer" aria-label={`Reply from ${au ? au.handle : "an anonymous poster"}`}>
         <div className="vx-answer__head">
-          <Avatar name={r.author ? r.author.displayName || r.author.handle : "Anonymous"} src={r.author?.avatarUrl ?? undefined} />
+          <Avatar name={au ? au.displayName || au.handle : "Anonymous"} src={au?.avatarUrl ?? undefined} />
           <div className="vx-answer__who">
-            <span className="vx-answer__name">{r.author ? "@" + r.author.handle : "Anonymous"}{r.author ? <VerifiedTick verified={r.author.verified} /> : null}</span>
+            <span className="vx-answer__name">{au ? <><span className="vx-answer__nm">{"@" + au.handle}</span><VerifiedTick verified={au.verified} /><AdminPill admin={(au as { admin?: boolean }).admin} /></> : "Anonymous"}</span>
             {/* V-FIX-D: the API lists a person's unnamed replies on their own page only; the tag is theirs alone. */}
-            {!r.author && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
+            {!au && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
             <span className="vx-answer__time">{ago(r.createdAt) + " · " + stance}</span>
           </div>
         </div>

@@ -202,6 +202,7 @@ function SettingsBody({ me }: { me: Me }) {
           <Switch label="Replies to you" checked={s.notifyReplies} onChange={(v) => patch({ notifyReplies: v })} />
           <Switch label="Reactions on your voices" detail="Grouped, never one by one" checked={s.notifyReactions} onChange={(v) => patch({ notifyReactions: v })} />
           <Switch label="Poll results" checked={s.notifyPollResults} onChange={(v) => patch({ notifyPollResults: v })} />
+          <Switch label="News tag alerts" detail="New posts under a tag you follow" checked={s.notifyTagFollows ?? true} onChange={(v) => patch({ notifyTagFollows: v })} />
           {/* lead ruling RW5b, 6 Nov (show only what is built): no screen creates a flash poll at launch, so there is no Flash polls alert row. The stored setting is untouched. */}
           <RowButton label="Category alerts" detail={alertTopics && alertTopics.length ? alertTopics.join(", ") : undefined} onClick={() => setSheet("cats")} />
         </div>

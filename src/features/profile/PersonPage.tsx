@@ -152,7 +152,7 @@ export function PersonPage({ segment }: { segment: string }) {
         {/* lead ruling WF, 6 Nov (B-M5): the share icon (390) and "Share profile" (1440), with PROFILE links. */}
         {data.isBlockedByMe ? null : <IconButton className="pf-only-phone" icon="share-2" label={`Share ${handle}’s profile`} onClick={() => setShare(true)} />}
         {data.isBlockedByMe ? null : <Button className="pf-only-desk" variant="secondary" icon="share-2" onClick={() => setShare(true)}>Share profile</Button>}
-        {signedIn && !isMine ? <IconButton icon="ellipsis" label={`More: report or block ${handle}`} onClick={() => setMore(true)} /> : null}
+        {signedIn && meState.status !== "loading" && !isMine ? <IconButton icon="ellipsis" label={`More: report or block ${handle}`} onClick={() => setMore(true)} /> : null}
       </header>
       <ProfileCard profile={profile} stats={[{ label: "Voices", value: voicesOf(profile) }, { label: "Reactions", value: profile.reactionsReceived }, { label: "Replies", value: profile.replyCount }]} />
       {data.isBlockedByMe ? (

@@ -1,7 +1,7 @@
 "use client";
 import { DMS_LIVE } from "@/features/dm/live";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon, Tabs } from "@/components/vx";
 import { FreePosts } from "@/components/vx";
 import { listMyAnswers, listSaved, type Me } from "@/lib/api/profile";
@@ -69,7 +69,23 @@ export function MePage() {
   const [toast, push] = useToast();
   // Voices I deleted here: the row leaves the list and the counts go down by one without a reload.
   const [deleted, setDeleted] = useState<string[]>([]);
-  const onDeleted = useCallback((id: string) => setDeleted((d) => (d.includes(id) ? d : [...d, id])), []);
+  const panel = useRef<HTMLDivElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  // Where keyboard focus goes once the row I deleted is gone: the next row's three dots, else the list heading.
+  const focusNext = useRef<{ id: string | null } | null>(null);
+  const onDeleted = useCallback((id: string) => {
+    const rows = Array.from(panel.current?.querySelectorAll<HTMLElement>("[data-post-id]") ?? []);
+    const at = rows.findIndex((r) => r.dataset.postId === id);
+    focusNext.current = { id: at >= 0 ? rows[at + 1]?.dataset.postId ?? null : null };
+    setDeleted((d) => (d.includes(id) ? d : [...d, id]));
+  }, []);
+  useEffect(() => {
+    const want = focusNext.current;
+    if (!want) return;
+    focusNext.current = null;
+    const row = want.id ? Array.from(panel.current?.querySelectorAll<HTMLElement>("[data-post-id]") ?? []).find((r) => r.dataset.postId === want.id) : undefined;
+    (row?.querySelector<HTMLElement>('button[aria-label^="More:"]') ?? heading.current)?.focus();
+  }, [deleted]);
   const theme = state.status === "ready" ? state.me.settings.theme : null;
   useEffect(() => { if (theme) applyAccountTheme(theme); }, [theme]);
   const loadMine = useCallback((c?: string) => listMyAnswers(c).then((p) => ({ items: p.items.filter((i) => i.type === "answer" && i.answer).map((i) => i.answer!), nextCursor: p.nextCursor })), []);
@@ -112,7 +128,8 @@ export function MePage() {
         onChange={(v) => setTab(v as "voices" | "saved")}
         items={[{ id: "voices", label: "My voices", count: voices }, { id: "saved", label: "Saved", count: me.savedCount }]}
       />
-      <div role="tabpanel" className="pf-panelbody">
+      <div role="tabpanel" className="pf-panelbody" ref={panel}>
+        <h2 className="pf-sr" tabIndex={-1} ref={heading}>{tab === "voices" ? "My voices" : "Saved"}</h2>
         {tab === "voices" ? (
           <PagedList load={loadMine} keyOf={(x) => x.id} skip={(x) => deleted.includes(x.id)} row={(x) => <PostRow a={x} own={{ push, onDeleted }} />} empty={{ title: "No voices yet", body: "Answer today’s question and your voice shows up here.", icon: "mic" }} />
         ) : (

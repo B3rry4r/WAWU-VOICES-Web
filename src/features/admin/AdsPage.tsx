@@ -7,6 +7,8 @@ import { listBrands, type AdminBrand } from "@/lib/api/admin-surveys";
 import type { AdminAd, UpsertAdRequest } from "@/lib/api/admin";
 import { getCategories } from "@/lib/api/feed";
 import { useAdmin } from "./AdminFrame";
+import { MediaPick, type Picked } from "./MediaPick";
+import { AD_AUDIO_MAX_SECONDS } from "@/lib/api/admin-media";
 import { dayMonth } from "./time";
 import { StackTable } from "./money/parts";
 import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, DetailPane, isSuspendedError, useAction, Gated } from "./ui";
@@ -280,6 +282,9 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
     listBrands().then((r) => { if (live) setBrands(r.items); }, () => { if (live) setBrandsFailed(true); });
     return () => { live = false; };
   }, []);
+  // V-FIX-B: a recording for the audio slot and a picture for any advert. Only a file chosen now is sent; an edit keeps what is set.
+  const [audio, setAudio] = useState<Picked | null>(null);
+  const [picture, setPicture] = useState<Picked | null>(null);
   const act = useAction();
   const set = (k: keyof typeof f) => (v: string) => setF((o) => ({ ...o, [k]: v }));
 
@@ -299,6 +304,8 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
       ...(f.price ? { priceKobo: Math.round(Number(f.price) * 100) } : {}),
       // A new advert sends the brand page only when one is chosen; an edit sends null to clear it (changedFields keeps it out when nothing changed).
       ...(brandId ? { brandId } : ad ? { brandId: null } : {}),
+      ...(audio && kind === "AUDIO_SLOT" ? { audioClipId: audio.id } : {}),
+      ...(picture ? { imageFileId: picture.id } : {}),
     };
     // lead ruling WF, 6 Nov (C-M8): an edit sends ONLY what changed, because the API reads any content field it receives
     // as "the words changed" and sends a paused advert back to approval. Changing only the dates keeps it paused.
@@ -349,6 +356,14 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
           </div>
           <div className="vx-field__hint"><span>{brandsFailed ? "The brand pages did not load. Reload to choose one." : "The advert shows on that brand's page."}</span></div>
         </div>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        {kind === "AUDIO_SLOT" ? (
+          <div data-testid="ad-audio-pick">
+            <MediaPick kind="audio" label="Audio advert" purpose="AD_AUDIO" maxSeconds={AD_AUDIO_MAX_SECONDS} value={audio} onChange={setAudio} required hint={`Up to ${AD_AUDIO_MAX_SECONDS} seconds. It plays only when a person taps it, and its words are checked before approval.${ad?.audioClipId && !audio ? " A recording is already set." : ""}`} />
+          </div>
+        ) : null}
+        <MediaPick kind="picture" label="Picture" fileKind="AD_CREATIVE" value={picture} onChange={setPicture} hint={`JPEG, PNG or WebP, under 5 MB.${ad?.imageUrl && !picture ? " A picture is already set." : ""}`} />
       </div>
       <div className="mt-4">
         <div className="mb-2 text-count">Topics it can show beside</div>

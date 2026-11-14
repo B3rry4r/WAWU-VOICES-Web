@@ -3,7 +3,7 @@ import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Avatar, Badge, Banner, Button, EmptyState, Icon, IconButton, Skeleton, TopicChip, VoicePlayer } from "@/components/vx";
+import { AdminPill, Avatar, Badge, Banner, Button, EmptyState, Icon, IconButton, Skeleton, TopicChip, VoicePlayer } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Reply, ReplyStance } from "@/lib/api/talk";
 import { ago } from "@/lib/feed-format";
@@ -31,18 +31,19 @@ function ClipPlayer({ clipId, ms, push }: { clipId: string; ms: number; push: (t
 
 function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => Promise<void>; push: (t: string, tone?: "danger") => void }) {
   const st = STANCES.find((s) => s.id === r.stance)!;
+  const au = r.author; // null: posted without a name, so nothing of the writer shows
   const [confirm, setConfirm] = useState(false);
   return (
     <>
     <div className="mt-2 hidden items-center gap-2 text-eyebrow uppercase text-[var(--ink-2)] dt:flex"><Icon name={stanceIcon[r.stance]} size={14} />{st.label}</div>
-    <article className="vx-answer" aria-label={`Reply from ${r.author ? r.author.handle : "an anonymous poster"}`}>
+    <article className="vx-answer" aria-label={`Reply from ${au ? au.handle : "an anonymous poster"}`}>
       <div className="vx-answer__head flex-wrap">
-        <Avatar name={r.author ? r.author.displayName ?? r.author.handle : "Anonymous"} src={r.author?.avatarUrl ?? undefined} size="s" />
+        <Avatar name={au ? au.displayName ?? au.handle : "Anonymous"} src={au?.avatarUrl ?? undefined} size="s" />
         <div className="vx-answer__who min-w-0 flex-1">
-          <span className="vx-answer__name">{r.author ? `@${r.author.handle}` : "Anonymous"}{r.author ? <VerifiedTick verified={r.author.verified} /> : null}</span>
+          <span className="vx-answer__name">{au ? <><span className="vx-answer__nm">{`@${au.handle}`}</span><VerifiedTick verified={au.verified} /><AdminPill admin={(au as { admin?: boolean }).admin} /></> : "Anonymous"}</span>
           {/* V-FIX-D: an unnamed reply has no author for anyone; its writer alone is told it is theirs. */}
-          {!r.author && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
-          <span className="vx-answer__time">{ago(r.createdAt) + (r.author?.state ? ` · ${r.author.state}` : "")}</span>
+          {!au && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
+          <span className="vx-answer__time">{ago(r.createdAt) + (au?.state ? ` · ${au.state}` : "")}</span>
         </div>
         <span className="dt:hidden"><Badge tone="proposed" icon={stanceIcon[r.stance]}>{st.label}</Badge></span>
         {r.isMine ? <IconButton icon="trash-2" label="Delete my reply" variant="ghost" size="s" onClick={() => setConfirm(true)} /> : null}
@@ -129,7 +130,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
           <TopicChip key={c.label} label={c.label} count={c.n} selected={filter === c.id} onClick={() => setFilter(c.id)} />
         ))}
       </div>
-      <div className={`tk-replies mt-3 grid gap-3 ${open ? "pb-48" : "pb-6"} dt:pb-6`}>
+      <div className={`tk-replies mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 ${open ? "pb-48" : "pb-6"} dt:pb-6`}>
         {state === "loading" ? <><Skeleton variant="answer" /><Skeleton variant="answer" /></> : null}
         {state === "error" && !items.length ? <Problem error={err} onRetry={() => void load()} /> : null}
         {state === "ready" && !items.length ? <EmptyState icon="message-square" title="No replies yet" body={`Be the first to reply to ${who}.`} /> : null}
