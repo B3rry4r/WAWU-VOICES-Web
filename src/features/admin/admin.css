@@ -63,6 +63,7 @@
   .ad-root .vx-iconbtn { min-width: var(--touch-min); min-height: var(--touch-min); }
   .ad-root .vx-seg .vx-tab { min-height: var(--touch-min); padding: 0 var(--space-2); }
   .ad-root select.vx-field__input { min-height: var(--touch-min); }
-  .ad-root [role="switch"]::before { content: ""; position: absolute; inset: calc((var(--touch-min) - 100%) / -2) 0; }
+  .ad-root .vx-switch { height: var(--touch-min); }
+  .ad-root .vx-switch::after { top: calc((var(--touch-min) - 24px) / 2); }
   .ad-root .vx-chip { min-height: var(--touch-min); max-width: 100%; height: auto; padding-top: var(--space-2); padding-bottom: var(--space-2); white-space: normal; text-align: left; }
 }

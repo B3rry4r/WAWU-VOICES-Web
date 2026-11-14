@@ -62,14 +62,14 @@ export const setReaction = (aid: string, kind: ReactionKind, key: string) =>
   apiFetch<ReactionState>(`/answers/${id(aid)}/reaction`, { method: "PUT", authed: true, body: { kind }, idempotencyKey: key });
 export const removeReaction = (aid: string) => apiFetch<ReactionState>(`/answers/${id(aid)}/reaction`, { method: "DELETE", authed: true });
 
-export interface NewsInput { isNews: boolean; newsTag?: NewsTag }
+export interface NewsInput { isNews: boolean; newsTag?: NewsTag; requestVerified?: boolean; newsSourceName?: string; newsSourceUrl?: string }
 /** `mood` is the one word of a mood question (LCH-02); an ordinary question sends none. */
 export const createAnswer = (qid: string, body: string, news: NewsInput, key: string, mood?: S["Mood"] | null, anonymous = false) =>
   apiFetch<PostReceipt>(`/questions/${id(qid)}/answers`, {
     method: "POST",
     authed: true,
     idempotencyKey: key,
-    body: { kind: "TEXT", body, ...(news.isNews ? { isNews: true, newsTag: news.newsTag } : {}), ...(mood ? { mood } : {}), ...(anonymous ? { anonymous: true } : {}) },
+    body: { kind: "TEXT", body, ...(news.isNews ? { isNews: true, newsTag: news.newsTag, ...(news.requestVerified ? { requestVerified: true } : {}), ...(news.newsSourceName ? { newsSourceName: news.newsSourceName } : {}), ...(news.newsSourceUrl ? { newsSourceUrl: news.newsSourceUrl } : {}) } : {}), ...(mood ? { mood } : {}), ...(anonymous ? { anonymous: true } : {}) },
   });
 /** `anonymous` is "Post without my name" (V-FIX-D): sent only when on, so a named reply sends exactly what it always did. */
 export const createReply = (aid: string, stance: ReplyStance, body: string, key: string, anonymous = false) =>

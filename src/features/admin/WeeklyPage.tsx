@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, EmptyState, Icon, TextField, TopicChip, WeeklyReportCard } from "@/components/vx";
 import { approveWeekly, editWeekly, holdWeekly, listWeekly, weeklyInstagramZip } from "@/lib/api/admin";
-import type { AdminWeeklyReport } from "@/lib/api/admin";
+import type { AdminWeeklyReport, Emotion } from "@/lib/api/admin";
 import { readPollSummary, readThemes } from "@/features/reach/weekly-map";
 import { useAdmin } from "./AdminFrame";
 import { published } from "@/lib/format/date";
@@ -93,6 +93,7 @@ function WeeklyBody() {
 function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeeklyReport) => void }) {
   const [editing, setEditing] = useState(false);
   const [f, setF] = useState({ cardTitle: r.cardTitle ?? "", headline: r.headline ?? "", mood: r.mood ?? "", summary: r.summary ?? "" });
+  const [rows, setRows] = useState<{ name: string; share: string; change: string }[]>((r.emotions ?? []).map((e) => ({ name: e.name, share: String(e.share), change: e.change == null ? "" : String(e.change) })));
   const [notes, setNotes] = useState(r.editorNote ?? "");
   const [at, setAt] = useState(toLocalInput(r.publishAt ?? nextSixPm()));
   const [holding, setHolding] = useState(false);
@@ -105,8 +106,13 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
   const themes = readThemes(r.themes);
   const when = clock(fromLocalInput(at));
 
+  const emotions: Emotion[] = rows
+    .filter((x) => x.name.trim())
+    .map((x) => ({ name: x.name.trim(), share: Math.min(100, Math.max(0, Number(x.share) || 0)), change: x.change.trim() === "" ? null : Math.min(100, Math.max(-100, Number(x.change) || 0)) }));
+  const setRow = (i: number, k: "name" | "share" | "change", v: string) => setRows((o) => o.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
+
   async function saveEdit() {
-    const out = await act.run(() => editWeekly(r.id, { cardTitle: f.cardTitle || undefined, headline: f.headline, mood: f.mood, summary: f.summary, editorNote: notes || undefined }));
+    const out = await act.run(() => editWeekly(r.id, { cardTitle: f.cardTitle || undefined, headline: f.headline, mood: f.mood, summary: f.summary, emotions, editorNote: notes || undefined }));
     if (out) {
       onChange(out);
       setEditing(false);
@@ -158,6 +164,26 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
               <TextField label="Mood headline" value={f.headline} onChange={(v) => setF({ ...f, headline: v })} />
               <TextField label="Mood line" value={f.mood} onChange={(v) => setF({ ...f, mood: v })} />
               <TextField label="Summary" multiline value={f.summary} onChange={(v) => setF({ ...f, summary: v })} />
+              <fieldset className="m-0 border-0 p-0" aria-label="Leading emotions">
+                <legend className="vx-eyebrow mb-1 text-ink-2">Leading emotions</legend>
+                <p className="m-0 mb-3 text-caption text-ink-2">Drawn from this week’s mood answers. Share is the percent of people; change is the move in points since last week. These rows are the mood bars here, on the weekly page and on the Instagram pictures.</p>
+                <div className="flex flex-col gap-3">
+                  {rows.map((x, i) => (
+                    <div key={i} className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-3">
+                      <TextField label={`Emotion ${i + 1}`} value={x.name} onChange={(v) => setRow(i, "name", v)} maxLength={40} />
+                      <TextField label="Share (%)" inputMode="numeric" value={x.share} onChange={(v) => setRow(i, "share", v)} />
+                      <TextField label="Change (points, empty if unknown)" inputMode="numeric" value={x.change} onChange={(v) => setRow(i, "change", v)} />
+                      <Button size="s" variant="ghost" onClick={() => setRows((o) => o.filter((_, j) => j !== i))}>Remove</Button>
+                    </div>
+                  ))}
+                  {rows.length < 8 ? (
+                    <div>
+                      <Button size="s" variant="secondary" icon="plus" onClick={() => setRows((o) => [...o, { name: "", share: "0", change: "0" }])}>Add an emotion</Button>
+                    </div>
+                  ) : null}
+                  {rows.length === 0 ? <p className="m-0 text-caption text-ink-2">No emotions yet. Too few people answered the mood question, or no mood question ran this week.</p> : null}
+                </div>
+              </fieldset>
               <ErrorLine>{act.error}</ErrorLine>
               <div className="flex gap-3">
                 <Button icon="check" loading={act.busy} onClick={saveEdit}>Save draft</Button>
@@ -170,7 +196,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
               title={r.cardTitle ?? "What Nigerians said this week"}
               moodLine={r.mood ?? r.headline ?? ""}
               summary={r.summary ?? undefined}
-              mood={r.emotions.map((e) => ({ label: e.name, pct: Math.round(e.share), delta: Math.round(e.change) }))}
+              mood={(r.emotions ?? []).map((e) => ({ label: e.name, pct: Math.round(e.share), delta: e.change == null ? undefined : Math.round(e.change) }))}
               themes={themes}
               poll={summary ? { pct: summary.pct, text: summary.text } : undefined}
               voices={r.basedOnVoices}
@@ -179,6 +205,21 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
             />
           )}
         </div>
+        <Card className="mt-5">
+          <CardTitle>The poll by state</CardTitle>
+          {r.regions && r.regions.length ? (
+            <ul className="m-0 flex list-none flex-col gap-2 p-0 text-body">
+              {r.regions.map((g) => (
+                <li key={g.state} className="flex items-baseline justify-between gap-3 border-t border-line pt-2 first:border-t-0 first:pt-0">
+                  <span>{g.state}</span>
+                  <span className="text-caption text-ink-2">{`${g.percent}% ${g.leading} (${g.votes.toLocaleString("en-NG")} votes)`}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="m-0 text-body text-ink-2">No state had enough votes to show without naming people, or voters have not given a state. Nothing is shown on the public report.</p>
+          )}
+        </Card>
       </div>
 
       <div className="flex flex-col gap-5">

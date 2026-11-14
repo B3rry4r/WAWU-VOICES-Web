@@ -24,6 +24,8 @@ export interface Draft {
   shareCode?: string | null;
   /** Set when this recording is a voice reply, not an answer: the parent answer and the stance it was sent with. It is sent as that same reply. */
   reply?: { answerId: string; stance: "AGREE" | "DISAGREE" | "EXPERIENCE" };
+  /** V-FIX-B round 2: the tag chosen so far (and the source named for a Verified News request) survives signing in. */
+  tag?: TagChoice;
 }
 
 /** A saved recording is removed after 7 days (addendum 7.7). */
@@ -32,6 +34,7 @@ export const draftIsStale = (d: Draft, now = Date.now()): boolean => now - (d.re
 export const STALE_NOTE = "A recording you saved more than 7 days ago was removed.";
 
 import { sessionStorage } from "@/lib/auth/session-storage";
+import type { TagChoice } from "@/features/news/tag-choice";
 
 /** Who is signed in, read from the token's subject (only to match a draft, never trusted for anything else). */
 export function currentOwner(): string | null {

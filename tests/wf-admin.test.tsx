@@ -40,7 +40,7 @@ describe("RW3: unfed tabs are hidden", () => {
     expect(tabs.textContent).not.toContain("New");
     expect(tabs.textContent).not.toContain("Sensitive topics");
   });
-  it("News shows Flagged as misleading and All changes only", async () => {
+  it("News shows Asking for Verified News first, then Flagged as misleading and All changes (V-FIX-B round 2: requests now exist)", async () => {
     vi.stubGlobal("fetch", vi.fn(async (u: string) => {
       if (u.endsWith("/me")) return json(200, me(["EDITOR"]));
       if (u.includes("/admin/news/items")) return json(200, { items: [], nextCursor: null, waiting: 0, counts: { flagged: 0, askingVerified: 0, allChanges: 0 } });
@@ -50,7 +50,8 @@ describe("RW3: unfed tabs are hidden", () => {
     const tabs = await screen.findByRole("tablist", { name: "News queues" });
     expect(tabs.textContent).toContain("Flagged as misleading");
     expect(tabs.textContent).toContain("All changes");
-    expect(tabs.textContent).not.toContain("Asking for Verified News");
+    expect(tabs.textContent).toContain("Asking for Verified News");
+    expect(tabs.textContent!.indexOf("Asking for Verified News")).toBeLessThan(tabs.textContent!.indexOf("Flagged as misleading"));
   });
 });
 

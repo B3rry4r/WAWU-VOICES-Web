@@ -145,6 +145,21 @@ export function WeeklyPage({ reportId }: { reportId?: string }) {
         ) : null}
       </div>
 
+      {report.regions && report.regions.length ? (
+        <section className="flex flex-col gap-2" aria-label="The poll by state">
+          <h2 className="vx-eyebrow m-0 text-ink-2">The poll by state</h2>
+          <ul className="m-0 flex list-none flex-col gap-2 rounded-l bg-surface p-4 shadow-1">
+            {report.regions.map((g) => (
+              <li key={g.state} className="flex items-baseline justify-between gap-3 text-body">
+                <span className="text-ink">{g.state}</span>
+                <span className="text-right text-caption text-ink-2">{`${g.percent}% ${g.leading} (${g.votes.toLocaleString("en-NG")} votes)`}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="m-0 text-caption text-ink-2">Only states with enough votes to stay anonymous are listed. People who have not given a state are not counted here.</p>
+        </section>
+      ) : null}
+
       <section className="flex flex-col gap-3 dt:flex-row dt:items-center dt:gap-6 dt:rounded-l dt:bg-surface dt:p-6 dt:shadow-1" aria-label="Share this week">
         <div className="dt:w-1/2">
           <ShareCard

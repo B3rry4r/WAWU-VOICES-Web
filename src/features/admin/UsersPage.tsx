@@ -29,9 +29,9 @@ function StatusChip({ status }: { status: string }) {
 
 function Figure({ label, value, testId }: { label: string; value: number | null; testId: string }) {
   return (
-    <div className="rounded-xl border border-line bg-surface px-5 py-4" data-testid={testId}>
+    <div className="min-w-0 rounded-xl border border-line bg-surface px-5 py-4" data-testid={testId}>
       <Eyebrow>{label}</Eyebrow>
-      <div className="mt-2 font-display text-num-l text-ink">{value === null ? "-" : count(value)}</div>
+      <div className="mt-2 font-display text-num-l text-ink [overflow-wrap:anywhere]">{value === null ? "-" : count(value)}</div>
     </div>
   );
 }
@@ -89,7 +89,7 @@ function UsersBody() {
   return (
     <div>
       <PageHead eyebrow="Admin only" title="Users" sub="Everyone who has registered, newest first." />
-      <div className="mb-5 grid grid-cols-3 gap-4">
+      <div className="mb-5 grid grid-cols-1 gap-3 dt:grid-cols-3 dt:gap-4">
         <Figure label="All users" value={counts?.total ?? null} testId="users-all" />
         <Figure label="Joined today" value={counts?.today ?? null} testId="users-today" />
         <Figure label="Verified" value={counts?.verified ?? null} testId="users-verified" />
@@ -153,7 +153,7 @@ function UsersBody() {
               {items.map((u) => (
                 <tr key={u.profile.id} className="border-t border-line">
                   <Td>
-                    <Link href={`/admin/money/wallets?handle=${encodeURIComponent(u.profile.handle)}`} className="text-ink">
+                    <Link href={`/admin/money/wallets?handle=${encodeURIComponent(u.profile.handle)}`} className="text-ink max-dt:flex max-dt:min-h-[44px] max-dt:flex-col max-dt:justify-center">
                       <span className="inline-flex items-center gap-1">
                         <span className="text-body-strong">{u.displayName ?? "No name yet"}</span>
                         <VerifiedTick verified={u.verified} />

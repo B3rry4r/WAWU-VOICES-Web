@@ -13,6 +13,7 @@ import { isSignedIn } from "@/lib/api/auth";
 import { getPlayUrl } from "@/lib/api/talk";
 import { trackListen } from "./listen-track";
 import { makePlayer, playWithResign } from "@/lib/audio-ref/player";
+import { claimPlayback } from "@/features/profile/playback";
 
 /** Signed in or not, read in the browser (the session lives in local storage). null until the first effect. */
 export function useSignedIn(): boolean | null {
@@ -178,6 +179,7 @@ export function useClipPlayback(clipId: string | undefined, onFail: (e: unknown)
         untrack.current = answerId ? trackListen(answerId, el) : null;
         onStart?.();
       }
+      claimPlayback(audio.current, me.current.stop);
       await playWithResign(audio.current, sign);
     } catch (e) {
       if (playing === me.current) playing = null;

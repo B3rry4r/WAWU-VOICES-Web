@@ -38,7 +38,7 @@ function SettingEditor({ def, entry, onSave, onCancel, busy, error }: { def: Def
           </div>
         </ConfirmPanel>
       ) : (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button disabled={!ready} onClick={() => setReview(true)}>
             Review the change
           </Button>
@@ -95,7 +95,7 @@ function PacksEditor({ entry, onSave, onCancel, busy, error }: { entry: ConfigEn
           </div>
         </ConfirmPanel>
       ) : (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button disabled={!ready} onClick={() => setReview(true)}>
             Review the change
           </Button>
@@ -151,7 +151,7 @@ function PlansEditor({ entry, onSave, onCancel, busy, error }: { entry: ConfigEn
           </div>
         </ConfirmPanel>
       ) : (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button disabled={!ready} onClick={() => setReview(true)}>
             Review the change
           </Button>

@@ -5,6 +5,8 @@ import { Button, Dialog, EmptyState, Tabs, TextField } from "@/components/vx";
 import { cancelOverride, createOverride, listOverrides, previewOverride } from "@/lib/api/admin";
 import type { AdminOverride, CreateOverrideRequest, OverridePreview } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
+import { MediaPick, type Picked } from "./MediaPick";
+import { NOTE_MAX_SECONDS } from "@/lib/api/admin-media";
 import { dayKey } from "@/lib/format/date";
 import { clock, dayClock, dayStringWeekday, fromLocalInput, longDate, toLocalInput, weekdayDay } from "./time";
 import { StackTable } from "./money/parts";
@@ -19,7 +21,9 @@ function nowLocal(addHours = 0): string {
 
 function OverrideBody() {
   const { today, reloadToday } = useAdmin();
-  const [kind, setKind] = useState<"TEXT" | "LINK">("TEXT");
+  const [kind, setKind] = useState<"TEXT" | "VOICE" | "IMAGE" | "LINK">("TEXT");
+  const [voice, setVoice] = useState<Picked | null>(null);
+  const [picture, setPicture] = useState<Picked | null>(null);
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState("");
   const [link, setLink] = useState("");
@@ -47,6 +51,8 @@ function OverrideBody() {
       headline: headline.trim() || undefined,
       body: body.trim() || undefined,
       linkUrl: link.trim() || undefined,
+      voiceClipId: voice?.id,
+      imageFileId: picture?.id,
       startsAt: fromLocalInput(starts),
       endsAt: fromLocalInput(ends),
       emergency,
@@ -54,9 +60,9 @@ function OverrideBody() {
       keepWeeklyTheme: keepTheme,
       dropReplaced: drop,
     }),
-    [kind, headline, body, link, starts, ends, emergency, alertOn, keepTheme, drop],
+    [kind, headline, body, link, voice, picture, starts, ends, emergency, alertOn, keepTheme, drop],
   );
-  const filled = headline.trim().length > 0 && (kind === "LINK" ? link.trim().length > 0 : true);
+  const filled = headline.trim().length > 0 && (kind === "LINK" ? link.trim().length > 0 : true) && (kind === "VOICE" ? !!voice : true) && (kind === "IMAGE" ? !!picture : true);
   const timesOk = !Number.isNaN(Date.parse(request.startsAt)) && !Number.isNaN(Date.parse(request.endsAt)) && Date.parse(request.endsAt) > Date.parse(request.startsAt);
 
   // "What happens next" is the API's own preview of the week, asked again when the form changes.
@@ -95,6 +101,8 @@ function OverrideBody() {
       setHeadline("");
       setBody("");
       setLink("");
+      setVoice(null);
+      setPicture(null);
       reloadToday();
       loadLog();
     }
@@ -104,6 +112,8 @@ function OverrideBody() {
     setHeadline("");
     setBody("");
     setLink("");
+    setVoice(null);
+    setPicture(null);
     setKind("TEXT");
     setStarts(nowLocal());
     setEnds(nowLocal(24));
@@ -150,9 +160,11 @@ function OverrideBody() {
           <Card>
             <CardTitle>What goes up instead</CardTitle>
             <div className="flex flex-col gap-4">
-              <Tabs variant="segmented" block label="Content type" items={[{ id: "TEXT", label: "Text", icon: "message-square" }, { id: "LINK", label: "Link", icon: "link" }]} value={kind} onChange={(v) => setKind(v as "TEXT" | "LINK")} />
+              <Tabs variant="segmented" block label="Content type" items={[{ id: "TEXT", label: "Text", icon: "message-square" }, { id: "VOICE", label: "Voice", icon: "mic" }, { id: "IMAGE", label: "Image", icon: "plus" }, { id: "LINK", label: "Link", icon: "link" }]} value={kind} onChange={(v) => setKind(v as "TEXT" | "VOICE" | "IMAGE" | "LINK")} />
               <TextField label="Headline (120 max)" value={headline} onChange={setHeadline} maxLength={HEADLINE_MAX} />
               <TextField label="Message" multiline value={body} onChange={setBody} hint="Shown under the headline on Home and on the share card." />
+              <MediaPick kind="audio" label="Editor voice note" purpose="OVERRIDE_NOTE" maxSeconds={NOTE_MAX_SECONDS} value={voice} onChange={setVoice} required={kind === "VOICE"} hint="Plays on Home under the message. Up to 60 seconds." />
+              <MediaPick kind="picture" label="Picture" fileKind="OVERRIDE_IMAGE" value={picture} onChange={setPicture} required={kind === "IMAGE"} hint="JPEG, PNG or WebP, under 5 MB. Shown on Home under the message." />
               <TextField label={kind === "LINK" ? "Link" : "Link (optional)"} value={link} onChange={setLink} placeholder="https://" inputMode="url" hint="Opens from a button under the message." />
             </div>
           </Card>
