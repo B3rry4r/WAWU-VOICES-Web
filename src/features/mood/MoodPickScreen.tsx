@@ -10,6 +10,7 @@ import { AppBar, Problem, useSignedIn } from "@/features/talk/lib";
 import { getSettings, updateSettings } from "@/lib/api/profile";
 import { MOODS, TONE, isMood, readPick, writePick } from "./mood";
 import { ShareWordSwitch } from "./ShareWordSwitch";
+import { cleanCode } from "@/features/share/speak-target";
 import { readPendingShareWord, writePendingShareWord } from "./share-word";
 
 /** MoodPick board: before Record or Write on a mood question, pick one word. It can be changed until the answer is posted. */
@@ -64,7 +65,9 @@ export function MoodPickScreen({ qid }: { qid: string }) {
   const go = (to: "speak" | "write") => {
     if (!word) { setHint(true); return; }
     writePick(qid, word);
-    router.push(`/q/${qid}/${to}?mood=${word}`);
+    // from: the share link's code stays with the person, so a sign-in on the way brings them back with it
+    const from = cleanCode(sp?.get("from"));
+    router.push(`/q/${qid}/${to}?mood=${word}${from ? `&from=${encodeURIComponent(from)}` : ""}`);
   };
   return (
     <>
