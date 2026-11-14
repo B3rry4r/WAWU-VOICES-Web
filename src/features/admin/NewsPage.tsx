@@ -138,7 +138,7 @@ function NewsBody() {
                     {"Source given: "}<b>{i.sourceName}</b>{i.sourceUrl ? <>{" · "}<span className="break-all">{i.sourceUrl}</span></> : null}
                   </span>
                 ) : null}
-                <span className="mt-1 block text-caption text-ink-2">{`@${i.answer.author?.handle ?? "removed"} · ${ago(i.answer.createdAt)} · ${countText(i.answer.likeCount, "like")}${i.evidenceUrl ? " · source photo attached" : ""}`}</span>
+                <span className="mt-1 block text-caption text-ink-2">{`${i.answer.author ? "@" + i.answer.author.handle : "Posted without a name"} · ${ago(i.answer.createdAt)} · ${countText(i.answer.likeCount, "like")}${i.evidenceUrl ? " · source photo attached" : ""}`}</span>
               </button>
             ))}
             {next ? (
@@ -191,9 +191,9 @@ function Decide({ item, readOnly, onDone, onGone }: { item: AdminNewsItem; readO
       <CardTitle>Decide the tag</CardTitle>
       <div className="rounded-l border border-line p-4">
         <div className="flex items-center gap-3">
-          <Avatar name={a.author?.displayName || a.author?.handle || "?"} size="m" />
+          {a.author ? <Avatar name={a.author.displayName || a.author.handle || "?"} size="m" /> : null}
           <div>
-            <div className="text-body-strong">{`@${a.author?.handle ?? "removed"}`}</div>
+            <div className="text-body-strong">{a.author ? `@${a.author.handle}` : "Posted without a name"}</div>
             <div className="text-caption text-ink-2">{[ago(a.createdAt) + " ago", a.author?.state].filter(Boolean).join(" · ")}</div>
           </div>
         </div>
