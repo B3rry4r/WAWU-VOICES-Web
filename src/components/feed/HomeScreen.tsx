@@ -12,6 +12,7 @@ import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
 import { WeeklyReportLink } from "./LinkCards";
 import { Answers, Failed, Loading, NothingYet, Section, TextLink, Tiles, WeekCard } from "./parts";
+import { useShareSheet } from "@/features/talk/TalkCard";
 import { useFinishProfile } from "@/features/entry/ui";
 import { SuspendedBanner } from "@/features/profile/SuspendedBanner";
 import { trendItems } from "./trend";
@@ -34,6 +35,7 @@ export function HomeScreen() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => setSignedIn(isSignedIn()), []);
   useFinishProfile();
+  const [shareNode, share] = useShareSheet();
   const load = useLoad<Data>(async () => {
     const [home, flash, trending, ad, who] = await Promise.all([
       getHome(),
@@ -74,6 +76,7 @@ export function HomeScreen() {
               closesIn={closesIn(q.endsAt)}
               avatars={uniqueVoices(q.recentVoices).map((v) => v.handle)}
               opensLabel={comingUp(q)}
+              onShare={() => share("QUESTION", q.id)}
               speakLabel={answered ? "Listen to answers" : signedIn ? undefined : "Add your voice"}
               speakIcon={answered ? "headphones" : undefined}
               answered={answered}
@@ -131,6 +134,7 @@ export function HomeScreen() {
         {signedIn ? <div className="order-8 dt:hidden"><AdCard ad={ad} /></div> : null}
       </div>
 
+      {shareNode}
       <Rail>
         <WeekCard topic={h.topicOfWeek} questionId={q?.id} variant="rail" />
         {trending.length ? <TrendingList items={trending} /> : null}

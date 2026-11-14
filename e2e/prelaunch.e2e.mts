@@ -65,6 +65,7 @@ try {
       pre(s);
       for (const b of ['Listen', 'Discuss', 'Vote', 'Add your voice', 'Speak']) assert.equal(await page.locator('.vx-hero').getByRole('button', { name: b, exact: true }).count(), 0, `${b} still on the card`);
       assert.equal(await page.getByRole('button', { name: 'Join the conversation' }).count(), 0);
+      assert.ok((await page.locator('.vx-hero').getByRole('button', { name: 'Share', exact: true }).count()) > 0, 'Share is missing on the coming-up card');
       await shot(page, `home-${who}-${w}-before`); await ctx.close();
     });
     await t(`Home ${who} ${w}, after it opens: normal card, today's top voices`, async () => {
@@ -86,6 +87,7 @@ try {
       assert.match(s, /How do you feel about Nigeria right now\?/); assert.match(s, /say it in your voice/); assert.match(s, /Opens Sunday 15 November/);
       assert.doesNotMatch(s, /so far|Closes in|No voices yet|Write instead/i);
       assert.equal(await r.page.getByRole('button', { name: /^(Speak|Write instead|Listen|Discuss|Vote)$/ }).count(), 0);
+      assert.ok((await r.page.getByRole('button', { name: 'Share this question' }).count()) > 0, 'Share is missing on the coming-up question page');
       await shot(r.page, `question-${w}-before`); await r.ctx.close();
       r = await open(w, 'after', false);
       await r.page.goto(`${ORIGIN}/q/q9`);
