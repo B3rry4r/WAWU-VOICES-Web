@@ -28,9 +28,20 @@ function write(next: Persisted): void {
   }
 }
 
+type OwnWrite = (accessToken: string, hadSession: boolean) => void;
+const ownWrites = new Set<OwnWrite>();
+/** Told when THIS tab stores tokens (a sign-in or a refresh here); a write from another tab is not reported. Changes nothing about how tokens are kept. */
+export function onOwnTokenWrite(fn: OwnWrite): void {
+  ownWrites.add(fn);
+}
+
 export const sessionStorage = {
   getToken: () => read().accessToken,
   getRefreshToken: () => read().refreshToken,
-  setTokens: (accessToken: string, refreshToken: string) => write({ accessToken, refreshToken }),
+  setTokens: (accessToken: string, refreshToken: string) => {
+    const hadSession = read().accessToken !== null;
+    write({ accessToken, refreshToken });
+    ownWrites.forEach((fn) => { try { fn(accessToken, hadSession); } catch { /* a listener never breaks the sign-in */ } });
+  },
   clear: () => write(EMPTY),
 };

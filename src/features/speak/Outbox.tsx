@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Banner, Button } from "@/components/vx";
 import { isSignedIn } from "@/lib/api/auth";
 import * as api from "@/lib/api/speak";
-import { clearDraft, currentOwner, draftIsStale, loadDraft, OTHER_TAB_NOTE, signedInAsSomeoneElse, STALE_NOTE, type Draft, type Owner } from "./draft";
+import { clearDraft, draftIsStale, loadDraft, openedFor, OTHER_TAB_NOTE, signedInAsSomeoneElse, STALE_NOTE, type Draft, type Owner } from "./draft";
 import { isSending, planFor, sendKeptRecording, type SendPlan } from "./outbox";
 import { isMoodQuestion } from "@/features/mood/mood";
 import { publishedFromLink } from "@/features/share/share-visit";
@@ -32,9 +32,9 @@ export function Outbox() {
   const pathname = usePathname() ?? "/";
   const [view, setView] = useState<View | null>(null);
   const running = useRef(false);
-  // The person the box last looked for. It lives across a sign-in in one tab, so it is read at the start of each look (not once at mount)
-  // and held for that whole pass: load, send and clear all name this person, and none of them acts if someone else has signed in since.
-  const owner = useRef<Owner>(currentOwner());
+  // The person this tab is for (see openedFor), read at the start of each look and held for that whole pass: load, send and clear all
+  // name this person, and none of them acts if someone else has signed in since.
+  const owner = useRef<Owner>(openedFor());
   // Who a banner on screen was opened for. Closing it removes that person's recording only, never one kept by someone who signed in since.
   const shownFor = useRef<Owner>(null);
   const onSpeak = /(^|\/)speak(\/|$)/.test(pathname);
@@ -68,8 +68,9 @@ export function Outbox() {
     if (running.current || onSpeak || !isSignedIn()) return;
     running.current = true;
     try {
-      owner.current = currentOwner();
+      owner.current = openedFor();
       const who = owner.current;
+      if (signedInAsSomeoneElse(who)) return; // another person signed in on another tab: their recordings are theirs to send, from their own tab
       const d = await loadDraft(who);
       if (!d) return;
       if (draftIsStale(d)) {

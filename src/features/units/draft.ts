@@ -2,6 +2,8 @@
  * (no server drafts) and post after a successful purchase. The Write screen saves a draft with `saveDraft` and opens the
  * out-of-posts sheet on a 402 FREE_POSTS_EXHAUSTED or INSUFFICIENT_UNITS; the tokens return page posts it. */
 
+import { signedInAsSomeoneElse, type Owner } from "@/features/speak/draft";
+
 const STORE = "voices-held-drafts";
 
 export interface HeldDraft {
@@ -14,7 +16,20 @@ export interface HeldDraft {
   awaitingUnits: boolean;
   /** The id of the payment whose units posted this draft. A posted draft is kept as a record (a second tab shows the right banner) and is never posted again. */
   posted?: string;
+  /** The person it belongs to (null: a guest's, handed to the person who signs in next). Absent on a draft stored before this: it behaves as it always did. */
+  owner?: string | null;
 }
+
+/**
+ * Every function below takes the person the screen was opened for as an optional last argument. Given, a draft stored for another
+ * person is never shown, never overwritten and never cleared by this one, and nothing is read or written while someone else is
+ * signed in. Not given, or a draft stored without a person: exactly as before.
+ */
+const allowed = (person: Owner | undefined): boolean => person === undefined || !signedInAsSomeoneElse(person);
+const mine = (d: HeldDraft | undefined, person: Owner | undefined): boolean => {
+  if (!d || person === undefined || d.owner === undefined) return true;
+  return d.owner === person || (d.owner === null && person !== null);
+};
 
 /** A draft older than this is never posted on its own, only offered (the words may no longer be the person's mind). */
 export const AUTO_POST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -52,29 +67,35 @@ function key(): string {
 }
 
 /** The draft still held for a question (not one that already posted). */
-export function getDraft(questionId: string): HeldDraft | undefined {
+export function getDraft(questionId: string, person?: Owner): HeldDraft | undefined {
+  if (!allowed(person)) return undefined;
   const d = read()[questionId];
-  return d && !d.posted ? d : undefined;
+  return d && !d.posted && mine(d, person) ? d : undefined;
 }
 
 /** The record for a question including a draft that already posted. */
-export function getRecord(questionId: string): HeldDraft | undefined {
-  return read()[questionId];
+export function getRecord(questionId: string, person?: Owner): HeldDraft | undefined {
+  if (!allowed(person)) return undefined;
+  const d = read()[questionId];
+  return mine(d, person) ? d : undefined;
 }
 
 /** The draft posted for this payment: keep the record, stop waiting. */
-export function markPosted(questionId: string, paymentId: string): void {
+export function markPosted(questionId: string, paymentId: string, person?: Owner): void {
+  if (!allowed(person)) return;
   const t = read();
-  if (t[questionId]) {
+  if (t[questionId] && mine(t[questionId], person)) {
     t[questionId] = { ...t[questionId], awaitingUnits: false, posted: paymentId };
     write(t);
   }
 }
 
 /** Save the words for a question. Keeps the same post key for the same text, so a retry stays one post. */
-export function saveDraft(questionId: string, body: string, now = Date.now()): HeldDraft | undefined {
+export function saveDraft(questionId: string, body: string, now = Date.now(), person?: Owner): HeldDraft | undefined {
+  if (!allowed(person)) return undefined;
   const text = body.trim();
   const t = read();
+  if (!mine(t[questionId], person)) return undefined; // another person's draft for this question is never overwritten or cleared
   if (!text) {
     delete t[questionId];
     write(t);
@@ -82,44 +103,50 @@ export function saveDraft(questionId: string, body: string, now = Date.now()): H
   }
   const prev = t[questionId];
   const live = prev && !prev.posted ? prev : undefined;
-  const d: HeldDraft = { questionId, body: text, key: live && live.body === text ? live.key : key(), savedAt: now, awaitingUnits: live?.awaitingUnits ?? false };
+  const d: HeldDraft = { questionId, body: text, key: live && live.body === text ? live.key : key(), savedAt: now, awaitingUnits: live?.awaitingUnits ?? false, ...(person === undefined ? {} : { owner: person }) };
   t[questionId] = d;
   write(t);
   return d;
 }
 
 /** The server refused the draft's key as spent: the same words get a new key, and stay held (with their waiting state). */
-export function renewDraftKey(questionId: string): void {
+export function renewDraftKey(questionId: string, person?: Owner): void {
+  if (!allowed(person)) return;
   const t = read();
   const d = t[questionId];
-  if (d && !d.posted) {
+  if (d && !d.posted && mine(d, person)) {
     t[questionId] = { ...d, key: key() };
     write(t);
   }
 }
 
-export function setAwaiting(questionId: string, awaiting: boolean): void {
+export function setAwaiting(questionId: string, awaiting: boolean, person?: Owner): void {
+  if (!allowed(person)) return;
   const t = read();
-  if (t[questionId]) {
+  if (t[questionId] && mine(t[questionId], person)) {
     t[questionId] = { ...t[questionId], awaitingUnits: awaiting };
     write(t);
   }
 }
 
-export function clearDraft(questionId: string): void {
+export function clearDraft(questionId: string, person?: Owner): void {
+  if (!allowed(person)) return;
   const t = read();
+  if (!mine(t[questionId], person)) return;
   delete t[questionId];
   write(t);
 }
 
 /** The drafts waiting for units to arrive, newest first. */
-export function awaitingDrafts(): HeldDraft[] {
+export function awaitingDrafts(person?: Owner): HeldDraft[] {
+  if (!allowed(person)) return [];
   return Object.values(read())
-    .filter((d) => d.awaitingUnits && !d.posted)
+    .filter((d) => d.awaitingUnits && !d.posted && mine(d, person))
     .sort((a, b) => b.savedAt - a.savedAt);
 }
 
 /** The question whose held draft was posted by this payment's units, if any (a second tab or browser reads this). */
-export function findPostedFor(paymentId: string): string | undefined {
-  return Object.values(read()).find((d) => d.posted === paymentId)?.questionId;
+export function findPostedFor(paymentId: string, person?: Owner): string | undefined {
+  if (!allowed(person)) return undefined;
+  return Object.values(read()).find((d) => d.posted === paymentId && mine(d, person))?.questionId;
 }

@@ -14,6 +14,7 @@ import { getPlayUrl } from "@/lib/api/talk";
 import { trackListen } from "./listen-track";
 import { makePlayer, playWithResign } from "@/lib/audio-ref/player";
 import { claimPlayback } from "@/features/profile/playback";
+import { signedInAsSomeoneElse, type Owner } from "@/features/speak/draft";
 
 /** Signed in or not, read in the browser (the session lives in local storage). null until the first effect. */
 export function useSignedIn(): boolean | null {
@@ -98,16 +99,30 @@ export function SignInNote({ children, from }: { children: ReactNode; from?: str
   );
 }
 
-/** What a person has typed so far on the Write screen, kept in this browser only (V-19). One per question or per reply. */
+/** What a person has typed so far on the Write screen, kept in this browser only (V-19). One per question or per reply.
+ *  The person it belongs to is kept beside it (TYPING_OWNERS), so the words stay in the same shape as before. Given a person, words
+ *  stored for someone else are never shown, never overwritten and never cleared by this one; words stored without a person behave as before. */
 const TYPING = "voices-typing-drafts";
-export function typedDraft(slot: string): string {
-  try { return (JSON.parse(window.localStorage.getItem(TYPING) ?? "{}") as Record<string, string>)[slot] ?? ""; } catch { return ""; }
+const TYPING_OWNERS = "voices-typing-owners";
+const readMap = <T,>(key: string): Record<string, T> => { try { return JSON.parse(window.localStorage.getItem(key) ?? "{}") as Record<string, T>; } catch { return {}; } };
+const typedMine = (slot: string, person: Owner | undefined): boolean => {
+  if (person === undefined) return true;
+  if (signedInAsSomeoneElse(person)) return false;
+  const o = readMap<string | null>(TYPING_OWNERS)[slot];
+  return o === undefined || o === person || (o === null && person !== null);
+};
+export function typedDraft(slot: string, person?: Owner): string {
+  if (!typedMine(slot, person)) return "";
+  try { return readMap<string>(TYPING)[slot] ?? ""; } catch { return ""; }
 }
-export function saveTyped(slot: string, text: string): void {
+export function saveTyped(slot: string, text: string, person?: Owner): void {
+  if (!typedMine(slot, person)) return;
   try {
-    const t = JSON.parse(window.localStorage.getItem(TYPING) ?? "{}") as Record<string, string>;
-    if (text) t[slot] = text; else delete t[slot];
+    const t = readMap<string>(TYPING);
+    const o = readMap<string | null>(TYPING_OWNERS);
+    if (text) { t[slot] = text; if (person !== undefined) o[slot] = person; } else { delete t[slot]; delete o[slot]; }
     window.localStorage.setItem(TYPING, JSON.stringify(t));
+    if (person !== undefined || Object.keys(o).length) window.localStorage.setItem(TYPING_OWNERS, JSON.stringify(o));
   } catch { /* ignore */ }
 }
 

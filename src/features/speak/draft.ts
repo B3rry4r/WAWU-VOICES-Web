@@ -33,7 +33,7 @@ export const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export const draftIsStale = (d: Draft, now = Date.now()): boolean => now - (d.recordedAt ?? d.savedAt) > DRAFT_MAX_AGE_MS;
 export const STALE_NOTE = "A recording you saved more than 7 days ago was removed.";
 
-import { sessionStorage } from "@/lib/auth/session-storage";
+import { onOwnTokenWrite, sessionStorage } from "@/lib/auth/session-storage";
 import type { TagChoice } from "@/features/news/tag-choice";
 
 /** Who is signed in, read from the token's subject (only to match a draft, never trusted for anything else). */
@@ -59,26 +59,44 @@ export type Owner = string | null;
 export const OTHER_TAB_NOTE = "You are signed in as someone else in another tab. Nothing was saved. Reload to carry on.";
 
 /**
- * The person THIS tab is for. The sign-in is shared by every tab of the browser, so when another tab signs in as someone else,
- * reading the token here would hand a screen opened later in this tab (record, voice reply) to the wrong person. The browser
- * tells a tab only about writes made by OTHER tabs (the `storage` event); the first one freezes the person this tab last knew,
- * and a sign-out (nobody signed in) lets go of it. Without another tab's write it is simply who is signed in.
+ * The person THIS tab is for, for the life of the page. The sign-in is shared by every tab of the browser, so reading the token
+ * when a screen mounts would hand a screen opened later in this tab (record, voice reply, the box) to whoever signed in on another tab.
+ *  - It follows who is signed in until another tab writes the session (the `storage` event, which a tab only gets for OTHER tabs'
+ *    writes). That first event pins the person this tab had, taken from the event's old value.
+ *  - It is never let go because the session went away (a sign-out in another tab, or a session that ran out): a tab opened for A
+ *    stays A's, so a recording made while nobody is signed in is kept under A and only A gets it back.
+ *  - It changes only by something done in THIS tab: a sign-in here when no session was there, or `leaveTab()` from the sign-out here.
+ *    A tab that was a guest when it loaded stays a guest until a sign-in here, so the guest claim works as before.
+ * Every write, restore and clear also compares this person with who is signed in right then (`signedInAsSomeoneElse`), so a missed
+ * event cannot let the wrong person through: the event only decides who the tab is for, the comparison decides what is allowed.
  */
-let tabKnew: Owner = typeof window === "undefined" ? null : currentOwner();
-let otherTabWrote = false;
+let person: Owner = typeof window === "undefined" ? null : currentOwner();
+let pinned = false;
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
-    if (e.key !== "voices-web-session") return;
-    if (!otherTabWrote) {
-      otherTabWrote = true;
-      try { tabKnew = subOf((JSON.parse(e.oldValue ?? "null") as { accessToken?: string } | null)?.accessToken); } catch { /* keeps what it knew */ }
-    }
+    if (e.key !== "voices-web-session" || pinned) return;
+    pinned = true;
+    try {
+      const before = subOf((JSON.parse(e.oldValue ?? "null") as { accessToken?: string } | null)?.accessToken);
+      if (before !== null) person = before; // no session before: the tab keeps who it already was (a guest stays a guest)
+    } catch { /* keeps what it knew */ }
+  });
+  // Tokens written by THIS tab (a sign-in here, or a refresh here).
+  onOwnTokenWrite((access, hadSession) => {
+    const s = subOf(access);
+    // A refresh of someone else's session (the stored refresh token is theirs) never changes whose tab this is.
+    if (!hadSession || person === null || s === person) { person = s; pinned = false; }
   });
 }
 export function openedFor(): Owner {
   const now = currentOwner();
-  if (!otherTabWrote || now === null) { tabKnew = now; otherTabWrote = false; }
-  return tabKnew;
+  if (!pinned && now !== null) person = now;
+  return person;
+}
+/** The sign-out done in this tab: the tab is nobody's again. */
+export function leaveTab(): void {
+  person = null;
+  pinned = false;
 }
 
 /**
@@ -124,7 +142,7 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
 /** True when the recording is really kept on this device. False means only this page holds it (storage blocked or full). */
 export async function saveDraft(input: Draft, owner: Owner): Promise<boolean> {
   if (signedInAsSomeoneElse(owner)) return false; // refused: nothing is written; the caller says why with signedInAsSomeoneElse()
-  const d: Draft = { ...input, owner: currentOwner() };
+  const d: Draft = { ...input, owner }; // always the person the screen was opened for, even when the session has ended meanwhile
   memory = d;
   try {
     await run("readwrite", (s) => s.put(d, ID));
@@ -152,9 +170,9 @@ export async function loadDraft(owner: Owner): Promise<Draft | null> {
   if (!d) return null;
   const me = currentOwner();
   const stored = d.owner ?? null;
-  if (stored === me) return d;
-  if (stored === null && me !== null) {
-    const claimed = { ...d, owner: me };
+  if (stored === owner) return d;
+  if (stored === null && owner !== null && me === owner) {
+    const claimed = { ...d, owner };
     memory = claimed;
     try { await run("readwrite", (s) => s.put(claimed, ID)); } catch { /* memory copy serves */ }
     return claimed;
