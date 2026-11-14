@@ -1,4 +1,5 @@
 "use client";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -38,7 +39,7 @@ function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => Pro
       <div className="vx-answer__head">
         <Avatar name={r.author.displayName ?? r.author.handle} src={r.author.avatarUrl ?? undefined} size="s" />
         <div className="vx-answer__who">
-          <span className="vx-answer__name">{`@${r.author.handle}`}</span>
+          <span className="vx-answer__name">{`@${r.author.handle}`}<VerifiedTick verified={r.author.verified} /></span>
           <span className="vx-answer__time">{ago(r.createdAt) + (r.author.state ? ` · ${r.author.state}` : "")}</span>
         </div>
         <span className="dt:hidden"><Badge tone="proposed" icon={stanceIcon[r.stance]}>{st.label}</Badge></span>

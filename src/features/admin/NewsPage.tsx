@@ -4,6 +4,7 @@ import { countText } from "@/lib/format/plural";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar, Button, EmptyState, Icon, NewsTag, Tabs, TextField } from "@/components/vx";
 import { decideNews, listNews } from "@/lib/api/admin";
+import { ApiError } from "@/lib/api/client";
 import type { AdminNewsItem, NewsDecision } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
 import { ago, clock } from "./time";
@@ -141,14 +142,14 @@ function NewsBody() {
               </div>
             ) : null}
           </div>
-          {it ? <Decide key={it.answer.id} item={it} readOnly={tab === "changes"} onDone={(w) => decided(it.answer.id, w, tab)} /> : null}
+          {it ? <Decide key={it.answer.id} item={it} readOnly={tab === "changes"} onDone={(w) => decided(it.answer.id, w, tab)} onGone={(w) => { setSaved(w); void load(); reloadToday(); }} /> : null}
         </div>
       )}
     </div>
   );
 }
 
-function Decide({ item, readOnly, onDone }: { item: AdminNewsItem; readOnly: boolean; onDone: (word: string) => void }) {
+function Decide({ item, readOnly, onDone, onGone }: { item: AdminNewsItem; readOnly: boolean; onDone: (word: string) => void; onGone: (words: string) => void }) {
   const cur = tagOf(item);
   const [tag, setTag] = useState<NewsTagId>(cur);
   const [url, setUrl] = useState(item.sourceUrl ?? "");
@@ -160,11 +161,19 @@ function Decide({ item, readOnly, onDone }: { item: AdminNewsItem; readOnly: boo
   const reasonOk = reason.trim().length > 0;
 
   async function go(body: NewsDecision, word: string) {
-    const ok = await act.run(async () => {
-      await decideNews(a.id, body);
-      return true;
+    // V-FIX-B round 3: another editor decided it first (409) or it is gone (404): the row leaves the list and the line says so.
+    const r = await act.run(async () => {
+      try {
+        await decideNews(a.id, body);
+        return "ok" as const;
+      } catch (e) {
+        if (e instanceof ApiError && (e.status === 404 || e.status === 409))
+          return { gone: e.explained && e.message ? e.message : e.status === 409 ? "Someone else already decided this one." : "This request is no longer there." };
+        throw e;
+      }
     });
-    if (ok) onDone(word);
+    if (r === "ok") onDone(word);
+    else if (r) onGone(r.gone);
   }
   const base = { reason: reason.trim() };
   const source = needSource ? { sourceName: name.trim() || undefined, sourceUrl: url.trim() || undefined } : {};

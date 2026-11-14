@@ -9,7 +9,7 @@ import { trackListen } from "@/features/talk/listen-track";
 const seedOf = (id: string) => id.split("").reduce((s, c) => (s * 31 + c.charCodeAt(0)) % 997, 7);
 
 /** The design's voice player on a real clip: bars from the clip's peaks, progress from the audio element, a short-lived URL asked for on first play. */
-export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, tone, answerId, onFirstPlay }: {
+export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, tone, answerId, onFirstPlay, controlRef }: {
   clipId: string;
   durationMs: number | null;
   peaks: number[] | null;
@@ -20,6 +20,8 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
   answerId?: string;
   /** Called once, the first time this player starts to play (an advert counts a listen). */
   onFirstPlay?: () => void;
+  /** Lets the card that holds this player pause just this player (an advert's link pauses the advert, nothing else). */
+  controlRef?: { current: { pause: () => void } | null };
 }) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const started = useRef(false);
@@ -58,6 +60,7 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
     }
   }
   function pause() { audio.current?.pause(); setPlaying(false); }
+  if (controlRef) controlRef.current = { pause };
   function seek(f: number) {
     const a = audio.current;
     setProg(f);

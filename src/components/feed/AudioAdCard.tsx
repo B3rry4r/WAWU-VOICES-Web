@@ -2,7 +2,6 @@
 import { useEffect, useRef } from "react";
 import { AdSlot } from "@/components/vx";
 import { LivePlayer } from "@/features/profile/ClipPlayer";
-import { stopPlayback } from "@/features/profile/playback";
 import { safeLink } from "./OverrideMessage";
 import { getPlayUrl } from "@/lib/api/profile";
 import { isSignedIn } from "@/lib/api/auth";
@@ -15,6 +14,7 @@ import { recordAdEvent, type AdPlacement } from "@/lib/api/polls";
  */
 export function AudioAdCard({ ad }: { ad: AdPlacement | null | undefined }) {
   const seen = useRef(false);
+  const control = useRef<{ pause: () => void } | null>(null);
   const box = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!ad || !ad.audioClipId || seen.current) return;
@@ -39,7 +39,7 @@ export function AudioAdCard({ ad }: { ad: AdPlacement | null | undefined }) {
         href={link ?? undefined}
         newTab
         onWhy={false}
-        onOpen={() => { stopPlayback(); recordAdEvent(ad.id, "TAP").catch(() => undefined); }}
+        onOpen={() => { control.current?.pause(); recordAdEvent(ad.id, "TAP").catch(() => undefined); }}
         player={
           <LivePlayer
             clipId={clipId}
@@ -48,6 +48,7 @@ export function AudioAdCard({ ad }: { ad: AdPlacement | null | undefined }) {
             getUrl={async (id) => (await getPlayUrl(id, isSignedIn())).url}
             failMessage="Could not play this advert. Try again."
             tone="surface"
+            controlRef={control}
             onFirstPlay={() => { recordAdEvent(ad.id, "LISTEN").catch(() => undefined); }}
           />
         }

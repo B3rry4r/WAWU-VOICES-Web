@@ -1,4 +1,5 @@
 "use client";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { countText } from "@/lib/format/plural";
 import Link from "next/link";
 import { useState } from "react";
@@ -87,7 +88,7 @@ export function ReplyRow({ r }: { r: Reply }) {
         <div className="vx-answer__head">
           <Avatar name={r.author.displayName || r.author.handle} src={r.author.avatarUrl ?? undefined} />
           <div className="vx-answer__who">
-            <span className="vx-answer__name">{"@" + r.author.handle}</span>
+            <span className="vx-answer__name">{"@" + r.author.handle}<VerifiedTick verified={r.author.verified} /></span>
             <span className="vx-answer__time">{ago(r.createdAt) + " · " + stance}</span>
           </div>
         </div>

@@ -197,6 +197,7 @@ function SettingsBody({ me }: { me: Me }) {
       <Section id="n-h" title="Notifications">
         <div className="pf-card">
           <Switch label="Today’s question" detail={`Every morning at ${minuteLabel(s.dailyQuestionMinute)}`} checked={s.notifyDailyQuestion} onChange={(v) => patch({ notifyDailyQuestion: v })} />
+          <Switch label="Topic of the week" detail="An email when a new topic starts" checked={s.notifyWeeklyTopic} onChange={(v) => patch({ notifyWeeklyTopic: v })} />
           <Switch label="Replies to you" checked={s.notifyReplies} onChange={(v) => patch({ notifyReplies: v })} />
           <Switch label="Reactions on your voices" detail="Grouped, never one by one" checked={s.notifyReactions} onChange={(v) => patch({ notifyReactions: v })} />
           <Switch label="Poll results" checked={s.notifyPollResults} onChange={(v) => patch({ notifyPollResults: v })} />
@@ -215,6 +216,12 @@ function SettingsBody({ me }: { me: Me }) {
             <Tabs label="Appearance" variant="segmented" block value={deviceChoice() ?? s.theme} onChange={(v) => patch({ theme: v as ThemeChoice })}
               items={[{ id: "light", label: "Light", icon: "sun" }, { id: "dark", label: "Dark", icon: "moon" }, { id: "system", label: "System" }]} />
           </div>
+        </div>
+      </Section>
+
+      <Section id="v-h" title="Verification">
+        <div className="pf-card">
+          <Link href="/verify" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Get verified</b><span>Send your ID and a utility bill. A tick shows beside your name.</span></span><Icon name="chevron-right" size={20} /></Link>
         </div>
       </Section>
 
