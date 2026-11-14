@@ -153,7 +153,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
         <aside className="hidden dt:block" aria-label="Add your voice">
           <div className="sticky top-6 flex flex-col gap-3 rounded-l bg-forest p-5 text-forest-on shadow-1">
             <h2 className="m-0 font-display text-display-m">What do you think?</h2>
-            <p className="m-0 text-body text-[color:var(--on-forest-2)]">Say it in 10 seconds, right here in your browser.<GuestOnly> You only sign in when you publish.</GuestOnly></p>
+            <p className="m-0 text-body text-[color:var(--on-forest-2)]">Say it in up to a minute, right here in your browser.<GuestOnly> You only sign in when you publish.</GuestOnly></p>
             <AddVoice code={page.code} label={page.ctaLabel} block />
           </div>
         </aside>

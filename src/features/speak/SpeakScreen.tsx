@@ -105,11 +105,11 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const mood = useMoodWord(question);
   const config = info?.config;
   const allowance = info?.allowance ?? null;
-  const freeSeconds = allowance?.costs.freeVoiceSeconds ?? config?.voiceFreeSeconds ?? 10;
+  const freeSeconds = allowance?.costs.freeVoiceSeconds ?? config?.voiceFreeSeconds ?? 60;
   const tokens = allowance?.extraVoiceTokens ?? [];
   // V-36: anyone may record up to the longest voice message; the price follows the length when it is sent.
   const limit = allowance?.maxVoiceSeconds ?? allowance?.costs.voiceMaxSeconds ?? 60;
-  const freeTotal = config?.freePosts ?? 10;
+  const freeTotal = config?.freePosts ?? 2;
   const freeLeft = allowance?.freePostsRemaining ?? freeTotal;
   const offers = config?.extraVoice ?? [];
   const qid = question?.id;

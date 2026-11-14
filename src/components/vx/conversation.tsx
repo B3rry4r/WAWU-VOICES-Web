@@ -247,7 +247,7 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
         <div className="vx-answer__who">
           <span className="vx-answer__name">
             {a.handle || a.name}
-            {p.sponsor ? <Icon name="badge-check" size={16} label="Verified brand" /> : null}
+            {p.sponsor ? <Icon name="badge-check" size={16} label="Verified brand" /> : a.verified ? <Icon name="badge-check" size={16} label="Verified" className="vx-tick" /> : null}
           </span>
           <span className="vx-answer__time">{p.time + (p.place ? ' · ' + p.place : '')}</span>
         </div>
@@ -341,6 +341,8 @@ export interface ProposalCardProps {
   author: string;
   /** What the avatar draws its initials from, when that differs from the shown name (the name is a "@handle"). */
   avatarName?: string;
+  /** V-46: a tick beside the name. */
+  verified?: boolean;
   time: string;
   text: string;
   supports?: number;
@@ -368,7 +370,10 @@ export function ProposalCard(p: ProposalCardProps): ReactElement {
       <div className="vx-answer__head">
         <Avatar name={p.avatarName ?? p.author} size="s" />
         <div className="vx-answer__who">
-          <span className="vx-answer__name">{p.author}</span>
+          <span className="vx-answer__name">
+            {p.author}
+            {p.verified ? <Icon name="badge-check" size={16} label="Verified" className="vx-tick" /> : null}
+          </span>
           <span className="vx-answer__time">{p.time}</span>
         </div>
         <Badge tone="proposed" icon="lightbulb" />

@@ -1,6 +1,6 @@
 import type { Role } from "@/lib/api/admin";
 
-export type AdminPageId = "today" | "override" | "calendar" | "pool" | "news" | "results" | "ads" | "weekly" | "moderation";
+export type AdminPageId = "today" | "override" | "calendar" | "pool" | "news" | "results" | "ads" | "weekly" | "moderation" | "verification";
 
 /** Who may open each admin page: the roles the API's operations for that page accept (docs/contract/openapi.yaml, x-wawu-roles). */
 export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
@@ -13,6 +13,8 @@ export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
   weekly: ["EDITOR", "ADMIN"],
   moderation: ["MODERATOR", "ADMIN"],
   ads: ["AD_MANAGER", "ADMIN"],
+  // V-46: identity documents are for admins only (the API route is ADMIN only).
+  verification: ["ADMIN"],
 };
 
 export function canOpen(roles: readonly Role[], page: AdminPageId): boolean {
@@ -44,4 +46,5 @@ export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: 
   { id: "ads", label: "Adverts", href: "/admin/ads", icon: "megaphone" },
   { id: "weekly", label: "Weekly report", href: "/admin/weekly", icon: "chart-column" },
   { id: "moderation", label: "Moderation", href: "/admin/moderation", icon: "shield-alert" },
+  { id: "verification", label: "Verification", href: "/admin/verification", icon: "badge-check" },
 ];

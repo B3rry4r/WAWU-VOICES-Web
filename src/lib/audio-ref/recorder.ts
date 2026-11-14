@@ -6,7 +6,7 @@ export type RecorderError = 'unsupported' | 'permission_denied' | 'no_microphone
 export interface RecordingResult { blob: Blob; mime: string; seconds: number; realSeconds: number; stoppedBy: 'user' | 'limit'; overLimit: boolean }
 
 export interface RecorderOptions {
-  maxSeconds: number;                    // 10 free, 30 or 60 with a Voice token
+  maxSeconds: number;                    // 60: the longest voice, and a free post covers it (V-46; it was 10)
   onTick?: (secondsLeft: number, level: number) => void; // level 0..1 for the live meter
   mediaDevices?: Pick<MediaDevices, 'getUserMedia'>;
 }

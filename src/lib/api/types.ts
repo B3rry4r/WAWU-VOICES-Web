@@ -19,7 +19,7 @@ export interface paths {
         put?: never;
         /**
          * Create my VOICES profile after WAWU ID sign-in
-         * @description Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and 3 or more categories. Creates the tokens balance, free allowance (10 posts) and settings. Records the referral if a code is sent. Auth: WAWU ID token; works before the VOICES profile exists.
+         * @description Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and 3 or more categories. Creates the tokens balance, free allowance (2 posts) and settings. Records the referral if a code is sent. Auth: WAWU ID token; works before the VOICES profile exists.
          */
         post: operations["createMe"];
         /**
@@ -428,6 +428,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where my verification stands
+         * @description V-46: state is NOT_SUBSCRIBED, READY, UNDER_REVIEW, VERIFIED, REJECTED (reason in request.reason, in plain words) or LAPSED. Verified means an admin approved the ID and utility bill and the subscription is running; verifiedUntil is the end of the plan (a renewal extends it). Auth: signed in with a finished profile.
+         */
+        get: operations["getMyVerification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/verification/documents/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload my ID (kind id) or my utility bill (kind bill)
+         * @description V-46: the body is the file itself (not JSON, not a form): jpeg, png, webp, heic or pdf, at most 10 MB. The type is read from the bytes, never from the name. Stored privately; no link to it is ever given to the person or the public. Sending again replaces that document. 403 subscription_required (message: Subscribe to get verified.) without a running subscription; 409 while the request is with the team or the person is already verified. Auth: signed in with a finished profile. Rate limit: 30 per 10 minutes per account.
+         */
+        put: operations["putVerificationDocument"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/verification/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send both documents to the team
+         * @description V-46: needs both documents and a running subscription (403 subscription_required). Moves the request to UNDER_REVIEW. After a rejection the person uploads again and submits again. Auth: signed in with a finished profile.
+         */
+        post: operations["submitVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The verification queue
+         * @description V-46: each item has the person, the plan and its end date. The documents are not in the list: open one to get their links. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminListVerification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One request with signed links to the two documents
+         * @description V-46: the links stop working after 5 minutes (expiresAt). This is the only route that gives them. Each look is written to the audit log. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminGetVerification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification/{requestId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a request
+         * @description V-46: the person is verified until the end of their subscription. 409 if another admin decided first, or the person has no running subscription. An admin cannot decide their own request (403). Writes an audit row and sends the person a mail. Auth: signed in with role ADMIN.
+         */
+        post: operations["adminApproveVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification/{requestId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a request with a reason
+         * @description V-46: a reason code is required (OTHER needs a note). The person sees the words for the code, then the note, and can upload again. 409 if another admin decided first. Writes an audit row and sends the person a mail. Auth: signed in with role ADMIN.
+         */
+        post: operations["adminRejectVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/topics/current": {
         parameters: {
             query?: never;
@@ -763,7 +903,7 @@ export interface paths {
         put?: never;
         /**
          * Start a voice upload: get a presigned PUT to Spaces
-         * @description Checks the length against the person's limit (10 s, or 30 or 60 s with an extra voice token). Guests record and preview in the browser only; the upload starts after sign-in. Auth: signed in with a finished profile. Rate limit: 20 per 10 minutes per account.
+         * @description Checks the length against the person's limit (60 s; before V-36 a longer clip needed an extra voice token). Guests record and preview in the browser only; the upload starts after sign-in. Auth: signed in with a finished profile. Rate limit: 20 per 10 minutes per account.
          */
         post: operations["createVoiceClip"];
         delete?: never;
@@ -1964,6 +2104,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/subscription-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The subscription plans and what each gives
+         * @description V-45. Prices come from config. Auth: guest or signed in. Auth: guest or signed in.
+         */
+        get: operations["listSubscriptionPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscriptions/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My plan, the one waiting to start and my finished plans
+         * @description Auth: signed in with a finished profile.
+         */
+        get: operations["getMySubscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wallet": {
         parameters: {
             query?: never;
@@ -2034,7 +2214,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Start a payment for a unit pack or an extra voice token
+         * Start a payment for a token pack or a subscription plan
          * @description The server fixes the amount from config and returns the Flutterwave checkout link. Nothing is credited until verification. Auth: signed in with a finished profile. Rate limit: 10 per 10 minutes per account.
          */
         post: operations["initPayment"];
@@ -3233,7 +3413,7 @@ export interface components {
         /** @enum {string} */
         ShareTarget: "WHATSAPP" | "WHATSAPP_STATUS" | "INSTAGRAM_STORIES" | "FACEBOOK" | "X" | "TIKTOK" | "TELEGRAM" | "SMS" | "COPY_LINK" | "SYSTEM_SHEET";
         /** @enum {string} */
-        PaymentKind: "UNITS" | "EXTRA_VOICE";
+        PaymentKind: "UNITS" | "EXTRA_VOICE" | "SUBSCRIPTION";
         /** @enum {string} */
         PaymentStatus: "INITIATED" | "PENDING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "REFUNDED";
         /** @enum {string} */
@@ -3265,13 +3445,15 @@ export interface components {
         /** @enum {string} */
         FileKind: "AVATAR" | "RESULT_PHOTO" | "OVERRIDE_IMAGE" | "AD_CREATIVE";
         /** @enum {string} */
-        LedgerTxnKind: "PURCHASE" | "SPEND_POST" | "SPEND_REACTION" | "SPEND_VOTE" | "REVERSAL" | "ADJUSTMENT" | "REFUND";
+        LedgerTxnKind: "PURCHASE" | "SPEND_POST" | "SPEND_REACTION" | "SPEND_VOTE" | "REVERSAL" | "ADJUSTMENT" | "REFUND" | "SUBSCRIPTION_CREDIT";
+        /** @enum {string} */
+        SubscriptionStatus: "ACTIVE" | "QUEUED" | "ENDED" | "CANCELLED_DELETED";
         /** @enum {string} */
         AccountStatus: "ACTIVE" | "SUSPENDED" | "BANNED" | "DELETION_PENDING" | "DELETED";
         /** @enum {string} */
         ProposalStanceKind: "SUPPORT" | "CHALLENGE";
         /** @enum {string} */
-        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL";
+        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required";
         /** @description The one error shape. Every non-2xx response is this. */
         Error: {
             error: components["schemas"]["ErrorBody"];
@@ -3375,6 +3557,7 @@ export interface components {
             voicesCount?: number;
             replyCount: number;
             reactionsReceived: number;
+            verified?: boolean;
         };
         PublicProfile: {
             profile: components["schemas"]["Profile"];
@@ -3614,7 +3797,7 @@ export interface components {
             language: string | null;
             text: string | null;
         };
-        /** @description Anonymous posts carry author null. */
+        /** @description Anonymous posts carry author null. verified (V-46) is true while an admin-approved ID and bill and a running subscription stand; the web shows a tick beside the name. */
         AuthorRef: {
             /** Format: uuid */
             id: string;
@@ -3622,6 +3805,7 @@ export interface components {
             displayName?: string | null;
             state?: string | null;
             avatarUrl?: string | null;
+            verified?: boolean;
         };
         /** @description Always shown with the post, in the feed, in search and on share cards. */
         NewsLabel: {
@@ -4431,12 +4615,15 @@ export interface components {
             items: components["schemas"]["LedgerItem"][];
             nextCursor: string | null;
         };
+        /** @description For kind SUBSCRIPTION send planId. A second plan is refused (409 SUBSCRIPTION_ACTIVE) while one runs or waits. */
         InitPaymentRequest: {
             /** @enum {string} */
             method?: "card" | "banktransfer" | "ussd";
             kind: components["schemas"]["PaymentKind"];
             /** Format: uuid */
             tierId?: string;
+            /** Format: uuid */
+            planId?: string;
             tokenKind?: components["schemas"]["ExtraVoiceTokenKind"];
             returnPath?: string;
         };
@@ -4456,6 +4643,7 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        /** @description For a SUBSCRIPTION, unitsMilli is the total over all its months: nothing is credited at once beyond the first month. */
         Payment: {
             /** Format: uuid */
             id: string;
@@ -4481,6 +4669,58 @@ export interface components {
             /** Format: date-time */
             verifiedAt: string | null;
             token: components["schemas"]["ExtraVoiceToken"] | null;
+            plan?: components["schemas"]["PaymentPlan"] | null;
+        };
+        PaymentPlan: {
+            slug: string;
+            name: string;
+            months: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            monthlyMilli: number;
+        };
+        SubscriptionPlan: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            months: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            monthlyMilli: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            totalMilli: number;
+        };
+        /** @description Prices and tokens come from config (docs/launch/PRICING.md). Paid once up front; tokens are credited month by month. */
+        SubscriptionPlans: {
+            plans: components["schemas"]["SubscriptionPlan"][];
+        };
+        /** @description Days are Lagos calendar days, YYYY-MM-DD. Month n is credited on the same day of month n as the start day (the last day of a shorter month). */
+        Subscription: {
+            /** Format: uuid */
+            id: string;
+            planSlug: string;
+            planName: string;
+            status: components["schemas"]["SubscriptionStatus"];
+            months: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            monthlyMilli: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            totalMilli: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number;
+            creditedMonths: number;
+            startDay: string;
+            endDay: string;
+            nextCreditDay: string | null;
+            /** Format: uuid */
+            paymentId: string;
+        };
+        MySubscriptions: {
+            current: components["schemas"]["Subscription"] | null;
+            queued: components["schemas"]["Subscription"] | null;
+            past: components["schemas"]["Subscription"][];
+            canBuy: boolean;
         };
         /** @description The server never trusts this value alone: it calls Flutterwave's verify itself and compares reference, amount and currency. */
         VerifyPaymentRequest: {
@@ -5086,6 +5326,114 @@ export interface components {
         AdminPaymentPage: {
             items: components["schemas"]["Payment"][];
             nextCursor: string | null;
+        };
+        /** @description V-46. canUpload is true with a running subscription unless the person is verified or under review. documents says which of the two files are in the draft (the files themselves are never returned). */
+        VerificationState: {
+            /** @enum {string} */
+            state: "NOT_SUBSCRIBED" | "READY" | "UNDER_REVIEW" | "VERIFIED" | "REJECTED" | "LAPSED";
+            verified: boolean;
+            /** Format: date-time */
+            verifiedUntil: string | null;
+            subscription: components["schemas"]["VerificationPlan"] | null;
+            canUpload: boolean;
+            canSubmit: boolean;
+            documents: components["schemas"]["VerificationDocuments"];
+            request: components["schemas"]["VerificationRequestView"] | null;
+            lastDecision: components["schemas"]["VerificationLastDecision"] | null;
+        };
+        /** @description endDay is the Lagos day the plan ends, YYYY-MM-DD; endLabel is the same day as 14 Feb 2027. */
+        VerificationPlan: {
+            planName: string;
+            endDay: string;
+            endLabel: string;
+        };
+        VerificationDocuments: {
+            id: boolean;
+            bill: boolean;
+        };
+        /** @description reason is set for a rejection: plain words, the admin's reason. */
+        VerificationRequestView: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            submittedAt: string | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            reason: string | null;
+        };
+        VerificationLastDecision: {
+            /** @enum {string} */
+            outcome: "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            decidedAt: string | null;
+        };
+        AdminVerificationPerson: {
+            /** Format: uuid */
+            id: string;
+            handle: string;
+            displayName: string | null;
+        };
+        AdminVerificationItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            submittedAt: string | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            person: components["schemas"]["AdminVerificationPerson"];
+            subscription: components["schemas"]["VerificationPlan"] | null;
+            decidedBy: string | null;
+            reason: string | null;
+            documentsDeleted: boolean;
+        };
+        AdminVerificationPage: {
+            items: components["schemas"]["AdminVerificationItem"][];
+            nextCursor: string | null;
+        };
+        /** @description A signed link that stops working at expiresAt (5 minutes after it was given). Never log it, never store it. */
+        VerificationDocumentLink: {
+            url: string;
+            mime: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        AdminVerification: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            submittedAt: string | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            person: components["schemas"]["AdminVerificationPerson"];
+            subscription: components["schemas"]["VerificationPlan"] | null;
+            reason: string | null;
+            documentsDeleted: boolean;
+            idDocument: components["schemas"]["VerificationDocumentLink"] | null;
+            billDocument: components["schemas"]["VerificationDocumentLink"] | null;
+        };
+        /** @description note is for the audit line only; the person does not see it. */
+        ApproveVerificationRequest: {
+            note?: string;
+        };
+        /** @description The person reads the short words for the code, then the note. OTHER needs a note (at most 500 characters). */
+        RejectVerificationRequest: {
+            /** @enum {string} */
+            reasonCode: "ID_UNREADABLE" | "ID_NOT_VALID" | "ID_EXPIRED" | "BILL_UNREADABLE" | "BILL_TOO_OLD" | "DETAILS_DO_NOT_MATCH" | "SUBSCRIPTION_ENDED" | "OTHER";
+            note?: string;
+        };
+        AdminVerificationDecision: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            verifiedUntil?: string;
         };
         AdminUserPage: {
             items: components["schemas"]["AdminUser"][];
@@ -6008,6 +6356,206 @@ export interface operations {
             };
             401: components["responses"]["E401"];
             409: components["responses"]["E409"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getMyVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationState"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    putVerificationDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationState"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            409: components["responses"]["E409"];
+            413: components["responses"]["E413"];
+            415: components["responses"]["E415"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    submitVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationState"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListVerification: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                /** @description pending (default, oldest first) or decided (newest first) */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminVerificationPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminGetVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminVerification"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminApproveVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminVerificationDecision"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminRejectVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminVerificationDecision"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
             429: components["responses"]["E429"];
         };
     };
@@ -8408,6 +8956,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TiersResponse"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    listSubscriptionPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionPlans"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getMySubscriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySubscriptions"];
                 };
             };
             401: components["responses"]["E401"];
