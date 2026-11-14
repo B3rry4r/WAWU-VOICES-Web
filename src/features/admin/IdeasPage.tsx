@@ -47,7 +47,7 @@ function IdeasBody() {
       ) : questions.length === 0 ? (
         <EmptyState icon="messages-square" title="No proposals yet" body="Questions show here once people propose next steps." />
       ) : (
-        <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)] items-start gap-5">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)]">
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Questions with proposals">
             {questions.map((q) => (
               <button key={q.questionId} type="button" role="listitem" aria-current={selected === q.questionId ? "true" : undefined} className={queueRow(selected === q.questionId)} onClick={() => { setSelected(q.questionId); setSaved(null); }}>
@@ -57,7 +57,7 @@ function IdeasBody() {
               </button>
             ))}
           </div>
-          {selected ? <Proposals key={selected} questionId={selected} onDone={(msg) => { setSaved(msg); void load(); }} /> : null}
+          {selected ? <div className="min-w-0"><Proposals key={selected} questionId={selected} onDone={(msg) => { setSaved(msg); void load(); }} /></div> : null}
         </div>
       )}
     </div>
@@ -123,15 +123,15 @@ function Proposals({ questionId, onDone }: { questionId: string; onDone: (msg: s
           <>
             <ul className="m-0 flex list-none flex-col p-0" aria-label="Proposals not in a group">
               {loose.map((p) => (
-                <li key={p.id} className="flex items-start gap-3 border-t border-line py-3 first:border-t-0">
+                <li key={p.id} className="flex items-start gap-3 border-t border-line py-1 first:border-t-0 lg:py-3">
                   <input
                     id={`pick-${p.id}`}
                     type="checkbox"
-                    className="mt-1 h-5 w-5 flex-none"
+                    className="h-11 w-11 flex-none lg:mt-1 lg:h-5 lg:w-5"
                     checked={picked.has(p.id)}
                     onChange={(e) => setPicked((o) => { const x = new Set(o); if (e.target.checked) x.add(p.id); else x.delete(p.id); return x; })}
                   />
-                  <label htmlFor={`pick-${p.id}`} className="min-w-0 flex-1 cursor-pointer text-body">
+                  <label htmlFor={`pick-${p.id}`} className="min-w-0 flex-1 cursor-pointer break-words py-3 text-body lg:py-0">
                     {p.text || "A spoken proposal with no transcript yet"}
                     <span className="ml-2 text-caption text-ink-2">{`${p.supportCount.toLocaleString("en-NG")} support, ${p.challengeCount.toLocaleString("en-NG")} challenge`}</span>
                   </label>
@@ -169,21 +169,21 @@ function GroupRow({ g, onDone }: { g: AdminProposals["groups"][number]; onDone: 
   }
   return (
     <li className="flex flex-col gap-2 border-t border-line py-2 first:border-t-0">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-body">{g.title}</span>
-        <span className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <span className="min-w-0 break-words text-body">{g.title}</span>
+        <span className="flex flex-wrap items-center gap-2">
           <span className="text-caption text-ink-2">{count(g.proposalCount, "proposal", "proposals")}</span>
           {g.confirmed ? <Pill tone="green">Confirmed</Pill> : <Pill tone="sun">Suggested</Pill>}
-          <Button size="s" variant="ghost" disabled={asking} onClick={() => setAsking(true)}>Split this group</Button>
+          <Button size="m" variant="ghost" disabled={asking} onClick={() => setAsking(true)}>Split this group</Button>
         </span>
       </div>
       {asking ? (
         <div className="flex flex-col gap-2 rounded-l bg-surface-2 p-3" role="group" aria-label={`Split ${g.title}`}>
           <p className="m-0 text-body">{`Split “${g.title}”? Its ${count(g.proposalCount, "proposal", "proposals")} go back to not grouped, and it stops showing as a group on What Next.`}</p>
           <ErrorLine>{act.error}</ErrorLine>
-          <div className="flex gap-2">
-            <Button size="s" variant="destructive" loading={act.busy} disabled={act.busy} onClick={() => void split()}>Split the group</Button>
-            <Button size="s" variant="secondary" disabled={act.busy} onClick={() => { setAsking(false); act.clear(); }}>Keep it</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="m" variant="destructive" loading={act.busy} disabled={act.busy} onClick={() => void split()}>Split the group</Button>
+            <Button size="m" variant="secondary" disabled={act.busy} onClick={() => { setAsking(false); act.clear(); }}>Keep it</Button>
           </div>
         </div>
       ) : null}
