@@ -22,7 +22,7 @@ You own what you say. By posting, you let VOICES store it, play it, show it to o
 ## Tokens
 - Tokens are a count inside VOICES. You buy them with naira, and the app shows each pack and its price before you pay. You get exactly the tokens you pay for, with no bonus tokens.
 - They have no cash value. They cannot be cashed out, and they cannot be sent to another person.
-- Your first 2 posts are free (a voice up to 60 seconds or text up to 500 characters). A longer post is charged in full and does not use a free post. After the free posts, a post costs tokens.
+- Your first 5 posts are free (a voice up to 60 seconds or text up to 500 characters). A longer post is charged in full and does not use a free post. After the free posts, a post costs tokens.
 - A text message costs 5 tokens for every 150 characters, in proportion to its length. A text can be up to 5,000 characters.
 - A voice message costs 78 tokens for up to 30 seconds and 100 tokens for over 30 and up to 60 seconds. A voice message can be up to 60 seconds.
 - You are charged when you send a message. A recording you cancel costs nothing.
