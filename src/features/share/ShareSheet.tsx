@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Icon, Sheet } from "@/components/vx";
+import { Button, Icon, Sheet } from "@/components/vx";
 import type { IconName } from "@/components/vx";
 import { apiFetch } from "@/lib/api/client";
 import { API_BASE } from "@/lib/api/config";
@@ -73,6 +73,27 @@ export async function cardIsReady(code: string): Promise<boolean> {
   }
 }
 
+/** The question has not opened and the API will not make a share link for it yet: say so, and offer the address of this page. */
+function PageAddress() {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    const url = window.location.href.split("#")[0];
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy this address", url);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-3" role="alert">
+      <p className="m-0 rounded-m bg-surface-2 p-3 text-caption text-ink-2">We cannot make a share link for this question yet. You can copy the address of this page and send that.</p>
+      <Button variant="secondary" icon={copied ? "check" : "link"} onClick={() => void copy()}>{copied ? "Copied" : "Copy this page’s address"}</Button>
+    </div>
+  );
+}
+
 function Round({ children, label, onClick, href, tone, disabled }: { children: ReactNode; label: string; onClick?: () => void; href?: string; tone?: "mint"; disabled?: boolean }) {
   const body = (
     <>
@@ -98,7 +119,7 @@ export function textWithoutLink(previewText: string, url: string): string {
   return previewText.split("\n").filter((l) => !l.includes(url)).join("\n").trim();
 }
 
-export function ShareSheet({ objectType, objectId, onClose }: { objectType: ShareObjectType; objectId: string; onClose: () => void }) {
+export function ShareSheet({ objectType, objectId, notOpen, onClose }: { objectType: ShareObjectType; objectId: string; /** The question has not opened: if the API will not make a link for it, say so and offer this page's address. */ notOpen?: boolean; onClose: () => void }) {
   const desktop = useDesktop();
   const [link, setLink] = useState<ShareLink | null>(null);
   const [card, setCard] = useState<Card>({ state: "making" });
@@ -170,7 +191,7 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
     <Sheet title={copy.title} subtitle={copy.subtitle} variant={desktop ? "dialog" : "sheet"} onClose={onClose}>
       <div className="flex flex-col gap-4">
         {failed ? (
-          <p className="m-0 rounded-m bg-danger-bg p-3 text-caption text-danger" role="alert">We could not make your link. Close this and try again.</p>
+          notOpen ? <PageAddress /> : <p className="m-0 rounded-m bg-danger-bg p-3 text-caption text-danger" role="alert">We could not make your link. Close this and try again.</p>
         ) : card.state === "ready" ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={card.url} alt="The card that goes out with your link" width={1200} height={630} className="block h-auto w-full rounded-m border border-line" />

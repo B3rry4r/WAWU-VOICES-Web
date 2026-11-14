@@ -4,7 +4,8 @@ import { Avatar, Badge, Button, Logo, NewsTag, Poll } from "@/components/vx";
 import { fmt } from "@/components/vx/helpers";
 import type { SharePage } from "@/lib/api/reach";
 import { AddVoice, GuestOnly, LinkOpened, SignInOrOpen } from "./ShareActions";
-import { comingUp } from "@/lib/feed-format";
+import { comingUp, questionStart } from "@/lib/feed-format";
+import { ShareOpening } from "./ShareOpening";
 import { MoodChip } from "@/features/mood/MoodChip";
 import { ClipPlayer } from "./ClipPlayer";
 
@@ -56,6 +57,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
   const bar = (i: number) => ({ width: `${Math.max(4, Math.round((page.arguments[i].voices * 100) / maxArg))}%` });
   // V-PRELAUNCH: a link to a question that has not opened draws the coming-up state: its text and the day it opens, no counts, nothing to act on.
   const opens = page.question ? comingUp(page.question) : undefined;
+  const opensAt = page.question ? questionStart(page.question) : null;
   const stats = opens ?? (isPoll
     ? [page.poll ? `${countText(page.poll.totalVotes, "vote")} so far` : null]
     : isProfile
@@ -68,7 +70,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
   const tops = page.poll ? [...page.poll.options].map((o) => o.votes ?? 0).sort((a, b) => b - a) : [];
   const tied = tops.length > 1 && tops[0] > 0 && tops[0] === tops[1];
   const leanLine = isPoll && tied ? "Tied so far." : page.leanLine;
-  const hasLean = !!leanLine || shownArgs.length > 0;
+  const hasLean = !opens && (!!leanLine || shownArgs.length > 0);
 
   const cta = opens ? null : (
     <>
@@ -80,6 +82,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
   return (
     <div className="min-h-dvh bg-bg text-ink" data-testid="share-page">
       <LinkOpened code={page.code} />
+      {opensAt !== null ? <ShareOpening opensAt={opensAt} /> : null}
       <header className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-3 dt:px-8 dt:py-5">
         <Logo height={36} />
         <span className="flex items-center gap-2">
@@ -112,7 +115,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
             </section>
           ) : null}
 
-          {voice ? (
+          {voice && !opens ? (
             <section className="flex flex-col gap-2" aria-label="Featured voice">
               <Eyebrow>Featured voice</Eyebrow>
               <article className="vx-answer" aria-label={"Voice from " + (voice.author ? "@" + voice.author.handle : "an anonymous poster")}>
@@ -131,14 +134,14 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
             </section>
           ) : null}
 
-          {page.poll ? (
+          {page.poll && !opens ? (
             <section className="flex flex-col gap-2" aria-label="The poll so far">
               <Eyebrow>The poll so far</Eyebrow>
               <Poll question={isPoll ? page.topicLine : extras?.pollTitle || "Poll results"} options={leaderFirst(page.poll.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes ?? 0 })))} total={page.poll.totalVotes} state="results" live={false} onExplain={false} hideQuestion={isPoll} />
             </section>
           ) : null}
 
-          {page.topProposal && page.proposalCount ? (
+          {page.topProposal && page.proposalCount && !opens ? (
             <section className="flex flex-col gap-2" aria-label="What Next?">
               <Eyebrow>{`What Next? · ${page.proposalCount} ${page.proposalCount === 1 ? "proposal" : "proposals"}`}</Eyebrow>
               <article className="flex flex-col gap-2 rounded-l border border-line bg-surface p-4 shadow-1">

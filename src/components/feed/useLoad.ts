@@ -59,6 +59,25 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[], pending?: (dat
 
   const ready = same(held.deps, deps) && held.res.state === "ready" ? held.res.data : undefined;
   const at = ready !== undefined && pendingRef.current ? pendingRef.current(ready) : null;
+  useStartWatch(
+    at,
+    () =>
+      fnRef.current().then((data) => {
+        fetchedAt.current = Date.now();
+        setHeld((cur) => (same(cur.deps, deps) ? { deps, res: { state: "ready", data } } : cur));
+      }),
+    fetchedAt,
+  );
+  return same(held.deps, deps) ? held.res : { state: "loading" };
+}
+
+/**
+ * The clock-and-wake part of `useLoad`, for anything that waits for an instant (`at`, epoch ms; null = nothing to wait for).
+ * `refresh` asks again and resolves when the answer is in. `fetchedAt` is when the screen's data was last fetched.
+ */
+export function useStartWatch(at: number | null, refresh: () => Promise<unknown>, fetchedAt: { current: number }): void {
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
   useEffect(() => {
     if (at === null) return;
     let live = true;
@@ -68,19 +87,12 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[], pending?: (dat
     let lastAsk = 0;
     const spread = Math.random() * SPREAD_MS;
     const visible = () => document.visibilityState !== "hidden";
-    const refresh = () => {
+    const ask = () => {
       if (inflight || !live) return;
       inflight = true;
       lastAsk = Date.now();
-      fnRef.current().then(
-        (data) => {
-          inflight = false;
-          if (!live) return;
-          fetchedAt.current = Date.now();
-          setHeld((cur) => (same(cur.deps, deps) ? { deps, res: { state: "ready", data } } : cur));
-        },
-        () => { inflight = false; }, // keep what is on the screen; the next wake tries again
-      );
+      const done = () => { inflight = false; }; // on a failure keep what is on the screen; the next wake tries again
+      refreshRef.current().then(done, done);
     };
     const wake = () => {
       if (timer !== undefined) clearTimeout(timer);
@@ -96,7 +108,7 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[], pending?: (dat
       let next = tries === 0 ? due : lastAsk + RETRY_MS[Math.min(tries - 1, RETRY_MS.length - 1)];
       if (now >= next) {
         tries += 1;
-        refresh();
+        ask();
         next = Date.now() + RETRY_MS[Math.min(tries - 1, RETRY_MS.length - 1)];
       }
       timer = setTimeout(wake, Math.max(250, Math.min(next - Date.now(), WAKE_MS)));
@@ -106,7 +118,7 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[], pending?: (dat
       const now = Date.now();
       if (now >= at || now - fetchedAt.current >= STALE_MS) {
         if (now >= at) tries = Math.max(tries, 1);
-        refresh();
+        ask();
       }
       wake();
     };
@@ -123,7 +135,5 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[], pending?: (dat
       window.removeEventListener("online", back);
       window.removeEventListener("pageshow", back);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [at]);
-  return same(held.deps, deps) ? held.res : { state: "loading" };
 }
