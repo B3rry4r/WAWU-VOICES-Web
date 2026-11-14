@@ -109,6 +109,18 @@ describe("rule 2: a tab knows who it belongs to", () => {
   });
 });
 
+describe("the notice follows the session", () => {
+  it("signed out in the other tab, then B signed in: the line changes to the someone-else line", async () => {
+    mockApi(table());
+    render(<SurveyScreen id="s1" />);
+    await screen.findByText("Question 1 of 2");
+    otherTab(null);
+    await screen.findByText("You are signed out in another tab. Reload to carry on.");
+    otherTab(jwt("userB"));
+    expect(await screen.findByText(NOTICE)).toBeTruthy();
+  });
+});
+
 describe("rule 1: keeps are per person and per survey; nothing crosses", () => {
   it("B fills a draft, signs out, A signs in: A sees A's draft, B's stays B's", async () => {
     mockApi(table());

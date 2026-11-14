@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api/client";
 import { freshKey, needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { deleteVoiceClip } from "@/lib/api/speak";
 import { answerSurvey, getSurvey, recordSurveyEvent, type Survey, type SurveyQuestionView } from "@/lib/api/surveys";
-import { useSameWho, whoNow } from "./who";
+import { useSameWho, useWhoNow, whoNow } from "./who";
 import { aboutMinutes, clearDraft, clock, loadDraft, markSkipped, markStarted, recapLine, saveDraft, TEXT_MAX, toInputs, wasSkipped, wasStarted, type Given, type GivenByQuestion } from "./logic";
 
 /** The Sponsored Survey, one question at a time (Survey boards), then the Done screen. Answering is free; nothing here touches tokens or a free post. */
@@ -27,7 +27,7 @@ export function SurveyScreen({ id }: { id: string }) {
   }, [id, signed]);
 
   // Another tab signed someone else in (or out): nothing of this person is shown or sent, and nothing is kept or cleared.
-  if (same.stale) return <StaleTab signedOut={whoNow() === null} />;
+  if (same.stale) return <StaleTab />;
   if (signed === null || load.state === "loading") return <SurveySkeleton />;
   if (!signed) {
     return (
@@ -59,7 +59,8 @@ export function SurveyScreen({ id }: { id: string }) {
   return <Ask survey={survey} owner={who as string} check={same.check} />;
 }
 
-function StaleTab({ signedOut }: { signedOut: boolean }) {
+function StaleTab() {
+  const signedOut = useWhoNow() === null;
   return (
     <Centre>
       <div data-testid="survey-stale" role="alert">
