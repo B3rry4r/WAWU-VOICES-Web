@@ -30,6 +30,9 @@ vi.mock("@/lib/api/talk", () => ({
 vi.mock("@/features/profile/playback", () => ({
   makePlayer: () => { audio = new FakeAudio(); return audio; },
   playWithResign: (a: FakeAudio) => a.play(),
+  claimPlayback: () => undefined,
+  releasePlayback: () => undefined,
+  stopPlayback: () => undefined,
 }));
 
 async function press(label: RegExp) {

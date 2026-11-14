@@ -87,3 +87,9 @@
 /* LCH-02: "Your word" line under the question on the recorder (the panel is on forest, so the text is the on-forest colour). */
 .sp-mood { color: var(--on-forest); }
 .sp-mood a { color: var(--on-forest); }
+
+/* V-FIX-B: the tag picker sits on the forest recorder panel. */
+.sp-tags { width: 100%; align-items: center; text-align: center; }
+.sp-tags .vx-caption, .sp-tags .vx-field__label, .sp-tags .vx-field__hint { color: var(--on-forest); }
+.sp-tags .vx-tagpick__row { justify-content: center; }
+.sp-tags [data-testid="tag-source"] { width: 100%; text-align: left; }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { VoicePlayer } from "@/components/vx";
-import { makePlayer, playWithResign } from "./playback";
+import { claimPlayback, makePlayer, playWithResign, releasePlayback } from "./playback";
 import { getPlayUrl, type VoiceClip } from "@/lib/api/profile";
 import { isSignedIn } from "@/lib/api/auth";
 import { trackListen } from "@/features/talk/listen-track";
@@ -9,7 +9,7 @@ import { trackListen } from "@/features/talk/listen-track";
 const seedOf = (id: string) => id.split("").reduce((s, c) => (s * 31 + c.charCodeAt(0)) % 997, 7);
 
 /** The design's voice player on a real clip: bars from the clip's peaks, progress from the audio element, a short-lived URL asked for on first play. */
-export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, tone, answerId }: {
+export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, tone, answerId, onFirstPlay, controlRef }: {
   clipId: string;
   durationMs: number | null;
   peaks: number[] | null;
@@ -18,8 +18,13 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
   tone?: "mint" | "surface" | "forest";
   /** Set only when the clip is an ANSWER's: the player then counts a start and reports listen progress (LISTEN-1). */
   answerId?: string;
+  /** Called once, the first time this player starts to play (an advert counts a listen). */
+  onFirstPlay?: () => void;
+  /** Lets the card that holds this player pause just this player (an advert's link pauses the advert, nothing else). */
+  controlRef?: { current: { pause: () => void } | null };
 }) {
   const audio = useRef<HTMLAudioElement | null>(null);
+  const started = useRef(false);
   const untrack = useRef<(() => void) | null>(null);
   const speed = useRef(1);
   const [playing, setPlaying] = useState(false);
@@ -27,7 +32,7 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
   const [failed, setFailed] = useState(false);
   const dur = Math.max(1, Math.round((durationMs ?? 0) / 1000));
 
-  useEffect(() => () => { untrack.current?.(); untrack.current = null; audio.current?.pause(); audio.current = null; }, []);
+  useEffect(() => () => { untrack.current?.(); untrack.current = null; if (audio.current) releasePlayback(audio.current); audio.current?.pause(); audio.current = null; }, []);
 
   async function play() {
     setFailed(false);
@@ -42,8 +47,10 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
         if (answerId) untrack.current = trackListen(answerId, a);
       }
       audio.current.playbackRate = speed.current;
+      claimPlayback(audio.current, () => { setPlaying(false); });
       setPlaying(true);
       await playWithResign(audio.current, () => getUrl(clipId));
+      if (!started.current) { started.current = true; onFirstPlay?.(); }
     } catch {
       untrack.current?.();
       untrack.current = null;
@@ -53,6 +60,7 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
     }
   }
   function pause() { audio.current?.pause(); setPlaying(false); }
+  if (controlRef) controlRef.current = { pause };
   function seek(f: number) {
     const a = audio.current;
     setProg(f);

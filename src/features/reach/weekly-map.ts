@@ -42,8 +42,9 @@ export function readThemes(v: unknown): { text: string; voices: number }[] {
 }
 
 /** Mood rows: name, percent, change in points on last week. */
-export function moodRows(r: Pick<WeeklyReport, "emotions">): { label: string; pct: number; delta: number }[] {
-  return r.emotions.map((e) => ({ label: e.name, pct: Math.round(e.share), delta: Math.round(e.change) }));
+export function moodRows(r: Pick<WeeklyReport, "emotions">): { label: string; pct: number; delta?: number }[] {
+  // change is null when last week had too few mood answers to compare: no change figure is drawn then. A report with no emotions draws no mood rows.
+  return (r.emotions ?? []).map((e) => ({ label: e.name, pct: Math.round(e.share), delta: e.change == null ? undefined : Math.round(e.change) }));
 }
 
 /** The three rows the weekly share card draws: the poll's top three when the poll is known, else the top three moods. */
@@ -54,5 +55,5 @@ export function cardRows(r: WeeklyReport, poll: PollResults | null): { label: st
       .slice(0, 3)
       .map((o) => ({ label: o.label, pct: Math.round(((o.votes ?? 0) * 100) / poll.totalVotes) }));
   }
-  return [...r.emotions].sort((a, b) => b.share - a.share).slice(0, 3).map((e) => ({ label: e.name, pct: Math.round(e.share) }));
+  return [...(r.emotions ?? [])].sort((a, b) => b.share - a.share).slice(0, 3).map((e) => ({ label: e.name, pct: Math.round(e.share) }));
 }

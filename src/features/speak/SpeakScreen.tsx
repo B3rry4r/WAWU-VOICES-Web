@@ -23,6 +23,8 @@ import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { cleanCode } from "@/features/share/speak-target";
 import { voicesOf } from "@/lib/feed-format";
+import { TagPicker, useIsEditor } from "@/features/news/TagPicker";
+import { NO_TAG, tagFields, tagReady, validTag, type TagChoice } from "@/features/news/tag-choice";
 import { AnonymousSwitch } from "@/features/talk/AnonymousSwitch";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 import { noteRecordingStarted, notePublished, rememberShareVisit, shareVisitCode } from "@/features/share/share-visit";
@@ -61,6 +63,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const [take, setTake] = useState<Take | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [sending, setSending] = useState<Step | null>(null);
+  const [tag, setTag] = useState<TagChoice>(NO_TAG);
+  const editor = useIsEditor(!!signedIn);
 
   const rec = useRef<VoiceRecorder | null>(null);
   const levelsRef = useRef<number[]>([]);
@@ -148,6 +152,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       setTake({ blob: d.blob, mime: d.mime, seconds: d.seconds, peaks: d.peaks, key: d.key, recordedAt: d.recordedAt ?? d.savedAt });
       // A recording kept offline remembers the choices made when Send was tapped; the switch the person sees is the one that is sent.
       if (d.anonymous) { anonRef.current = true; setAnon(true); }
+      if (validTag(d.tag)) setTag(d.tag as TagChoice); // the tag (and the source of a Verified News request) chosen before the join comes back with it
       setPhase("preview");
     });
     return () => { live = false; };
@@ -160,6 +165,14 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     return () => window.removeEventListener("online", back);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [take, phase, sending]);
+
+  // V-FIX-B round 2: a tag picked after recording is kept with the held recording, so it survives signing in.
+  useEffect(() => {
+    if (!qid || !take || phase !== "preview") return;
+    const h = window.setTimeout(() => void saveDraftKeepingReply({ ...take, questionId: qid, savedAt: Date.now(), tag }), 300);
+    return () => window.clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tag]);
 
   // WF-6b (A-L6): "Finish and post my voice" returns here with autopost=1 and the held recording: send it once, without a second tap.
   const autoPosted = useRef(false);
@@ -195,7 +208,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     const t: Take = { blob: r.blob, mime: r.mime, seconds: r.realSeconds, peaks: peaksFromLevels(levelsRef.current), key: uuidKey(), recordedAt: Date.now() };
     setTake(t);
     setPhase("preview");
-    if (qid) void saveDraftKeepingReply({ ...t, questionId: qid, savedAt: Date.now() } satisfies Draft);
+    if (qid) void saveDraftKeepingReply({ ...t, questionId: qid, savedAt: Date.now(), tag } satisfies Draft);
     if (r.overLimit) {
       interrupted.current = false;
       pushNote({ tone: "info", text: `That recording ran past ${wasLimit} seconds, so it cannot be sent as it is. Record it again.` });
@@ -203,7 +216,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       interrupted.current = false;
       pushNote({ tone: "info", text: "Your recording stopped when you left the page. Listen back, then send it or record again." });
     }
-  }, [qid, untrap]);
+  }, [qid, untrap, tag]);
 
   async function startRecording() {
     if (!qid || phase === "recording" || starting.current || rec.current) return;
@@ -388,8 +401,10 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   async function send() {
     if (!take || !qid || sending) return;
+    // V-FIX-B (addendum 1): a post cannot publish without a tag the person chose.
+    if (!tagReady(tag)) return;
     if (!signedIn) {
-      await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
+      await saveDraft({ ...take, questionId: qid, savedAt: Date.now(), tag });
       window.location.assign(joinHref());
       return;
     }
@@ -431,7 +446,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current);
+      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current, tagFields(tag));
       writeAnonPref(qid, false);
       notePublished();
       await clearDraft();
@@ -460,7 +475,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         sendState.current = null;
         const next: Take = { ...take, key: uuidKey() };
         setTake(next);
-        void saveDraftKeepingReply({ ...next, questionId: qid, savedAt: Date.now() } satisfies Draft);
+        void saveDraftKeepingReply({ ...next, questionId: qid, savedAt: Date.now(), tag } satisfies Draft);
         pushNote({ tone: "danger", text: refusalText(e) });
         return;
       }
@@ -471,13 +486,13 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           text: refusalText(e),
           action: "Get tokens",
           onAction: () => {
-            void saveDraftKeepingReply({ ...take, questionId: qid, savedAt: Date.now() }).finally(() => router.push(`/units/buy?from=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}`));
+            void saveDraftKeepingReply({ ...take, questionId: qid, savedAt: Date.now(), tag }).finally(() => router.push(`/units/buy?from=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}`));
           },
         });
         return;
       }
       if (e instanceof ApiError && (e.code === "UNAUTHENTICATED" || e.code === "TOKEN_EXPIRED")) {
-        await saveDraftKeepingReply({ ...take, questionId: qid, savedAt: Date.now() });
+        await saveDraftKeepingReply({ ...take, questionId: qid, savedAt: Date.now(), tag });
         window.location.assign(joinHref());
         return;
       }
@@ -602,6 +617,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         <>
           <TakePlayer blob={take.blob} seconds={take.seconds} peaks={take.peaks} />
           <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>
+          <TagPicker value={tag} onChange={setTag} editor={editor} className="sp-tags" />
           {usesToken(take.seconds) ? <p className="vx-rec__hint" role="status">This message uses the extra voice token you already bought. Nothing is charged in tokens.</p> : null}
           <AnonymousSwitch onForest on={anon} disabled={!!sending} onChange={chooseAnon} />
           {signedIn === false ? <p className="sp-fine">You sign in to post. Your recording waits here in this browser.</p> : null}
@@ -614,7 +630,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           <div className="vx-rec__actions">
             <Button variant="onforest" icon="rotate-ccw" disabled={!!sending} onClick={() => dropTake(true)}>Re-record</Button>
             <Button variant="onforest" icon="trash-2" disabled={!!sending} onClick={() => dropTake(true)}>Delete</Button>
-            <Button size="l" icon="send" loading={!!sending} onClick={() => void send()}>{covered(take.seconds) || usesToken(take.seconds) ? "Send" : `Send for ${priceFor(take.seconds)}`}</Button>
+            <Button size="l" icon="send" loading={!!sending} disabled={!tagReady(tag)} onClick={() => void send()}>{covered(take.seconds) || usesToken(take.seconds) ? "Send" : `Send for ${priceFor(take.seconds)}`}</Button>
           </div>
         </>
       ) : null}

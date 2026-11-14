@@ -28,12 +28,12 @@ export function updatedAgo(iso: string, now = Date.now()): string {
   return `${d} ${d === 1 ? "day" : "days"} ago`;
 }
 
-function Summary({ s, proposals, groups }: { s: EditorialSummary; proposals: number; groups: number }) {
+export function Summary({ s, proposals, groups }: { s: EditorialSummary; proposals: number; groups: number }) {
   return (
     <section className="vt-summary" aria-label="Editorial summary">
       <div className="vt-summary__top">
         <span className="vx-eyebrow">Editorial summary</span>
-        {s.reviewedByEditor ? <span className="vt-summary__rev">Reviewed by an editor</span> : null}
+        {s.reviewedByEditor ? <span className="vt-summary__rev">{s.aiDrafted ? "AI-assisted, reviewed by an editor" : "Reviewed by an editor"}</span> : null}
       </div>
       <h2>Where the conversation stands so far</h2>
       <div className="vt-summary__blk">

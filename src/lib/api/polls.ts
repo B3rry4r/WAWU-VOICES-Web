@@ -1,4 +1,4 @@
-import type { components } from "./types";
+import type { components } from "./types-pending";
 import { apiFetch } from "./client";
 import { guestId } from "./feed";
 

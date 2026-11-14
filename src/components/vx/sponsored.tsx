@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { Button } from './actions';
 import { VoicePlayer } from './conversation';
 import { cx, initials } from './helpers';
@@ -20,6 +20,10 @@ export interface AdSlotProps {
   onWhy?: (() => void) | false;
   /** The button was tapped (to count the tap). */
   onOpen?: () => void;
+  /** Open the link in a new tab, safely (rel noopener noreferrer). */
+  newTab?: boolean;
+  /** The audio variant's real player (V-FIX-B); left out, the drawn one shows. */
+  player?: ReactNode;
   className?: string;
 }
 
@@ -34,7 +38,7 @@ export function AdSlot(p: AdSlotProps): ReactElement {
           <span className="vx-ad__brand"><Badge tone="ad" />{p.brand}</span>
           <p className="vx-ad__head">{p.headline}</p>
         </div>
-        <Button variant="secondary" size="s" href={p.href || '#'} onClick={p.onOpen}>{p.cta || 'Open'}</Button>
+        <Button variant="secondary" size="s" href={p.href || '#'} target={p.newTab ? '_blank' : undefined} rel={p.newTab ? 'noopener noreferrer' : undefined} onClick={p.onOpen}>{p.cta || 'Open'}</Button>
       </aside>
     );
   }
@@ -46,10 +50,10 @@ export function AdSlot(p: AdSlotProps): ReactElement {
       </div>
       <p className="vx-ad__head">{p.headline}</p>
       {p.body ? <p className="vx-ad__body">{p.body}</p> : null}
-      {v === 'audio' ? <VoicePlayer duration={p.duration || 15} seed={21} tone="surface" /> : null}
+      {v === 'audio' ? (p.player ?? <VoicePlayer duration={p.duration || 15} seed={21} tone="surface" />) : null}
       {p.cta === false && p.onWhy === false ? null : (
         <div className="vx-ad__top">
-          {p.cta === false ? null : <Button variant="secondary" size="s" iconEnd="chevron-right" href={p.href || '#'} onClick={p.onOpen}>{p.cta || 'Learn more'}</Button>}
+          {p.cta === false ? null : <Button variant="secondary" size="s" iconEnd="chevron-right" href={p.href || '#'} target={p.newTab ? '_blank' : undefined} rel={p.newTab ? 'noopener noreferrer' : undefined} onClick={p.onOpen}>{p.cta || 'Learn more'}</Button>}
           {p.onWhy === false ? null : <button type="button" className="vx-ad__why" onClick={p.onWhy}>Why this ad?</button>}
         </div>
       )}
