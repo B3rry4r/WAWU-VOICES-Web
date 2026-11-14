@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/client";
-import { monotonicNow, serverNow } from "@/lib/api/server-clock";
+import { monotonicNow, serverClockMeasured, serverNow } from "@/lib/api/server-clock";
 
 export type Load<T> = { state: "loading" } | { state: "error"; error: ApiError | Error; retry: () => void } | { state: "ready"; data: T };
 
@@ -104,6 +104,7 @@ export function useStartWatch(at: number | null, refresh: () => Promise<unknown>
     let tries = 0; // asks made in the current run of steps
     let lastAsk = -Infinity; // monotonic clock
     let lateAsked = false; // the ask at the later guess has been made
+    let shortRetry = false; // the first ask of the light state was made as the server-corrected guess arrived: the next one comes after RETRY_MS[0]
     const spread = Math.random() * SPREAD_MS;
     let lookWall = Date.now();
     let lookMono = monotonicNow();
@@ -131,36 +132,40 @@ export function useStartWatch(at: number | null, refresh: () => Promise<unknown>
     const lead = (plus: number) => {
       const a = at + plus - Date.now();
       const b = at + plus - serverNow();
-      return { early: Math.min(a, b), late: Math.max(a, b), split: Math.abs(a - b) > AGREE_MS };
+      return { early: Math.min(a, b), late: Math.max(a, b), split: Math.abs(a - b) > AGREE_MS, serverFirst: serverClockMeasured() && b <= 0 && a > 0 };
     };
     const wake = () => {
       if (timer !== undefined) clearTimeout(timer);
       timer = undefined;
       if (!live) return;
       stepped();
-      const { early, late, split } = lead(spread);
+      const { early, late, split, serverFirst } = lead(spread);
       if (early > 0) {
-        timer = setTimeout(wake, Math.min(early, WAKE_MS));
+        timer = setTimeout(wake, Math.ceil(Math.min(early, WAKE_MS))); // whole ms, rounded UP: a wake never lands before its instant
         return;
       }
       if (!visible()) return; // asleep or in the background: the visibility event wakes us
       const light = split && late > 0; // only the earlier guess has come
-      if (split && !light && !lateAsked) { lateAsked = true; tries = 0; } // the later guess has come: ask now, then the retry steps
-      const gap = (n: number) => (light ? LIGHT_MS : RETRY_MS[Math.min(n - 1, RETRY_MS.length - 1)]);
+      if (split && !light && !lateAsked) { lateAsked = true; tries = 0; shortRetry = false; } // the later guess has come: ask now, then the retry steps
+      const gap = (n: number) => (light ? (shortRetry && n === 1 ? RETRY_MS[0] : LIGHT_MS) : RETRY_MS[Math.min(n - 1, RETRY_MS.length - 1)]);
       const now = monotonicNow();
       const age = Date.now() - fetchedAt.current;
       // Only the earlier guess has come and the data was fetched a moment ago (the page just loaded): that fetch is the first ask.
-      if (light && tries === 0 && age >= 0 && age < LIGHT_MS) { tries = 1; lastAsk = now - age; }
+      // (Only when the load was made at or after the earlier guess came; a guess that arrives while the page waits gets an ask of its own.)
+      const loadBefore = age < 0 || age > -early; // the page was loaded before the earlier guess came
+      if (light && tries === 0 && age >= 0 && age < LIGHT_MS && !loadBefore) { tries = 1; lastAsk = now - age; }
       let next = tries === 0 ? now : lastAsk + gap(tries);
       if (now >= next) {
         // An ask still in flight (a slow answer) does not use up a step: the step comes when it has ended.
         if (ask()) {
+          // The server-corrected guess (a real reading) arrived while the page waited: a stale "not open" must not cost a minute, so retry once after 5 s.
+          if (light && tries === 0 && loadBefore && serverFirst) shortRetry = true;
           tries += 1;
           next = monotonicNow() + gap(tries);
         }
       }
       const wait = Math.max(250, Math.min(next - monotonicNow(), WAKE_MS));
-      timer = setTimeout(wake, light ? Math.min(wait, Math.max(250, late)) : wait);
+      timer = setTimeout(wake, Math.ceil(light ? Math.min(wait, Math.max(250, late)) : wait));
     };
     const back = (throttle: boolean) => () => {
       if (!visible()) return;

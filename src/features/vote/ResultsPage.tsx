@@ -189,7 +189,7 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
       key.current = null;
       setState("done");
     } catch (e) {
-      if (e instanceof ApiError && e.status > 0) key.current = null;
+      if (needsNewKey(e)) key.current = null; // the key is spent: the next tap carries a new one; any other failure keeps it
       setState({ error: needsNewKey(e) ? newKeyLine("Post") : e instanceof ApiError && e.status > 0 && e.explained ? e.message : "We could not post that. Check your connection and try again." });
     } finally {
       busy.current = false;
