@@ -1,5 +1,6 @@
 "use client";
 
+import { needsNewKey } from "@/lib/api/keys";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import { useAdmin } from "./AdminFrame";
@@ -16,6 +17,7 @@ export function refusalWords(e: unknown): string {
   if (e instanceof ApiError) {
     // lead ruling WF, 6 Nov (C-L6): a suspended admin person is told so plainly, not "cannot post".
     if (e.code === "ACCOUNT_SUSPENDED") return "This account is suspended, so changes are paused. Ask an admin for help.";
+    if (needsNewKey(e)) return "That did not go through. Tap the button to try again.";
     if (e.explained) {
       // A 422 carries the useful words in details.fields[].message; the top message is only "Some details need fixing."
       const f = (e.details as { fields?: { message?: unknown }[] } | undefined)?.fields;

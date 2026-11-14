@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/client";
-import { serverNow } from "@/lib/api/server-clock";
+import { monotonicNow, serverNow } from "@/lib/api/server-clock";
 
 export type Load<T> = { state: "loading" } | { state: "error"; error: ApiError | Error; retry: () => void } | { state: "ready"; data: T };
 
@@ -74,9 +74,24 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[], pending?: (dat
   return same(held.deps, deps) ? held.res : { state: "loading" };
 }
 
+/** Two clocks that differ by more than this are two different guesses of the opening instant. */
+export const AGREE_MS = 10_000;
+/** The device clock and the monotonic clock may differ by this much between two looks before it counts as a step of the device clock. */
+export const STEP_MS = 30_000;
+/** While the two guesses disagree and the later one has not come, ask at most this often (the earlier guess may be the wrong one). */
+export const LIGHT_MS = 60_000;
+
 /**
- * The clock-and-wake part of `useLoad`, for anything that waits for an instant (`at`, epoch ms; null = nothing to wait for).
- * `refresh` asks again and resolves when the answer is in. `fetchedAt` is when the screen's data was last fetched.
+ * The clock-and-wake part of `useLoad`, for anything that waits for an instant (`at`, epoch ms on the server's clock; null = nothing to wait for).
+ * `refresh` asks again and resolves when the answer is in. `fetchedAt` is when the screen's data was last fetched (device clock).
+ *
+ * Two guesses of the opening instant are kept: by the device clock (`Date.now()`) and by the server-corrected clock (`serverNow()`,
+ * carried by `performance.now()`, so a step of the device clock does not move it). It starts asking at the EARLIER of the two
+ * (plus the 0 to 5 second spread). While the guesses disagree by more than 10 seconds and the later one has not come, it asks at
+ * most once a minute (an early ask is harmless: only the server's answer opens the page); at the later guess it asks again and
+ * from there keeps to the retry steps. Waits are measured on the monotonic clock. A step of the device clock (the two clocks
+ * disagreeing by more than 30 seconds since the last look) makes it plan again; returning to the tab asks when the device
+ * clock is earlier than the last fetch.
  */
 export function useStartWatch(at: number | null, refresh: () => Promise<unknown>, fetchedAt: { current: number }): void {
   const refreshRef = useRef(refresh);
@@ -86,47 +101,78 @@ export function useStartWatch(at: number | null, refresh: () => Promise<unknown>
     let live = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let inflight = false;
-    let tries = 0; // asks made after the instant
-    let lastAsk = 0; // device clock
+    let tries = 0; // asks made in the current run of steps
+    let lastAsk = -Infinity; // monotonic clock
+    let lateAsked = false; // the ask at the later guess has been made
     const spread = Math.random() * SPREAD_MS;
+    let lookWall = Date.now();
+    let lookMono = monotonicNow();
     const visible = () => document.visibilityState !== "hidden";
+    /** Has the device clock stepped since the last look? Plans again if so. */
+    const stepped = (): boolean => {
+      const w = Date.now();
+      const m = monotonicNow();
+      const off = Math.abs(w - lookWall - (m - lookMono));
+      lookWall = w;
+      lookMono = m;
+      if (off <= STEP_MS) return false;
+      lateAsked = false;
+      return true;
+    };
     const ask = (): boolean => {
       if (inflight || !live) return false;
       inflight = true;
-      lastAsk = Date.now();
+      lastAsk = monotonicNow();
       const done = () => { inflight = false; }; // on a failure keep what is on the screen; the next wake tries again
       refreshRef.current().then(done, done);
       return true;
     };
-    // The opening instant is compared on the server's clock (corrected from the API's Date header); waits between asks use the device clock.
+    /** Milliseconds to the instant on each guess: the earlier and the later. */
+    const lead = (plus: number) => {
+      const a = at + plus - Date.now();
+      const b = at + plus - serverNow();
+      return { early: Math.min(a, b), late: Math.max(a, b), split: Math.abs(a - b) > AGREE_MS };
+    };
     const wake = () => {
       if (timer !== undefined) clearTimeout(timer);
       timer = undefined;
       if (!live) return;
-      const due = at + spread;
-      const toDue = due - serverNow();
-      if (toDue > 0) {
-        timer = setTimeout(wake, Math.min(toDue, WAKE_MS));
+      stepped();
+      const { early, late, split } = lead(spread);
+      if (early > 0) {
+        timer = setTimeout(wake, Math.min(early, WAKE_MS));
         return;
       }
       if (!visible()) return; // asleep or in the background: the visibility event wakes us
-      const now = Date.now();
-      let next = tries === 0 ? now : lastAsk + RETRY_MS[Math.min(tries - 1, RETRY_MS.length - 1)];
+      const light = split && late > 0; // only the earlier guess has come
+      if (split && !light && !lateAsked) { lateAsked = true; tries = 0; } // the later guess has come: ask now, then the retry steps
+      const gap = (n: number) => (light ? LIGHT_MS : RETRY_MS[Math.min(n - 1, RETRY_MS.length - 1)]);
+      const now = monotonicNow();
+      const age = Date.now() - fetchedAt.current;
+      // Only the earlier guess has come and the data was fetched a moment ago (the page just loaded): that fetch is the first ask.
+      if (light && tries === 0 && age >= 0 && age < LIGHT_MS) { tries = 1; lastAsk = now - age; }
+      let next = tries === 0 ? now : lastAsk + gap(tries);
       if (now >= next) {
         // An ask still in flight (a slow answer) does not use up a step: the step comes when it has ended.
         if (ask()) {
           tries += 1;
-          next = Date.now() + RETRY_MS[Math.min(tries - 1, RETRY_MS.length - 1)];
+          next = monotonicNow() + gap(tries);
         }
       }
-      timer = setTimeout(wake, Math.max(250, Math.min(next - Date.now(), WAKE_MS)));
+      const wait = Math.max(250, Math.min(next - monotonicNow(), WAKE_MS));
+      timer = setTimeout(wake, light ? Math.min(wait, Math.max(250, late)) : wait);
     };
     const back = (throttle: boolean) => () => {
       if (!visible()) return;
-      const now = Date.now();
-      const pastIt = serverNow() >= at;
-      if ((pastIt || now - fetchedAt.current >= STALE_MS) && !(throttle && now - lastAsk < BACK_MIN_MS)) {
-        if (pastIt) tries = Math.max(tries, 1);
+      const wall = Date.now();
+      const didStep = stepped();
+      const { late, split } = lead(spread);
+      const pastIt = at - serverNow() <= 0 || at - wall <= 0; // either clock says it has come
+      const light = split && late > 0;
+      // The device clock earlier than the last fetch means it went backwards: the age of the data cannot be read from it.
+      const stale = wall - fetchedAt.current >= STALE_MS || wall < fetchedAt.current || didStep;
+      if ((pastIt || stale) && !(throttle && monotonicNow() - lastAsk < (light ? LIGHT_MS : BACK_MIN_MS))) {
+        if (pastIt) tries = Math.max(tries, light ? 2 : 1);
         ask();
       }
       wake();

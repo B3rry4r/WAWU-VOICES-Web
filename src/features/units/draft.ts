@@ -88,6 +88,16 @@ export function saveDraft(questionId: string, body: string, now = Date.now()): H
   return d;
 }
 
+/** The server refused the draft's key as spent: the same words get a new key, and stay held (with their waiting state). */
+export function renewDraftKey(questionId: string): void {
+  const t = read();
+  const d = t[questionId];
+  if (d && !d.posted) {
+    t[questionId] = { ...d, key: key() };
+    write(t);
+  }
+}
+
 export function setAwaiting(questionId: string, awaiting: boolean): void {
   const t = read();
   if (t[questionId]) {

@@ -9,5 +9,11 @@ delete process.env.NEXT_PUBLIC_WAWU_ID_BASE;
 export default defineConfig({
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
   esbuild: { jsx: "automatic" },
-  test: { environment: "node", include: ["tests/**/*.test.{ts,tsx}"] },
+  // `performance` is faked with the rest (the page measures waits on it, so a test that moves time must move it too).
+  test: {
+    environment: "node",
+    include: ["tests/**/*.test.{ts,tsx}"],
+    setupFiles: ["tests/support/clock-setup.ts"],
+    fakeTimers: { toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "setImmediate", "clearImmediate", "Date", "performance"] },
+  },
 });

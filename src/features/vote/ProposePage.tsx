@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Banner, Composer, Icon } from "@/components/vx";
+import { InView } from "@/components/InView";
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { StageNav } from "@/features/stage/StageNav";
 import { ApiError } from "@/lib/api/client";
 import { createProposal, getPublicConfig, getQuestion, newKey, similarProposals } from "@/lib/api/vote";
@@ -95,7 +97,8 @@ export function ProposePage({ questionId }: { questionId: string }) {
       router.push(`/q/${questionId}/next`);
     } catch (e) {
       if (e instanceof ApiError && e.status > 0) key.current = null;
-      if (e instanceof ApiError && e.status === 429) setError({ title: "Slow down a moment", text: "You have posted a lot in a short time. Try again in a few minutes." });
+      if (needsNewKey(e)) setError({ title: "Not posted", text: newKeyLine("Post") });
+      else if (e instanceof ApiError && e.status === 429) setError({ title: "Slow down a moment", text: "You have posted a lot in a short time. Try again in a few minutes." });
       else if (e instanceof ApiError && e.status === 403) setError({ title: "You cannot post right now", text: e.explained ? e.message : "Finish your profile first, then try again." });
       else if (e instanceof ApiError && e.status === 409) setError({ title: "This question is closed", text: "New proposals are not taken any more." });
       else if (e instanceof ApiError && e.status > 0) setError({ title: "Not posted", text: e.explained ? e.message : "Something went wrong on our side. Try again in a moment." });
@@ -127,7 +130,7 @@ export function ProposePage({ questionId }: { questionId: string }) {
           <p className="vt-lead">Make it practical: who should do what, and by when. It shows as Proposed, and others can support, challenge or improve it.</p>
           {improves ? <Banner tone="info" title="You are improving a proposal">Your version will show as an improvement on it.</Banner> : null}
           {signNote ? <Banner tone="info" title="Sign in to post" onClose={() => setSignNote(false)}>Reading is open to everyone. Posting a proposal needs an account.</Banner> : null}
-          {error ? <Banner tone="danger" title={error.title} onClose={() => setError(null)}>{error.text}</Banner> : null}
+          {error ? <InView key={error.text}><Banner tone="danger" title={error.title} onClose={() => setError(null)}>{error.text}</Banner></InView> : null}
           {verified === false ? (
             <Banner tone="info" title="Verification needed" action="Get verified" onAction={() => router.push("/verify")}>{VERIFICATION_REQUIRED_WORDS}</Banner>
           ) : (

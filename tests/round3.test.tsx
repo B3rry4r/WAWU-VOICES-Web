@@ -100,11 +100,18 @@ describe("L-a: the device clock is corrected from the API's Date header", () => 
       vi.useFakeTimers({ now: real + skew });
       noteServerDate(new Date(real).toUTCString()); // the header was read now
       let askedAtReal = -1;
+      const early: number[] = []; // asks before the real instant (round 5: a device clock that is FAST asks early, at most once a minute)
       const start = real;
-      const onAsk = () => { if (askedAtReal < 0) askedAtReal = start + (Date.now() - (start + skew)); };
+      const onAsk = () => {
+        const t = start + (Date.now() - (start + skew));
+        if (t < OPENS) early.push(t);
+        else if (askedAtReal < 0) askedAtReal = t;
+      };
       render(<Watch onAsk={onAsk} />);
       await tick(19_000);
       expect(askedAtReal).toBe(-1);
+      if (skew > 0) expect(early.length).toBeLessThanOrEqual(1); // was: never before (round 5 ruling: the earlier of the two clocks)
+      else expect(early.length).toBe(0);
       await tick(6_000);
       expect(askedAtReal).toBeGreaterThanOrEqual(OPENS);
       expect(askedAtReal - OPENS).toBeLessThanOrEqual(5_100);
