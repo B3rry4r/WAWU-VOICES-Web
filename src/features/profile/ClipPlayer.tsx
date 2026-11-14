@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { VoicePlayer } from "@/components/vx";
-import { makePlayer, playWithResign } from "./playback";
+import { claimPlayback, makePlayer, playWithResign, releasePlayback } from "./playback";
 import { getPlayUrl, type VoiceClip } from "@/lib/api/profile";
 import { isSignedIn } from "@/lib/api/auth";
 import { trackListen } from "@/features/talk/listen-track";
@@ -30,7 +30,7 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
   const [failed, setFailed] = useState(false);
   const dur = Math.max(1, Math.round((durationMs ?? 0) / 1000));
 
-  useEffect(() => () => { untrack.current?.(); untrack.current = null; audio.current?.pause(); audio.current = null; }, []);
+  useEffect(() => () => { untrack.current?.(); untrack.current = null; if (audio.current) releasePlayback(audio.current); audio.current?.pause(); audio.current = null; }, []);
 
   async function play() {
     setFailed(false);
@@ -45,6 +45,7 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
         if (answerId) untrack.current = trackListen(answerId, a);
       }
       audio.current.playbackRate = speed.current;
+      claimPlayback(audio.current, () => { setPlaying(false); });
       setPlaying(true);
       await playWithResign(audio.current, () => getUrl(clipId));
       if (!started.current) { started.current = true; onFirstPlay?.(); }

@@ -29,6 +29,9 @@ class FakeAudio extends EventTarget {
 vi.mock("@/features/profile/playback", () => ({
   makePlayer: () => new FakeAudio(),
   playWithResign: (a: FakeAudio) => a.play(),
+  claimPlayback: () => undefined,
+  releasePlayback: () => undefined,
+  stopPlayback: () => undefined,
 }));
 
 beforeEach(() => { events.length = 0; played.length = 0; });

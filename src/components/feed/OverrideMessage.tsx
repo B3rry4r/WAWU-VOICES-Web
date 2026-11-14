@@ -30,7 +30,7 @@ export function OverrideMessage({ o }: { o: Override }) {
   // The message is the hero's next sibling (the Home test pins that); the picture, voice note and link follow it.
   return (
     <>
-      {body ? <p data-testid="override-message" className="m-0 mt-3 text-body-l text-ink-2">{body}</p> : null}
+      {body ? <p data-testid="override-message" className="m-0 mt-3 text-body-l text-ink-2 [overflow-wrap:anywhere]">{body}</p> : null}
       <div className="mt-3 flex flex-col gap-3 empty:hidden" data-testid="override-extras">
       {o.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- a public CDN picture of unknown size; next/image needs the domain listed
@@ -50,7 +50,7 @@ export function OverrideMessage({ o }: { o: Override }) {
       ) : null}
       {link ? (
         <div>
-          <Button variant="secondary" iconEnd="link" href={link} target="_blank" rel="noopener noreferrer" data-testid="override-link">Open the link</Button>
+          <Button variant="secondary" className="h-auto min-h-[44px] max-w-full py-2 text-start [overflow-wrap:anywhere] [white-space:normal]" iconEnd="link" href={link} target="_blank" rel="noopener noreferrer" data-testid="override-link">Open the link</Button>
         </div>
       ) : null}
       </div>

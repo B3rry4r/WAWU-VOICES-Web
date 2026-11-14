@@ -2,6 +2,8 @@
 import { useEffect, useRef } from "react";
 import { AdSlot } from "@/components/vx";
 import { LivePlayer } from "@/features/profile/ClipPlayer";
+import { stopPlayback } from "@/features/profile/playback";
+import { safeLink } from "./OverrideMessage";
 import { getPlayUrl } from "@/lib/api/profile";
 import { isSignedIn } from "@/lib/api/auth";
 import { recordAdEvent, type AdPlacement } from "@/lib/api/polls";
@@ -25,6 +27,7 @@ export function AudioAdCard({ ad }: { ad: AdPlacement | null | undefined }) {
   }, [ad]);
   if (!ad || !ad.audioClipId) return null;
   const clipId = ad.audioClipId;
+  const link = safeLink(ad.linkUrl); // only an http or https address becomes a button
   return (
     <div ref={box} data-testid="audio-ad">
       <AdSlot
@@ -32,10 +35,11 @@ export function AudioAdCard({ ad }: { ad: AdPlacement | null | undefined }) {
         brand={ad.brand}
         headline={ad.headline}
         body={ad.body ?? undefined}
-        cta={ad.linkUrl ? (ad.ctaLabel ?? "Learn more") : false}
-        href={ad.linkUrl ?? undefined}
+        cta={link ? (ad.ctaLabel ?? "Learn more") : false}
+        href={link ?? undefined}
+        newTab
         onWhy={false}
-        onOpen={() => { recordAdEvent(ad.id, "TAP").catch(() => undefined); }}
+        onOpen={() => { stopPlayback(); recordAdEvent(ad.id, "TAP").catch(() => undefined); }}
         player={
           <LivePlayer
             clipId={clipId}

@@ -18,7 +18,9 @@ const tagOf = (it: AdminNewsItem): NewsTagId => (it.answer.news?.tag as NewsTagI
 
 function NewsBody() {
   const { reloadToday } = useAdmin();
-  const [tab, setTab] = useState("flagged");
+  // V-FIX-B round 2: the Verified News requests are the queue an editor opens first; with none waiting it opens on the flagged posts.
+  const [tab, setTab] = useState("asking");
+  const picked = useRef(false);
   const [items, setItems] = useState<AdminNewsItem[] | null>(null);
   const [counts, setCounts] = useState({ flagged: 0, askingVerified: 0, allChanges: 0 });
   const [waiting, setWaiting] = useState(0);
@@ -40,6 +42,10 @@ function NewsBody() {
       setCounts(p.counts);
       setWaiting(p.waiting);
       setSelected(p.items[0]?.answer.id ?? null);
+      if (!picked.current) {
+        picked.current = true;
+        if (tab === "asking" && p.items.length === 0 && p.counts.flagged > 0) setTab("flagged");
+      }
     } catch (e) {
       if (my === seq.current) setError(e as Error);
     }
@@ -78,11 +84,19 @@ function NewsBody() {
       <div className="mb-5">
         <Tabs
           label="News queues"
-          items={[
-            { id: "flagged", label: "Flagged as misleading", count: counts.flagged },
-            // lead ruling WF (RW3), 6 Nov: "Asking for Verified News" stays hidden until a route creates those requests.
-            { id: "changes", label: "All changes", count: counts.allChanges },
-          ]}
+          items={
+            counts.askingVerified > 0 || tab === "asking"
+              ? [
+                  { id: "asking", label: "Asking for Verified News", count: counts.askingVerified },
+                  { id: "flagged", label: "Flagged as misleading", count: counts.flagged },
+                  { id: "changes", label: "All changes", count: counts.allChanges },
+                ]
+              : [
+                  { id: "flagged", label: "Flagged as misleading", count: counts.flagged },
+                  { id: "asking", label: "Asking for Verified News", count: counts.askingVerified },
+                  { id: "changes", label: "All changes", count: counts.allChanges },
+                ]
+          }
           value={tab}
           onChange={(id) => {
             setSaved(null);
@@ -100,7 +114,7 @@ function NewsBody() {
       ) : items === null ? (
         <ListSkeleton />
       ) : items.length === 0 ? (
-        <EmptyState icon="shield-check" title={tab === "changes" ? "No changes yet" : "Nothing is waiting here"} body={tab === "changes" ? "Every tag change will be listed here." : "Posts people flag as misleading land here."} />
+        <EmptyState icon="shield-check" title={tab === "changes" ? "No changes yet" : "Nothing is waiting here"} body={tab === "changes" ? "Every tag change will be listed here." : tab === "asking" ? "Posts whose poster asked for Verified News land here, with the source they gave." : "Posts people flag as misleading land here."} />
       ) : (
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">
@@ -113,6 +127,11 @@ function NewsBody() {
                   </span>
                 </span>
                 <span className="mt-2 block text-body">{i.answer.body}</span>
+                {i.verifiedRequested && i.sourceName ? (
+                  <span className="mt-1 block text-caption" data-testid="request-source">
+                    {"Source given: "}<b>{i.sourceName}</b>{i.sourceUrl ? <>{" · "}<span className="break-all">{i.sourceUrl}</span></> : null}
+                  </span>
+                ) : null}
                 <span className="mt-1 block text-caption text-ink-2">{`@${i.answer.author?.handle ?? "removed"} · ${ago(i.answer.createdAt)} · ${countText(i.answer.likeCount, "like")}${i.evidenceUrl ? " · source photo attached" : ""}`}</span>
               </button>
             ))}

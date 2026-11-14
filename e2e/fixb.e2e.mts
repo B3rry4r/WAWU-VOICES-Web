@@ -24,7 +24,7 @@ const browser = await chromium.launch({ executablePath: exe, args: ['--use-fake-
 let failed = 0;
 const t = async (name: string, fn: () => Promise<void>) => { try { await fn(); console.log('ok   ' + name); } catch (e) { failed++; console.log('FAIL ' + name + ' ' + (e as Error).message); } };
 
-interface Opts { w?: number; h?: number; signedIn?: boolean; override?: object | null; audioAd?: object | null; roles?: string[]; scheme?: 'light' | 'dark' }
+interface Opts { extra?: (p: string, m: string, body: string, ok: (b: unknown, status?: number) => Promise<void>) => Promise<boolean>; w?: number; h?: number; signedIn?: boolean; override?: object | null; audioAd?: object | null; roles?: string[]; scheme?: 'light' | 'dark' }
 async function open(o: Opts = {}) {
   const ctx = await browser.newContext({ permissions: ['microphone'], viewport: { width: o.w ?? 390, height: o.h ?? 844 }, colorScheme: o.scheme ?? 'light' });
   if (o.signedIn !== false) await ctx.addInitScript(() => localStorage.setItem('voices-web-session', JSON.stringify({ accessToken: 't', refreshToken: 'r' })));
@@ -34,6 +34,7 @@ async function open(o: Opts = {}) {
   await ctx.route('**/api/v1/**', async (route) => {
     const req = route.request(); const u = new URL(req.url()); const p = u.pathname.replace('/api/v1', '');
     const ok = (b: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+    if (o.extra && (await o.extra(p, req.method(), req.postData() ?? '', ok))) return;
     if (req.method() === 'POST' && p === '/questions/q1/answers') { posts.push(JSON.parse(req.postData() ?? '{}')); return ok({ answer: answer({ id: 'new1' }) }, 201); }
     if (req.method() === 'POST' && p.startsWith('/ads/') && p.endsWith('/events')) { events.push({ id: p.split('/')[2], kind: JSON.parse(req.postData() ?? '{}').kind }); return route.fulfill({ status: 204 }); }
     if (p === '/questions/q1') return ok(question());
@@ -192,6 +193,109 @@ try {
       await ctx.close();
     });
   }
+  // ---- round 2
+  await t('guest: the tag and the source chosen before joining are kept with the held recording', async () => {
+    const { page, ctx } = await open({ signedIn: false });
+    await page.goto(`${ORIGIN}/q/q1/speak`);
+    await page.getByRole('button', { name: 'Start recording' }).click();
+    await page.waitForTimeout(2500);
+    await page.getByRole('button', { name: 'Stop recording' }).click();
+    await page.getByRole('button', { name: 'Request Verified News' }).click();
+    await page.getByLabel('Your source').fill('Lagos State Emergency Agency');
+    await page.waitForTimeout(700);
+    await page.getByRole('button', { name: /^Send/ }).click();
+    await page.waitForURL((u) => u.pathname.startsWith('/join') || u.pathname.includes('sign'), { timeout: 20000 });
+    const tag = await page.evaluate(() => new Promise((res, rej) => { const r = indexedDB.open('voices-speak', 1); r.onsuccess = () => { const g = r.result.transaction('drafts').objectStore('drafts').get('current'); g.onsuccess = () => res(g.result?.tag ?? null); g.onerror = () => rej(g.error); }; r.onerror = () => rej(r.error); }));
+    assert.deepEqual(tag, { pick: 'REQUEST_VERIFIED', sourceName: 'Lagos State Emergency Agency', sourceUrl: '' });
+    await ctx.close();
+  });
+  await t('Finish and post my voice sends the held tag and source in one tap', async () => {
+    const { page, posts, ctx } = await open();
+    await page.goto(`${ORIGIN}/welcome`);
+    await page.evaluate(() => new Promise<void>((res, rej) => {
+      const r = indexedDB.open('voices-speak', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('drafts');
+      r.onsuccess = () => { const tx = r.result.transaction('drafts', 'readwrite'); tx.objectStore('drafts').put({ owner: null, questionId: 'q1', blob: new Blob([new Uint8Array(3000)], { type: 'audio/webm' }), mime: 'audio/webm', seconds: 4, peaks: [1, 2, 3], key: 'k-held2', savedAt: Date.now(), tag: { pick: 'REQUEST_VERIFIED', sourceName: 'Lagos State Emergency Agency', sourceUrl: 'https://example.com/s' } }, 'current'); tx.oncomplete = () => { r.result.close(); res(); }; tx.onerror = () => rej(tx.error); };
+      r.onerror = () => rej(r.error);
+    }));
+    await page.goto(`${ORIGIN}/q/q1/speak?autopost=1`);
+    await page.waitForURL('**/posted?a=new1', { timeout: 20000 });
+    assert.deepEqual({ ...posts[0] }, { kind: 'VOICE', clipId: 'c1', isNews: true, newsTag: 'UNVERIFIED_NEWS', requestVerified: true, newsSourceName: 'Lagos State Emergency Agency', newsSourceUrl: 'https://example.com/s' });
+    await ctx.close();
+  });
+  for (const [w, h, tag] of [[1440, 900, '1440']] as const) {
+    await t(`admin news ${tag}: Asking for Verified News is the first tab, shows the source, and approves`, async () => {
+      const decisions: Record<string, unknown>[] = [];
+      const item = { answer: answer({ id: 'n1', news: { tag: 'UNVERIFIED_NEWS', sourceName: null, sourceUrl: null, chosenBy: '@me.handle', chosenAt: new Date().toISOString() } }), flagCount: 0, flagReasons: [], verifiedRequested: true, sourceName: 'Lagos State Emergency Agency', sourceUrl: 'https://example.com/lasema', evidenceUrl: null, changeLog: [], summary: 'Water is up to my knees' };
+      const { page, ctx } = await open({ w, h, roles: ['EDITOR'], extra: async (p, m, body, ok) => {
+        if (p === '/admin/today') { await ok({ date: '2026-11-15', weekNumber: 1, topic, flowState: 'NORMAL', todaysQuestion: question(), stats: { sharesByTarget: [], voicesToday: 0, voicePercent: 0, pollVotes: 0, shares: 0, openReports: 0, oldestReportMinutes: null, dailyQuestionMailsToday: 0, weeklyTopicMailsToday: 0, topicMailBudgetLeftToday: 0 }, schedule: [], nextQuestion: null, needsAttention: { flaggedNews: 0, askingVerified: 1, openReports: 0, adsAwaiting: 0, resultsToCheck: 0, newsTags: 1 } }); return true; }
+        if (p === '/admin/news/items') { await ok({ items: [item], nextCursor: null, waiting: 1, counts: { flagged: 0, askingVerified: 1, allChanges: 0 } }); return true; }
+        if (p === '/admin/news/n1/decision' && m === 'POST') { decisions.push(JSON.parse(body)); await ok({}); return true; }
+        return false;
+      } });
+      await page.goto(`${ORIGIN}/admin/news`);
+      const tabs = page.getByRole('tablist', { name: 'News queues' }).getByRole('tab');
+      await tabs.first().waitFor();
+      assert.match(await tabs.first().innerText(), /Asking for Verified News/);
+      assert.equal(await tabs.first().getAttribute('aria-selected'), 'true');
+      assert.match(await page.getByTestId('request-source').innerText(), /Lagos State Emergency Agency/);
+      await shot(page, `admin-news-asking-${tag}`, true);
+      await page.getByLabel('Reason (the poster sees this)').fill('Checked with the agency.');
+      await page.getByRole('button', { name: 'Approve Verified News' }).click();
+      await page.getByText('Verified News approved').waitFor();
+      assert.equal(decisions[0].decision, 'APPROVE_VERIFIED');
+      assert.equal(decisions[0].sourceName, 'Lagos State Emergency Agency');
+      await ctx.close();
+    });
+  }
+  await t('settings: the News tag alerts switch saves notifyTagFollows', async () => {
+    const patches: Record<string, unknown>[] = [];
+    const settings = { language: 'en', dataSaver: false, theme: 'system', timezone: 'Africa/Lagos', quietHoursStart: null, quietHoursEnd: null, notifyDailyQuestion: true, notifyWeeklyTopic: true, notifyReplies: true, notifyReactions: true, notifyPollResults: true, notifyFlashPolls: false, notifyCategoryAlerts: true, notifyTagFollows: true, dailyQuestionMinute: 480, shareMyWord: true };
+    const { page, ctx } = await open({ extra: async (p, m, body, ok) => {
+      if (p === '/me') { await ok({ id: 'u1', wawuId: 'w1', handle: 'me.handle', profileComplete: true, roles: [], status: 'ACTIVE', phoneMasked: '+234 *** 1234', savedCount: 0, replyCount: 0, reactionsReceived: 0, unreadNotifications: 0, allowances: allowance, settings, profile: { handle: 'me.handle', displayName: 'Me Person', bio: null, avatarUrl: null, countryCode: 'NG', state: null, city: null, languages: ['en'], voiceCard: null, voiceCount: 0 } }); return true; }
+      if (p === '/me/settings') { if (m === 'PATCH') { patches.push(JSON.parse(body)); Object.assign(settings, JSON.parse(body)); } await ok(settings); return true; }
+      if (p === '/categories' || p === '/me/categories') { await ok(p === '/categories' ? { items: [] } : { categories: [] }); return true; }
+      return false;
+    } });
+    await page.goto(`${ORIGIN}/settings`);
+    const sw = page.getByRole('switch', { name: 'News tag alerts' });
+    await sw.waitFor();
+    assert.equal(await sw.isChecked(), true);
+    await shot(page, 'settings-tag-alerts-390', true);
+    await sw.click();
+    await page.waitForTimeout(500);
+    assert.deepEqual(patches, [{ notifyTagFollows: false }]);
+    await ctx.close();
+  });
+  for (const [w, h, tag] of [[390, 844, '390'], [1440, 900, '1440']] as const) {
+    await t(`${tag}: a 60 character label and a 100 character word wrap and never scroll sideways`, async () => {
+      const longAd = { ...ad, headline: 'W'.repeat(100), body: 'B'.repeat(100), ctaLabel: 'Order the very long named product today from us now '.slice(0, 60) };
+      const longOv = { contentKind: 'TEXT', body: 'Z'.repeat(200), audioUrl: null, imageUrl: null, linkUrl: 'https://example.com/' + 'p'.repeat(150), endsAt: new Date(Date.now() + 20 * 3600e3).toISOString() };
+      const { page, ctx } = await open({ w, h, signedIn: false, override: longOv, audioAd: longAd });
+      await page.goto(`${ORIGIN}/`);
+      await page.getByTestId('audio-ad').waitFor();
+      await page.getByTestId('override-message').waitFor();
+      const widths = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, win: window.innerWidth }));
+      assert.ok(widths.doc <= widths.win, `page scrolls sideways: ${widths.doc} > ${widths.win}`);
+      await shot(page, `home-long-${tag}`, true);
+      await ctx.close();
+    });
+  }
+  await t('an advert link opens in a new tab with rel noopener noreferrer, and pauses the advert', async () => {
+    const { page, plays, ctx } = await open({ signedIn: false, audioAd: ad });
+    await page.goto(`${ORIGIN}/`);
+    const box = page.getByTestId('audio-ad');
+    await box.getByRole('button', { name: /Play voice/ }).click();
+    await box.getByRole('button', { name: /Pause voice/ }).waitFor();
+    const link = box.getByRole('link', { name: /Visit page/ });
+    assert.equal(await link.getAttribute('target'), '_blank');
+    assert.equal(await link.getAttribute('rel'), 'noopener noreferrer');
+    await link.evaluate((a) => a.addEventListener('click', (e) => e.preventDefault()));
+    await link.click();
+    await box.getByRole('button', { name: /Play voice/ }).waitFor({ timeout: 5000 });
+    assert.equal(plays.length >= 1, true);
+    await ctx.close();
+  });
 } finally { await browser.close(); }
 console.log(failed ? `${failed} failed` : 'all passed');
 process.exit(failed ? 1 : 0);
