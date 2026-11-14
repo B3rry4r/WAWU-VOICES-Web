@@ -7,7 +7,7 @@ import { lagosClock } from "./shared";
 export function toComment(p: ResultPost, isNew = false): ResultCommentProps {
   return {
     id: p.id,
-    author: { handle: "@" + p.author.handle, name: p.author.displayName ?? p.author.handle },
+    author: { handle: "@" + p.author.handle, name: p.author.displayName ?? p.author.handle, avatar: p.author.avatarUrl ?? undefined },
     time: lagosClock(p.createdAt),
     place: unitLabel(p),
     figures: [

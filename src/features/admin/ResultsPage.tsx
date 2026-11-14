@@ -182,7 +182,7 @@ function Check({ row, onDone }: { row: AdminResultPost; onDone: (row: AdminResul
       <div className="rounded-l border border-line p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Avatar name={p.author.displayName || p.author.handle} size="s" />
+            <Avatar name={p.author.displayName || p.author.handle} src={p.author.avatarUrl ?? undefined} size="s" />
             <div>
               <div className="text-body-strong">{`@${p.author.handle}`}</div>
               <div className="text-caption text-ink-2">{clock(p.createdAt)}</div>

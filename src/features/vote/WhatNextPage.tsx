@@ -96,6 +96,7 @@ export function ProposalItem({ p, groups, signedIn, questionId, onNeedSignIn, on
       <ProposalCard
         author={`@${cur.author.handle}`}
         avatarName={cur.author.displayName ?? cur.author.handle}
+        avatarSrc={cur.author.avatarUrl ?? undefined}
         time={ago(cur.createdAt)}
         text={cur.body ?? ""}
         supports={cur.supportCount}
