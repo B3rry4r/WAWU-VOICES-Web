@@ -47,6 +47,12 @@ export function monthYear(w: When, style: "short" | "long" = "short"): string {
   return `${p.month} ${p.year}`;
 }
 
+/** "Sunday 15 November": the long weekday, the day and the long month (Lagos time). */
+export function longDay(w: When): string {
+  const p = parts(w, { weekday: "long", day: "numeric", month: "long" });
+  return `${p.weekday} ${p.day} ${p.month}`;
+}
+
 /** "Mon" or "Monday". */
 export function weekday(w: When, style: "short" | "long" = "short"): string {
   return parts(w, { weekday: style }).weekday;

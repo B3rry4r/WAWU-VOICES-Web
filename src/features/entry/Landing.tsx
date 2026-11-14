@@ -5,7 +5,7 @@ import { Button, Icon, Logo, QuestionHero, Skeleton, type IconName } from "@/com
 import { Answers } from "@/components/feed/parts";
 import { useLoad } from "@/components/feed/useLoad";
 import { getPublicConfig, getTodaysQuestion, getTrending } from "@/lib/api/feed";
-import { closesIn, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, voicesOf } from "@/lib/feed-format";
 import { SoundButton } from "@/components/shell/SoundButton";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { fromPrice } from "./format";
@@ -74,6 +74,7 @@ export function Landing() {
           question={q.text}
           voices={voicesOf(q)}
           closesIn={closesIn(q.endsAt)}
+          opensLabel={comingUp(q)}
           speakLabel="Add your voice"
           onSpeak={() => router.push("/")}
           onListen={() => router.push(`/q/${q.id}`)}

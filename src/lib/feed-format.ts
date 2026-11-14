@@ -1,6 +1,6 @@
 import { tokensLabel } from "@/lib/shared/text-price";
 import type { Answer } from "@/lib/api/feed";
-import { countdown } from "@/lib/format/date";
+import { countdown, dayKey, longDay } from "@/lib/format/date";
 
 /** "9h", "2 days", "45 min": time left until an ISO instant (the shared countdown). */
 export function closesIn(endsAt: string | null | undefined, now = Date.now()): string | undefined {
@@ -35,6 +35,31 @@ export function isOpen(q: { status: string; startsAt: string | null; endsAt: str
   if (q.startsAt && Date.parse(q.startsAt) > now) return false;
   if (q.endsAt && Date.parse(q.endsAt) <= now) return false;
   return true;
+}
+
+/** V-PRELAUNCH: scheduled and not yet inside its window. The API says SCHEDULED for such a question; the date decides the rest. */
+export function notOpenYet(q: { status: string; startsAt: string | null }, now = Date.now()): boolean {
+  return q.status === "SCHEDULED" && !!q.startsAt && Date.parse(q.startsAt) > now;
+}
+
+/** "Opens Sunday 15 November" (the Lagos day of `startsAt`). */
+export function opensLabel(q: { startsAt: string | null }): string | undefined {
+  return q.startsAt ? `Opens ${longDay(q.startsAt)}` : undefined;
+}
+
+/** The label to give a card for a question that has not opened (undefined once it has): the card then shows no counts and no actions. */
+export function comingUp(q: { status: string; startsAt: string | null }, now = Date.now()): string | undefined {
+  return notOpenYet(q, now) ? opensLabel(q) : undefined;
+}
+
+/** A topic whose week has not begun: the API says SCHEDULED, and its first day is after today (Lagos). */
+export function topicNotStarted(t: { status: string; startsOn: string }, now = Date.now()): boolean {
+  return t.status === "SCHEDULED" && t.startsOn > dayKey(now);
+}
+
+/** "Starts Monday 16 November": `startsOn` is a Lagos calendar day. */
+export function startsLabel(t: { startsOn: string }): string {
+  return `Starts ${longDay(`${t.startsOn}T12:00:00+01:00`)}`;
 }
 
 /** "0.2 tokens", "1 token", "16.67 tokens": tokens from milli-tokens. */

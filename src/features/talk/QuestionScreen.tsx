@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Avatar, Banner, Button, EmptyState, FreePosts, NotFoundState, Icon, Sheet, Skeleton, Tabs } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, AnswerSort, Question } from "@/lib/api/talk";
-import { closesIn, uniqueVoices, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
@@ -92,6 +92,25 @@ export function QuestionScreen({ id }: { id: string }) {
   const left = allow?.freePostsRemaining;
   const close = closesIn(question.endsAt);
   const daily = question.kind === "DAILY";
+
+  // V-PRELAUNCH: scheduled and not yet open. The question and its hint, when it opens, and nothing to do yet: no counts, no
+  // voices, no buttons (the Hub answers 404 to a share of it until it opens, so there is no share either).
+  const opens = comingUp(question);
+  if (opens)
+    return (
+      <>
+        <div className="hidden items-center dt:flex">
+          <Link href="/" className="inline-flex min-h-11 items-center gap-2 text-label text-[var(--ink)] no-underline"><Icon name="arrow-left" size={18} />Back to Home</Link>
+        </div>
+        <AppBar phoneOnly title="Coming up" back="/" />
+        <section aria-label="The question" data-testid="q-coming-up" className="flex flex-col gap-3 pb-2 pt-5">
+          <span className="text-eyebrow uppercase text-[var(--green-text)]">Coming up</span>
+          <h1 className="m-0 font-display text-display-l [text-wrap:balance] dt:text-display-2xl">{question.text}</h1>
+          {question.hint ? <p className="m-0 text-body-l text-[var(--ink-2)]">{question.hint}</p> : null}
+          <p className="m-0 text-body-strong text-[var(--ink-2)]">{opens}</p>
+        </section>
+      </>
+    );
 
   async function toggleSave() {
     if (!signedIn) return push("Sign in to save a question.", "info");

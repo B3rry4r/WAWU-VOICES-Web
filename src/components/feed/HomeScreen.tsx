@@ -7,7 +7,7 @@ import { getHome, getMe, getTrendingQuestions, type Home } from "@/lib/api/feed"
 import { listMyAnswers } from "@/lib/api/profile";
 import { getAdPlacement, getFlashPolls, type AdPlacement, type Poll } from "@/lib/api/polls";
 import { isSignedIn } from "@/lib/api/auth";
-import { closesIn, shortCount, uniqueVoices, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, shortCount, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
 import { WeeklyReportLink } from "./LinkCards";
@@ -73,6 +73,7 @@ export function HomeScreen() {
               voices={voicesOf(q)}
               closesIn={closesIn(q.endsAt)}
               avatars={uniqueVoices(q.recentVoices).map((v) => v.handle)}
+              opensLabel={comingUp(q)}
               speakLabel={answered ? "Listen to answers" : signedIn ? undefined : "Add your voice"}
               speakIcon={answered ? "headphones" : undefined}
               answered={answered}
@@ -105,6 +106,8 @@ export function HomeScreen() {
           </Section>
         ) : null}
 
+        {/* The boards: "Trending answers" on the phone, "Top voices on today's question" on desktop (Home-390, Home-1440). The Hub sends only today's open question's top voices, so with none this draws nothing, not an empty box. */}
+        {h.trending.length ? (
         <Section
           className="order-6 dt:order-6"
           title={<><span className="dt:hidden">Trending answers</span><span className="hidden dt:inline">Top voices on today’s question</span></>}
@@ -117,8 +120,9 @@ export function HomeScreen() {
             ) : undefined
           }
         >
-          {h.trending.length ? <Answers items={h.trending.slice(0, 2)} /> : <NothingYet title="No voices yet" body="Be the first to answer today’s question." />}
+          <Answers items={h.trending.slice(0, 2)} />
         </Section>
+        ) : null}
 
         <Section className="order-7 dt:order-4 dt:[&>div:first-child]:hidden" title="New conversations">
           {h.newConversations.length ? <Tiles items={h.newConversations.slice(0, 2)} /> : <NothingYet title="Nothing new yet" body="New conversations show up here as they open." />}
