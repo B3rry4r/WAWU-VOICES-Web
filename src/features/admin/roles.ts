@@ -1,6 +1,6 @@
 import type { Role } from "@/lib/api/admin";
 
-export type AdminPageId = "today" | "override" | "calendar" | "pool" | "news" | "results" | "ads" | "weekly" | "moderation";
+export type AdminPageId = "today" | "override" | "calendar" | "pool" | "news" | "results" | "ads" | "weekly" | "moderation" | "ideas" | "people";
 
 /** Who may open each admin page: the roles the API's operations for that page accept (docs/contract/openapi.yaml, x-wawu-roles). */
 export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
@@ -12,6 +12,8 @@ export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
   results: ["EDITOR", "ADMIN"],
   weekly: ["EDITOR", "ADMIN"],
   moderation: ["MODERATOR", "ADMIN"],
+  ideas: ["MODERATOR", "ADMIN"],
+  people: ["ADMIN"],
   ads: ["AD_MANAGER", "ADMIN"],
 };
 
@@ -44,4 +46,6 @@ export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: 
   { id: "ads", label: "Adverts", href: "/admin/ads", icon: "megaphone" },
   { id: "weekly", label: "Weekly report", href: "/admin/weekly", icon: "chart-column" },
   { id: "moderation", label: "Moderation", href: "/admin/moderation", icon: "shield-alert" },
+  { id: "ideas", label: "Group ideas", href: "/admin/ideas", icon: "messages-square" },
+  { id: "people", label: "People and roles", href: "/admin/people", icon: "user-check" },
 ];

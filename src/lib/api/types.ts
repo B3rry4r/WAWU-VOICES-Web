@@ -2543,12 +2543,76 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The saved What Next? summary and whether AI drafting is on
+         * @description Auth: signed in with role EDITOR or ADMIN.
+         */
+        get: operations["adminGetSummary"];
         /**
          * Edit and approve the What Next? editorial summary
          * @description Auth: signed in with role EDITOR or ADMIN.
          */
         put: operations["adminSaveSummary"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/topics/{topicId}/summary/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A summary draft from the week's data, or from the AI when asked and a key is set
+         * @description Saves nothing. Without a GEMINI_API_KEY, ai true still answers with the data draft and an aiNote saying AI drafting is off. Auth: signed in with role EDITOR or ADMIN.
+         */
+        post: operations["adminDraftSummary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/proposal-questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Questions that have proposals, newest activity first (up to 30)
+         * @description Auth: signed in with role MODERATOR or ADMIN.
+         */
+        get: operations["adminListProposalQuestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One question's proposals with its groups and suggested groups
+         * @description Auth: signed in with role MODERATOR or ADMIN.
+         */
+        get: operations["adminListProposals"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -3728,6 +3792,13 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
+        /** @description One state in the weekly poll: how many votes came from it, the choice that led there and its whole percent. A state under the anonymity floor (config weekly.min_group_size) is never listed. */
+        RegionShare: {
+            state: string;
+            votes: number;
+            leading: string;
+            percent: number;
+        };
         /** @description share is the percent of voices; change is the move in percentage points since last week. */
         Emotion: {
             name: string;
@@ -4217,6 +4288,7 @@ export interface components {
         };
         WeeklyReport: {
             emotions: components["schemas"]["Emotion"][];
+            regions?: components["schemas"]["RegionShare"][];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -4918,6 +4990,7 @@ export interface components {
         };
         AdminWeeklyReport: {
             emotions: components["schemas"]["Emotion"][];
+            regions?: components["schemas"]["RegionShare"][];
             cardTitle: string | null;
             editorNote: string | null;
             /** Format: uuid */
@@ -5117,6 +5190,118 @@ export interface components {
             pollLine: string;
             nextStepsLine: string;
             approve: boolean;
+            aiDrafted?: boolean;
+        };
+        SavedSummary: {
+            /** Format: uuid */
+            topicId: string;
+            mainView: string;
+            mainViewVoices: number;
+            opposingView: string;
+            opposingViewVoices: number;
+            pollLine: string;
+            nextStepsLine: string;
+            basedOnVoices: number;
+            basedOnVotes: number;
+            /** Format: date-time */
+            updatedAt: string;
+            reviewedByEditor: boolean;
+            aiDrafted: boolean;
+        };
+        /** @description The saved summary (reviewed or not) and whether the AI draft is switched on here (a GEMINI_API_KEY is set). */
+        AdminSummary: {
+            aiAvailable: boolean;
+            summary: components["schemas"]["SavedSummary"] | null;
+        };
+        DraftSummaryRequest: {
+            ai?: boolean;
+        };
+        SummaryDraftFields: {
+            mainView: string;
+            mainViewVoices: number;
+            opposingView: string;
+            opposingViewVoices: number;
+            pollLine: string;
+            nextStepsLine: string;
+        };
+        SummaryDraftMood: {
+            mood: components["schemas"]["Mood"];
+            count: number;
+            percent: number;
+        };
+        SummaryDraftCategory: {
+            name: string;
+            voices: number;
+        };
+        SummaryDraftQuote: {
+            /** Format: uuid */
+            answerId: string;
+            kind: components["schemas"]["PostKind"];
+            reactions: number;
+            excerpt: string;
+        };
+        /** @description Nothing is saved. The data draft needs no AI: the weekly poll's two leading choices as the two positions, the poll line and the next-steps line counted from the poll and the proposals, plus mood counts, the busiest categories and the most-reacted voices as material. An empty mainView or opposingView means the data had nothing to put there and the editor writes it. */
+        SummaryDraft: {
+            /** Format: uuid */
+            topicId: string;
+            /** @enum {string} */
+            source: "DATA" | "AI";
+            aiAvailable: boolean;
+            aiNote: string | null;
+            draft: components["schemas"]["SummaryDraftFields"];
+            basedOnVoices: number;
+            basedOnVotes: number;
+            moods: components["schemas"]["SummaryDraftMood"][];
+            categories: components["schemas"]["SummaryDraftCategory"][];
+            quotes: components["schemas"]["SummaryDraftQuote"][];
+        };
+        AdminProposalQuestion: {
+            /** Format: uuid */
+            questionId: string;
+            text: string;
+            weekNumber: number | null;
+            proposalCount: number;
+            groupCount: number;
+            ungroupedCount: number;
+        };
+        AdminProposalQuestions: {
+            items: components["schemas"]["AdminProposalQuestion"][];
+        };
+        AdminProposalItem: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["PostKind"];
+            text: string;
+            supportCount: number;
+            challengeCount: number;
+            /** Format: uuid */
+            groupId: string | null;
+            groupTitle: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminProposalGroup: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            confirmed: boolean;
+            proposalCount: number;
+        };
+        AdminGroupSuggestion: {
+            title: string;
+            proposalIds: string[];
+        };
+        AdminProposalQuestionRef: {
+            /** Format: uuid */
+            id: string;
+            text: string;
+        };
+        /** @description A question's published proposals (up to 300, best supported first) with its groups. A suggestion is proposals with words in common; nothing is grouped until a moderator confirms it with POST /admin/proposal-groups. */
+        AdminProposals: {
+            question: components["schemas"]["AdminProposalQuestionRef"];
+            items: components["schemas"]["AdminProposalItem"][];
+            groups: components["schemas"]["AdminProposalGroup"][];
+            suggestions: components["schemas"]["AdminGroupSuggestion"][];
         };
         AuditPage: {
             items: components["schemas"]["AuditEntry"][];
@@ -9296,6 +9481,32 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
+    adminGetSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                topicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSummary"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
     adminSaveSummary: {
         parameters: {
             query?: never;
@@ -9318,6 +9529,88 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EditorialSummary"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminDraftSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                topicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryDraft"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListProposalQuestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProposalQuestions"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListProposals: {
+        parameters: {
+            query: {
+                /** @description The question */
+                questionId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminProposals"];
                 };
             };
             401: components["responses"]["E401"];
