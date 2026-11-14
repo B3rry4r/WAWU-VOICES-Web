@@ -20,6 +20,7 @@ import { tokensLabel } from "@/lib/shared/text-price";
 import "./speak.css";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
+import { cleanCode } from "@/features/share/speak-target";
 import { voicesOf } from "@/lib/feed-format";
 import { AnonymousSwitch } from "@/features/talk/AnonymousSwitch";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
@@ -317,7 +318,19 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }
 
   // held=1: a recording is held in the browser, so the join steps say "Finish and post my voice" and return here (A-M4).
-  const joinHref = () => `${JOIN_PATH}?next=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}&held=1`;
+  // A share link's code (from) and the picked word come back with the person, so they land on the same screen with both.
+  const joinHref = () => {
+    const back = new URLSearchParams();
+    if (qParam && !questionId) back.set("q", qParam);
+    const from = cleanCode(params.get("from"));
+    if (from) {
+      back.set("from", from);
+      const w = params.get("mood") ?? mood.word;
+      if (w) back.set("mood", w);
+    }
+    const qs = back.toString();
+    return `${JOIN_PATH}?next=${encodeURIComponent(pathname + (qs ? `?${qs}` : ""))}&held=1`;
+  };
 
   async function waitReady(clipId: string): Promise<void> {
     for (let i = 0; i < 90; i++) {
