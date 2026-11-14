@@ -7,7 +7,7 @@ import { decideNews, listNews } from "@/lib/api/admin";
 import type { AdminNewsItem, NewsDecision } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
 import { ago, clock } from "./time";
-import { AuditList, Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction, Gated } from "./ui";
+import { AuditList, Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, SavedLine, DetailPane, queueRow, useAction, Gated } from "./ui";
 
 type NewsTagId = "VERIFIED_NEWS" | "UNVERIFIED_NEWS" | "GOSSIP";
 const KIND: Record<NewsTagId, "verified" | "unverified" | "gossip"> = { VERIFIED_NEWS: "verified", UNVERIFIED_NEWS: "unverified", GOSSIP: "gossip" };
@@ -26,6 +26,7 @@ function NewsBody() {
   const [error, setError] = useState<Error | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [paneOpen, setPaneOpen] = useState(false);
   const seq = useRef(0);
 
   const load = useCallback(async () => {
@@ -61,6 +62,7 @@ function NewsBody() {
 
   function decided(id: string, word: string, queueTab: string) {
     setSaved(word);
+    setPaneOpen(false);
     setItems((x) => {
       const rest = (x ?? []).filter((i) => i.answer.id !== id);
       const at = (x ?? []).findIndex((i) => i.answer.id === id);
@@ -102,17 +104,17 @@ function NewsBody() {
       ) : items.length === 0 ? (
         <EmptyState icon="shield-check" title={tab === "changes" ? "No changes yet" : "Nothing is waiting here"} body={tab === "changes" ? "Every tag change will be listed here." : "Posts people flag as misleading land here."} />
       ) : (
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
+        <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">
             {items.map((i) => (
-              <button key={i.answer.id} type="button" role="listitem" className={queueRow(selected === i.answer.id)} onClick={() => setSelected(i.answer.id)} aria-current={selected === i.answer.id ? "true" : undefined}>
+              <button key={i.answer.id} type="button" role="listitem" className={queueRow(selected === i.answer.id)} onClick={() => { setSelected(i.answer.id); setPaneOpen(true); }} aria-current={selected === i.answer.id ? "true" : undefined}>
                 <span className="flex flex-wrap items-center gap-2">
                   <NewsTag kind={KIND[tagOf(i)]} />
                   <span className={`text-count ${i.verifiedRequested ? "text-verified" : "text-danger"}`}>
                     {i.verifiedRequested ? "Source sent for Verified News" : `Flagged ${i.flagCount} ${i.flagCount === 1 ? "time" : "times"}`}
                   </span>
                 </span>
-                <span className="mt-2 block text-body">{i.answer.body}</span>
+                <span className="mt-2 block whitespace-pre-wrap break-words text-body">{i.answer.body}</span>
                 <span className="mt-1 block text-caption text-ink-2">{`@${i.answer.author?.handle ?? "removed"} · ${ago(i.answer.createdAt)} · ${countText(i.answer.likeCount, "like")}${i.evidenceUrl ? " · source photo attached" : ""}`}</span>
               </button>
             ))}
@@ -122,7 +124,7 @@ function NewsBody() {
               </div>
             ) : null}
           </div>
-          {it ? <Decide key={it.answer.id} item={it} readOnly={tab === "changes"} onDone={(w) => decided(it.answer.id, w, tab)} /> : null}
+          <DetailPane open={paneOpen} onClose={() => setPaneOpen(false)}>{it ? <Decide key={it.answer.id} item={it} readOnly={tab === "changes"} onDone={(w) => decided(it.answer.id, w, tab)} /> : null}</DetailPane>
         </div>
       )}
     </div>
@@ -162,7 +164,7 @@ function Decide({ item, readOnly, onDone }: { item: AdminNewsItem; readOnly: boo
           </div>
         </div>
         <div className="mt-3"><NewsTag kind={KIND[cur]} /></div>
-        <p className="m-0 mt-3 text-body-l">{a.body}</p>
+        <p className="m-0 mt-3 whitespace-pre-wrap break-words text-body-l">{a.body}</p>
         <div className="mt-3 flex gap-5 text-caption text-ink-2">
           <span className="inline-flex items-center gap-1.5"><Icon name="heart" size={18} />{a.likeCount}</span>
           <span className="inline-flex items-center gap-1.5"><Icon name="message-circle" size={18} />{a.replyCount}</span>

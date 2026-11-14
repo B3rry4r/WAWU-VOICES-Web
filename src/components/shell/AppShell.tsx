@@ -7,13 +7,21 @@ import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react"
 import { DeskSearch } from "./DeskSearch";
 import { ShellSlotsContext } from "./ShellSlots";
 import { Bell, UnreadProvider } from "./Bell";
+import { DmUnreadProvider, MessagesIcon } from "./Messages";
+import { DMS_LIVE } from "@/features/dm/live";
 import { SoundButton } from "./SoundButton";
 import { GuestEntry } from "./GuestEntry";
+import { Outbox } from "@/features/speak/Outbox";
 import { NAV, activeNav, hidesTabBar, isChromeless, onWeekly, showsLogoBar, type NavId } from "./nav";
 
 const ICONS: Record<Exclude<NavId, "speak">, typeof House> = { home: House, discover: Compass, profile: User };
 
-/** Messages never (V-10). The bell shows for a signed-in person; a guest gets the country pill and Sign in (GuestEntry).
+/** While DMS_LIVE is false the unread poll and the messages icon are not mounted at all. */
+function DmGate({ children }: { children: ReactNode }) {
+  return DMS_LIVE ? <DmUnreadProvider>{children}</DmUnreadProvider> : <>{children}</>;
+}
+
+/** Messages (V-DM): the messages icon sits beside the bell for a signed-in person. The bell shows for a signed-in person; a guest gets the country pill and Sign in (GuestEntry).
  *  Phone chrome below 1024 px, desktop chrome (left nav, centre, right rail) from 1024 px. Page content goes in children; `rail` fills the right rail. */
 export function AppShell({ children, rail }: { children: ReactNode; rail?: ReactNode }) {
   const [railEl, setRailEl] = useState<HTMLElement | null>(null);
@@ -40,6 +48,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
 
   return (
     <UnreadProvider>
+    <DmGate>
     <div className="sh-root">
       {/* desktop left nav */}
       <nav className="sh-desk sh-sidenav" aria-label="Main">
@@ -81,7 +90,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
           </Link>
         )}
         <div ref={setBarEl} className="sh-topbar__slot" />
-        {logoBar ? <><SoundButton /><GuestEntry /><Bell /></> : null}
+        {logoBar ? <><SoundButton /><GuestEntry />{DMS_LIVE ? <MessagesIcon /> : null}<Bell /></> : null}
       </header>
 
       <div className="sh-centre">
@@ -95,6 +104,9 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
       </div>
 
       <aside ref={setRailEl} className="sh-desk sh-rail" aria-label="This week">{rail}</aside>
+
+      {/* recordings made offline: sent by themselves when free, offered with their price otherwise */}
+      <Outbox />
 
       {/* phone bottom tab bar */}
       {bare ? null : (
@@ -117,6 +129,7 @@ export function AppShell({ children, rail }: { children: ReactNode; rail?: React
         </nav>
       )}
     </div>
+    </DmGate>
     </UnreadProvider>
   );
 }

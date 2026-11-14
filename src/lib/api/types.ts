@@ -2053,7 +2053,7 @@ export interface paths {
         };
         /**
          * The Instagram Stories card image
-         * @description The 1080x1920 Stories card: same words and colours as the card, stacked for a tall frame. Text and brand only. Drawn on request, never stored. 404 for an unknown link, a deleted person's card or a failed card. Auth: none (public).
+         * @description The 1080x1920 Stories card: same words and colours as the card, stacked for a tall frame. Text and brand only. Drawn on request, never stored. 404 for an unknown link, and in every case the 1200x630 card is 404 (a removed, held or deleted post, a suspended, banned, leaving or deleted author, a question that has not opened). At most 60 requests a minute per address for the story and the square together. Auth: none (public).
          */
         get: operations["getShareStoryImage"];
         put?: never;
@@ -2072,8 +2072,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The square card image (mood card)
-         * @description LCH-03: the 1080x1080 mood card for WhatsApp and feeds. Drawn on request and cached. Only a mood answer's link has one, any other link is a 404, and so is a deleted, removed or leaving person's card. Auth: none (public).
+         * The square card image
+         * @description The 1080x1080 card for WhatsApp and feeds, for every kind of link (brief 6.8; the mood card has its own drawing). Same words as the card, text and brand only, so an anonymous voice carries no name and no invite code. Drawn on request and cached. 404 for an unknown link and in every case the 1200x630 card is 404 (a removed, held or deleted post, a suspended, banned, leaving or deleted author, a question that has not opened). At most 60 requests a minute per address for the story and the square together. Auth: none (public).
          */
         get: operations["getShareSquareImage"];
         put?: never;
@@ -2094,7 +2094,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record a share intent, link open or Add your voice tap
+         * Record a share intent, link open, Add your voice tap, recording started or voice published from the link
          * @description Auth: guest or signed in. Rate limit: 300 per minute per IP or account.
          */
         post: operations["recordShareEvent"];
@@ -2473,7 +2473,7 @@ export interface paths {
         };
         /**
          * Find people
-         * @description Auth: signed in with role ADMIN.
+         * @description Everyone who has registered, newest first, or the ones a search finds. Also returns total and counts. Auth: signed in with role ADMIN.
          */
         get: operations["adminListUsers"];
         put?: never;
@@ -3192,6 +3192,410 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prices, costs, allowances and limits
+         * @description Auth: signed in with role ADMIN.
+         */
+        get: operations["adminListConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/config/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a config value (effective at once, logged)
+         * @description Auth: signed in with role ADMIN.
+         */
+        put: operations["adminUpdateConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/config/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Config change log
+         * @description Auth: signed in with role ADMIN.
+         */
+        get: operations["adminConfigChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/config/changes/{changeId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Roll a change back
+         * @description Auth: signed in with role ADMIN.
+         */
+        post: operations["adminRollbackConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/wallets/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person's wallet, ledger and payments
+         * @description Auth: signed in with role ADMIN.
+         */
+        get: operations["adminGetWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/wallets/{userId}/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adjust a wallet (a reason is required)
+         * @description Writes an ADJUSTMENT ledger transaction and an audit entry. Cannot take a balance below zero. The answer carries `adjustment` with the audit id and the ledger transaction id. Auth: signed in with role ADMIN.
+         */
+        post: operations["adminAdjustWallet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Payments and their reconcile state
+         * @description V-ADMIN-MONEY: newest first, each with the person and the payment's own price, VAT, charge and total. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminListPayments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payments/{paymentId}/reverify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-run the provider verify for a stuck payment
+         * @description Auth: signed in with role ADMIN.
+         */
+        post: operations["adminReverifyPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/money/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Money received, payments and tokens for today, 7 and 30 days
+         * @description V-ADMIN-MONEY: received money split into token packs and subscriptions, with VAT and the payment charge apart from WAWU's own revenue (price), payment counts, new paying people, and tokens sold against spent. Days are Lagos days; the last 7 and 30 days include today. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminMoneyOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current and ended subscription plans
+         * @description V-ADMIN-MONEY: read only. Newest first, with the next credit day of a plan still running. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminListSubscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audit log
+         * @description Auth: signed in with role ADMIN.
+         */
+        get: operations["adminAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fix the spelling, typos and grammar of my text (5 tokens)
+         * @description Only spelling, typos and grammar are corrected, never what the text means: the server checks every change and refuses a fix that changes more. Costs 5 tokens (config textfix.cost_milli), charged once per Idempotency-Key and only when a fix comes back: an AI failure (502 TEXT_FIX_FAILED), a refused fix and a text with nothing to fix cost nothing. The text is sent to the AI provider to be corrected and used for nothing else. The person sees the changes and chooses to use the fix or keep their own text. Auth: signed in with a finished profile. Rate limit: 10 per 10 minutes per account.
+         */
+        post: operations["fixText"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a direct message (text or voice) to one member
+         * @description V-DM. Only a verified sender (for now: a member with a running subscription), else 403 verification_required. A person who blocked you (or whom you blocked), who turned messages off, or who is suspended, banned or leaving is one and the same 403 `dm_unavailable` ("This person is not taking messages."), so nobody can tell which; an unknown or deleted person is 404. The price comes from config (dm.text_price_milli per 150 characters in proportion, dm.voice_price_milli per voice message; both 0 by default, so messages are free); text is at most 5,000 characters and voice at most dm.voice_max_seconds (60). Free posts do not apply. A direct message has its own cap, dm.messages_per_day (100 by default, 429 DAILY_LIMIT_REACHED), and does not count toward the 20 posts a day. Charged only when the message is stored: a refused or failed send costs nothing, and a repeat with the same Idempotency-Key returns the first result and charges once. Auth: signed in with a finished profile. Rate limit: 30 a minute per account (config ratelimit.dm_per_min).
+         */
+        post: operations["sendDm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a direct message costs and how many I have left today
+         * @description Auth: signed in with a finished profile.
+         */
+        get: operations["getDmLimits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/conversations/{conversationId}/mute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Mute a chat
+         * @description A muted chat does not raise the unread number or dot. The other person is not told. Idempotent. Auth: signed in with a finished profile.
+         */
+        put: operations["muteDm"];
+        post?: never;
+        /**
+         * Unmute a chat
+         * @description Auth: signed in with a finished profile.
+         */
+        delete: operations["unmuteDm"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My conversations, latest first
+         * @description Newest message first. Each has the last message preview and my unread count. People who blocked me, or whom I blocked, are left out. Auth: signed in with a finished profile.
+         */
+        get: operations["listDmConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/conversations/{conversationId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The messages of one conversation, newest first
+         * @description 404 for a conversation I am not in, and for one with a person who blocked me or whom I blocked. Auth: signed in with a finished profile.
+         */
+        get: operations["listDmMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/conversations/{conversationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark everything sent to me in a conversation as read
+         * @description Auth: signed in with a finished profile.
+         */
+        post: operations["markDmRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many direct messages I have not read
+         * @description The number on the messages icon. The web polls it every 30 seconds while the page is open. Auth: signed in with a finished profile.
+         */
+        get: operations["getDmUnread"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dm/with/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The person, my conversation with them and whether they take messages
+         * @description For the Message button on a profile and the new-message screen. 404 for myself, a banned or a deleted account. Auth: signed in with a finished profile.
+         */
+        get: operations["getDmWith"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/surveys": {
         parameters: {
             query?: never;
@@ -3504,246 +3908,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Prices, costs, allowances and limits
-         * @description Auth: signed in with role ADMIN.
-         */
-        get: operations["adminListConfig"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/config/{key}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Change a config value (effective at once, logged)
-         * @description Auth: signed in with role ADMIN.
-         */
-        put: operations["adminUpdateConfig"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/config/changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Config change log
-         * @description Auth: signed in with role ADMIN.
-         */
-        get: operations["adminConfigChanges"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/config/changes/{changeId}/rollback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Roll a change back
-         * @description Auth: signed in with role ADMIN.
-         */
-        post: operations["adminRollbackConfig"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/wallets/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * A person's wallet, ledger and payments
-         * @description Auth: signed in with role ADMIN.
-         */
-        get: operations["adminGetWallet"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/wallets/{userId}/adjust": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Adjust a wallet (a reason is required)
-         * @description Writes an ADJUSTMENT ledger transaction and an audit entry. Cannot take a balance below zero. The answer carries `adjustment` with the audit id and the ledger transaction id. Auth: signed in with role ADMIN.
-         */
-        post: operations["adminAdjustWallet"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/payments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Payments and their reconcile state
-         * @description V-ADMIN-MONEY: newest first, each with the person and the payment's own price, VAT, charge and total. Auth: signed in with role ADMIN.
-         */
-        get: operations["adminListPayments"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/payments/{paymentId}/reverify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Re-run the provider verify for a stuck payment
-         * @description Auth: signed in with role ADMIN.
-         */
-        post: operations["adminReverifyPayment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/money/overview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Money received, payments and tokens for today, 7 and 30 days
-         * @description V-ADMIN-MONEY: received money split into token packs and subscriptions, with VAT and the payment charge apart from WAWU's own revenue (price), payment counts, new paying people, and tokens sold against spent. Days are Lagos days; the last 7 and 30 days include today. Auth: signed in with role ADMIN.
-         */
-        get: operations["adminMoneyOverview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/subscriptions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Current and ended subscription plans
-         * @description V-ADMIN-MONEY: read only. Newest first, with the next credit day of a plan still running. Auth: signed in with role ADMIN.
-         */
-        get: operations["adminListSubscriptions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/audit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Audit log
-         * @description Auth: signed in with role ADMIN.
-         */
-        get: operations["adminAudit"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/text/fix": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Fix the spelling, typos and grammar of my text (5 tokens)
-         * @description Only spelling, typos and grammar are corrected, never what the text means: the server checks every change and refuses a fix that changes more. Costs 5 tokens (config textfix.cost_milli), charged once per Idempotency-Key and only when a fix comes back: an AI failure (502 TEXT_FIX_FAILED), a refused fix and a text with nothing to fix cost nothing. The text is sent to the AI provider to be corrected and used for nothing else. The person sees the changes and chooses to use the fix or keep their own text. Auth: signed in with a finished profile. Rate limit: 10 per 10 minutes per account.
-         */
-        post: operations["fixText"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3773,7 +3937,7 @@ export interface components {
         /** @enum {string} */
         ContentStatus: "PUBLISHED" | "HELD" | "REMOVED" | "DELETED_BY_AUTHOR";
         /** @enum {string} */
-        ReportTargetType: "ANSWER" | "REPLY" | "PROPOSAL" | "RESULT_POST" | "USER";
+        ReportTargetType: "ANSWER" | "REPLY" | "PROPOSAL" | "RESULT_POST" | "USER" | "DM_MESSAGE";
         /** @enum {string} */
         ReportReason: "HATE_OR_HARASSMENT" | "THREAT_OR_VIOLENCE" | "SCAM_OR_SPAM" | "PERSONAL_DETAILS" | "MISLEADING_NEWS_TAG" | "ABOUT_ME" | "OTHER";
         /** @enum {string} */
@@ -3811,7 +3975,7 @@ export interface components {
         /** @enum {string} */
         ResultThreadStatus: "SCHEDULED" | "OPEN" | "CLOSED";
         /** @enum {string} */
-        VoiceClipPurpose: "ANSWER" | "REPLY" | "PROPOSAL" | "VOTE_EXPLANATION" | "VOICE_CARD" | "OVERRIDE_NOTE" | "AD_AUDIO" | "SURVEY_ANSWER";
+        VoiceClipPurpose: "ANSWER" | "REPLY" | "PROPOSAL" | "VOTE_EXPLANATION" | "VOICE_CARD" | "OVERRIDE_NOTE" | "AD_AUDIO" | "DM" | "SURVEY_ANSWER";
         /** @enum {string} */
         VoiceClipStatus: "PENDING_UPLOAD" | "UPLOADED" | "PROCESSING" | "READY" | "FAILED" | "REMOVED";
         /** @enum {string} */
@@ -3825,7 +3989,7 @@ export interface components {
         /** @enum {string} */
         ProposalStanceKind: "SUPPORT" | "CHALLENGE";
         /** @enum {string} */
-        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "QUESTION_NOT_OPEN" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required";
+        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "QUESTION_NOT_OPEN" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required" | "dm_unavailable";
         /** @description The one error shape. Every non-2xx response is this. */
         Error: {
             error: components["schemas"]["ErrorBody"];
@@ -4003,6 +4167,7 @@ export interface components {
             notifyCategoryAlerts: boolean;
             dailyQuestionMinute: number;
             shareMyWord: boolean;
+            dmOpen: boolean;
             useMyStateForSurveys: boolean;
         };
         UpdateSettingsRequest: {
@@ -4022,6 +4187,7 @@ export interface components {
             notifyCategoryAlerts?: boolean;
             dailyQuestionMinute?: number;
             shareMyWord?: boolean;
+            dmOpen?: boolean;
             useMyStateForSurveys?: boolean;
         };
         CategoryFollow: {
@@ -4266,7 +4432,8 @@ export interface components {
             items: components["schemas"]["Proposal"][];
         };
         AppealRequest: {
-            targetType: components["schemas"]["ReportTargetType"];
+            /** @enum {string} */
+            targetType: "ANSWER" | "REPLY" | "PROPOSAL" | "RESULT_POST" | "USER" | "DM_MESSAGE";
             /** Format: uuid */
             targetId: string;
             note: string;
@@ -4429,13 +4596,14 @@ export interface components {
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
         };
+        /** @description author is null for a reply posted without the person's name, for every reader including the writer (isMine says it is theirs). A person's own page lists these replies for that person only. */
         Reply: {
             helpfulCount: number;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             answerId: string;
-            author: components["schemas"]["AuthorRef"];
+            author: components["schemas"]["AuthorRef"] | null;
             stance: components["schemas"]["ReplyStance"];
             kind: components["schemas"]["PostKind"];
             body?: string | null;
@@ -4456,6 +4624,7 @@ export interface components {
             disagree: number;
             experience: number;
         };
+        /** @description anonymous (default false) posts the reply without the person's name: no read of the reply, notice or mail carries the author. A reply by the writer of a nameless answer, under that answer, is always nameless whatever this says. */
         CreateReplyRequest: {
             stance: components["schemas"]["ReplyStance"];
             kind: components["schemas"]["PostKind"];
@@ -4464,6 +4633,7 @@ export interface components {
             clipId?: string;
             /** Format: uuid */
             extraVoiceTokenId?: string;
+            anonymous?: boolean;
         };
         ReplyReceipt: {
             reply: components["schemas"]["Reply"];
@@ -4869,7 +5039,7 @@ export interface components {
             objectId: string;
             language?: string;
         };
-        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story), null only where that route would 404. squareImageUrl is the 1080x1080 mood card (GET /share/{code}/square) for a mood answer and null for every other link. */
+        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story), null only where that route would 404. squareImageUrl is the 1080x1080 card (GET /share/{code}/square) for every kind (brief 6.8), null only where that route would 404. An anonymous voice carries no name and no invite code on any size. */
         ShareLink: {
             code: string;
             url: string;
@@ -5692,320 +5862,6 @@ export interface components {
             decision: "APPROVE" | "REJECT" | "ASK_FOR_CHANGES" | "PAUSE" | "RESUME";
             reason?: string;
         };
-        SurveyQuestionInput: {
-            /** @enum {string} */
-            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
-            prompt: string;
-            options?: string[];
-        };
-        UpsertSurveyRequest: {
-            brandName: string;
-            /** Format: uuid */
-            brandId?: string;
-            contactEmail: string;
-            title: string;
-            questions: components["schemas"]["SurveyQuestionInput"][];
-            categoryIds?: string[];
-            states?: string[];
-            /** Format: date */
-            startsOn?: string;
-            /** Format: date */
-            endsOn?: string;
-            frequencyCapPerDay?: number;
-            /** @description Naira in kobo (32-bit integer). */
-            priceKobo?: number;
-            responseTarget?: number;
-        };
-        SurveyDecision: {
-            /** @enum {string} */
-            decision: "APPROVE" | "REJECT" | "ASK_FOR_CHANGES" | "PAUSE" | "RESUME";
-            reason?: string;
-        };
-        SurveyOptionView: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-        };
-        SurveyQuestionView: {
-            /** Format: uuid */
-            id: string;
-            position: number;
-            /** @enum {string} */
-            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
-            prompt: string;
-            options: components["schemas"]["SurveyOptionView"][];
-        };
-        AdminSurvey: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            brandId: string | null;
-            brandName: string;
-            contactEmail: string;
-            title: string;
-            status: components["schemas"]["AdStatus"];
-            label: string;
-            live: boolean;
-            checks: components["schemas"]["ReportCheck"][];
-            questions: components["schemas"]["SurveyQuestionView"][];
-            categoryIds: string[];
-            states: string[];
-            /** Format: date */
-            startsOn: string | null;
-            /** Format: date */
-            endsOn: string | null;
-            frequencyCapPerDay: number;
-            /** @description Naira in kobo (32-bit integer). */
-            priceKobo: number | null;
-            responseTarget: number | null;
-            views: number;
-            starts: number;
-            completes: number;
-            skips: number;
-            responses: number;
-            rejectReason: string | null;
-            changeRequest: string | null;
-            /** Format: date-time */
-            submittedAt: string | null;
-            /** Format: date-time */
-            approvedAt: string | null;
-            /** Format: date-time */
-            snapshotAt: string | null;
-            /** Format: date-time */
-            releasedAt: string | null;
-        };
-        AdminSurveyPage: {
-            items: components["schemas"]["AdminSurvey"][];
-            nextCursor: string | null;
-            awaitingApproval: number;
-        };
-        SurveyReportOption: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-            count: number | null;
-            share: number | null;
-            hidden: boolean;
-        };
-        /** @description The choices that are hidden, together. Present only when their sum is at least weekly.min_group_size. When a hidden group would follow from the totals, the next smallest shown group is hidden too and joins this line. */
-        SurveyReportOther: {
-            label: string;
-            count: number;
-            share: number;
-        };
-        SurveyBreakdownOther: {
-            responses: number;
-            share: number;
-        };
-        SurveyReportVoice: {
-            transcript: string;
-            seconds: number;
-        };
-        SurveyReportQuestion: {
-            /** Format: uuid */
-            id: string;
-            position: number;
-            /** @enum {string} */
-            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
-            prompt: string;
-            answered: number | null;
-            options: components["schemas"]["SurveyReportOption"][];
-            other: components["schemas"]["SurveyReportOther"] | null;
-            texts: string[];
-            voices: components["schemas"]["SurveyReportVoice"][];
-        };
-        SurveyReportTotals: {
-            views: number;
-            starts: number;
-            skips: number;
-            responses: number | null;
-            completionRate: number | null;
-        };
-        SurveyReportState: {
-            state: string;
-            responses: number;
-            share: number;
-        };
-        SurveyReportAge: {
-            ageBand: string;
-            responses: number;
-            share: number;
-        };
-        SurveyReportHead: {
-            /** Format: uuid */
-            id: string;
-            brandName: string;
-            title: string;
-            status: components["schemas"]["AdStatus"];
-            /** Format: date */
-            startsOn: string | null;
-            /** Format: date */
-            endsOn: string | null;
-            responseTarget: number | null;
-        };
-        /** @description While the survey runs (and until staff release it) only stage, ready, released, answeredSoFar and note are present. The counts, shares, free answers and breakdowns exist only when released is true, and are then the stored report, never recomputed. */
-        SurveyReport: {
-            survey: components["schemas"]["SurveyReportHead"];
-            /** @enum {string} */
-            stage: "NOT_LIVE" | "RUNNING" | "REVIEW" | "RELEASED";
-            ready: boolean;
-            released: boolean;
-            answeredSoFar?: number;
-            /** Format: date-time */
-            releasedAt?: string;
-            minGroupSize?: number;
-            belowMinimum?: boolean;
-            totals?: components["schemas"]["SurveyReportTotals"];
-            questions?: components["schemas"]["SurveyReportQuestion"][];
-            byState?: components["schemas"]["SurveyReportState"][];
-            byStateOther?: components["schemas"]["SurveyBreakdownOther"] | null;
-            byAgeBand?: components["schemas"]["SurveyReportAge"][];
-            byAgeBandOther?: components["schemas"]["SurveyBreakdownOther"] | null;
-            note: string;
-        };
-        SurveyFreeItem: {
-            id: string;
-            /** Format: uuid */
-            questionId: string;
-            prompt: string;
-            /** @enum {string} */
-            kind: "TEXT" | "VOICE";
-            text: string;
-            seconds: number | null;
-            hidden: boolean;
-        };
-        SurveyFreeAnswers: {
-            released: boolean;
-            items: components["schemas"]["SurveyFreeItem"][];
-            total: number;
-            hiddenCount: number;
-            nextCursor: string | null;
-        };
-        HideFreeAnswerRequest: {
-            hidden: boolean;
-        };
-        HideFreeAnswerResult: {
-            id: string;
-            hidden: boolean;
-        };
-        SurveyReleaseResult: {
-            released: boolean;
-            /** Format: date-time */
-            releasedAt: string;
-            hiddenCount: number;
-            mailed: boolean;
-        };
-        SurveyCard: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-            brandName: string;
-            brandSlug: string | null;
-            brandWebsite: string | null;
-            title: string;
-            questionCount: number;
-        };
-        SurveyPlacementResponse: {
-            survey: components["schemas"]["SurveyCard"] | null;
-        };
-        Survey: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-            brandName: string;
-            brandSlug: string | null;
-            brandWebsite: string | null;
-            title: string;
-            questionCount: number;
-            note: string;
-            /** @enum {string} */
-            myStatus: "OPEN" | "ANSWERED";
-            voiceMaxSeconds: number;
-            ageBands: string[];
-            questions: components["schemas"]["SurveyQuestionView"][];
-        };
-        SurveyEventRequest: {
-            /** @enum {string} */
-            kind: "VIEW" | "START" | "SKIP";
-        };
-        SurveyAnswerInput: {
-            /** Format: uuid */
-            questionId: string;
-            /** Format: uuid */
-            optionId?: string;
-            text?: string;
-            /** Format: uuid */
-            clipId?: string;
-        };
-        SurveyResponseRequest: {
-            answers: components["schemas"]["SurveyAnswerInput"][];
-            anonymous?: boolean;
-            shareState?: boolean;
-            /** @enum {string} */
-            ageBand?: "18-24" | "25-34" | "35-44" | "45-54" | "55+";
-        };
-        SurveyResponseResult: {
-            ok: boolean;
-            note: string;
-        };
-        BrandInput: {
-            name: string;
-            tagline?: string;
-            /** Format: uuid */
-            logoFileId?: string;
-            website?: string;
-            contactEmail?: string;
-            active?: boolean;
-        };
-        AdminBrand: {
-            /** Format: uuid */
-            id: string;
-            name: string;
-            slug: string;
-            tagline: string | null;
-            website: string | null;
-            contactEmail: string | null;
-            active: boolean;
-            logoUrl: string | null;
-            label: string;
-        };
-        AdminBrandList: {
-            items: components["schemas"]["AdminBrand"][];
-        };
-        BrandHead: {
-            name: string;
-            slug: string;
-            tagline: string | null;
-            website: string | null;
-            logoUrl: string | null;
-            label: string;
-        };
-        BrandSurveyCard: {
-            /** Format: uuid */
-            id: string;
-            title: string;
-            label: string;
-            questionCount: number;
-            /** Format: date */
-            endsOn: string | null;
-        };
-        BrandAdCard: {
-            /** Format: uuid */
-            id: string;
-            kind: components["schemas"]["AdKind"];
-            /** @enum {string} */
-            label: "Ad" | "Sponsored";
-            headline: string;
-            body: string | null;
-            imageUrl: string | null;
-            linkUrl: string | null;
-            ctaLabel: string | null;
-        };
-        BrandPage: {
-            brand: components["schemas"]["BrandHead"];
-            surveys: components["schemas"]["BrandSurveyCard"][];
-            ads: components["schemas"]["BrandAdCard"][];
-        };
         ConfigEntry: {
             key: string;
             value: unknown;
@@ -6329,9 +6185,41 @@ export interface components {
             /** Format: date-time */
             verifiedUntil?: string;
         };
+        /** @description total is how many people match the current search and status, ignoring the cursor. counts is the whole user table, whatever the search. */
         AdminUserPage: {
-            items: components["schemas"]["AdminUser"][];
+            items: components["schemas"]["AdminUserRow"][];
             nextCursor: string | null;
+            total: number;
+            counts: components["schemas"]["AdminUserCounts"];
+        };
+        /** @description An AdminUser plus what the Users screen shows. mailTo is the notification address; only this list returns it, and only to an admin. postCount is answers plus replies not deleted. hasProfile is false while the person has no display name, bio or photo. There is no last-seen field: the User model has none. */
+        AdminUserRow: {
+            profile: components["schemas"]["Profile"];
+            status: components["schemas"]["AccountStatus"];
+            roles: components["schemas"]["Role"][];
+            strikes: number;
+            /** Format: date-time */
+            createdAt: string;
+            mailTo: string | null;
+            displayName: string | null;
+            state: string | null;
+            verified: boolean;
+            postCount: number;
+            hasProfile: boolean;
+        };
+        /** @description total is everyone registered. today is those who joined since midnight in Lagos. verified is those verified right now. */
+        AdminUserCounts: {
+            total: number;
+            today: number;
+            verified: number;
+            byStatus: components["schemas"]["AdminUserStatusCounts"];
+        };
+        AdminUserStatusCounts: {
+            ACTIVE: number;
+            SUSPENDED: number;
+            BANNED: number;
+            DELETION_PENDING: number;
+            DELETED: number;
         };
         AdminUser: {
             profile: components["schemas"]["Profile"];
@@ -6400,8 +6288,116 @@ export interface components {
             changed: boolean;
             charge: components["schemas"]["TextFixCharge"];
         };
+        DmPerson: {
+            /** Format: uuid */
+            id: string;
+            handle: string;
+            displayName: string | null;
+            place: string | null;
+            verified: boolean;
+            deleted: boolean;
+        };
+        /** @description Play it with GET /voice-clips/{id}/play: only the two people in the conversation may. */
+        DmClip: {
+            /** Format: uuid */
+            id: string;
+            durationMs: number | null;
+            peaks: number[] | null;
+            transcript: string | null;
+        };
+        /** @description A removed message (status REMOVED or DELETED_BY_AUTHOR) has no body and no clip. costMilli is only on my own messages, readAt only on my own and says when the other person opened it. */
+        DmMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            senderId: string;
+            mine: boolean;
+            kind: components["schemas"]["PostKind"];
+            body: string | null;
+            clip: components["schemas"]["DmClip"] | null;
+            status: components["schemas"]["ContentStatus"];
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            costMilli?: number;
+            /** Format: date-time */
+            readAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description A TEXT message has body (1 to 5,000 characters) and no clipId. A VOICE message has clipId (a READY clip made with purpose DM, at most dm.voice_max_seconds, 60 by default) and no body. */
+        SendDmRequest: {
+            /** Format: uuid */
+            toUserId: string;
+            kind: components["schemas"]["PostKind"];
+            body?: string;
+            /** Format: uuid */
+            clipId?: string;
+        };
+        DmCharge: {
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            costMilli: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number;
+        };
+        DmSendReceipt: {
+            message: components["schemas"]["DmMessage"];
+            charge: components["schemas"]["DmCharge"];
+        };
+        DmLastMessage: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["PostKind"];
+            preview: string;
+            mine: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DmConversation: {
+            /** Format: uuid */
+            id: string;
+            person: components["schemas"]["DmPerson"];
+            lastMessage: components["schemas"]["DmLastMessage"] | null;
+            unread: number;
+            muted: boolean;
+            acceptsMessages: boolean;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DmMessagePage: {
+            person: components["schemas"]["DmPerson"];
+            muted: boolean;
+            acceptsMessages: boolean;
+            items: components["schemas"]["DmMessage"][];
+            nextCursor: string | null;
+        };
+        /** @description acceptsMessages is false when the person turned messages off, is suspended, or either of us blocked the other. */
+        DmWith: {
+            person: components["schemas"]["DmPerson"];
+            /** Format: uuid */
+            conversationId: string | null;
+            acceptsMessages: boolean;
+        };
+        /** @description What a direct message costs now, from config. 0 is free (the owner's design says messages are free). textPriceMilli is per textPriceChars characters, in proportion; voicePriceMilli is for one voice message of any length up to voiceMaxSeconds. */
+        DmLimits: {
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            textPriceMilli: number;
+            textPriceChars: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            voicePriceMilli: number;
+            voiceMaxSeconds: number;
+            maxChars: number;
+            messagesPerDay: number;
+            messagesLeftToday: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number;
+        };
         BlockedUserPage: {
             items: components["schemas"]["BlockedUser"][];
+            nextCursor: string | null;
+        };
+        DmConversationPage: {
+            items: components["schemas"]["DmConversation"][];
             nextCursor: string | null;
         };
         CalendarPage: {
@@ -6463,6 +6459,320 @@ export interface components {
         };
         AdPlacementResponse: {
             ad: components["schemas"]["AdPlacement"] | null;
+        };
+        SurveyQuestionInput: {
+            /** @enum {string} */
+            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
+            prompt: string;
+            options?: string[];
+        };
+        UpsertSurveyRequest: {
+            brandName: string;
+            /** Format: uuid */
+            brandId?: string;
+            contactEmail: string;
+            title: string;
+            questions: components["schemas"]["SurveyQuestionInput"][];
+            categoryIds?: string[];
+            states?: string[];
+            /** Format: date */
+            startsOn?: string;
+            /** Format: date */
+            endsOn?: string;
+            frequencyCapPerDay?: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo?: number;
+            responseTarget?: number;
+        };
+        SurveyDecision: {
+            /** @enum {string} */
+            decision: "APPROVE" | "REJECT" | "ASK_FOR_CHANGES" | "PAUSE" | "RESUME";
+            reason?: string;
+        };
+        SurveyOptionView: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+        };
+        SurveyQuestionView: {
+            /** Format: uuid */
+            id: string;
+            position: number;
+            /** @enum {string} */
+            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
+            prompt: string;
+            options: components["schemas"]["SurveyOptionView"][];
+        };
+        AdminSurvey: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            brandId: string | null;
+            brandName: string;
+            contactEmail: string;
+            title: string;
+            status: components["schemas"]["AdStatus"];
+            label: string;
+            live: boolean;
+            checks: components["schemas"]["ReportCheck"][];
+            questions: components["schemas"]["SurveyQuestionView"][];
+            categoryIds: string[];
+            states: string[];
+            /** Format: date */
+            startsOn: string | null;
+            /** Format: date */
+            endsOn: string | null;
+            frequencyCapPerDay: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number | null;
+            responseTarget: number | null;
+            views: number;
+            starts: number;
+            completes: number;
+            skips: number;
+            responses: number;
+            rejectReason: string | null;
+            changeRequest: string | null;
+            /** Format: date-time */
+            submittedAt: string | null;
+            /** Format: date-time */
+            approvedAt: string | null;
+            /** Format: date-time */
+            snapshotAt: string | null;
+            /** Format: date-time */
+            releasedAt: string | null;
+        };
+        AdminSurveyPage: {
+            items: components["schemas"]["AdminSurvey"][];
+            nextCursor: string | null;
+            awaitingApproval: number;
+        };
+        SurveyReportOption: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            count: number | null;
+            share: number | null;
+            hidden: boolean;
+        };
+        /** @description The choices that are hidden, together. Present only when their sum is at least weekly.min_group_size. When a hidden group would follow from the totals, the next smallest shown group is hidden too and joins this line. */
+        SurveyReportOther: {
+            label: string;
+            count: number;
+            share: number;
+        };
+        SurveyBreakdownOther: {
+            responses: number;
+            share: number;
+        };
+        SurveyReportVoice: {
+            transcript: string;
+            seconds: number;
+        };
+        SurveyReportQuestion: {
+            /** Format: uuid */
+            id: string;
+            position: number;
+            /** @enum {string} */
+            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
+            prompt: string;
+            answered: number | null;
+            options: components["schemas"]["SurveyReportOption"][];
+            other: components["schemas"]["SurveyReportOther"] | null;
+            texts: string[];
+            voices: components["schemas"]["SurveyReportVoice"][];
+        };
+        SurveyReportTotals: {
+            views: number;
+            starts: number;
+            skips: number;
+            responses: number | null;
+            completionRate: number | null;
+        };
+        SurveyReportState: {
+            state: string;
+            responses: number;
+            share: number;
+        };
+        SurveyReportAge: {
+            ageBand: string;
+            responses: number;
+            share: number;
+        };
+        SurveyReportHead: {
+            /** Format: uuid */
+            id: string;
+            brandName: string;
+            title: string;
+            status: components["schemas"]["AdStatus"];
+            /** Format: date */
+            startsOn: string | null;
+            /** Format: date */
+            endsOn: string | null;
+            responseTarget: number | null;
+        };
+        /** @description While the survey runs (and until staff release it) only stage, ready, released, answeredSoFar and note are present. The counts, shares, free answers and breakdowns exist only when released is true, and are then the stored report, never recomputed. */
+        SurveyReport: {
+            survey: components["schemas"]["SurveyReportHead"];
+            /** @enum {string} */
+            stage: "NOT_LIVE" | "RUNNING" | "REVIEW" | "RELEASED";
+            ready: boolean;
+            released: boolean;
+            answeredSoFar?: number;
+            /** Format: date-time */
+            releasedAt?: string;
+            minGroupSize?: number;
+            belowMinimum?: boolean;
+            totals?: components["schemas"]["SurveyReportTotals"];
+            questions?: components["schemas"]["SurveyReportQuestion"][];
+            byState?: components["schemas"]["SurveyReportState"][];
+            byStateOther?: components["schemas"]["SurveyBreakdownOther"] | null;
+            byAgeBand?: components["schemas"]["SurveyReportAge"][];
+            byAgeBandOther?: components["schemas"]["SurveyBreakdownOther"] | null;
+            note: string;
+        };
+        SurveyFreeItem: {
+            id: string;
+            /** Format: uuid */
+            questionId: string;
+            prompt: string;
+            /** @enum {string} */
+            kind: "TEXT" | "VOICE";
+            text: string;
+            seconds: number | null;
+            hidden: boolean;
+        };
+        SurveyFreeAnswers: {
+            released: boolean;
+            items: components["schemas"]["SurveyFreeItem"][];
+            total: number;
+            hiddenCount: number;
+            nextCursor: string | null;
+        };
+        HideFreeAnswerRequest: {
+            hidden: boolean;
+        };
+        HideFreeAnswerResult: {
+            id: string;
+            hidden: boolean;
+        };
+        SurveyReleaseResult: {
+            released: boolean;
+            /** Format: date-time */
+            releasedAt: string;
+            hiddenCount: number;
+            mailed: boolean;
+        };
+        SurveyCard: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            brandName: string;
+            brandSlug: string | null;
+            brandWebsite: string | null;
+            title: string;
+            questionCount: number;
+        };
+        SurveyPlacementResponse: {
+            survey: components["schemas"]["SurveyCard"] | null;
+        };
+        Survey: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            brandName: string;
+            brandSlug: string | null;
+            brandWebsite: string | null;
+            title: string;
+            questionCount: number;
+            note: string;
+            /** @enum {string} */
+            myStatus: "OPEN" | "ANSWERED";
+            voiceMaxSeconds: number;
+            ageBands: string[];
+            questions: components["schemas"]["SurveyQuestionView"][];
+        };
+        SurveyEventRequest: {
+            /** @enum {string} */
+            kind: "VIEW" | "START" | "SKIP";
+        };
+        SurveyAnswerInput: {
+            /** Format: uuid */
+            questionId: string;
+            /** Format: uuid */
+            optionId?: string;
+            text?: string;
+            /** Format: uuid */
+            clipId?: string;
+        };
+        SurveyResponseRequest: {
+            answers: components["schemas"]["SurveyAnswerInput"][];
+            anonymous?: boolean;
+            shareState?: boolean;
+            /** @enum {string} */
+            ageBand?: "18-24" | "25-34" | "35-44" | "45-54" | "55+";
+        };
+        SurveyResponseResult: {
+            ok: boolean;
+            note: string;
+        };
+        BrandInput: {
+            name: string;
+            tagline?: string;
+            /** Format: uuid */
+            logoFileId?: string;
+            website?: string;
+            contactEmail?: string;
+            active?: boolean;
+        };
+        AdminBrand: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            tagline: string | null;
+            website: string | null;
+            contactEmail: string | null;
+            active: boolean;
+            logoUrl: string | null;
+            label: string;
+        };
+        AdminBrandList: {
+            items: components["schemas"]["AdminBrand"][];
+        };
+        BrandHead: {
+            name: string;
+            slug: string;
+            tagline: string | null;
+            website: string | null;
+            logoUrl: string | null;
+            label: string;
+        };
+        BrandSurveyCard: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            label: string;
+            questionCount: number;
+            /** Format: date */
+            endsOn: string | null;
+        };
+        BrandAdCard: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["AdKind"];
+            /** @enum {string} */
+            label: "Ad" | "Sponsored";
+            headline: string;
+            body: string | null;
+            imageUrl: string | null;
+            linkUrl: string | null;
+            ctaLabel: string | null;
+        };
+        BrandPage: {
+            brand: components["schemas"]["BrandHead"];
+            surveys: components["schemas"]["BrandSurveyCard"][];
+            ads: components["schemas"]["BrandAdCard"][];
         };
     };
     responses: {
@@ -10332,13 +10642,13 @@ export interface operations {
     };
     adminListUsers: {
         parameters: {
-            query: {
+            query?: {
                 /** @description Opaque cursor from nextCursor */
                 cursor?: string;
                 /** @description 1 to 50, default 20 */
                 limit?: number;
-                /** @description handle or phone hash */
-                q: string;
+                /** @description Optional. A part of a handle or display name, a phone number or phone hash, or one whole mail address. Leave it out to list everyone, newest first */
+                q?: string;
                 status?: string;
             };
             header?: never;
@@ -11584,6 +11894,595 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
+    adminListConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigList"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminUpdateConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConfigRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigEntry"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminConfigChanges: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigChangePage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminRollbackConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigEntry"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminGetWallet: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWallet"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminAdjustWallet: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustWalletRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWallet"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListPayments: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                /** @description PaymentStatus */
+                status?: string;
+                /** @description PaymentKind */
+                kind?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPaymentPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminReverifyPayment: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                paymentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPayment"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminMoneyOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MoneyOverview"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListSubscriptions: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                /** @description SubscriptionStatus */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSubscriptionPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminAudit: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                action?: string;
+                targetType?: string;
+                targetId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    fixText: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TextFixRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TextFixResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            402: components["responses"]["E402"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+            502: components["responses"]["E502"];
+            503: components["responses"]["E503"];
+        };
+    };
+    sendDm: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendDmRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmSendReceipt"];
+                };
+            };
+            401: components["responses"]["E401"];
+            402: components["responses"]["E402"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getDmLimits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmLimits"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    muteDm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    unmuteDm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    listDmConversations: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmConversationPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    listDmMessages: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmMessagePage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    markDmRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getDmUnread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCount"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getDmWith: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmWith"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
     adminListSurveys: {
         parameters: {
             query?: {
@@ -12094,366 +12993,6 @@ export interface operations {
             };
             404: components["responses"]["E404"];
             429: components["responses"]["E429"];
-        };
-    };
-    adminListConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfigList"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminUpdateConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateConfigRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfigEntry"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminConfigChanges: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor from nextCursor */
-                cursor?: string;
-                /** @description 1 to 50, default 20 */
-                limit?: number;
-                key?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfigChangePage"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminRollbackConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                changeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CancelRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfigEntry"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            409: components["responses"]["E409"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminGetWallet: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor from nextCursor */
-                cursor?: string;
-                /** @description 1 to 50, default 20 */
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminWallet"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminAdjustWallet: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdjustWalletRequest"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminWallet"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            409: components["responses"]["E409"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminListPayments: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor from nextCursor */
-                cursor?: string;
-                /** @description 1 to 50, default 20 */
-                limit?: number;
-                /** @description PaymentStatus */
-                status?: string;
-                /** @description PaymentKind */
-                kind?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminPaymentPage"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminReverifyPayment: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                paymentId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminPayment"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            409: components["responses"]["E409"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminMoneyOverview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MoneyOverview"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminListSubscriptions: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor from nextCursor */
-                cursor?: string;
-                /** @description 1 to 50, default 20 */
-                limit?: number;
-                /** @description SubscriptionStatus */
-                status?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminSubscriptionPage"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminAudit: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor from nextCursor */
-                cursor?: string;
-                /** @description 1 to 50, default 20 */
-                limit?: number;
-                action?: string;
-                targetType?: string;
-                targetId?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuditPage"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    fixText: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TextFixRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TextFixResult"];
-                };
-            };
-            401: components["responses"]["E401"];
-            402: components["responses"]["E402"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-            502: components["responses"]["E502"];
-            503: components["responses"]["E503"];
         };
     };
 }

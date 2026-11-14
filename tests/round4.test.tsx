@@ -132,7 +132,19 @@ describe("round 4: a share page never ends on an error page because of a failed 
     unmount();
     getSharePage.mockResolvedValueOnce(sharePageBody(true));
     render(await Page({ params: { code: "c1" } }));
+    expect(screen.getByTestId("share-move-on")).toBeTruthy();
+    expect(screen.queryByTestId("share-page")).toBeNull();
+    expect(screen.queryByTestId("share-waiting")).toBeNull();
+  });
+
+  it("the page: an open link of another kind (an answer) still draws the share page", async () => {
+    const { default: Page } = await import("@/app/s/[code]/page");
+    vi.useFakeTimers({ now: OPENS - 3_600_000 });
+    getSharePage.mockResolvedValueOnce({ ...sharePageBody(true), objectType: "ANSWER" });
+    render(await Page({ params: { code: "c1" } }));
     expect(screen.getByTestId("share-page")).toBeTruthy();
+    expect(screen.queryByTestId("share-move-on")).toBeNull();
+    expect(screen.queryByTestId("share-waiting")).toBeNull();
   });
 });
 

@@ -2,6 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Mood } from "@/lib/api/mood";
+import { cleanCode } from "@/features/share/speak-target";
 
 /** The words, in the order the boards draw them, with the design-system pairs (light and dark come from the tokens). */
 export const MOODS: readonly Mood[] = ["ANGRY", "TIRED", "PROUD", "HOPEFUL"];
@@ -65,7 +66,9 @@ export function useMoodWord(question: { id: string; moodOptions?: readonly Mood[
     if (!needs) { setReady(true); return; }
     const w = isMood(asked) && options!.includes(asked) ? asked : readPick(qid);
     if (w && options!.includes(w)) { writePick(qid, w); setWord(w); setReady(true); return; }
-    router.replace(pickHref(qid));
+    // a share link's code (from) goes with the person to the pick screen
+    const from = cleanCode(params?.get("from"));
+    router.replace(pickHref(qid) + (from ? `?from=${encodeURIComponent(from)}` : ""));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qid, needs, asked]);
   return { needs, word, ready: !qid ? false : ready };

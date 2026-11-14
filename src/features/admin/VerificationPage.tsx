@@ -5,7 +5,7 @@ import { Avatar, Button, EmptyState, Icon, Tabs, TextField } from "@/components/
 import { approveVerification, getVerification, listVerification, openVerificationDocument, rejectVerification } from "@/lib/api/verify";
 import type { AdminVerification, AdminVerificationItem, RejectReasonCode, VerificationDocumentLink } from "@/lib/api/verify";
 import { ago, clock } from "./time";
-import { Card, CardTitle, ErrorLine, Eyebrow, Gated, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, queueRow, refusalWords, useAction } from "./ui";
+import { Card, CardTitle, ErrorLine, Eyebrow, Gated, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, DetailPane, queueRow, refusalWords, useAction } from "./ui";
 
 /** The short reasons an admin picks from. The person reads the words in `person`, then the admin's own note. */
 export const REASONS: { code: RejectReasonCode; label: string; person: string }[] = [
@@ -195,6 +195,7 @@ function Body() {
   const [error, setError] = useState<Error | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [paneOpen, setPaneOpen] = useState(false);
   const seq = useRef(0);
 
   const load = useCallback(async () => {
@@ -225,6 +226,7 @@ function Body() {
   }
   function decided(id: string, word: string) {
     setSaved(word);
+    setPaneOpen(false);
     setItems((x) => {
       const rest = (x ?? []).filter((i) => i.id !== id);
       const at = (x ?? []).findIndex((i) => i.id === id);
@@ -247,10 +249,10 @@ function Body() {
       ) : items.length === 0 ? (
         <EmptyState icon="shield-check" title={tab === "pending" ? "Nothing is waiting" : "No decisions yet"} body={tab === "pending" ? "New requests from subscribers land here." : "Every decision will be listed here."} />
       ) : (
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
+        <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">
             {items.map((i) => (
-              <button key={i.id} type="button" role="listitem" className={queueRow(selected === i.id)} onClick={() => setSelected(i.id)} aria-current={selected === i.id ? "true" : undefined}>
+              <button key={i.id} type="button" role="listitem" className={queueRow(selected === i.id)} onClick={() => { setSelected(i.id); setPaneOpen(true); }} aria-current={selected === i.id ? "true" : undefined}>
                 <span className="flex flex-wrap items-center gap-2">
                   <b className="text-body-strong">{i.person.displayName || i.person.handle}</b>
                   <span className="text-caption text-ink-2">{`@${i.person.handle}`}</span>
@@ -264,7 +266,7 @@ function Body() {
             ))}
             {next ? <div className="p-3 text-center"><Button variant="ghost" onClick={() => void more()}>Show more</Button></div> : null}
           </div>
-          {it ? <Decide key={it.id} item={it} onDone={(w) => decided(it.id, w)} /> : null}
+          <DetailPane open={paneOpen} onClose={() => setPaneOpen(false)}>{it ? <Decide key={it.id} item={it} onDone={(w) => decided(it.id, w)} /> : null}</DetailPane>
         </div>
       )}
       <Eyebrow className="mt-6">Only admins can open this page.</Eyebrow>

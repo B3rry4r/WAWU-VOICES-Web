@@ -5,7 +5,7 @@ import { Button, EmptyState, Icon, TextField, TopicChip } from "@/components/vx"
 import { addSpareQuestion, createTopic, getTopic, listTopics, moveQuestion, updateQuestion, updateTopic } from "@/lib/api/admin";
 import type { AdminQuestion, AdminTopic, AdminTopicList, CalendarWeek, TopicStatus } from "@/lib/api/admin";
 import { dayMonth, dayStringShort, dayStringWeekday, slot, weekRange } from "./time";
-import { Card, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, refusalWords, useAction, Gated } from "./ui";
+import { Card, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, DetailPane, refusalWords, useAction, Gated } from "./ui";
 import { ApiError } from "@/lib/api/client";
 import { FLASH_HOURS, startFlashNow } from "./flash";
 
@@ -42,6 +42,7 @@ function CalendarBody() {
   const [error, setError] = useState<Error | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [paneOpen, setPaneOpen] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
   const seq = useRef(0);
   const first = useRef(true);
@@ -97,13 +98,13 @@ function CalendarBody() {
         title="Topic calendar"
         right={
           <>
-            <div className="vx-field w-[260px]">
+            <div className="vx-field w-full dt:w-[260px]">
               <div className="vx-field__box">
                 <span className="pl-4 text-ink-2"><Icon name="search" size={20} /></span>
                 <input className="vx-field__input" aria-label="Search the calendar" placeholder="Find a week or question" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
             </div>
-            <Button icon="plus" onClick={() => { setAdding(true); setSaved(null); }}>Add a week</Button>
+            <Button icon="plus" onClick={() => { setAdding(true); setSaved(null); setPaneOpen(true); }}>Add a week</Button>
           </>
         }
       />
@@ -123,7 +124,7 @@ function CalendarBody() {
       ) : page === null ? (
         <ListSkeleton />
       ) : (
-        <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start gap-5">
+        <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="overflow-hidden rounded-xl border border-line bg-surface">
             {weeks.length === 0 ? (
               <div className="p-6">
@@ -140,10 +141,10 @@ function CalendarBody() {
                 </thead>
                 <tbody>
                   {weeks.map((w) => (
-                    <tr key={w.topicId} onClick={() => { setSelected(w.topicId); setAdding(false); setSaved(null); }} className={`cursor-pointer border-t border-line ${selected === w.topicId && !adding ? "bg-mint" : "hover:bg-surface-2"}`}>
+                    <tr key={w.topicId} onClick={() => { setSelected(w.topicId); setAdding(false); setSaved(null); setPaneOpen(true); }} className={`cursor-pointer border-t border-line ${selected === w.topicId && !adding ? "bg-mint" : "hover:bg-surface-2"}`}>
                       <td className="whitespace-nowrap px-4 py-3 text-body-strong">{`${w.weekNumber} · ${dayStringShort(w.startsOn)}`}</td>
                       <td className="px-4 py-3">
-                        <button type="button" className={`cursor-pointer border-0 bg-transparent p-0 text-left text-ink ${w.status === "LIVE" ? "text-body-strong" : ""}`} aria-current={selected === w.topicId ? "true" : undefined}>{w.title}</button>
+                        <button type="button" className={`cursor-pointer border-0 bg-transparent p-0 text-left text-ink max-dt:min-h-[44px] max-dt:min-w-[44px] ${w.status === "LIVE" ? "text-body-strong" : ""}`} aria-current={selected === w.topicId ? "true" : undefined}>{w.title}</button>
                       </td>
                       <td className="px-4 py-3"><StatusPill s={w.status} /></td>
                     </tr>
@@ -158,16 +159,18 @@ function CalendarBody() {
             ) : null}
           </div>
 
+          <DetailPane open={paneOpen} onClose={() => setPaneOpen(false)}>
           {adding ? (
             <WeekForm
               mode="new"
               suggestedWeek={(page.totals.weeks || 0) + 1}
-              onClose={() => setAdding(false)}
+              onClose={() => { setAdding(false); setPaneOpen(false); }}
               onSaved={(t) => { setAdding(false); setSelected(t.topic.id); setSaved("Week added as a draft."); void load(); }}
             />
           ) : selected ? (
             <Panel key={selected} topicId={selected} onChanged={(msg) => { setSaved(msg); void load(); }} />
           ) : null}
+          </DetailPane>
         </div>
       )}
     </div>
@@ -295,10 +298,10 @@ function QuestionRow({ q, days, week, onSaved }: { q: AdminQuestion; days: strin
     }
   }
   return (
-    <li className="grid grid-cols-[72px_minmax(0,1fr)_auto] items-start gap-3 border-t border-line py-3 first:border-t-0">
+    <li className="grid grid-cols-[56px_minmax(0,1fr)] items-start gap-3 dt:grid-cols-[72px_minmax(0,1fr)_auto] border-t border-line py-3 first:border-t-0">
       <span className={`text-count ${q.status === "LIVE" ? "text-green-text" : "text-ink-2"}`}>{q.day ? dayStringWeekday(q.day) : "Open"}</span>
       {editing ? (
-        <div className="col-span-2 flex flex-col gap-2">
+        <div className="flex flex-col gap-2 dt:col-span-2">
           <TextField label="Question" multiline value={text} onChange={setText} />
           <ErrorLine>{act.error}</ErrorLine>
           <div className="flex gap-2">
@@ -309,7 +312,7 @@ function QuestionRow({ q, days, week, onSaved }: { q: AdminQuestion; days: strin
       ) : (
         <>
           <button type="button" onClick={() => setEditing(true)} aria-label={`Edit question: ${q.text}`} className="cursor-pointer border-0 bg-transparent p-0 text-left text-body text-ink">{q.text}</button>
-          <span className="flex items-center gap-1">
+          <span className="flex flex-wrap items-center gap-1 max-dt:col-start-2">
             {q.status === "LIVE" ? <Pill tone="red" dot>Live</Pill> : null}
             {q.pinned ? <Pill tone="green">Pinned</Pill> : null}
             {movable ? (
@@ -321,7 +324,7 @@ function QuestionRow({ q, days, week, onSaved }: { q: AdminQuestion; days: strin
             ) : null}
           </span>
           {target && other ? (
-            <div className="col-start-2 col-end-4 flex flex-col gap-2 rounded-l bg-surface-2 p-3" role="group" aria-label="Swap days">
+            <div className="col-start-2 dt:col-end-4 flex flex-col gap-2 rounded-l bg-surface-2 p-3" role="group" aria-label="Swap days">
               <p className="m-0 text-body">{`This swaps with “${other.text}”.`}</p>
               <p className="m-0 text-caption text-ink-2">{`Both questions change days: this one goes to ${dayStringWeekday(target)}, and that one goes to ${q.day ? dayStringWeekday(q.day) : "this day"}.`}</p>
               <div className="flex gap-2">
@@ -330,7 +333,7 @@ function QuestionRow({ q, days, week, onSaved }: { q: AdminQuestion; days: strin
               </div>
             </div>
           ) : null}
-          {mError ? <div className="col-start-2 col-end-4"><ErrorLine>{mError}</ErrorLine></div> : null}
+          {mError ? <div className="col-start-2 dt:col-end-4"><ErrorLine>{mError}</ErrorLine></div> : null}
         </>
       )}
     </li>
@@ -380,12 +383,12 @@ function FlashRow({ q, topicId, onStarted }: { q: AdminQuestion; topicId: string
     }
   }
   return (
-    <li className="grid grid-cols-[72px_minmax(0,1fr)_auto] items-start gap-3 border-t border-line py-3">
+    <li className="grid grid-cols-[56px_minmax(0,1fr)] items-start gap-3 dt:grid-cols-[72px_minmax(0,1fr)_auto] border-t border-line py-3">
       <span className="text-count text-ink-2">Flash</span>
       <span className="text-body text-ink">{q.text}</span>
-      <Button size="s" variant="secondary" onClick={() => setAsking(true)} disabled={asking}>Start as flash poll</Button>
+      <Button size="s" variant="secondary" className="max-dt:col-start-2" onClick={() => setAsking(true)} disabled={asking}>Start as flash poll</Button>
       {asking ? (
-        <div className="col-start-2 col-end-4 flex flex-col gap-2 rounded-l bg-surface-2 p-3" role="group" aria-label="Start flash poll">
+        <div className="col-start-2 dt:col-end-4 flex flex-col gap-2 rounded-l bg-surface-2 p-3" role="group" aria-label="Start flash poll">
           <p className="m-0 text-body">{`Starts now and stays open for ${FLASH_HOURS} hours.`}</p>
           <p className="m-0 text-caption text-ink-2">People who allow flash polls are told. Only one flash poll can be open at a time.</p>
           <ErrorLine>{act.error}</ErrorLine>
@@ -423,7 +426,7 @@ function WeekForm(p: { mode: "new"; suggestedWeek: number; onClose: () => void; 
     <Card>
       <h2 className="m-0 mb-1 font-display text-display-m">{p.mode === "edit" ? "Edit week" : "Add a week"}</h2>
       {p.mode === "edit" ? <p className="m-0 mb-4 text-caption text-ink-2">{`Changing the start date moves this week only (${dayMonth(f.startsOn ? f.startsOn + "T12:00:00+01:00" : new Date())} onward). Other weeks stay where they are.`}</p> : <div className="mb-4" />}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextField label="Week number" inputMode="numeric" value={f.weekNumber} onChange={set("weekNumber")} />
         <TextField label="Starts on (a Thursday)" type="date" value={f.startsOn} onChange={set("startsOn")} />
         <TextField label="Topic of the week" value={f.title} onChange={set("title")} className="col-span-2" />

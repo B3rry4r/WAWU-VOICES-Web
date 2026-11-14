@@ -1,4 +1,5 @@
 "use client";
+import { DMS_LIVE } from "@/features/dm/live";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Icon, Tabs } from "@/components/vx";
@@ -8,6 +9,7 @@ import { PagedList } from "./PostList";
 import { PostRow } from "./PostRow";
 import { ProfileCard } from "./ProfileCard";
 import { Rail } from "@/components/shell/ShellSlots";
+import { useToast } from "@/features/talk/TalkCard";
 import { DeletionPending } from "./DeletionPending";
 import { SuspendedBanner } from "./SuspendedBanner";
 import { LoadError, LoadingBlock, NeedsProfileNotice, SignedOutNotice } from "./states";
@@ -64,6 +66,10 @@ function Aside({ me }: { me: Me }) {
 export function MePage() {
   const { state, reload } = useMe();
   const [tab, setTab] = useState<"voices" | "saved">("voices");
+  const [toast, push] = useToast();
+  // Voices I deleted here: the row leaves the list and the counts go down by one without a reload.
+  const [deleted, setDeleted] = useState<string[]>([]);
+  const onDeleted = useCallback((id: string) => setDeleted((d) => (d.includes(id) ? d : [...d, id])), []);
   const theme = state.status === "ready" ? state.me.settings.theme : null;
   useEffect(() => { if (theme) applyAccountTheme(theme); }, [theme]);
   const loadMine = useCallback((c?: string) => listMyAnswers(c).then((p) => ({ items: p.items.filter((i) => i.type === "answer" && i.answer).map((i) => i.answer!), nextCursor: p.nextCursor })), []);
@@ -77,6 +83,7 @@ export function MePage() {
   if (me.status === "DELETION_PENDING") return <DeletionPending scheduledFor={me.deletionScheduledFor ?? null} onUndone={() => reload()} />;
   const profile = me.profile!;
   const a = me.allowances;
+  const voices = Math.max(0, voicesOf(profile) - deleted.length);
   return (
     <div className="pf-page">
       <h1 className="pf-h1">Profile</h1>
@@ -85,7 +92,7 @@ export function MePage() {
       <ProfileCard
         own
         profile={profile}
-        stats={[{ label: "Voices", value: voicesOf(profile) }, { label: "Reactions", value: me.reactionsReceived }, { label: "Saved", value: me.savedCount }]}
+        stats={[{ label: "Voices", value: voices }, { label: "Reactions", value: me.reactionsReceived }, { label: "Saved", value: me.savedCount }]}
         unitsMilli={a.balanceMilli}
         freePosts={a.freePostsRemaining}
         referral={me.referralCode}
@@ -93,6 +100,7 @@ export function MePage() {
       <div className="pf-phone-only">
         <div className="pf-linkpanel">
           <LinkRow href="/units" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} ${a.balanceMilli === 1000 ? "token" : "tokens"} · ${a.freePostsRemaining} free posts left`}>Tokens</LinkRow>
+          {DMS_LIVE ? <LinkRow href="/messages" icon="message-circle">Messages</LinkRow> : null}
           <LinkRow href="/settings" icon="settings">Settings</LinkRow>
           <LinkRow href="/settings/legal/rules" icon="shield-check">Community rules</LinkRow>
         </div>
@@ -102,11 +110,11 @@ export function MePage() {
         label="Your posts"
         value={tab}
         onChange={(v) => setTab(v as "voices" | "saved")}
-        items={[{ id: "voices", label: "My voices", count: voicesOf(profile) }, { id: "saved", label: "Saved", count: me.savedCount }]}
+        items={[{ id: "voices", label: "My voices", count: voices }, { id: "saved", label: "Saved", count: me.savedCount }]}
       />
       <div role="tabpanel" className="pf-panelbody">
         {tab === "voices" ? (
-          <PagedList load={loadMine} row={(x) => <PostRow a={x} />} empty={{ title: "No voices yet", body: "Answer today’s question and your voice shows up here.", icon: "mic" }} />
+          <PagedList load={loadMine} keyOf={(x) => x.id} skip={(x) => deleted.includes(x.id)} row={(x) => <PostRow a={x} own={{ push, onDeleted }} />} empty={{ title: "No voices yet", body: "Answer today’s question and your voice shows up here.", icon: "mic" }} />
         ) : (
           <PagedList
             load={loadSaved}
@@ -116,6 +124,7 @@ export function MePage() {
         )}
       </div>
       <Rail><Aside me={me} /></Rail>
+      {toast}
     </div>
   );
 }

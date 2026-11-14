@@ -35,12 +35,14 @@ function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => Pro
   return (
     <>
     <div className="mt-2 hidden items-center gap-2 text-eyebrow uppercase text-[var(--ink-2)] dt:flex"><Icon name={stanceIcon[r.stance]} size={14} />{st.label}</div>
-    <article className="vx-answer" aria-label={`Reply from ${r.author.handle}`}>
-      <div className="vx-answer__head">
-        <Avatar name={r.author.displayName ?? r.author.handle} src={r.author.avatarUrl ?? undefined} size="s" />
-        <div className="vx-answer__who">
-          <span className="vx-answer__name">{`@${r.author.handle}`}<VerifiedTick verified={r.author.verified} /></span>
-          <span className="vx-answer__time">{ago(r.createdAt) + (r.author.state ? ` · ${r.author.state}` : "")}</span>
+    <article className="vx-answer" aria-label={`Reply from ${r.author ? r.author.handle : "an anonymous poster"}`}>
+      <div className="vx-answer__head flex-wrap">
+        <Avatar name={r.author ? r.author.displayName ?? r.author.handle : "Anonymous"} src={r.author?.avatarUrl ?? undefined} size="s" />
+        <div className="vx-answer__who min-w-0 flex-1">
+          <span className="vx-answer__name">{r.author ? `@${r.author.handle}` : "Anonymous"}{r.author ? <VerifiedTick verified={r.author.verified} /> : null}</span>
+          {/* V-FIX-D: an unnamed reply has no author for anyone; its writer alone is told it is theirs. */}
+          {!r.author && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
+          <span className="vx-answer__time">{ago(r.createdAt) + (r.author?.state ? ` · ${r.author.state}` : "")}</span>
         </div>
         <span className="dt:hidden"><Badge tone="proposed" icon={stanceIcon[r.stance]}>{st.label}</Badge></span>
         {r.isMine ? <IconButton icon="trash-2" label="Delete my reply" variant="ghost" size="s" onClick={() => setConfirm(true)} /> : null}
@@ -118,7 +120,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
       {!open ? <div className="mt-3"><Banner tone="info" title="This question has closed.">You can still read and listen to every reply. New replies are closed.</Banner></div> : null}
       {open && signedIn && allow ? (
         <div className="mt-4 hidden dt:block">
-          <ReplyComposer aid={aid} qid={qid} who={who} allow={allow} stance={pick} onVoice={() => setVoiceOpen(true)} onPosted={() => { push("Reply posted.", "success"); void load(); }} onBuy={(href) => router.push(href)} />
+          <ReplyComposer ownNameless={ans.author === null && ans.isMine} aid={aid} qid={qid} who={who} allow={allow} stance={pick} onVoice={() => setVoiceOpen(true)} onPosted={() => { push("Reply posted.", "success"); void load(); }} onBuy={(href) => router.push(href)} />
         </div>
       ) : null}
       <h2 className="m-0 mt-6 hidden font-display text-display-m dt:block">{`${total.toLocaleString("en-NG")} ${total === 1 ? "reply" : "replies"}`}</h2>
@@ -149,12 +151,15 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
       ) : null}
       {voiceOpen && allow ? (
         <VoiceReplySheet
+          ownNameless={ans.author === null && ans.isMine}
           aid={aid}
+          qid={qid}
           who={who}
           stance={pick}
           allow={allow}
           onClose={() => setVoiceOpen(false)}
           onPosted={() => { setVoiceOpen(false); push("Reply posted.", "success"); void load(); void api.getAllowance().then(setAllow, () => undefined); }}
+          onKept={() => push("You are offline. Your voice reply is saved on this device. It will be sent when you are back online, or you will be asked to tap Send.", "info")}
           onBuy={() => router.push(`/units/buy?from=${encodeURIComponent(`/q/${qid}/a/${aid}`)}`)}
         />
       ) : null}

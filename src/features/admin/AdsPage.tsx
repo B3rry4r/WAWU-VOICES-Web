@@ -8,7 +8,8 @@ import type { AdminAd, UpsertAdRequest } from "@/lib/api/admin";
 import { getCategories } from "@/lib/api/feed";
 import { useAdmin } from "./AdminFrame";
 import { dayMonth } from "./time";
-import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, isSuspendedError, useAction, Gated } from "./ui";
+import { StackTable } from "./money/parts";
+import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, DetailPane, isSuspendedError, useAction, Gated } from "./ui";
 
 const KIND_WORDS: Record<AdminAd["kind"], string> = {
   FEED_CARD: "Ad · feed card",
@@ -48,6 +49,7 @@ function AdsBody() {
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [paneOpen, setPaneOpen] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -86,7 +88,7 @@ function AdsBody() {
         eyebrow={`Ad manager · ${awaiting} awaiting approval`}
         title="Adverts"
         right={error && isSuspendedError(error) ? undefined : (
-          <Button icon="plus" onClick={() => { setCreating(true); setEditing(false); setSaved(null); }}>
+          <Button icon="plus" onClick={() => { setCreating(true); setEditing(false); setSaved(null); setPaneOpen(true); }}>
             New advert
           </Button>
         )}
@@ -101,12 +103,12 @@ function AdsBody() {
       ) : items === null ? (
         <ListSkeleton />
       ) : items.length === 0 && !creating ? (
-        <EmptyState icon="megaphone" title="No adverts yet" body="Adverts you add land here for approval." action="New advert" actionIcon="plus" onAction={() => setCreating(true)} />
+        <EmptyState icon="megaphone" title="No adverts yet" body="Adverts you add land here for approval." action="New advert" actionIcon="plus" onAction={() => { setCreating(true); setPaneOpen(true); }} />
       ) : (
         <>
           {items.length ? (
             <div className="mb-5 overflow-hidden rounded-xl border border-line bg-surface">
-              <table className="w-full border-collapse text-left text-caption">
+              <StackTable className="w-full border-collapse text-left text-caption">
                 <thead>
                   <tr className="text-ink-2">
                     {["Brand", "Type and placement", "Audience", "Dates", "Views · taps · listens", "Status"].map((h) => (
@@ -118,11 +120,11 @@ function AdsBody() {
                   {items.map((a) => (
                     <tr
                       key={a.id}
-                      onClick={() => { setSelected(a.id); setCreating(false); setEditing(false); setSaved(null); }}
+                      onClick={() => { setSelected(a.id); setCreating(false); setEditing(false); setSaved(null); setPaneOpen(true); }}
                       className={`cursor-pointer border-t border-line align-top ${selected === a.id && !creating ? "bg-mint" : "hover:bg-surface-2"}`}
                     >
                       <td className="px-4 py-3 text-body-strong">
-                        <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-left text-body-strong text-ink" aria-label={`Open ${a.brand}`} aria-current={selected === a.id ? "true" : undefined}>{a.brand}</button>
+                        <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-left text-body-strong text-ink max-dt:min-h-[44px] max-dt:min-w-[44px]" aria-label={`Open ${a.brand}`} aria-current={selected === a.id ? "true" : undefined}>{a.brand}</button>
                       </td>
                       <td className="px-4 py-3">{KIND_WORDS[a.kind]}</td>
                       <td className="px-4 py-3">{audience(a)}</td>
@@ -132,20 +134,22 @@ function AdsBody() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </StackTable>
             </div>
           ) : null}
 
+          <DetailPane open={paneOpen} onClose={() => setPaneOpen(false)}>
           {editing && ad && !creating ? (
             <AdForm key={ad.id} ad={ad} cats={cats} onClose={() => setEditing(false)} onSaved={(a) => { setEditing(false); changed(a, ad.status === "PAUSED" ? "Advert saved. If you changed its words, it waits for approval again." : "Advert saved."); }} />
           ) : creating ? (
             <AdForm cats={cats} onClose={() => setCreating(false)} onSaved={(a) => { setCreating(false); setSelected(a.id); setSaved("Advert saved. It now waits for approval."); reloadToday(); void load(); }} />
           ) : ad ? (
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
+            <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <Preview ad={ad} />
               <Review key={ad.id + ad.status} ad={ad} cats={cats} onDone={changed} onEdit={() => { setEditing(true); setSaved(null); }} />
             </div>
           ) : null}
+          </DetailPane>
         </>
       )}
     </div>
@@ -310,7 +314,7 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
   return (
     <Card>
       <CardTitle>{ad ? "Edit advert" : "New advert"}</CardTitle>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextField label="Brand" value={f.brand} onChange={set("brand")} />
         <div className="vx-field">
           <label className="vx-field__label" htmlFor="ad-kind">Where it shows</label>
