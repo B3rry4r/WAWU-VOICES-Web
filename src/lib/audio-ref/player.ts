@@ -1,3 +1,4 @@
+import { pauseSongForVoice } from "@/lib/theme-song";
 /** Playback. The server returns a short-lived signed URL (15 min). There is no download control and no "save as";
  *  the element is created in script with controlsList=nodownload so it never shows one. */
 export function makePlayer(url: string): HTMLAudioElement {
@@ -12,6 +13,7 @@ export function makePlayer(url: string): HTMLAudioElement {
 
 /** Re-sign once when the URL lapses mid-session (403 on play). */
 export async function playWithResign(a: HTMLAudioElement, resign: () => Promise<string>): Promise<void> {
+  pauseSongForVoice();
   try { await a.play(); } catch { a.src = await resign(); await a.play(); }
 }
 
