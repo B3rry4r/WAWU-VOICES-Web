@@ -2053,7 +2053,7 @@ export interface paths {
         };
         /**
          * The Instagram Stories card image
-         * @description The 1080x1920 Stories card: same words and colours as the card, stacked for a tall frame. Text and brand only. Drawn on request, never stored. 404 for an unknown link, a deleted person's card or a failed card. Auth: none (public).
+         * @description The 1080x1920 Stories card: same words and colours as the card, stacked for a tall frame. Text and brand only. Drawn on request, never stored. 404 for an unknown link, and in every case the 1200x630 card is 404 (a removed, held or deleted post, a suspended, banned, leaving or deleted author, a question that has not opened). At most 60 requests a minute per address for the story and the square together. Auth: none (public).
          */
         get: operations["getShareStoryImage"];
         put?: never;
@@ -2072,8 +2072,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The square card image (mood card)
-         * @description LCH-03: the 1080x1080 mood card for WhatsApp and feeds. Drawn on request and cached. Only a mood answer's link has one, any other link is a 404, and so is a deleted, removed or leaving person's card. Auth: none (public).
+         * The square card image
+         * @description The 1080x1080 card for WhatsApp and feeds, for every kind of link (brief 6.8; the mood card has its own drawing). Same words as the card, text and brand only, so an anonymous voice carries no name and no invite code. Drawn on request and cached. 404 for an unknown link and in every case the 1200x630 card is 404 (a removed, held or deleted post, a suspended, banned, leaving or deleted author, a question that has not opened). At most 60 requests a minute per address for the story and the square together. Auth: none (public).
          */
         get: operations["getShareSquareImage"];
         put?: never;
@@ -2094,7 +2094,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record a share intent, link open or Add your voice tap
+         * Record a share intent, link open, Add your voice tap, recording started or voice published from the link
          * @description Auth: guest or signed in. Rate limit: 300 per minute per IP or account.
          */
         post: operations["recordShareEvent"];
@@ -2473,7 +2473,7 @@ export interface paths {
         };
         /**
          * Find people
-         * @description Auth: signed in with role ADMIN.
+         * @description Everyone who has registered, newest first, or the ones a search finds. Also returns total and counts. Auth: signed in with role ADMIN.
          */
         get: operations["adminListUsers"];
         put?: never;
@@ -4081,6 +4081,7 @@ export interface components {
         PublicConfig: {
             /** @enum {string} */
             currency: "NGN";
+            dmsLive?: boolean;
             freePosts: number;
             /** @description Naira in kobo (32-bit integer). */
             unitBaseKobo: number;
@@ -4282,13 +4283,14 @@ export interface components {
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
         };
+        /** @description author is null for a reply posted without the person's name, for every reader including the writer (isMine says it is theirs). A person's own page lists these replies for that person only. */
         Reply: {
             helpfulCount: number;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             answerId: string;
-            author: components["schemas"]["AuthorRef"];
+            author: components["schemas"]["AuthorRef"] | null;
             stance: components["schemas"]["ReplyStance"];
             kind: components["schemas"]["PostKind"];
             body?: string | null;
@@ -4309,6 +4311,7 @@ export interface components {
             disagree: number;
             experience: number;
         };
+        /** @description anonymous (default false) posts the reply without the person's name: no read of the reply, notice or mail carries the author. A reply by the writer of a nameless answer, under that answer, is always nameless whatever this says. */
         CreateReplyRequest: {
             stance: components["schemas"]["ReplyStance"];
             kind: components["schemas"]["PostKind"];
@@ -4317,6 +4320,7 @@ export interface components {
             clipId?: string;
             /** Format: uuid */
             extraVoiceTokenId?: string;
+            anonymous?: boolean;
         };
         ReplyReceipt: {
             reply: components["schemas"]["Reply"];
@@ -4722,7 +4726,7 @@ export interface components {
             objectId: string;
             language?: string;
         };
-        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story), null only where that route would 404. squareImageUrl is the 1080x1080 mood card (GET /share/{code}/square) for a mood answer and null for every other link. */
+        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story), null only where that route would 404. squareImageUrl is the 1080x1080 card (GET /share/{code}/square) for every kind (brief 6.8), null only where that route would 404. An anonymous voice carries no name and no invite code on any size. */
         ShareLink: {
             code: string;
             url: string;
@@ -5864,9 +5868,41 @@ export interface components {
             /** Format: date-time */
             verifiedUntil?: string;
         };
+        /** @description total is how many people match the current search and status, ignoring the cursor. counts is the whole user table, whatever the search. */
         AdminUserPage: {
-            items: components["schemas"]["AdminUser"][];
+            items: components["schemas"]["AdminUserRow"][];
             nextCursor: string | null;
+            total: number;
+            counts: components["schemas"]["AdminUserCounts"];
+        };
+        /** @description An AdminUser plus what the Users screen shows. mailTo is the notification address; only this list returns it, and only to an admin. postCount is answers plus replies not deleted. hasProfile is false while the person has no display name, bio or photo. There is no last-seen field: the User model has none. */
+        AdminUserRow: {
+            profile: components["schemas"]["Profile"];
+            status: components["schemas"]["AccountStatus"];
+            roles: components["schemas"]["Role"][];
+            strikes: number;
+            /** Format: date-time */
+            createdAt: string;
+            mailTo: string | null;
+            displayName: string | null;
+            state: string | null;
+            verified: boolean;
+            postCount: number;
+            hasProfile: boolean;
+        };
+        /** @description total is everyone registered. today is those who joined since midnight in Lagos. verified is those verified right now. */
+        AdminUserCounts: {
+            total: number;
+            today: number;
+            verified: number;
+            byStatus: components["schemas"]["AdminUserStatusCounts"];
+        };
+        AdminUserStatusCounts: {
+            ACTIVE: number;
+            SUSPENDED: number;
+            BANNED: number;
+            DELETION_PENDING: number;
+            DELETED: number;
         };
         AdminUser: {
             profile: components["schemas"]["Profile"];
@@ -9976,13 +10012,13 @@ export interface operations {
     };
     adminListUsers: {
         parameters: {
-            query: {
+            query?: {
                 /** @description Opaque cursor from nextCursor */
                 cursor?: string;
                 /** @description 1 to 50, default 20 */
                 limit?: number;
-                /** @description handle or phone hash */
-                q: string;
+                /** @description Optional. A part of a handle or display name, a phone number or phone hash, or one whole mail address. Leave it out to list everyone, newest first */
+                q?: string;
                 status?: string;
             };
             header?: never;

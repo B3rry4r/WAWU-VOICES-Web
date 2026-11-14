@@ -1,5 +1,6 @@
 "use client";
 
+import { needsNewKey } from "@/lib/api/keys";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import { useAdmin } from "./AdminFrame";
@@ -16,6 +17,7 @@ export function refusalWords(e: unknown): string {
   if (e instanceof ApiError) {
     // lead ruling WF, 6 Nov (C-L6): a suspended admin person is told so plainly, not "cannot post".
     if (e.code === "ACCOUNT_SUSPENDED") return "This account is suspended, so changes are paused. Ask an admin for help.";
+    if (needsNewKey(e)) return "That did not go through. Tap the button to try again.";
     if (e.explained) {
       // A 422 carries the useful words in details.fields[].message; the top message is only "Some details need fixing."
       const f = (e.details as { fields?: { message?: unknown }[] } | undefined)?.fields;
@@ -30,20 +32,20 @@ export function refusalWords(e: unknown): string {
 
 export function PageHead({ eyebrow, title, sub, right }: { eyebrow?: string; title: string; sub?: string; right?: ReactNode }) {
   return (
-    <header className="mb-5 flex items-start justify-between gap-4">
+    <header className="mb-5 flex items-start justify-between gap-4 max-dt:flex-col">
       <div className="min-w-0">
         {eyebrow ? <div className="vx-eyebrow text-ink-2">{eyebrow}</div> : null}
         <h1 className="m-0 mt-1 font-display text-display-xl text-ink">{title}</h1>
         {sub ? <p className="m-0 mt-1 text-body text-ink-2">{sub}</p> : null}
       </div>
-      {right ? <div className="flex flex-none items-center gap-3 pt-2">{right}</div> : null}
+      {right ? <div className="flex flex-none flex-wrap items-center gap-3 pt-2 max-dt:w-full">{right}</div> : null}
     </header>
   );
 }
 
 export function Card({ children, className = "", tone }: { children: ReactNode; className?: string; tone?: "mint" | "plain" }) {
   const bg = tone === "mint" ? "bg-surface-2" : "bg-surface";
-  return <section className={`rounded-xl border border-line ${bg} p-6 ${className}`}>{children}</section>;
+  return <section className={`rounded-xl border border-line ${bg} p-4 dt:p-6 ${className}`}>{children}</section>;
 }
 
 export function CardTitle({ children }: { children: ReactNode }) {
@@ -192,6 +194,22 @@ export function AuditList({ lines, title }: { lines: { at: string; text: string;
           <li key={i}>{l.text}</li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * The right-hand side of a list and detail page. From 1024 px it is an ordinary grid cell, as before.
+ * Below that the list is the page and the detail opens over it (full screen, scrolls inside itself) with a way back.
+ */
+export function DetailPane({ open, onClose, children }: { open: boolean; onClose: () => void; children: ReactNode }) {
+  return (
+    <div className={open ? "max-dt:fixed max-dt:inset-0 max-dt:z-sheet max-dt:overflow-y-auto max-dt:overscroll-contain max-dt:bg-bg max-dt:p-4" : "max-dt:hidden"}>
+      <button type="button" onClick={onClose} className="link mb-3 inline-flex min-h-[44px] cursor-pointer items-center gap-2 border-0 bg-transparent p-0 dt:hidden">
+        <Icon name="arrow-left" size={20} />
+        Back to the list
+      </button>
+      {children}
     </div>
   );
 }

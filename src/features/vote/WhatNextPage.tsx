@@ -9,6 +9,8 @@ import { ApiError } from "@/lib/api/client";
 import { getWhatNext, listProposals, removeStance, setStance } from "@/lib/api/vote";
 import type { EditorialSummary, Proposal, ProposalGroup, ProposalSort, WhatNext } from "@/lib/api/vote";
 import { ago, voicesOf } from "@/lib/feed-format";
+import { useVerified } from "@/features/verify/useVerification";
+import { VERIFICATION_REQUIRED_WORDS } from "@/features/verify/words";
 import { DeskRail } from "./DeskRail";
 import { useWhatNextPrompt } from "./prompt";
 import { AppBar, DeskBack, LoadFailed, Loading, ShareButton, shortCount, useLoadWhen, useSignedIn } from "./chrome";
@@ -97,6 +99,7 @@ export function ProposalItem({ p, groups, signedIn, questionId, onNeedSignIn, on
         author={`@${cur.author.handle}`}
         avatarName={cur.author.displayName ?? cur.author.handle}
         avatarSrc={cur.author.avatarUrl ?? undefined}
+        verified={cur.author.verified === true}
         time={ago(cur.createdAt)}
         text={cur.body ?? ""}
         supports={cur.supportCount}
@@ -121,6 +124,8 @@ export function WhatNextPage({ questionId }: { questionId: string }) {
   const [moreBusy, setMoreBusy] = useState(false);
   const [share, setShare] = useState(false);
   const [signNote, setSignNote] = useState(false);
+  const [verifyNote, setVerifyNote] = useState(false);
+  const verified = useVerified(signedIn);
   const load = useLoadWhen<WhatNext>(() => getWhatNext(questionId, sort), [questionId, sort, signedIn], signedIn !== null);
   useEffect(() => setMore(null), [sort, questionId]);
 
@@ -145,7 +150,11 @@ export function WhatNextPage({ questionId }: { questionId: string }) {
   }
 
   const shareBtn = d?.summary ? <ShareButton label="Share this summary" onClick={() => setShare(true)} /> : null;
-  const proposeBtn = (
+  // V-46: only a verified person suggests an idea. Someone who is not sees why, instead of a screen that fails on Post.
+  const needsVerify = verified === false;
+  const proposeBtn = needsVerify ? (
+    <Button size="l" block icon="lightbulb" onClick={() => setVerifyNote(true)}>Propose a next step</Button>
+  ) : (
     <Button size="l" block icon="lightbulb" href={`/q/${questionId}/propose`}>Propose a next step</Button>
   );
 
@@ -181,9 +190,10 @@ export function WhatNextPage({ questionId }: { questionId: string }) {
             />
             <p className="vt-note mt-3">Similar proposals are grouped. Groups are suggested automatically and a moderator confirms each one.</p>
           </div>
+          {verifyNote && needsVerify ? <Banner tone="info" title="Verification needed" action="Get verified" onAction={() => router.push("/verify")} onClose={() => setVerifyNote(false)}>{VERIFICATION_REQUIRED_WORDS}</Banner> : null}
           {signNote ? <Banner tone="info" title="Sign in to support or challenge" onClose={() => setSignNote(false)}>Reading is open to everyone. Supporting, challenging and proposing need an account.</Banner> : null}
           {items.length === 0 ? (
-            <EmptyState icon="lightbulb" title="No proposals yet" body="Be the first to say who should do what, and by when." action="Propose a next step" actionIcon="lightbulb" onAction={() => router.push(`/q/${questionId}/propose`)} />
+            <EmptyState icon="lightbulb" title="No proposals yet" body="Be the first to say who should do what, and by when." action="Propose a next step" actionIcon="lightbulb" onAction={() => (needsVerify ? setVerifyNote(true) : router.push(`/q/${questionId}/propose`))} />
           ) : (
             items.map((p) => <ProposalItem key={p.id} p={p} groups={groups} signedIn={!!signedIn} questionId={questionId} onNeedSignIn={() => setSignNote(true)} />)
           )}

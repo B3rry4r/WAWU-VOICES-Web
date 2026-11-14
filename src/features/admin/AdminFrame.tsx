@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Avatar, EmptyState, Icon } from "@/components/vx";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Avatar, EmptyState, Icon, Sheet } from "@/components/vx";
 import type { IconName } from "@/components/vx";
 import { getAdminToday } from "@/lib/api/admin";
 import type { AdminToday, Role } from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/client";
 import { getMe } from "@/lib/api/feed";
+import { signOut } from "@/lib/api/auth";
 import { sessionStorage } from "@/lib/auth/session-storage";
+import { AdminNotAdmin } from "./AdminNotAdmin";
+import { AdminSignIn } from "./AdminSignIn";
 import "./admin.css";
 import { ADMIN_PAGES, canOpen, isAdminPerson, roleLine } from "./roles";
 import type { AdminPageId } from "./roles";
@@ -21,6 +24,8 @@ interface AdminCtx {
   today: AdminToday | null;
   todayError: Error | null;
   reloadToday: () => void;
+  /** Ends the session through the app's own sign-out; the admin sign-in page shows after it. */
+  signOut: () => void;
 }
 
 const Ctx = createContext<AdminCtx | null>(null);
@@ -34,9 +39,9 @@ export function useAdmin(): AdminCtx {
 /** Waits before the two automatic retries of a failed access check (5xx, network, timeout). */
 const RETRY_MS = [1000, 3000];
 
-type Gate = { s: "checking" } | { s: "no" } | { s: "failed" } | { s: "yes"; roles: Role[]; name: string };
+type Gate = { s: "checking" } | { s: "guest" } | { s: "notadmin"; handle: string | null } | { s: "failed" } | { s: "yes"; roles: Role[]; name: string };
 
-/** The admin area is only drawn for a signed-in person with an admin role. Everyone else gets the same "could not find that" any unknown address gets. */
+/** The admin area is only drawn for a signed-in person with an admin role. No session: the admin sign-in page. A session without a role: the "not an admin" page. The API is the real guard. */
 export function AdminFrame({ children }: { children: ReactNode }) {
   const [gate, setGate] = useState<Gate>({ s: "checking" });
   const [today, setToday] = useState<AdminToday | null>(null);
@@ -44,7 +49,13 @@ export function AdminFrame({ children }: { children: ReactNode }) {
   const [n, setN] = useState(0);
   const reloadToday = useCallback(() => setN((x) => x + 1), []);
 
+  const pathname = usePathname() ?? "/admin";
   const [tries, setTries] = useState(0);
+  const endSession = useCallback(() => {
+    signOut();
+    setToday(null);
+    setGate({ s: "guest" });
+  }, []);
   const tryAgain = useCallback(() => {
     setGate({ s: "checking" });
     setTries((x) => x + 1);
@@ -52,24 +63,24 @@ export function AdminFrame({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!sessionStorage.getToken()) {
-      setGate({ s: "no" });
+      setGate({ s: "guest" });
       return;
     }
     let live = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    // getMe already refreshes an expired access token and retries once. A refusal that survives that (401 with the session
-    // cleared, or 403) means "not an admin": the deliberate "could not find that". Anything else is a failed check, not an answer.
+    // getMe already refreshes an expired access token and retries once. A 401 that survives that (session cleared) means no session:
+    // the sign-in page. A 403 means a signed-in account that is not an admin. Anything else is a failed check, not an answer.
     const check = (attempt: number) => {
       getMe().then(
         (me) => {
           if (!live) return;
           const roles = me.roles ?? [];
-          setGate(isAdminPerson(roles) ? { s: "yes", roles, name: me.profile?.displayName || me.handle || "Admin" } : { s: "no" });
+          setGate(isAdminPerson(roles) ? { s: "yes", roles, name: me.profile?.displayName || me.handle || "Admin" } : { s: "notadmin", handle: me.handle || null });
         },
         (e: unknown) => {
           if (!live) return;
-          const refused = e instanceof ApiError && (e.status === 403 || (e.status === 401 && !sessionStorage.getToken()));
-          if (refused) return setGate({ s: "no" });
+          if (e instanceof ApiError && e.status === 403) return setGate({ s: "notadmin", handle: null });
+          if (e instanceof ApiError && e.status === 401 && !sessionStorage.getToken()) return setGate({ s: "guest" });
           if (attempt < RETRY_MS.length) timer = setTimeout(() => check(attempt + 1), RETRY_MS[attempt]);
           else setGate({ s: "failed" });
         },
@@ -103,7 +114,7 @@ export function AdminFrame({ children }: { children: ReactNode }) {
     };
   }, [yes, n]);
 
-  const value = useMemo<AdminCtx | null>(() => (gate.s === "yes" ? { roles: gate.roles, name: gate.name, today, todayError, reloadToday } : null), [gate, today, todayError, reloadToday]);
+  const value = useMemo<AdminCtx | null>(() => (gate.s === "yes" ? { roles: gate.roles, name: gate.name, today, todayError, reloadToday, signOut: endSession } : null), [gate, today, todayError, reloadToday, endSession]);
 
   if (gate.s === "checking") return <div className="min-h-[60vh]" aria-busy="true" aria-label="Loading" />;
   if (gate.s === "failed") {
@@ -113,23 +124,20 @@ export function AdminFrame({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (gate.s === "no" || !value) {
-    return (
-      <div className="flex min-h-[70vh] items-center justify-center">
-        <EmptyState icon="compass" title="We could not find that" body="Go back to Home and pick another page." action="Go to Home" onAction={() => window.location.assign("/")} />
-      </div>
-    );
+  if (gate.s === "notadmin") return <AdminNotAdmin handle={gate.handle} onOtherAccount={endSession} />;
+  if (gate.s === "guest" || !value) {
+    return <AdminSignIn path={pathname} onSignedIn={tryAgain} />;
   }
 
   return (
     <Ctx.Provider value={value}>
       <div className="ad-root min-h-screen bg-bg text-ink">
-        <div className="hidden min-h-full dt:grid dt:grid-cols-[248px_minmax(0,1fr)]">
-          <Sidebar />
-          <div className="min-w-0 px-10 pb-16 pt-8">{children}</div>
-        </div>
-        <div className="flex min-h-screen items-center justify-center p-6 dt:hidden">
-          <p className="m-0 mx-auto max-w-[320px] text-center text-body text-ink-2">Open the admin on a computer.</p>
+        <div className="min-h-full dt:grid dt:grid-cols-[248px_minmax(0,1fr)]">
+          <div className="hidden dt:contents">
+            <Sidebar />
+          </div>
+          <PhoneBar />
+          <div className="min-w-0 px-4 pb-12 pt-4 dt:px-10 dt:pb-16 dt:pt-8">{children}</div>
         </div>
       </div>
     </Ctx.Provider>
@@ -155,10 +163,105 @@ function countFor(id: AdminPageId, t: AdminToday | null): number | null {
   }
 }
 
+/** "/admin/money" is a page of its own and the parent of the other Money pages: it is current only on itself. */
+function isCurrent(p: (typeof ADMIN_PAGES)[number], path: string): boolean {
+  const own = ADMIN_PAGES.some((o) => o.href.startsWith(p.href + "/"));
+  return p.href === "/admin" || own ? path === p.href : path === p.href || path.startsWith(p.href + "/");
+}
+
+/** The name of the page the person is on, for the phone's top bar. */
+function pageName(path: string): string {
+  const hit = ADMIN_PAGES.filter((p) => isCurrent(p, path))[0];
+  return hit ? hit.label : "Admin";
+}
+
+/** Below 1024 px: a top bar with the mark, the page name and a menu button. The menu lists what the sidebar lists, with Sign out at the bottom. */
+function PhoneBar() {
+  const { roles, name, today, signOut } = useAdmin();
+  const path = usePathname() ?? "/admin";
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    setOpen(false);
+  }, [path]);
+  const items = ADMIN_PAGES.filter((p) => canOpen(roles, p.id));
+  return (
+    <div className="sticky top-0 z-sticky flex min-h-[56px] items-center gap-3 bg-forest px-4 text-forest-on dt:hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/brand/logo-wordmark-white.png" alt="VOICES admin" className="h-7 w-auto flex-none" />
+      <span className="min-w-0 flex-1 truncate text-label" data-testid="phone-page-name">
+        {pageName(path)}
+      </span>
+      <button
+        type="button"
+        aria-label="Menu"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        className="flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-m border-0 bg-transparent text-forest-on hover:bg-forest-2"
+      >
+        <Icon name="menu" size={24} />
+      </button>
+      {open ? (
+        <Sheet title="Admin pages" subtitle={`${name}, ${roleLine(roles)}`} onClose={() => setOpen(false)}>
+          <nav aria-label="Admin pages" className="flex max-h-[60vh] flex-col overflow-y-auto px-4 pb-2 text-ink">
+            {items.map((p, i) => {
+              const on = isCurrent(p, path);
+              const c = countFor(p.id, today);
+              const heading = p.group && p.group !== items[i - 1]?.group ? p.group : null;
+              return (
+                <div key={p.id} className="contents">
+                  {heading ? <div className="vx-eyebrow mt-3 px-3 pb-1 text-ink-2" role="presentation">{heading}</div> : null}
+                  <Link
+                    href={p.href}
+                    aria-current={on ? "page" : undefined}
+                    className={`flex min-h-[44px] items-center gap-3 rounded-m px-3 text-label text-ink no-underline a-plain ${on ? "bg-mint" : "hover:bg-surface-2"}`}
+                  >
+                    <Icon name={p.icon as IconName} size={22} />
+                    <span className="min-w-0 flex-1">{p.label}</span>
+                    {c ? <span className="rounded-pill bg-green px-2 py-0.5 text-count text-green-on">{c}</span> : null}
+                  </Link>
+                </div>
+              );
+            })}
+          </nav>
+          <div className="border-t border-line px-4 py-3">
+            <button type="button" onClick={signOut} className="flex min-h-[48px] w-full cursor-pointer items-center rounded-m border-0 bg-transparent px-3 text-left text-label text-ink hover:bg-surface-2">
+              Sign out
+            </button>
+          </div>
+        </Sheet>
+      ) : null}
+    </div>
+  );
+}
+
 function Sidebar() {
-  const { roles, name, today } = useAdmin();
+  const { roles, name, today, signOut } = useAdmin();
   const path = usePathname() ?? "/admin";
   const items = ADMIN_PAGES.filter((p) => canOpen(roles, p.id));
+  // The list scrolls inside the sidebar when the window is short. The fade at the cut edge shows there is more.
+  const navRef = useRef<HTMLElement>(null);
+  const [cut, setCut] = useState({ above: false, below: false });
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const measure = () => {
+      const above = el.scrollTop > 1;
+      const below = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+      setCut((c) => (c.above === above && c.below === below ? c : { above, below }));
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    ro?.observe(el);
+    if (el.firstElementChild) ro?.observe(el.firstElementChild);
+    window.addEventListener("resize", measure);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [items.length]);
   const initials = name
     .split(/\s+/)
     .map((w) => w[0])
@@ -172,21 +275,36 @@ function Sidebar() {
         <img src="/brand/logo-wordmark-white.png" alt="VOICES" className="h-9 w-auto" />
         <span className="rounded-xs bg-forest-2 px-2 py-1 text-eyebrow uppercase text-sun">Admin</span>
       </div>
-      <nav className="flex flex-col gap-1" aria-label="Admin pages">
-        {items.map((p) => {
-          const on = p.href === "/admin" ? path === "/admin" : path === p.href || path.startsWith(p.href + "/");
+      <nav
+        ref={navRef}
+        className="ad-nav flex min-h-0 flex-col overflow-y-auto"
+        data-more-above={cut.above ? "true" : undefined}
+        data-more-below={cut.below ? "true" : undefined}
+        aria-label="Admin pages"
+      >
+        {items.map((p, i) => {
+          // "/admin/money" is a page of its own and the parent of the other Money pages: it is current only on itself.
+          const own = ADMIN_PAGES.some((o) => o.href.startsWith(p.href + "/"));
+          const on = p.href === "/admin" || own ? path === p.href : path === p.href || path.startsWith(p.href + "/");
           const c = countFor(p.id, today);
+          const heading = p.group && p.group !== items[i - 1]?.group ? p.group : null;
           return (
+            <div key={p.id} className="contents">
+              {heading ? (
+                <div className="vx-eyebrow ad-nav-head px-3 text-[var(--on-forest-2)]" role="presentation">
+                  {heading}
+                </div>
+              ) : null}
             <Link
-              key={p.id}
               href={p.href}
               aria-current={on ? "page" : undefined}
-              className={`flex min-h-[48px] items-center gap-3 rounded-m px-3 text-label text-forest-on no-underline a-plain ${on ? "bg-forest-2" : "hover:bg-forest-2"}`}
+              className={`ad-nav-item flex items-center gap-3 rounded-m px-3 text-label text-forest-on no-underline a-plain ${on ? "bg-forest-2" : "hover:bg-forest-2"}`}
             >
               <Icon name={p.icon as IconName} size={22} />
               <span className="min-w-0 flex-1">{p.label}</span>
               {c ? <span className="rounded-pill bg-green px-2 py-0.5 text-count text-green-on">{c}</span> : null}
             </Link>
+            </div>
           );
         })}
       </nav>
@@ -198,6 +316,9 @@ function Sidebar() {
         </div>
         <span className="sr-only">{initials}</span>
       </div>
+      <button type="button" onClick={signOut} className="mt-3 flex min-h-[44px] items-center rounded-m border-0 bg-transparent px-3 text-label text-forest-on hover:bg-forest-2">
+        Sign out
+      </button>
     </aside>
   );
 }

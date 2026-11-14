@@ -1,4 +1,5 @@
 "use client";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -30,16 +31,17 @@ function ClipPlayer({ clipId, ms, push }: { clipId: string; ms: number; push: (t
 
 function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => Promise<void>; push: (t: string, tone?: "danger") => void }) {
   const st = STANCES.find((s) => s.id === r.stance)!;
+  const au = r.author; // null: posted without a name, so nothing of the writer shows
   const [confirm, setConfirm] = useState(false);
   return (
     <>
     <div className="mt-2 hidden items-center gap-2 text-eyebrow uppercase text-[var(--ink-2)] dt:flex"><Icon name={stanceIcon[r.stance]} size={14} />{st.label}</div>
-    <article className="vx-answer" aria-label={`Reply from ${r.author.handle}`}>
+    <article className="vx-answer" aria-label={`Reply from ${au ? au.handle : "someone who did not give a name"}`}>
       <div className="vx-answer__head">
-        <Avatar name={r.author.displayName ?? r.author.handle} src={r.author.avatarUrl ?? undefined} size="s" />
+        <Avatar name={au ? au.displayName ?? au.handle : "Anonymous"} src={au?.avatarUrl ?? undefined} size="s" />
         <div className="vx-answer__who">
-          <span className="vx-answer__name"><span className="vx-answer__nm">{`@${r.author.handle}`}</span><AdminPill admin={(r.author as { admin?: boolean }).admin} /></span>
-          <span className="vx-answer__time">{ago(r.createdAt) + (r.author.state ? ` · ${r.author.state}` : "")}</span>
+          <span className="vx-answer__name">{au ? <><span className="vx-answer__nm">{`@${au.handle}`}</span><VerifiedTick verified={au.verified} /><AdminPill admin={(au as { admin?: boolean }).admin} /></> : <span className="vx-answer__nm">Anonymous</span>}</span>
+          <span className="vx-answer__time">{ago(r.createdAt) + (au?.state ? ` · ${au.state}` : "")}</span>
         </div>
         <span className="dt:hidden"><Badge tone="proposed" icon={stanceIcon[r.stance]}>{st.label}</Badge></span>
         {r.isMine ? <IconButton icon="trash-2" label="Delete my reply" variant="ghost" size="s" onClick={() => setConfirm(true)} /> : null}

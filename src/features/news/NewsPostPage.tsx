@@ -1,5 +1,6 @@
 "use client";
 
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -26,13 +27,14 @@ function chosenLine(p: NewsAnswer): string | null {
 
 function ReplyCard({ r }: { r: NewsReply }) {
   const transcript = r.clip?.transcript?.status === "READY" ? r.clip.transcript.text : null;
+  const au = r.author; // null: posted without a name, so nothing of the writer shows
   return (
-    <article className="vx-answer" aria-label={"Reply from " + r.author.handle}>
+    <article className="vx-answer" aria-label={"Reply from " + (au ? au.handle : "someone who did not give a name")}>
       <div className="vx-answer__head">
-        <Avatar name={r.author.displayName ?? r.author.handle} src={r.author.avatarUrl ?? undefined} />
+        <Avatar name={au ? au.displayName ?? au.handle : "Anonymous"} src={au?.avatarUrl ?? undefined} />
         <div className="vx-answer__who">
-          <span className="vx-answer__name">{"@" + r.author.handle}</span>
-          <span className="vx-answer__time">{ago(r.createdAt) + (r.author.state ? " · " + r.author.state : "")}</span>
+          <span className="vx-answer__name">{au ? <>{"@" + au.handle}<VerifiedTick verified={au.verified} /></> : "Anonymous"}</span>
+          <span className="vx-answer__time">{ago(r.createdAt) + (au?.state ? " · " + au.state : "")}</span>
         </div>
       </div>
       {r.clip && SERVED.clipPlay ? <ClipPlayer clipId={r.clip.id} durationMs={r.clip.durationMs} peaks={r.clip.peaks} /> : null}

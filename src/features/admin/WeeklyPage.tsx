@@ -148,7 +148,7 @@ function Review({ r, onChange }: { r: AdminWeeklyReport; onChange: (r: AdminWeek
   }
 
   return (
-    <div className="grid grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] items-start gap-5">
+    <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
       <div>
         <div className="vx-eyebrow mb-2 text-ink-2">{r.status === "PUBLISHED" ? "Published, reviewed by a person" : r.status === "APPROVED" ? "Approved, publishes at its time" : "AI draft, edit before publishing"}</div>
         <div className="ad-report">

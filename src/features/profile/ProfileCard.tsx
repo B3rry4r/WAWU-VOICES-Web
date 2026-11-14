@@ -54,6 +54,7 @@ export function ProfileCard(p: {
     <ProfileHeader
       name={name}
       handle={"@" + profile.handle}
+      verified={profile.verified === true}
       avatar={profile.avatarUrl ?? undefined}
       admin={(profile as { admin?: boolean }).admin === true}
       place={place ?? undefined}

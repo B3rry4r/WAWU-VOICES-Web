@@ -45,10 +45,43 @@ export function useToast(): [ReactNode, PushToast] {
 }
 
 /** The share sheet from the reach screens (W8b), opened for a question or a voice. */
-export function useShareSheet(): [ReactNode, (type: "QUESTION" | "ANSWER", id: string) => void] {
-  const [t, setT] = useState<{ type: "QUESTION" | "ANSWER"; id: string } | null>(null);
-  const node = t ? <ShareSheet objectType={t.type} objectId={t.id} onClose={() => setT(null)} /> : null;
-  return [node, (type, id) => setT({ type, id })];
+export function useShareSheet(): [ReactNode, (type: "QUESTION" | "ANSWER", id: string, opts?: { notOpen?: boolean }) => void] {
+  const [t, setT] = useState<{ type: "QUESTION" | "ANSWER"; id: string; notOpen?: boolean } | null>(null);
+  const node = t ? <ShareSheet objectType={t.type} objectId={t.id} notOpen={t.notOpen} onClose={() => setT(null)} /> : null;
+  return [node, (type, id, opts) => setT({ type, id, notOpen: opts?.notOpen })];
+}
+
+/** The sheets behind the three dots on MY OWN voice: "This voice" (Edit, Delete, Copy link), the edit sheet, the delete confirm and the share sheet.
+ *  One version, used by the voice card and by my Profile rows. A refused edit shows the server's words in the sheet; a refused delete leaves the post and says why. */
+export function OwnVoiceFlow({ answer, push, onClose, onSaved, onDeleted }: { answer: Answer; push: PushToast; onClose: () => void; onSaved: (a: Answer) => void; onDeleted: (id: string) => void }) {
+  const [stage, setStage] = useState<"menu" | "edit" | "delete" | "share">("menu");
+  return (
+    <>
+      {stage === "share" ? <ShareSheet objectType="ANSWER" objectId={answer.id} onClose={onClose} /> : null}
+      {stage === "edit" ? <EditSheet answer={answer} onClose={onClose} onSaved={(n) => { onSaved(n); onClose(); push("Your post is updated.", "success"); }} /> : null}
+      {stage === "delete" ? (
+        <DeleteDialog
+          noun="voice"
+          onClose={onClose}
+          onConfirm={async () => {
+            try { await api.deleteAnswer(answer.id); } catch (e) { push(failText(e), "danger"); onClose(); return; }
+            onClose();
+            push("Your post is deleted.", "success");
+            onDeleted(answer.id);
+          }}
+        />
+      ) : null}
+      {stage === "menu" ? (
+        <Sheet title="This voice" onClose={onClose}>
+          <div className="grid gap-2 pb-2">
+            {answer.kind === "TEXT" ? <Button variant="secondary" size="l" block icon="message-square" onClick={() => setStage("edit")}>Edit this post</Button> : null}
+            <Button variant="secondary" size="l" block icon="trash-2" onClick={() => setStage("delete")}>Delete this post</Button>
+            <Button variant="secondary" size="l" block icon="link" onClick={() => setStage("share")}>Copy link</Button>
+          </div>
+        </Sheet>
+      ) : null}
+    </>
+  );
 }
 
 interface Props {
@@ -62,6 +95,8 @@ interface Props {
   unfolded?: boolean;
   compact?: boolean;
   className?: string;
+  /** A list may draw the card inside its own frame (a tap target). Only the card itself goes in it, never the sheets, and a hidden card draws no frame. */
+  frame?: (card: ReactNode) => ReactNode;
   /** Called after a change the parent may want (reaction or like totals). */
   onChange?: (a: Answer) => void;
   /** Called after I delete my own voice, so the page can leave it. */
@@ -88,12 +123,10 @@ function useBlockedHere(id: string | undefined): boolean {
 
 /** The design system card wired to the real API. The card is controlled (liked, likeCount, reaction, reactionCounts, trayOpen, playing):
  *  it shows what the server last said, a tap is sent through onLike / onReact / onReply / onShare / onMore, and a refusal puts the props back. */
-export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, className, onChange, onDeleted }: Props) {
+export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, className, frame, onChange, onDeleted }: Props) {
   const router = useRouter();
   const [a, setA] = useState(answer);
   const [more, setMore] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [gone, setGone] = useState(false);
   const [tray, setTray] = useState(false);
   // lead ruling WF, 6 Nov (held): Escape closes the reaction tray.
@@ -209,33 +242,20 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   return (
     <>
       {/* LCH-02: the word sits above the card, as the MoodAnswers board draws it. */}
-      {a.mood ? <div className="grid gap-[6px]"><MoodChip mood={a.mood} />{cardEl}</div> : cardEl}
+      {(() => {
+        const body = a.mood ? <div className="grid gap-[6px]"><MoodChip mood={a.mood} className="justify-self-start" />{cardEl}</div> : cardEl;
+        return frame ? frame(body) : body;
+      })()}
       {shareNode}
-      {editing ? <EditSheet answer={a} onClose={() => setEditing(false)} onSaved={(n) => { upd(n); setEditing(false); push("Your post is updated.", "success"); }} /> : null}
-      {deleting ? (
-        <DeleteDialog
-          noun="voice"
-          onClose={() => setDeleting(false)}
-          onConfirm={async () => {
-            try { await api.deleteAnswer(a.id); } catch (e) { push(failText(e), "danger"); setDeleting(false); return; }
-            setDeleting(false);
-            setGone(true);
-            push("Your post is deleted.", "success");
-            onDeleted?.(a.id);
-          }}
-        />
+      {more && a.isMine ? (
+        <OwnVoiceFlow answer={a} push={push} onClose={() => setMore(false)} onSaved={upd} onDeleted={(id) => { setGone(true); onDeleted?.(id); }} />
       ) : null}
-      {more ? (
+      {more && !a.isMine ? (
         <Sheet title="This voice" onClose={() => setMore(false)}>
           <div className="grid gap-2 pb-2">
-            {a.isMine ? (
-              <>
-                {a.kind === "TEXT" ? <Button variant="secondary" size="l" block icon="message-square" onClick={() => { setMore(false); setEditing(true); }}>Edit this post</Button> : null}
-                <Button variant="secondary" size="l" block icon="trash-2" onClick={() => { setMore(false); setDeleting(true); }}>Delete this post</Button>
-              </>
-            ) : <Button variant="secondary" size="l" block icon="flag" href={`/report/ANSWER/${a.id}`}>Report this voice</Button>}
+            <Button variant="secondary" size="l" block icon="flag" href={`/report/ANSWER/${a.id}`}>Report this voice</Button>
             <Button variant="secondary" size="l" block icon="link" onClick={() => { setMore(false); share("ANSWER", a.id); }}>Copy link</Button>
-            {handle && !a.isMine ? (
+            {handle ? (
               <Button
                 variant="secondary"
                 size="l"

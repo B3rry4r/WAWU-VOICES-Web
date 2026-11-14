@@ -108,15 +108,15 @@ export async function sendSignedIn(replace: (path: string) => void, to = "/"): P
 }
 
 /** Signed-in people have no business on a guest entry page: send them on. Returns true while that runs. */
-export function useSkipIfSignedIn(to = "/"): boolean {
+export function useSkipIfSignedIn(to = "/", off = false): boolean {
   const router = useRouter();
   const [skipping, setSkipping] = useState(false);
   useEffect(() => {
-    if (isSignedIn()) {
+    if (!off && isSignedIn()) {
       setSkipping(true);
       void sendSignedIn((p) => router.replace(p), to);
     }
-  }, [router, to]);
+  }, [router, to, off]);
   return skipping;
 }
 

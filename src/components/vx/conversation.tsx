@@ -248,7 +248,7 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
         <div className="vx-answer__who">
           <span className="vx-answer__name">
             <span className="vx-answer__nm">{a.handle || a.name}</span>
-            {p.sponsor ? <Icon name="badge-check" size={16} label="Verified brand" /> : null}
+            {p.sponsor ? <Icon name="badge-check" size={16} label="Verified brand" /> : a.verified ? <Icon name="badge-check" size={16} label="Verified" className="vx-tick" /> : null}
             {a.handle ? <AdminPill admin={a.admin} /> : null}
           </span>
           <span className="vx-answer__time">{p.time + (p.place ? ' · ' + p.place : '')}</span>
@@ -345,6 +345,8 @@ export interface ProposalCardProps {
   avatarName?: string;
   /** The person's picture, when they have one. */
   avatarSrc?: string;
+  /** V-46: a tick beside the name. */
+  verified?: boolean;
   time: string;
   text: string;
   supports?: number;
@@ -372,7 +374,10 @@ export function ProposalCard(p: ProposalCardProps): ReactElement {
       <div className="vx-answer__head">
         <Avatar name={p.avatarName ?? p.author} src={p.avatarSrc} size="s" />
         <div className="vx-answer__who">
-          <span className="vx-answer__name">{p.author}</span>
+          <span className="vx-answer__name">
+            {p.author}
+            {p.verified ? <Icon name="badge-check" size={16} label="Verified" className="vx-tick" /> : null}
+          </span>
           <span className="vx-answer__time">{p.time}</span>
         </div>
         <Badge tone="proposed" icon="lightbulb" />

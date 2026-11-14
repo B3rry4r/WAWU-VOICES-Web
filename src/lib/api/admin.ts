@@ -115,3 +115,43 @@ export const listAds = (status?: string) => apiFetch<AdminAdPage>(`/admin/ads${q
 export const createAd = (body: UpsertAdRequest) => apiFetch<AdminAd>("/admin/ads", { ...A, method: "POST", body });
 export const updateAd = (id: string, body: Partial<UpsertAdRequest>) => apiFetch<AdminAd>(`/admin/ads/${enc(id)}`, { ...A, method: "PATCH", body });
 export const decideAd = (id: string, body: AdDecision) => apiFetch<AdminAd>(`/admin/ads/${enc(id)}/decision`, { ...A, method: "POST", body });
+
+// Money (V-ADMIN-MONEY). Every route here is ADMIN only; the API decides.
+export type MoneyOverview = S["MoneyOverview"];
+export type MoneyWindow = S["MoneyWindow"];
+export type MoneySlice = S["MoneySlice"];
+export type AdminPayment = S["AdminPayment"];
+export type AdminPaymentPage = S["AdminPaymentPage"];
+export type AdminWallet = S["AdminWallet"];
+export type AdminSubscription = S["AdminSubscription"];
+export type AdminSubscriptionPage = S["AdminSubscriptionPage"];
+export type AdminUserPage = S["AdminUserPage"];
+export type AdminUserRow = S["AdminUserRow"];
+export type AdminUserCounts = S["AdminUserCounts"];
+export type ConfigEntry = S["ConfigEntry"];
+export type ConfigChange = S["ConfigChange"];
+export type ConfigChangePage = S["ConfigChangePage"];
+
+export const getMoneyOverview = () => apiFetch<MoneyOverview>("/admin/money/overview", A);
+export const listAdminPayments = (o: { status?: string; kind?: string; cursor?: string | null; limit?: number } = {}) =>
+  apiFetch<AdminPaymentPage>(`/admin/payments${qs({ status: o.status, kind: o.kind, cursor: o.cursor, limit: o.limit })}`, A);
+/** Asks the provider again about one payment. The key is kept for the tap, so a retry of the same tap cannot double up. */
+export const reverifyPayment = (id: string, idempotencyKey: string) =>
+  apiFetch<AdminPayment>(`/admin/payments/${enc(id)}/reverify`, { ...A, method: "POST", idempotencyKey });
+export const findPeople = (q?: string) => apiFetch<AdminUserPage>(`/admin/users${qs({ q, limit: 10 })}`, A);
+/** The Users screen: everyone newest first, or the ones a search finds. Also carries total and counts. */
+export const listAdminUsers = (o: { q?: string; status?: string; cursor?: string | null; limit?: number } = {}) =>
+  apiFetch<AdminUserPage>(`/admin/users${qs({ q: o.q, status: o.status, cursor: o.cursor, limit: o.limit })}`, A);
+export const getAdminWallet = (userId: string, o: { cursor?: string | null; limit?: number } = {}) =>
+  apiFetch<AdminWallet>(`/admin/wallets/${enc(userId)}${qs({ cursor: o.cursor, limit: o.limit })}`, A);
+export const adjustWallet = (userId: string, body: { deltaMilli: number; reason: string }, idempotencyKey: string) =>
+  apiFetch<AdminWallet>(`/admin/wallets/${enc(userId)}/adjust`, { ...A, method: "POST", body, idempotencyKey });
+export const listSubscriptions = (o: { status?: string; cursor?: string | null; limit?: number } = {}) =>
+  apiFetch<AdminSubscriptionPage>(`/admin/subscriptions${qs({ status: o.status, cursor: o.cursor, limit: o.limit })}`, A);
+
+// Prices and limits: the one config route, with its change log and rollback.
+export const listConfig = () => apiFetch<{ items: ConfigEntry[] }>("/admin/config", A);
+export const updateConfig = (key: string, value: unknown, reason: string) => apiFetch<ConfigEntry>(`/admin/config/${enc(key)}`, { ...A, method: "PUT", body: { value, reason } });
+export const listConfigChanges = (o: { key?: string; cursor?: string | null; limit?: number } = {}) =>
+  apiFetch<ConfigChangePage>(`/admin/config/changes${qs({ key: o.key, cursor: o.cursor, limit: o.limit })}`, A);
+export const rollbackConfig = (changeId: string, reason: string) => apiFetch<ConfigEntry>(`/admin/config/changes/${enc(changeId)}/rollback`, { ...A, method: "POST", body: { reason } });

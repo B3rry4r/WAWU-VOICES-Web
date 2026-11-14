@@ -45,6 +45,8 @@ export function UnitsChip(p: UnitsChipProps): ReactElement {
 export interface ProfileHeaderProps {
   name: string;
   handle: string;
+  /** V-46: a tick beside the name. */
+  verified?: boolean;
   avatar?: string;
   /** An account with the admin role: an "Admin" pill after the handle. */
   admin?: boolean;
@@ -97,7 +99,13 @@ export function ProfileHeader(p: ProfileHeaderProps): ReactElement {
         <div className="vx-prof__top">
           <Avatar name={p.name} src={p.avatar} size="l" playing={playing} />
           <div className="vx-prof__id">
-            <div className="vx-prof__who"><h2 className="vx-prof__handle">{p.handle}</h2><AdminPill admin={p.admin} /></div>
+            <div className="vx-prof__who">
+              <h2 className="vx-prof__handle">
+                {p.handle}
+                {p.verified ? <Icon name="badge-check" size={24} label="Verified" className="vx-tick vx-tick--l" /> : null}
+              </h2>
+              <AdminPill admin={p.admin} />
+            </div>
             <span className="vx-prof__meta">{[p.place, p.joined].filter(Boolean).join(' · ')}</span>
           </div>
         </div>

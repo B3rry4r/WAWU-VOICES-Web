@@ -1,5 +1,6 @@
 import type { ExtraVoiceToken } from "@/lib/api/speak";
 import { ApiError } from "@/lib/api/client";
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { voiceCostMilli, voiceFreeCovers } from "@/lib/shared/text-price";
 
 /** lead ruling LF, 9 Nov: the price on the Send button is the shared function the server charges with, on the recording length in ms. */
@@ -27,9 +28,13 @@ export function peaksFromLevels(levels: number[], bars = 48): number[] {
   return out.map((v) => Math.round(Math.min(1, v / top) * 255));
 }
 
-/** The smallest available token that covers this take, or undefined when the free seconds are enough. */
-export function tokenFor(tokens: ExtraVoiceToken[], seconds: number, freeSeconds: number): ExtraVoiceToken | undefined {
-  if (seconds <= freeSeconds + 0.5) return undefined; // the server allows half a second over
+/**
+ * The smallest available token that covers this take, or undefined when no token is needed. A person with a free post left
+ * and a take inside the free seconds uses the free post and keeps the token. With no free post left, a token they already
+ * paid for covers the message (V-46: the free seconds are now a minute, so a take is rarely longer than them).
+ */
+export function tokenFor(tokens: ExtraVoiceToken[], seconds: number, freeSeconds: number, freeLeft = 1): ExtraVoiceToken | undefined {
+  if (freeLeft > 0 && seconds <= freeSeconds + 0.5) return undefined; // the server allows half a second over
   return tokens
     .filter((t) => t.status === "AVAILABLE" && t.maxSeconds + 0.5 >= seconds)
     .sort((a, b) => a.maxSeconds - b.maxSeconds)[0];
@@ -43,6 +48,7 @@ export function durationLabel(seconds: number): string {
 /** The words shown for a failed call. The server's own words are shown whenever it explained itself. */
 export function refusalText(e: unknown): string {
   if (!(e instanceof ApiError)) return "Something went wrong. Try again in a moment.";
+  if (needsNewKey(e)) return newKeyLine("Send") + " Your recording is kept.";
   if (e.status === 0) return "You are offline. Your recording is kept. Check your connection and try again.";
   if (e.explained && e.message.trim()) return e.message;
   return "Something went wrong on our side. Try again in a moment.";

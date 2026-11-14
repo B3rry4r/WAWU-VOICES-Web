@@ -5,13 +5,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Avatar, Banner, Button, EmptyState, FreePosts, NotFoundState, Icon, Sheet, Skeleton, Tabs } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, AnswerSort, Question } from "@/lib/api/talk";
-import { closesIn, uniqueVoices, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
 import { LiveResultsLink } from "@/components/feed/LinkCards";
 import { AppBar, BarButton, Problem, failText, unitsText, useSignedIn } from "./lib";
 import { textLimit } from "./textLimit";
+import { ComingUpQuestion } from "./ComingUp";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 import { TalkRail } from "./TalkRail";
 import { MoodChip } from "@/features/mood/MoodChip";
@@ -26,7 +27,7 @@ const SORTS = [{ id: "TOP", label: "Top" }, { id: "NEW", label: "New" }, { id: "
 /** What the person has to post with (lead ruling WF-6, 6 Nov, B-N4): free posts while there are any; with none left, their units (or "Out of free posts"). Never "a free post" when there is none. */
 export function postingLine(seconds: number, allow: Allowances | null): string {
   const tail = "Reading and listening are always free.";
-  if (!allow || allow.freePostsRemaining > 0) return `You have ${allow?.costs.freeVoiceSeconds ?? 10} seconds on a free post. Longer is charged when you send. ${tail}`;
+  if (!allow || allow.freePostsRemaining > 0) return `You have ${allow?.costs.freeVoiceSeconds ?? 60} seconds on a free post. ${tail}`;
   const cost = allow.costs.extraVoice30Kobo * 10;
   if (allow.balanceMilli >= cost) return `You have ${unitsText(allow.balanceMilli)}. A voice message of up to ${allow.costs.voiceTier1Seconds ?? 30} seconds is ${unitsText(cost)}, up to ${seconds} seconds is ${unitsText(allow.costs.extraVoice60Kobo * 10)}. ${tail}`;
   return `Out of free posts. Get tokens to post. ${tail}`;
@@ -37,7 +38,7 @@ export function QuestionScreen({ id }: { id: string }) {
   const signedIn = useSignedIn();
   const [toast, push] = useToast();
   const [shareNode, share] = useShareSheet();
-  const q = useLoad<Question>(() => api.getQuestion(id), [id, signedIn]);
+  const q = useLoad<Question>(() => api.getQuestion(id), [id, signedIn], questionStart);
   const [allow, setAllow] = useState<Allowances | null>(null);
   useEffect(() => {
     if (signedIn) api.getAllowance().then(setAllow, () => setAllow(null));
@@ -68,7 +69,9 @@ export function QuestionScreen({ id }: { id: string }) {
       setState("error");
     }
   }, [id, sort, mood]);
-  useEffect(() => { void loadPage(); }, [loadPage, signedIn]);
+  // The question turning from SCHEDULED to open reloads the voices too.
+  const status = q.state === "ready" ? q.data.status : null;
+  useEffect(() => { void loadPage(); }, [loadPage, signedIn, status]);
   const [removedN, setRemovedN] = useState(0);
   useEffect(() => { setRemovedN(0); }, [q]);
 
@@ -93,6 +96,11 @@ export function QuestionScreen({ id }: { id: string }) {
   const left = allow?.freePostsRemaining;
   const close = closesIn(question.endsAt);
   const daily = question.kind === "DAILY";
+
+  // V-PRELAUNCH: scheduled and not yet open. The question and its hint, when it opens, and nothing to do yet: no counts, no
+  // voices, no buttons (the Hub answers 404 to a share of it until it opens, so there is no share either).
+  const opens = comingUp(question);
+  if (opens) return <ComingUpQuestion question={question} opens={opens} />;
 
   async function toggleSave() {
     if (!signedIn) return push("Sign in to save a question.", "info");

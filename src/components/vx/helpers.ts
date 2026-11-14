@@ -80,6 +80,8 @@ export interface Person {
   avatar?: string;
   /** An account with the admin role: draws the "Admin" pill after the name. Read as `=== true`. */
   admin?: boolean;
+  /** V-46: an admin approved their ID and bill and their subscription runs: a tick shows beside the name. */
+  verified?: boolean;
 }
 
 export type NewsKind = 'verified' | 'unverified' | 'gossip';
