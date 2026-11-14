@@ -9,8 +9,9 @@ import { VoiceBox } from "@/features/speak/VoiceBox";
 import { refusalText } from "@/features/speak/logic";
 import { isSignedIn } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
+import { deleteVoiceClip } from "@/lib/api/speak";
 import { answerSurvey, getSurvey, recordSurveyEvent, type Survey, type SurveyQuestionView } from "@/lib/api/surveys";
-import { aboutMinutes, clearDraft, loadDraft, markStarted, recapLine, saveDraft, TEXT_MAX, toInputs, wasStarted, type Given, type GivenByQuestion } from "./logic";
+import { aboutMinutes, clearDraft, clock, loadDraft, markSkipped, markStarted, recapLine, saveDraft, TEXT_MAX, toInputs, wasSkipped, wasStarted, type Given, type GivenByQuestion } from "./logic";
 
 /** The Sponsored Survey, one question at a time (Survey boards), then the Done screen. Answering is free; nothing here touches tokens or a free post. */
 export function SurveyScreen({ id }: { id: string }) {
@@ -83,6 +84,8 @@ function Ask({ survey }: { survey: Survey }) {
   const [leaving, setLeaving] = useState(false);
   const [why, setWhy] = useState(false);
   const [recap, setRecap] = useState<{ prompt: string; line: string }[] | null | undefined>(undefined);
+  const [closed, setClosed] = useState<string | null>(null); // the server's words when the survey closed before the answers went in
+  const canGoBack = useRef(typeof window !== "undefined" && window.history.length > 1); // the person came from inside the app, so Back lands on their place in the feed
   const finished = useRef(false); // the answers were sent (or the survey was already answered): nothing more to count
   const skipSent = useRef(false); // SKIP goes once
   const alive = useRef(false);
@@ -90,6 +93,7 @@ function Ask({ survey }: { survey: Survey }) {
   const hasAnswers = useRef(false);
   hasAnswers.current = Object.keys(given).length > 0;
   const q = qs[idx];
+  const qid = q.id;
   const last = idx === total - 1;
   const minutes = aboutMinutes(total);
 
@@ -105,10 +109,14 @@ function Ask({ survey }: { survey: Survey }) {
     if (!finished.current) saveDraft(survey.id, { idx, given, anonymous, shareState, ageBand });
   }, [survey.id, idx, given, anonymous, shareState, ageBand]);
 
-  // SKIP, once, when the person goes without finishing: Back, a closed tab, a hidden page, or a link away. keepalive lets it finish while the page closes.
+  // SKIP is for a real choice to leave: Skip, Leave, Back with no answers, or a link away inside the app. A reload, a hidden tab, switching app and closing the tab send nothing.
+  // At most once per survey per person per tab (the flag is in session storage, keyed by person), and leaving by any of these routes also removes the draft.
   const sendSkip = useCallback(() => {
-    if (finished.current || skipSent.current) return;
+    if (finished.current) return;
+    clearDraft(survey.id);
+    if (skipSent.current || wasSkipped(survey.id)) return;
     skipSent.current = true;
+    markSkipped(survey.id);
     void recordSurveyEvent(survey.id, "SKIP", { keepalive: true });
   }, [survey.id]);
 
@@ -133,17 +141,12 @@ function Ask({ survey }: { survey: Survey }) {
 
   const leave = useCallback(() => {
     sendSkip();
-    clearDraft(survey.id);
     guard.current = false;
     router.push("/");
-  }, [router, sendSkip, survey.id]);
+  }, [router, sendSkip]);
 
   useEffect(() => {
     alive.current = true;
-    const onPageHide = () => sendSkip();
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") sendSkip();
-    };
     // Back asks first (the browser's own box does not show here): one extra history entry is kept on top, and a Back press lands on it.
     const onPop = () => {
       if (!guard.current || finished.current) return;
@@ -162,15 +165,11 @@ function Ask({ survey }: { survey: Survey }) {
     } catch {
       guard.current = false;
     }
-    window.addEventListener("pagehide", onPageHide);
-    document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("popstate", onPop);
     return () => {
       alive.current = false;
-      window.removeEventListener("pagehide", onPageHide);
-      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("popstate", onPop);
-      // Gone from the page without a Back or a close (a link away): count the skip, unless the page came straight back (a development double mount).
+      // Gone from the page by a link inside the app (a reload or a closed tab never gets here): count the skip, unless the page came straight back (a development double mount).
       setTimeout(() => {
         if (!alive.current) sendSkip();
       }, 0);
@@ -194,8 +193,14 @@ function Ask({ survey }: { survey: Survey }) {
         releaseGuard();
         setRecap(qs.filter((x) => all[x.id]).map((x) => ({ prompt: x.prompt, line: recapLine(all[x.id]) })));
       } catch (e) {
-        // A second answer is not an error: the survey is already answered, so the Done screen shows.
-        if (e instanceof ApiError && e.status === 409) {
+        if (e instanceof ApiError && e.status === 409 && /closed/i.test(e.message)) {
+          // The survey ended before this answer arrived: say so in the server's words. Nothing more to count, and the draft goes.
+          finished.current = true;
+          clearDraft(survey.id);
+          releaseGuard();
+          setClosed(e.message);
+        } else if (e instanceof ApiError && e.status === 409) {
+          // A second answer is not an error: the survey is already answered, so the Done screen shows.
           finished.current = true;
           clearDraft(survey.id);
           releaseGuard();
@@ -212,11 +217,14 @@ function Ask({ survey }: { survey: Survey }) {
     const next = { ...given };
     if (g) next[q.id] = g;
     else delete next[q.id];
+    // A voice answer is in the draft the moment its clip is ready, before anything is sent, so a reload (or a failed send) finds it ready.
+    if (g?.kind === "voice") saveDraft(survey.id, { idx, given: next, anonymous, shareState, ageBand });
     setGiven(next);
     if (last) void submit(next);
     else setIdx(idx + 1);
   }
 
+  if (closed !== null) return <Closed words={closed} canGoBack={canGoBack.current} />;
   if (recap !== undefined) return <Done survey={survey} recap={recap} />;
 
   const options = q.kind === "SINGLE_CHOICE" ? q.options : [];
@@ -262,6 +270,16 @@ function Ask({ survey }: { survey: Survey }) {
           busy={busy}
           onSend={send}
           onVoice={async (clip) => keep({ kind: "voice", clipId: clip.clipId, seconds: clip.seconds })}
+          onVoiceReady={(clip) => setGiven((g) => ({ ...g, [qid]: { kind: "voice" as const, clipId: clip.clipId, seconds: clip.seconds } }))}
+          voice={given[q.id]?.kind === "voice" ? (given[q.id] as Extract<Given, { kind: "voice" }>) : null}
+          onSendVoice={() => keep(given[q.id])}
+          onRerecord={() => {
+            const g = given[q.id];
+            if (g?.kind === "voice") void deleteVoiceClip(g.clipId).catch(() => undefined);
+            const next = { ...given };
+            delete next[q.id];
+            setGiven(next);
+          }}
           last={last}
         />
 
@@ -334,6 +352,12 @@ function QuestionCard(p: {
   busy: boolean;
   onSend: () => void;
   onVoice: (clip: { clipId: string; seconds: number }) => Promise<void>;
+  /** The recording is uploaded and READY: kept in the draft now, shown ready to send. */
+  onVoiceReady: (clip: { clipId: string; seconds: number }) => void;
+  /** A recording already made and ready for this question (kept across a reload or a failed send). */
+  voice: Extract<Given, { kind: "voice" }> | null;
+  onSendVoice: () => void;
+  onRerecord: () => void;
   last: boolean;
 }) {
   const { survey, q } = p;
@@ -361,6 +385,20 @@ function QuestionCard(p: {
       </SponsoredSurveyCard>
     );
   }
+  if (p.voice) {
+    return (
+      <SponsoredSurveyCard survey={survey} question={q.prompt} hideActions total={total}>
+        <section className="vx-rec flex flex-col gap-3" aria-label="Voice answer ready" data-testid="voice-ready">
+          <p className="m-0 text-body-strong">{`Your voice answer is ready, ${clock(p.voice.seconds)}.`}</p>
+          <p className="vx-rec__hint m-0">It is saved. Nothing is sent until you tap Send answer.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" icon="rotate-ccw" disabled={p.busy} onClick={p.onRerecord}>Record again</Button>
+            <Button size="l" icon="send" loading={p.busy} disabled={p.busy} onClick={p.onSendVoice}>Send answer</Button>
+          </div>
+        </section>
+      </SponsoredSurveyCard>
+    );
+  }
   return (
     <SponsoredSurveyCard survey={survey} question={q.prompt} hideActions total={total}>
       <VoiceBox
@@ -372,6 +410,7 @@ function QuestionCard(p: {
         postingText="Saving"
         sendLabel={() => "Send answer"}
         onSend={(c) => p.onVoice({ clipId: c.clipId, seconds: c.seconds })}
+        onReady={(c) => p.onVoiceReady({ clipId: c.clipId, seconds: c.seconds })}
       />
     </SponsoredSurveyCard>
   );
@@ -436,6 +475,18 @@ function AboutRail({ survey }: { survey: Survey }) {
         <p className="m-0 text-count text-ink-2">{WHY_TEXT}</p>
       </section>
     </>
+  );
+}
+
+/** The survey closed before the answers arrived. The server's words, and a way back to where the person was in the feed. */
+function Closed({ words, canGoBack }: { words: string; canGoBack: boolean }) {
+  const router = useRouter();
+  return (
+    <Centre>
+      <div data-testid="survey-closed">
+        <EmptyState icon="clipboard-list" title={words} body="Thank you for trying. Your answers were not sent." action="Back to where you were" onAction={() => (canGoBack ? router.back() : router.push("/"))} />
+      </div>
+    </Centre>
   );
 }
 

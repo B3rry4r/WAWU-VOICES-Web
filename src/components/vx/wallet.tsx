@@ -152,7 +152,7 @@ export function BuyUnitsSheet(p: BuyUnitsSheetProps): ReactElement {
       {p.paywall ? (
         <div className="vx-paywall" role="status">
           <Icon name="triangle-alert" size={20} />
-          <span>{p.paywall === true ? 'You have used your 10 free posts. Get tokens from ₦183. Your draft is saved and posts when your tokens arrive.' : p.paywall}</span>
+          <span>{p.paywall === true ? 'You have used your free posts. Get tokens from ₦183. Your draft is saved and posts when your tokens arrive.' : p.paywall}</span>
         </div>
       ) : null}
       <PackPicker packs={packs} selected={sel} onSelect={(id) => (p.onSelect ? p.onSelect(id) : setSel(id))} />

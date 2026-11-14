@@ -78,6 +78,8 @@ export interface Person {
   handle?: string;
   name?: string;
   avatar?: string;
+  /** V-46: an admin approved their ID and bill and their subscription runs: a tick shows beside the name. */
+  verified?: boolean;
 }
 
 export type NewsKind = 'verified' | 'unverified' | 'gossip';

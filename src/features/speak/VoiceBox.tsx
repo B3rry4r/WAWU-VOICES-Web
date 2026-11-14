@@ -24,11 +24,13 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
 
 export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number }
 
-export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, previewHint, postingText }: {
+export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, previewHint, postingText, onReady }: {
   purpose: Purpose;
   maxSeconds: number;
   /** The length a free post covers; a longer take may need an old voice token, as on the record screen. */
   freeSeconds: number;
+  /** Free posts the person has left. With none, a token they already hold covers the message. Default: some left. */
+  freeLeft?: number;
   tokens?: api.ExtraVoiceToken[];
   hint?: ReactNode;
   /** The words on the Send button for this length ("Send" or "Send for 3 tokens"). */
@@ -45,6 +47,8 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
   previewHint?: string;
   /** The words for the last step of the send. Left out: "Posting". */
   postingText?: string;
+  /** Survey answers: the take is sent up the moment the recording stops, and this is called once the clip is READY, before anything is posted. The caller keeps the clip id. Left out: nothing is sent until the person taps Send. */
+  onReady?: (clip: ReadyClip) => void;
 }) {
   const [phase, setPhase] = useState<"idle" | "recording" | "preview">("idle");
   const [left, setLeft] = useState(maxSeconds);
@@ -134,7 +138,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
     throw new Error("CLIP_SLOW");
   }
 
-  async function send() {
+  async function send(holdOnly = false) {
     if (!take || sending || disabled) return;
     if (take.seconds > maxSeconds + 0.5) return;
     setNote(null);
@@ -144,7 +148,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
     let stage: "create" | "upload" | "later" = "create";
     try {
       if (!st.clipId) {
-        const tok = purpose === "REPLY" ? tokenFor(tokens ?? [], take.seconds, freeSeconds) : undefined;
+        const tok = purpose === "REPLY" ? tokenFor(tokens ?? [], take.seconds, freeSeconds, freeLeft) : undefined;
         const up = await api.createVoiceClip({
           purpose,
           mime: baseMime(take.mime) as "audio/webm" | "audio/mp4" | "audio/ogg",
@@ -165,6 +169,13 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
       if (!st.completed) { await api.completeVoiceClip(st.clipId); st.completed = true; }
       setSending({ step: "process" });
       await waitReady(st.clipId);
+      if (holdOnly && onReady) {
+        // Ready, and kept by the caller, but not posted.
+        state.current = null;
+        if (alive.current) setSending(null);
+        if (alive.current) onReady({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds });
+        return;
+      }
       setSending({ step: "post" });
       await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds });
       state.current = null;
@@ -178,6 +189,15 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
       setNote(errorText?.(e) ?? refusalText(e));
     }
   }
+
+  // A survey answer is sent up as soon as the recording stops, so a reload finds it ready.
+  const heldKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!onReady || !take || phase !== "preview" || take.seconds > maxSeconds + 0.5 || heldKey.current === take.key) return;
+    heldKey.current = take.key;
+    void send(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [take, phase]);
 
   const live = phase === "recording";
   const help = micError ? MIC_HELP[micError] : null;

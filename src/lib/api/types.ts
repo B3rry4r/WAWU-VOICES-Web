@@ -19,7 +19,7 @@ export interface paths {
         put?: never;
         /**
          * Create my VOICES profile after WAWU ID sign-in
-         * @description Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and 3 or more categories. Creates the tokens balance, free allowance (10 posts) and settings. Records the referral if a code is sent. Auth: WAWU ID token; works before the VOICES profile exists.
+         * @description Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and 3 or more categories. Creates the tokens balance, free allowance (2 posts) and settings. Records the referral if a code is sent. Auth: WAWU ID token; works before the VOICES profile exists.
          */
         post: operations["createMe"];
         /**
@@ -101,7 +101,7 @@ export interface paths {
         };
         /**
          * My settings
-         * @description useMyStateForSurveys (default false): allow Sponsored Surveys aimed at states to be shown to me when my state is one of them. Auth: signed in with a finished profile.
+         * @description Auth: signed in with a finished profile.
          */
         get: operations["getSettings"];
         put?: never;
@@ -111,7 +111,7 @@ export interface paths {
         head?: never;
         /**
          * Change my settings
-         * @description Auth: signed in with a finished profile.
+         * @description useMyStateForSurveys (default false): allow Sponsored Surveys aimed at states to be shown to me when my state is one of them. Auth: signed in with a finished profile.
          */
         patch: operations["updateSettings"];
         trace?: never;
@@ -422,6 +422,166 @@ export interface paths {
          * @description The only way a pending deletion is cancelled (lead ruling WF, fix round 1, RW9). Idempotent: with nothing pending it answers the same Me. 409 once the purge has run. Writes an audit line. Auth: WAWU ID token; works before the VOICES profile exists.
          */
         post: operations["cancelDeletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where my verification stands
+         * @description V-46: state is NOT_SUBSCRIBED, READY, UNDER_REVIEW, VERIFIED, REJECTED (reason in request.reason, in plain words), EXPIRED (sent and never decided for 90 days: send again) or LAPSED. Verified means an admin approved the ID and utility bill and the subscription is running; verifiedUntil is the end of the plan (a renewal extends it). Auth: signed in with a finished profile.
+         */
+        get: operations["getMyVerification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/verification/documents/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload my ID (kind id) or my utility bill (kind bill)
+         * @description V-46: the body is the file itself (not JSON, not a form): jpeg, png, webp, heic or pdf, at most 10 MB. The type is read from the bytes, never from the name. Stored privately; no link to it is ever given to the person or the public. Sending again replaces that document. 403 subscription_required (message: Subscribe to get verified.) without a running subscription; 409 while the request is with the team or the person is already verified. Auth: signed in with a finished profile. Rate limit: 30 per 10 minutes per account.
+         */
+        put: operations["putVerificationDocument"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/verification/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send both documents to the team
+         * @description V-46: needs both documents and a running subscription (403 subscription_required). Moves the request to UNDER_REVIEW. After a rejection the person uploads again and submits again. Auth: signed in with a finished profile.
+         */
+        post: operations["submitVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The verification queue
+         * @description V-46: each item has the person, the plan and its end date. The documents are not in the list: open one to get their links. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminListVerification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One request (no documents, no links)
+         * @description V-46: who, the plan, the state, and whether each document is still there. Never cached (Cache-Control: no-store). Auth: signed in with role ADMIN.
+         */
+        get: operations["adminGetVerification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification/{requestId}/documents/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open one document: a signed link
+         * @description V-46: kind is id or bill. The link stops working after 5 minutes (expiresAt), serves the stored type as an attachment, and is made only here. Each open is written to the audit log (who and which document, never the link). 404 once the files are deleted. Never cached. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminOpenVerificationDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification/{requestId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a request
+         * @description V-46: the person is verified until the end of their subscription. 409 if another admin decided first, or the person has no running subscription. An admin cannot decide their own request (403). Writes an audit row and sends the person a mail. Auth: signed in with role ADMIN.
+         */
+        post: operations["adminApproveVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification/{requestId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a request with a reason
+         * @description V-46: a reason code is required (OTHER needs a note). The person sees the words for the code, then the note, and can upload again. 409 if another admin decided first. Writes an audit row and sends the person a mail. Auth: signed in with role ADMIN.
+         */
+        post: operations["adminRejectVerification"];
         delete?: never;
         options?: never;
         head?: never;
@@ -763,7 +923,7 @@ export interface paths {
         put?: never;
         /**
          * Start a voice upload: get a presigned PUT to Spaces
-         * @description Checks the length against the person's limit (10 s, or 30 or 60 s with an extra voice token). Guests record and preview in the browser only; the upload starts after sign-in. Auth: signed in with a finished profile. Rate limit: 20 per 10 minutes per account.
+         * @description Checks the length against the person's limit (60 s; before V-36 a longer clip needed an extra voice token). Guests record and preview in the browser only; the upload starts after sign-in. Auth: signed in with a finished profile. Rate limit: 20 per 10 minutes per account.
          */
         post: operations["createVoiceClip"];
         delete?: never;
@@ -3032,206 +3192,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Prices, costs, allowances and limits
-         * @description Auth: signed in with role ADMIN.
-         */
-        get: operations["adminListConfig"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/config/{key}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Change a config value (effective at once, logged)
-         * @description Auth: signed in with role ADMIN.
-         */
-        put: operations["adminUpdateConfig"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/config/changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Config change log
-         * @description Auth: signed in with role ADMIN.
-         */
-        get: operations["adminConfigChanges"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/config/changes/{changeId}/rollback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Roll a change back
-         * @description Auth: signed in with role ADMIN.
-         */
-        post: operations["adminRollbackConfig"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/wallets/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * A person's wallet, ledger and payments
-         * @description Auth: signed in with role ADMIN.
-         */
-        get: operations["adminGetWallet"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/wallets/{userId}/adjust": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Adjust a wallet (a reason is required)
-         * @description Writes an ADJUSTMENT ledger transaction and an audit entry. Cannot take a balance below zero. Auth: signed in with role ADMIN.
-         */
-        post: operations["adminAdjustWallet"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/payments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Payments and their reconcile state
-         * @description Auth: signed in with role ADMIN.
-         */
-        get: operations["adminListPayments"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/payments/{paymentId}/reverify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Re-run the provider verify for a stuck payment
-         * @description Auth: signed in with role ADMIN.
-         */
-        post: operations["adminReverifyPayment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/audit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Audit log
-         * @description Auth: signed in with role ADMIN.
-         */
-        get: operations["adminAudit"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/text/fix": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Fix the spelling, typos and grammar of my text (5 tokens)
-         * @description Only spelling, typos and grammar are corrected, never what the text means: the server checks every change and refuses a fix that changes more. Costs 5 tokens (config textfix.cost_milli), charged once per Idempotency-Key and only when a fix comes back: an AI failure (502 TEXT_FIX_FAILED), a refused fix and a text with nothing to fix cost nothing. The text is sent to the AI provider to be corrected and used for nothing else. The person sees the changes and chooses to use the fix or keep their own text. Auth: signed in with a finished profile. Rate limit: 10 per 10 minutes per account.
-         */
-        post: operations["fixText"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/admin/surveys": {
         parameters: {
             query?: never;
@@ -3329,7 +3289,7 @@ export interface paths {
         };
         /**
          * The brand's results, combined and anonymous (once released)
-         * @description Nothing is worked out while the survey runs: stage RUNNING (or NOT_LIVE), ready false, only answeredSoFar. When the survey is over (end date passed or response target reached) its results are fixed once and no answer is accepted after that; until staff release them the report is stage REVIEW, ready true, released false, answeredSoFar only. After POST /admin/surveys/{surveyId}/release it is stage RELEASED, released true, and every read returns the same stored report. No name, handle, photo or id is ever returned. Free answers and transcripts are scrubbed and any staff hid are left out. State and age band appear only for people who agreed to share them. No group smaller than weekly.min_group_size is shown, and no hidden group can be worked out by subtraction: a hidden total that is under the minimum pulls the next smallest group in, and hidden groups are shown together as other only when their sum is at least the minimum. Every read writes an audit row (who, when, which survey). The web builds the CSV from a released body only. Auth: signed in with role AD_MANAGER or ADMIN.
+         * @description Nothing is worked out while the survey runs: stage RUNNING (or NOT_LIVE), ready false, only answeredSoFar. When the survey is over (end date passed or response target reached) its results are fixed once and no answer is accepted after that; until staff release them the report is stage REVIEW, ready true, released false, answeredSoFar only. After POST /admin/surveys/{surveyId}/release it is stage RELEASED, released true, and every read returns the same stored report. No name, handle, photo or id is ever returned. Free answers and transcripts are scrubbed and any staff hid are left out. State and age band appear only for people who agreed to share them. No group smaller than weekly.min_group_size is shown, and no hidden group can be worked out by subtraction: a hidden total that is under TWICE the minimum pulls the next smallest group in (repeating), and hidden groups are shown together as other only when their sum is at least the minimum. The answered of a question is null (and its options, other, texts and voices are left out) when the number of responses without an answer to it is above 0 and under the minimum, because that small difference could be worked out from it. For a written or voice question answered is the number of items in the list the brand gets (hidden, empty and scrubbed-to-nothing answers are in neither), and the list is left out when it is under the minimum or that difference is small. A breakdown (byState, byAgeBand) is shown only when its shared total equals, or differs by at least the minimum from, the total and every other shown breakdown; otherwise it is left out whole. Every read writes an audit row (who, when, which survey). The web builds the CSV from a released body only. Auth: signed in with role AD_MANAGER or ADMIN.
          */
         get: operations["adminSurveyReport"];
         put?: never;
@@ -3340,27 +3300,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/surveys/{surveyId}/release": {
+    "/admin/surveys/{surveyId}/free-answers": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Staff have read the free answers: release the results to the brand
-         * @description Once only (409 after). Builds and stores the brand's report from the fixed results and the free answers left in, writes an audit row (who, when, how many hidden), then sends email F04 to the brand contact. mailed is false when the mail could not go yet: it is tried again every ten minutes and never sent twice. F04 is never sent before release. Auth: signed in with role AD_MANAGER or ADMIN.
+         * Every free answer and transcript, for staff to read before release, a page at a time
+         * @description 409 while the survey is still running. Scrubbed (NFKC first; emails also spelt chidi(at)gmail(dot)com, 'chidi @ gmail . com', 'chidi at gmail.com'; links with any scheme, www, label.label/path, a list of endings, 'word dot ending', IPv4; phone numbers of 10 or more digits with any non-letter separators, mixed with number words, O and I between digits; @handles and handles after a platform word with ':' or '@' or a token holding a digit, '_' or '.'). A name or address typed in plain words is not found by pattern: read each one. Listed alphabetically inside a question, never in the order people answered. Each item's id is a review handle (an HMAC of the answer id), never the answer's own id and not ordered by time. When the LAST page is served (nextCursor null) reviewedAt and reviewedById are stored; POST release needs them when the survey has any written or voice answer. Audited. Auth: signed in with role AD_MANAGER or ADMIN.
          */
-        post: operations["adminReleaseSurvey"];
+        get: operations["adminSurveyFreeAnswers"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/admin/surveys/{surveyId}/free-answers/{answerId}": {
+    "/admin/surveys/{surveyId}/free-answers/{handle}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3375,25 +3335,25 @@ export interface paths {
         head?: never;
         /**
          * Hide one free answer from the brand (or show it again)
-         * @description One call per answer. 409 before the survey is over and after release. Audited (the answer id, never its words). Auth: signed in with role AD_MANAGER or ADMIN.
+         * @description One call per answer. {handle} is the item's id from the review list (32 hex characters), not an answer id: anything else is 404. 409 before the survey is over and after release. Hiding or showing clears nothing, including the read that release needs. Audited (the handle, never its words). Auth: signed in with role AD_MANAGER or ADMIN.
          */
         patch: operations["adminHideSurveyFreeAnswer"];
         trace?: never;
     };
-    "/admin/surveys/{surveyId}/free-answers": {
+    "/admin/surveys/{surveyId}/release": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Every free answer and transcript, for staff to read before release
-         * @description 409 while the survey is still running. Scrubbed (emails, links, bare domains, t.me and wa.me, 'name at provider dot com', numbers also in words, handles after insta, ig, twitter, x, tiktok, snap). A name or address typed in plain words is not found by pattern: read each one. Listed alphabetically inside a question, never in the order people answered. Audited. Auth: signed in with role AD_MANAGER or ADMIN.
-         */
-        get: operations["adminSurveyFreeAnswers"];
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Staff have read the free answers: release the results to the brand
+         * @description 409 'Read the written answers before releasing the results.' while the survey has written or voice answers and the whole review list (every page of GET free-answers) has not been served since the results were fixed; a survey with none releases as before. Once only (409 after). Builds and stores the brand's report from the fixed results and the free answers left in, writes an audit row (who, when, how many hidden), then sends email F04 to the brand contact. mailed is false when the mail could not go yet: it is tried again every ten minutes and never sent twice. F04 is never sent before release. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        post: operations["adminReleaseSurvey"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3515,7 +3475,7 @@ export interface paths {
         put?: never;
         /**
          * Answer a sponsored survey
-         * @description One answer per person per survey (409 after). Free: it never touches tokens, free posts or the daily posting limit, and is never a public post. A voice answer uses a clip made with POST /voice-clips purpose SURVEY_ANSWER and is at most surveys.voice_max_seconds. anonymous: true keeps nothing about the person; state and age band are kept only with shareState and ageBand. Auth: signed in with a finished profile.
+         * @description One answer per person per survey (409 after). Free: it never touches tokens, free posts or the daily posting limit, and is never a public post. A voice answer uses a clip made with POST /voice-clips purpose SURVEY_ANSWER and is at most surveys.voice_max_seconds. anonymous: true keeps nothing about the person; state and age band are kept only with shareState and ageBand. 409 'This survey has closed.' when the survey ended or reached its target (404 when it is not live for this person). One recording answers one question: using it twice in one request is 422. A control character (NUL and the like) in a written answer is 422. Auth: signed in with a finished profile.
          */
         post: operations["answerSurvey"];
         delete?: never;
@@ -3538,6 +3498,246 @@ export interface paths {
         get: operations["getBrandPage"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prices, costs, allowances and limits
+         * @description Auth: signed in with role ADMIN.
+         */
+        get: operations["adminListConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/config/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a config value (effective at once, logged)
+         * @description Auth: signed in with role ADMIN.
+         */
+        put: operations["adminUpdateConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/config/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Config change log
+         * @description Auth: signed in with role ADMIN.
+         */
+        get: operations["adminConfigChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/config/changes/{changeId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Roll a change back
+         * @description Auth: signed in with role ADMIN.
+         */
+        post: operations["adminRollbackConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/wallets/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person's wallet, ledger and payments
+         * @description Auth: signed in with role ADMIN.
+         */
+        get: operations["adminGetWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/wallets/{userId}/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adjust a wallet (a reason is required)
+         * @description Writes an ADJUSTMENT ledger transaction and an audit entry. Cannot take a balance below zero. The answer carries `adjustment` with the audit id and the ledger transaction id. Auth: signed in with role ADMIN.
+         */
+        post: operations["adminAdjustWallet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Payments and their reconcile state
+         * @description V-ADMIN-MONEY: newest first, each with the person and the payment's own price, VAT, charge and total. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminListPayments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payments/{paymentId}/reverify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-run the provider verify for a stuck payment
+         * @description Auth: signed in with role ADMIN.
+         */
+        post: operations["adminReverifyPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/money/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Money received, payments and tokens for today, 7 and 30 days
+         * @description V-ADMIN-MONEY: received money split into token packs and subscriptions, with VAT and the payment charge apart from WAWU's own revenue (price), payment counts, new paying people, and tokens sold against spent. Days are Lagos days; the last 7 and 30 days include today. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminMoneyOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current and ended subscription plans
+         * @description V-ADMIN-MONEY: read only. Newest first, with the next credit day of a plan still running. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminListSubscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audit log
+         * @description Auth: signed in with role ADMIN.
+         */
+        get: operations["adminAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/text/fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fix the spelling, typos and grammar of my text (5 tokens)
+         * @description Only spelling, typos and grammar are corrected, never what the text means: the server checks every change and refuses a fix that changes more. Costs 5 tokens (config textfix.cost_milli), charged once per Idempotency-Key and only when a fix comes back: an AI failure (502 TEXT_FIX_FAILED), a refused fix and a text with nothing to fix cost nothing. The text is sent to the AI provider to be corrected and used for nothing else. The person sees the changes and chooses to use the fix or keep their own text. Auth: signed in with a finished profile. Rate limit: 10 per 10 minutes per account.
+         */
+        post: operations["fixText"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3611,7 +3811,7 @@ export interface components {
         /** @enum {string} */
         ResultThreadStatus: "SCHEDULED" | "OPEN" | "CLOSED";
         /** @enum {string} */
-        VoiceClipPurpose: "ANSWER" | "REPLY" | "PROPOSAL" | "VOTE_EXPLANATION" | "VOICE_CARD" | "OVERRIDE_NOTE" | "AD_AUDIO";
+        VoiceClipPurpose: "ANSWER" | "REPLY" | "PROPOSAL" | "VOTE_EXPLANATION" | "VOICE_CARD" | "OVERRIDE_NOTE" | "AD_AUDIO" | "SURVEY_ANSWER";
         /** @enum {string} */
         VoiceClipStatus: "PENDING_UPLOAD" | "UPLOADED" | "PROCESSING" | "READY" | "FAILED" | "REMOVED";
         /** @enum {string} */
@@ -3625,7 +3825,7 @@ export interface components {
         /** @enum {string} */
         ProposalStanceKind: "SUPPORT" | "CHALLENGE";
         /** @enum {string} */
-        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL";
+        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required";
         /** @description The one error shape. Every non-2xx response is this. */
         Error: {
             error: components["schemas"]["ErrorBody"];
@@ -3729,6 +3929,7 @@ export interface components {
             voicesCount?: number;
             replyCount: number;
             reactionsReceived: number;
+            verified?: boolean;
         };
         PublicProfile: {
             profile: components["schemas"]["Profile"];
@@ -3794,6 +3995,7 @@ export interface components {
             quietHoursStart: number | null;
             quietHoursEnd: number | null;
             notifyDailyQuestion: boolean;
+            notifyWeeklyTopic: boolean;
             notifyReplies: boolean;
             notifyReactions: boolean;
             notifyPollResults: boolean;
@@ -3812,6 +4014,7 @@ export interface components {
             quietHoursStart?: number | null;
             quietHoursEnd?: number | null;
             notifyDailyQuestion?: boolean;
+            notifyWeeklyTopic?: boolean;
             notifyReplies?: boolean;
             notifyReactions?: boolean;
             notifyPollResults?: boolean;
@@ -3970,7 +4173,7 @@ export interface components {
             language: string | null;
             text: string | null;
         };
-        /** @description Anonymous posts carry author null. */
+        /** @description Anonymous posts carry author null. verified (V-46) is true while an admin-approved ID and bill and a running subscription stand; the web shows a tick beside the name. */
         AuthorRef: {
             /** Format: uuid */
             id: string;
@@ -3978,6 +4181,7 @@ export interface components {
             displayName?: string | null;
             state?: string | null;
             avatarUrl?: string | null;
+            verified?: boolean;
         };
         /** @description Always shown with the post, in the feed, in search and on share cards. */
         NewsLabel: {
@@ -5009,6 +5213,9 @@ export interface components {
             shares: number;
             openReports: number;
             oldestReportMinutes: number | null;
+            dailyQuestionMailsToday: number;
+            weeklyTopicMailsToday: number;
+            topicMailBudgetLeftToday: number;
         };
         ShareTargetCount: {
             target: components["schemas"]["ShareTarget"];
@@ -5484,6 +5691,320 @@ export interface components {
             decision: "APPROVE" | "REJECT" | "ASK_FOR_CHANGES" | "PAUSE" | "RESUME";
             reason?: string;
         };
+        SurveyQuestionInput: {
+            /** @enum {string} */
+            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
+            prompt: string;
+            options?: string[];
+        };
+        UpsertSurveyRequest: {
+            brandName: string;
+            /** Format: uuid */
+            brandId?: string;
+            contactEmail: string;
+            title: string;
+            questions: components["schemas"]["SurveyQuestionInput"][];
+            categoryIds?: string[];
+            states?: string[];
+            /** Format: date */
+            startsOn?: string;
+            /** Format: date */
+            endsOn?: string;
+            frequencyCapPerDay?: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo?: number;
+            responseTarget?: number;
+        };
+        SurveyDecision: {
+            /** @enum {string} */
+            decision: "APPROVE" | "REJECT" | "ASK_FOR_CHANGES" | "PAUSE" | "RESUME";
+            reason?: string;
+        };
+        SurveyOptionView: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+        };
+        SurveyQuestionView: {
+            /** Format: uuid */
+            id: string;
+            position: number;
+            /** @enum {string} */
+            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
+            prompt: string;
+            options: components["schemas"]["SurveyOptionView"][];
+        };
+        AdminSurvey: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            brandId: string | null;
+            brandName: string;
+            contactEmail: string;
+            title: string;
+            status: components["schemas"]["AdStatus"];
+            label: string;
+            live: boolean;
+            checks: components["schemas"]["ReportCheck"][];
+            questions: components["schemas"]["SurveyQuestionView"][];
+            categoryIds: string[];
+            states: string[];
+            /** Format: date */
+            startsOn: string | null;
+            /** Format: date */
+            endsOn: string | null;
+            frequencyCapPerDay: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number | null;
+            responseTarget: number | null;
+            views: number;
+            starts: number;
+            completes: number;
+            skips: number;
+            responses: number;
+            rejectReason: string | null;
+            changeRequest: string | null;
+            /** Format: date-time */
+            submittedAt: string | null;
+            /** Format: date-time */
+            approvedAt: string | null;
+            /** Format: date-time */
+            snapshotAt: string | null;
+            /** Format: date-time */
+            releasedAt: string | null;
+        };
+        AdminSurveyPage: {
+            items: components["schemas"]["AdminSurvey"][];
+            nextCursor: string | null;
+            awaitingApproval: number;
+        };
+        SurveyReportOption: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            count: number | null;
+            share: number | null;
+            hidden: boolean;
+        };
+        /** @description The choices that are hidden, together. Present only when their sum is at least weekly.min_group_size. When a hidden group would follow from the totals, the next smallest shown group is hidden too and joins this line. */
+        SurveyReportOther: {
+            label: string;
+            count: number;
+            share: number;
+        };
+        SurveyBreakdownOther: {
+            responses: number;
+            share: number;
+        };
+        SurveyReportVoice: {
+            transcript: string;
+            seconds: number;
+        };
+        SurveyReportQuestion: {
+            /** Format: uuid */
+            id: string;
+            position: number;
+            /** @enum {string} */
+            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
+            prompt: string;
+            answered: number | null;
+            options: components["schemas"]["SurveyReportOption"][];
+            other: components["schemas"]["SurveyReportOther"] | null;
+            texts: string[];
+            voices: components["schemas"]["SurveyReportVoice"][];
+        };
+        SurveyReportTotals: {
+            views: number;
+            starts: number;
+            skips: number;
+            responses: number | null;
+            completionRate: number | null;
+        };
+        SurveyReportState: {
+            state: string;
+            responses: number;
+            share: number;
+        };
+        SurveyReportAge: {
+            ageBand: string;
+            responses: number;
+            share: number;
+        };
+        SurveyReportHead: {
+            /** Format: uuid */
+            id: string;
+            brandName: string;
+            title: string;
+            status: components["schemas"]["AdStatus"];
+            /** Format: date */
+            startsOn: string | null;
+            /** Format: date */
+            endsOn: string | null;
+            responseTarget: number | null;
+        };
+        /** @description While the survey runs (and until staff release it) only stage, ready, released, answeredSoFar and note are present. The counts, shares, free answers and breakdowns exist only when released is true, and are then the stored report, never recomputed. */
+        SurveyReport: {
+            survey: components["schemas"]["SurveyReportHead"];
+            /** @enum {string} */
+            stage: "NOT_LIVE" | "RUNNING" | "REVIEW" | "RELEASED";
+            ready: boolean;
+            released: boolean;
+            answeredSoFar?: number;
+            /** Format: date-time */
+            releasedAt?: string;
+            minGroupSize?: number;
+            belowMinimum?: boolean;
+            totals?: components["schemas"]["SurveyReportTotals"];
+            questions?: components["schemas"]["SurveyReportQuestion"][];
+            byState?: components["schemas"]["SurveyReportState"][];
+            byStateOther?: components["schemas"]["SurveyBreakdownOther"] | null;
+            byAgeBand?: components["schemas"]["SurveyReportAge"][];
+            byAgeBandOther?: components["schemas"]["SurveyBreakdownOther"] | null;
+            note: string;
+        };
+        SurveyFreeItem: {
+            id: string;
+            /** Format: uuid */
+            questionId: string;
+            prompt: string;
+            /** @enum {string} */
+            kind: "TEXT" | "VOICE";
+            text: string;
+            seconds: number | null;
+            hidden: boolean;
+        };
+        SurveyFreeAnswers: {
+            released: boolean;
+            items: components["schemas"]["SurveyFreeItem"][];
+            total: number;
+            hiddenCount: number;
+            nextCursor: string | null;
+        };
+        HideFreeAnswerRequest: {
+            hidden: boolean;
+        };
+        HideFreeAnswerResult: {
+            id: string;
+            hidden: boolean;
+        };
+        SurveyReleaseResult: {
+            released: boolean;
+            /** Format: date-time */
+            releasedAt: string;
+            hiddenCount: number;
+            mailed: boolean;
+        };
+        SurveyCard: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            brandName: string;
+            brandSlug: string | null;
+            brandWebsite: string | null;
+            title: string;
+            questionCount: number;
+        };
+        SurveyPlacementResponse: {
+            survey: components["schemas"]["SurveyCard"] | null;
+        };
+        Survey: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            brandName: string;
+            brandSlug: string | null;
+            brandWebsite: string | null;
+            title: string;
+            questionCount: number;
+            note: string;
+            /** @enum {string} */
+            myStatus: "OPEN" | "ANSWERED";
+            voiceMaxSeconds: number;
+            ageBands: string[];
+            questions: components["schemas"]["SurveyQuestionView"][];
+        };
+        SurveyEventRequest: {
+            /** @enum {string} */
+            kind: "VIEW" | "START" | "SKIP";
+        };
+        SurveyAnswerInput: {
+            /** Format: uuid */
+            questionId: string;
+            /** Format: uuid */
+            optionId?: string;
+            text?: string;
+            /** Format: uuid */
+            clipId?: string;
+        };
+        SurveyResponseRequest: {
+            answers: components["schemas"]["SurveyAnswerInput"][];
+            anonymous?: boolean;
+            shareState?: boolean;
+            /** @enum {string} */
+            ageBand?: "18-24" | "25-34" | "35-44" | "45-54" | "55+";
+        };
+        SurveyResponseResult: {
+            ok: boolean;
+            note: string;
+        };
+        BrandInput: {
+            name: string;
+            tagline?: string;
+            /** Format: uuid */
+            logoFileId?: string;
+            website?: string;
+            contactEmail?: string;
+            active?: boolean;
+        };
+        AdminBrand: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            tagline: string | null;
+            website: string | null;
+            contactEmail: string | null;
+            active: boolean;
+            logoUrl: string | null;
+            label: string;
+        };
+        AdminBrandList: {
+            items: components["schemas"]["AdminBrand"][];
+        };
+        BrandHead: {
+            name: string;
+            slug: string;
+            tagline: string | null;
+            website: string | null;
+            logoUrl: string | null;
+            label: string;
+        };
+        BrandSurveyCard: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            label: string;
+            questionCount: number;
+            /** Format: date */
+            endsOn: string | null;
+        };
+        BrandAdCard: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["AdKind"];
+            /** @enum {string} */
+            label: "Ad" | "Sponsored";
+            headline: string;
+            body: string | null;
+            imageUrl: string | null;
+            linkUrl: string | null;
+            ctaLabel: string | null;
+        };
+        BrandPage: {
+            brand: components["schemas"]["BrandHead"];
+            surveys: components["schemas"]["BrandSurveyCard"][];
+            ads: components["schemas"]["BrandAdCard"][];
+        };
         ConfigEntry: {
             key: string;
             value: unknown;
@@ -5523,18 +6044,289 @@ export interface components {
             deltaMilli: number;
             reason: string;
         };
+        PaymentPerson: {
+            /** Format: uuid */
+            id: string;
+            handle: string;
+        };
+        /** @description V-ADMIN-MONEY: a payment as the admin sees it: the person, the price, VAT, charge and total it was started with (null on a payment made before the customer paid charges), and what was paid over the total (V-23), to refund by hand. */
+        AdminPayment: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["PaymentKind"];
+            status: components["schemas"]["PaymentStatus"];
+            /** @description Naira in kobo (32-bit integer). */
+            amountKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo?: number | null;
+            txRef: string;
+            reference?: string;
+            title: string;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            unitsMilli: number | null;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            bonusMilli: number | null;
+            method: string | null;
+            cardLast4: string | null;
+            receiptNo: string | null;
+            failureReason: string | null;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            verifiedAt: string | null;
+            token: components["schemas"]["ExtraVoiceToken"] | null;
+            plan?: components["schemas"]["PaymentPlan"] | null;
+            user: components["schemas"]["PaymentPerson"];
+            overpaidKobo: number;
+            refundNeeded: boolean;
+        };
+        /** @description What an adjust call did: the audit entry and the ledger transaction it wrote, and the balance after. */
+        WalletAdjustment: {
+            /** Format: uuid */
+            auditId: string;
+            /** Format: uuid */
+            txnId: string;
+            /** @description Admin adjustment in milli-units, at most 1,000 units either way per call. */
+            deltaMilli: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number;
+        };
         AdminWallet: {
             user: components["schemas"]["Profile"];
+            status: components["schemas"]["AccountStatus"];
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
             freePostsRemaining: number;
             ledger: components["schemas"]["LedgerItem"][];
-            payments: components["schemas"]["Payment"][];
+            payments: components["schemas"]["AdminPayment"][];
             nextCursor: string | null;
+            adjustment?: components["schemas"]["WalletAdjustment"];
         };
         AdminPaymentPage: {
-            items: components["schemas"]["Payment"][];
+            items: components["schemas"]["AdminPayment"][];
             nextCursor: string | null;
+        };
+        /** @description Paid payments, summed by the database from the payment rows' own amounts. priceKobo is WAWU's own revenue; VAT and the payment charge are paid by the customer on top and shown apart; totalKobo is what the customer paid. */
+        MoneySlice: {
+            count: number;
+            priceKobo: number;
+            vatKobo: number;
+            chargeKobo: number;
+            totalKobo: number;
+        };
+        MoneyReceived: {
+            packs: components["schemas"]["MoneySlice"];
+            subscriptions: components["schemas"]["MoneySlice"];
+            other: components["schemas"]["MoneySlice"];
+            total: components["schemas"]["MoneySlice"];
+        };
+        /** @description paid: confirmed in the window. The others: started in the window and in that state now. pending is initiated plus pending. */
+        MoneyPaymentCounts: {
+            paid: number;
+            failed: number;
+            pending: number;
+            expired: number;
+            refunded: number;
+        };
+        /** @description Wallet movements in the window from the ledger entries: bought in packs, credited from plans, spent, spends reversed, admin adjustments up and down, anything else, spent net of reversals, and the net change of all wallets. */
+        MoneyTokens: {
+            soldMilli: number;
+            fromPlansMilli: number;
+            spentMilli: number;
+            reversedMilli: number;
+            adjustedInMilli: number;
+            adjustedOutMilli: number;
+            otherMilli: number;
+            netSpentMilli: number;
+            walletChangeMilli: number;
+        };
+        /** @description A window of whole Lagos days from fromDay's start to now. newPayers: people whose first confirmed payment ever is in the window. */
+        MoneyWindow: {
+            label: string;
+            /** Format: date */
+            fromDay: string;
+            /** Format: date */
+            toDay: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            received: components["schemas"]["MoneyReceived"];
+            overpaidKobo: number;
+            payments: components["schemas"]["MoneyPaymentCounts"];
+            newPayers: number;
+            tokens: components["schemas"]["MoneyTokens"];
+        };
+        MoneyWindows: {
+            today: components["schemas"]["MoneyWindow"];
+            last7: components["schemas"]["MoneyWindow"];
+            last30: components["schemas"]["MoneyWindow"];
+        };
+        /** @description V-ADMIN-MONEY: every figure comes from the payment and ledger tables; a screen adds nothing up. */
+        MoneyOverview: {
+            /** Format: date-time */
+            asOf: string;
+            /** Format: date */
+            lagosDay: string;
+            tokensHeldMilli: number;
+            windows: components["schemas"]["MoneyWindows"];
+        };
+        AdminSubscriptionPerson: {
+            /** Format: uuid */
+            id: string;
+            handle: string;
+            displayName: string | null;
+        };
+        AdminSubscriptionPlan: {
+            slug: string;
+            name: string;
+        };
+        AdminSubscription: {
+            /** Format: uuid */
+            id: string;
+            user: components["schemas"]["AdminSubscriptionPerson"];
+            plan: components["schemas"]["AdminSubscriptionPlan"];
+            status: components["schemas"]["SubscriptionStatus"];
+            /** Format: date */
+            startDay: string;
+            /** Format: date */
+            endDay: string;
+            months: number;
+            creditedMonths: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            monthlyMilli: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number;
+            /** Format: date */
+            nextCreditDay: string | null;
+            /** Format: uuid */
+            paymentId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description counts: the number of plans in each status, whatever the page or filter. */
+        AdminSubscriptionPage: {
+            items: components["schemas"]["AdminSubscription"][];
+            counts: unknown;
+            nextCursor: string | null;
+        };
+        /** @description V-46. canUpload is true with a running subscription unless the person is verified or under review. documents says which of the two files are in the draft (the files themselves are never returned). */
+        VerificationState: {
+            /** @enum {string} */
+            state: "NOT_SUBSCRIBED" | "READY" | "UNDER_REVIEW" | "VERIFIED" | "REJECTED" | "EXPIRED" | "LAPSED";
+            verified: boolean;
+            /** Format: date-time */
+            verifiedUntil: string | null;
+            subscription: components["schemas"]["VerificationPlan"] | null;
+            canUpload: boolean;
+            canSubmit: boolean;
+            documents: components["schemas"]["VerificationDocuments"];
+            request: components["schemas"]["VerificationRequestView"] | null;
+            lastDecision: components["schemas"]["VerificationLastDecision"] | null;
+        };
+        /** @description endDay is the Lagos day the plan ends, YYYY-MM-DD; endLabel is the same day as 14 Feb 2027. */
+        VerificationPlan: {
+            planName: string;
+            endDay: string;
+            endLabel: string;
+        };
+        VerificationDocuments: {
+            id: boolean;
+            bill: boolean;
+        };
+        /** @description reason is set for a rejection: plain words, the admin's reason. */
+        VerificationRequestView: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
+            /** Format: date-time */
+            submittedAt: string | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            reason: string | null;
+        };
+        VerificationLastDecision: {
+            /** @enum {string} */
+            outcome: "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            decidedAt: string | null;
+        };
+        AdminVerificationPerson: {
+            /** Format: uuid */
+            id: string;
+            handle: string;
+            displayName: string | null;
+        };
+        AdminVerificationItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            submittedAt: string | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            person: components["schemas"]["AdminVerificationPerson"];
+            subscription: components["schemas"]["VerificationPlan"] | null;
+            decidedBy: string | null;
+            reason: string | null;
+            documentsDeleted: boolean;
+        };
+        AdminVerificationPage: {
+            items: components["schemas"]["AdminVerificationItem"][];
+            nextCursor: string | null;
+        };
+        /** @description A signed link that stops working at expiresAt (5 minutes after it was given). Never log it, never store it. */
+        VerificationDocumentLink: {
+            url: string;
+            mime: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        AdminVerification: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            submittedAt: string | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            person: components["schemas"]["AdminVerificationPerson"];
+            subscription: components["schemas"]["VerificationPlan"] | null;
+            reason: string | null;
+            documentsDeleted: boolean;
+            idDocument: components["schemas"]["VerificationDocumentInfo"] | null;
+            billDocument: components["schemas"]["VerificationDocumentInfo"] | null;
+        };
+        /** @description That the document is there and its type. Its link is made by GET /admin/verification/{requestId}/documents/{kind} when an admin opens it. */
+        VerificationDocumentInfo: {
+            mime: string;
+        };
+        /** @description note is for the audit line only; the person does not see it. */
+        ApproveVerificationRequest: {
+            note?: string;
+        };
+        /** @description The person reads the short words for the code, then the note. OTHER needs a note (at most 500 characters). */
+        RejectVerificationRequest: {
+            /** @enum {string} */
+            reasonCode: "ID_UNREADABLE" | "ID_NOT_VALID" | "ID_EXPIRED" | "BILL_UNREADABLE" | "BILL_TOO_OLD" | "DETAILS_DO_NOT_MATCH" | "SUBSCRIPTION_ENDED" | "OTHER";
+            note?: string;
+        };
+        AdminVerificationDecision: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            verifiedUntil?: string;
         };
         AdminUserPage: {
             items: components["schemas"]["AdminUser"][];
@@ -5670,321 +6462,6 @@ export interface components {
         };
         AdPlacementResponse: {
             ad: components["schemas"]["AdPlacement"] | null;
-        };
-        SurveyQuestionInput: {
-            /** @enum {string} */
-            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
-            prompt: string;
-            options?: string[];
-        };
-        UpsertSurveyRequest: {
-            brandName: string;
-            /** Format: uuid */
-            brandId?: string;
-            contactEmail: string;
-            title: string;
-            questions: components["schemas"]["SurveyQuestionInput"][];
-            categoryIds?: string[];
-            states?: string[];
-            /** Format: date */
-            startsOn?: string;
-            /** Format: date */
-            endsOn?: string;
-            frequencyCapPerDay?: number;
-            /** @description Naira in kobo (32-bit integer). */
-            priceKobo?: number;
-            responseTarget?: number;
-        };
-        SurveyDecision: {
-            /** @enum {string} */
-            decision: "APPROVE" | "REJECT" | "ASK_FOR_CHANGES" | "PAUSE" | "RESUME";
-            reason?: string;
-        };
-        SurveyOptionView: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-        };
-        SurveyQuestionView: {
-            /** Format: uuid */
-            id: string;
-            position: number;
-            /** @enum {string} */
-            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
-            prompt: string;
-            options: components["schemas"]["SurveyOptionView"][];
-        };
-        AdminSurvey: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            brandId: string | null;
-            brandName: string;
-            contactEmail: string;
-            title: string;
-            status: components["schemas"]["AdStatus"];
-            label: string;
-            live: boolean;
-            checks: components["schemas"]["ReportCheck"][];
-            questions: components["schemas"]["SurveyQuestionView"][];
-            categoryIds: string[];
-            states: string[];
-            /** Format: date */
-            startsOn: string | null;
-            /** Format: date */
-            endsOn: string | null;
-            frequencyCapPerDay: number;
-            /** @description Naira in kobo (32-bit integer). */
-            priceKobo: number | null;
-            responseTarget: number | null;
-            views: number;
-            starts: number;
-            completes: number;
-            skips: number;
-            responses: number;
-            rejectReason: string | null;
-            changeRequest: string | null;
-            /** Format: date-time */
-            submittedAt: string | null;
-            /** Format: date-time */
-            approvedAt: string | null;
-            /** Format: date-time */
-            snapshotAt: string | null;
-            /** Format: date-time */
-            releasedAt: string | null;
-        };
-        AdminSurveyPage: {
-            items: components["schemas"]["AdminSurvey"][];
-            nextCursor: string | null;
-            awaitingApproval: number;
-        };
-        SurveyReportOption: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-            count: number | null;
-            share: number | null;
-            hidden: boolean;
-        };
-        SurveyBreakdownOther: {
-            responses: number;
-            share: number;
-        };
-        /** @description The choices that are hidden, together. Present only when their sum is at least weekly.min_group_size. When a hidden group would follow from the totals, the next smallest shown group is hidden too and joins this line. */
-        SurveyReportOther: {
-            label: string;
-            count: number;
-            share: number;
-        };
-        SurveyReportVoice: {
-            transcript: string;
-            seconds: number;
-        };
-        SurveyReportQuestion: {
-            /** Format: uuid */
-            id: string;
-            position: number;
-            /** @enum {string} */
-            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
-            prompt: string;
-            answered: number | null;
-            options: components["schemas"]["SurveyReportOption"][];
-            other: components["schemas"]["SurveyReportOther"] | null;
-            texts: string[];
-            voices: components["schemas"]["SurveyReportVoice"][];
-        };
-        SurveyReportTotals: {
-            views: number;
-            starts: number;
-            skips: number;
-            responses: number | null;
-            completionRate: number | null;
-        };
-        SurveyReportState: {
-            state: string;
-            responses: number;
-            share: number;
-        };
-        SurveyReportAge: {
-            ageBand: string;
-            responses: number;
-            share: number;
-        };
-        SurveyReportHead: {
-            /** Format: uuid */
-            id: string;
-            brandName: string;
-            title: string;
-            status: components["schemas"]["AdStatus"];
-            /** Format: date */
-            startsOn: string | null;
-            /** Format: date */
-            endsOn: string | null;
-            responseTarget: number | null;
-        };
-        /** @description While the survey runs (and until staff release it) only stage, ready, released, answeredSoFar and note are present. The counts, shares, free answers and breakdowns exist only when released is true, and are then the stored report, never recomputed. */
-        SurveyReport: {
-            survey: components["schemas"]["SurveyReportHead"];
-            /** @enum {string} */
-            stage: "NOT_LIVE" | "RUNNING" | "REVIEW" | "RELEASED";
-            ready: boolean;
-            released: boolean;
-            answeredSoFar?: number;
-            /** Format: date-time */
-            releasedAt?: string;
-            minGroupSize?: number;
-            belowMinimum?: boolean;
-            totals?: components["schemas"]["SurveyReportTotals"];
-            questions?: components["schemas"]["SurveyReportQuestion"][];
-            byState?: components["schemas"]["SurveyReportState"][];
-            byStateOther?: components["schemas"]["SurveyBreakdownOther"] | null;
-            byAgeBand?: components["schemas"]["SurveyReportAge"][];
-            byAgeBandOther?: components["schemas"]["SurveyBreakdownOther"] | null;
-            note: string;
-        };
-        SurveyReleaseResult: {
-            released: boolean;
-            /** Format: date-time */
-            releasedAt: string;
-            hiddenCount: number;
-            mailed: boolean;
-        };
-        HideFreeAnswerResult: {
-            /** Format: uuid */
-            id: string;
-            hidden: boolean;
-        };
-        HideFreeAnswerRequest: {
-            hidden: boolean;
-        };
-        SurveyFreeAnswers: {
-            released: boolean;
-            items: components["schemas"]["SurveyFreeItem"][];
-            total: number;
-            hiddenCount: number;
-        };
-        SurveyFreeItem: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            questionId: string;
-            prompt: string;
-            /** @enum {string} */
-            kind: "TEXT" | "VOICE";
-            text: string;
-            seconds: number | null;
-            hidden: boolean;
-        };
-        SurveyCard: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-            brandName: string;
-            brandSlug: string | null;
-            brandWebsite: string | null;
-            title: string;
-            questionCount: number;
-        };
-        SurveyPlacementResponse: {
-            survey: components["schemas"]["SurveyCard"] | null;
-        };
-        Survey: {
-            /** Format: uuid */
-            id: string;
-            label: string;
-            brandName: string;
-            brandSlug: string | null;
-            brandWebsite: string | null;
-            title: string;
-            questionCount: number;
-            note: string;
-            /** @enum {string} */
-            myStatus: "OPEN" | "ANSWERED";
-            voiceMaxSeconds: number;
-            ageBands: string[];
-            questions: components["schemas"]["SurveyQuestionView"][];
-        };
-        SurveyEventRequest: {
-            /** @enum {string} */
-            kind: "VIEW" | "START" | "SKIP";
-        };
-        SurveyAnswerInput: {
-            /** Format: uuid */
-            questionId: string;
-            /** Format: uuid */
-            optionId?: string;
-            text?: string;
-            /** Format: uuid */
-            clipId?: string;
-        };
-        SurveyResponseRequest: {
-            answers: components["schemas"]["SurveyAnswerInput"][];
-            anonymous?: boolean;
-            shareState?: boolean;
-            /** @enum {string} */
-            ageBand?: "18-24" | "25-34" | "35-44" | "45-54" | "55+";
-        };
-        SurveyResponseResult: {
-            ok: boolean;
-            note: string;
-        };
-        BrandInput: {
-            name: string;
-            tagline?: string;
-            /** Format: uuid */
-            logoFileId?: string;
-            website?: string;
-            contactEmail?: string;
-            active?: boolean;
-        };
-        AdminBrand: {
-            /** Format: uuid */
-            id: string;
-            name: string;
-            slug: string;
-            tagline: string | null;
-            website: string | null;
-            contactEmail: string | null;
-            active: boolean;
-            logoUrl: string | null;
-            label: string;
-        };
-        AdminBrandList: {
-            items: components["schemas"]["AdminBrand"][];
-        };
-        BrandHead: {
-            name: string;
-            slug: string;
-            tagline: string | null;
-            website: string | null;
-            logoUrl: string | null;
-            label: string;
-        };
-        BrandSurveyCard: {
-            /** Format: uuid */
-            id: string;
-            title: string;
-            label: string;
-            questionCount: number;
-            /** Format: date */
-            endsOn: string | null;
-        };
-        BrandAdCard: {
-            /** Format: uuid */
-            id: string;
-            kind: components["schemas"]["AdKind"];
-            /** @enum {string} */
-            label: "Ad" | "Sponsored";
-            headline: string;
-            body: string | null;
-            imageUrl: string | null;
-            linkUrl: string | null;
-            ctaLabel: string | null;
-        };
-        BrandPage: {
-            brand: components["schemas"]["BrandHead"];
-            surveys: components["schemas"]["BrandSurveyCard"][];
-            ads: components["schemas"]["BrandAdCard"][];
         };
     };
     responses: {
@@ -6772,6 +7249,233 @@ export interface operations {
             };
             401: components["responses"]["E401"];
             409: components["responses"]["E409"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getMyVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationState"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    putVerificationDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationState"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            409: components["responses"]["E409"];
+            413: components["responses"]["E413"];
+            415: components["responses"]["E415"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    submitVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationState"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListVerification: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                /** @description pending (default, oldest first) or decided (newest first) */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminVerificationPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminGetVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminVerification"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminOpenVerificationDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationDocumentLink"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminApproveVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminVerificationDecision"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminRejectVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminVerificationDecision"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
             429: components["responses"]["E429"];
         };
     };
@@ -10879,311 +11583,6 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
-    adminListConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfigList"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminUpdateConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateConfigRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfigEntry"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminConfigChanges: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor from nextCursor */
-                cursor?: string;
-                /** @description 1 to 50, default 20 */
-                limit?: number;
-                key?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfigChangePage"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminRollbackConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                changeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CancelRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfigEntry"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            409: components["responses"]["E409"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminGetWallet: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor from nextCursor */
-                cursor?: string;
-                /** @description 1 to 50, default 20 */
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminWallet"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminAdjustWallet: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdjustWalletRequest"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminWallet"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            409: components["responses"]["E409"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminListPayments: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor from nextCursor */
-                cursor?: string;
-                /** @description 1 to 50, default 20 */
-                limit?: number;
-                /** @description PaymentStatus */
-                status?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminPaymentPage"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminReverifyPayment: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                paymentId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Payment"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            409: components["responses"]["E409"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminAudit: {
-        parameters: {
-            query?: {
-                /** @description Opaque cursor from nextCursor */
-                cursor?: string;
-                /** @description 1 to 50, default 20 */
-                limit?: number;
-                action?: string;
-                targetType?: string;
-                targetId?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuditPage"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    fixText: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TextFixRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TextFixResult"];
-                };
-            };
-            401: components["responses"]["E401"];
-            402: components["responses"]["E402"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-            502: components["responses"]["E502"];
-            503: components["responses"]["E503"];
-        };
-    };
     adminListSurveys: {
         parameters: {
             query?: {
@@ -11386,9 +11785,14 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
-    adminReleaseSurvey: {
+    adminSurveyFreeAnswers: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Opaque, signed page link from nextCursor. Pages can only be walked in order; a link that is not valid is 422 */
+                cursor?: string;
+                /** @description 1 to 50, default 50 */
+                limit?: number;
+            };
             header?: never;
             path: {
                 surveyId: string;
@@ -11403,13 +11807,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SurveyReleaseResult"];
+                    "application/json": components["schemas"]["SurveyFreeAnswers"];
                 };
             };
             401: components["responses"]["E401"];
             403: components["responses"]["E403"];
             404: components["responses"]["E404"];
             409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
             429: components["responses"]["E429"];
         };
     };
@@ -11419,7 +11824,7 @@ export interface operations {
             header?: never;
             path: {
                 surveyId: string;
-                answerId: string;
+                handle: string;
             };
             cookie?: never;
         };
@@ -11446,7 +11851,7 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
-    adminSurveyFreeAnswers: {
+    adminReleaseSurvey: {
         parameters: {
             query?: never;
             header?: never;
@@ -11463,7 +11868,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SurveyFreeAnswers"];
+                    "application/json": components["schemas"]["SurveyReleaseResult"];
                 };
             };
             401: components["responses"]["E401"];
@@ -11688,6 +12093,366 @@ export interface operations {
             };
             404: components["responses"]["E404"];
             429: components["responses"]["E429"];
+        };
+    };
+    adminListConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigList"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminUpdateConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConfigRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigEntry"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminConfigChanges: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigChangePage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminRollbackConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigEntry"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminGetWallet: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWallet"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminAdjustWallet: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustWalletRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWallet"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListPayments: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                /** @description PaymentStatus */
+                status?: string;
+                /** @description PaymentKind */
+                kind?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPaymentPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminReverifyPayment: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                paymentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPayment"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminMoneyOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MoneyOverview"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListSubscriptions: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                /** @description SubscriptionStatus */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSubscriptionPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminAudit: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                action?: string;
+                targetType?: string;
+                targetId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    fixText: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TextFixRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TextFixResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            402: components["responses"]["E402"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+            502: components["responses"]["E502"];
+            503: components["responses"]["E503"];
         };
     };
 }

@@ -156,7 +156,7 @@ export function Onboarding() {
             <p className="m-0 text-body-l text-ink-2">{LANDING_INTRO}</p>
             <ul className="m-0 flex list-none flex-col gap-4 p-0">
               {[
-                ["mic", "One question a day", "Speak for 10 seconds or write a few lines."],
+                ["mic", "One question a day", "Speak for up to a minute or write a few lines."],
                 ["headphones", "Hear the country", "Listen, react and vote in open polls. Listening is always free."],
                 ["coins", `${cfg.freePosts} free posts to start`, `Then tokens from ₦${from}. Every price shows before you tap.`],
               ].map(([ic, t, b]) => (

@@ -102,6 +102,15 @@ describe("Person", () => {
 });
 
 describe("Settings", () => {
+  it("shows the topic of the week switch from the API and turning it off sends false", async () => {
+    signIn();
+    mockApi({ ...meRoutes, "PATCH /me/settings": ({ body }: { body: unknown }) => ({ ...me.settings, ...(body as object) }) });
+    render(<SettingsPage />);
+    const sw = (await screen.findByRole("switch", { name: /Topic of the week/ })) as HTMLInputElement;
+    expect(sw.checked).toBe(true);
+    await userEvent.click(sw);
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ notifyWeeklyTopic: false }));
+  });
   it("saves a switch on toggle and puts it back when the save fails", async () => {
     signIn();
     let fail = false;

@@ -1,3 +1,5 @@
+import { currentOwner } from "@/features/speak/draft";
+import { SURVEY_KEEP_PREFIX } from "@/lib/auth/survey-keeps";
 import type { SurveyAnswerInput, SurveyQuestionView } from "@/lib/api/surveys";
 
 /** "About 1 min": about three questions a minute, never less than one. The API carries no time, so this is counted here. */
@@ -44,8 +46,11 @@ export const TEXT_MAX = 500;
 
 // ---- What the page keeps for one survey in this tab (sessionStorage; every call is wrapped, a blocked store means nothing is kept) ----
 
-const startedKey = (id: string) => `wawu.survey.${id}.started`;
-const draftKey = (id: string) => `wawu.survey.${id}.draft`;
+// Every key carries the signed-in person's id (the token's subject), so another person on the same tab never finds it. Signing out removes them all (clearSurveyKeeps).
+const keyFor = (id: string, what: "started" | "draft" | "skipped") => `${SURVEY_KEEP_PREFIX}${currentOwner() ?? "unknown"}.${id}.${what}`;
+const startedKey = (id: string) => keyFor(id, "started");
+const draftKey = (id: string) => keyFor(id, "draft");
+const skippedKey = (id: string) => keyFor(id, "skipped");
 
 function store(): Storage | null {
   try {
@@ -66,6 +71,22 @@ export function wasStarted(id: string): boolean {
 export function markStarted(id: string): void {
   try {
     store()?.setItem(startedKey(id), "1");
+  } catch {
+    /* nothing kept */
+  }
+}
+
+/** True once a SKIP has gone for this survey by this person in this tab. A SKIP goes at most once. */
+export function wasSkipped(id: string): boolean {
+  try {
+    return store()?.getItem(skippedKey(id)) === "1";
+  } catch {
+    return false;
+  }
+}
+export function markSkipped(id: string): void {
+  try {
+    store()?.setItem(skippedKey(id), "1");
   } catch {
     /* nothing kept */
   }
