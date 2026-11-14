@@ -45,6 +45,7 @@ export const FULLSCREEN_PREFIXES = [
   "/units/buy",
   "/units/done",
   "/units/out-of-posts",
+  "/messages/*",
 ] as const;
 
 /**
@@ -64,6 +65,7 @@ const ACTIVE_BY_PREFIX: [string, NavId][] = [
   ["/c", "discover"],
   ["/live", "home"],
   ["/notifications", "home"],
+  ["/messages", "home"],
   ["/q", "home"],
   ["/p", "home"],
 ];

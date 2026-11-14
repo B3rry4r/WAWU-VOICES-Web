@@ -93,6 +93,7 @@ export function MePage() {
       <div className="pf-phone-only">
         <div className="pf-linkpanel">
           <LinkRow href="/units" icon="wallet" detail={`${unitsFigure(a.balanceMilli)} ${a.balanceMilli === 1000 ? "token" : "tokens"} · ${a.freePostsRemaining} free posts left`}>Tokens</LinkRow>
+          <LinkRow href="/messages" icon="message-circle">Messages</LinkRow>
           <LinkRow href="/settings" icon="settings">Settings</LinkRow>
           <LinkRow href="/settings/legal/rules" icon="shield-check">Community rules</LinkRow>
         </div>

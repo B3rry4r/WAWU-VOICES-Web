@@ -34,7 +34,8 @@ const REASONS: { id: ReportReason; label: string }[] = [
   { id: "OTHER", label: "Something else" },
 ];
 
-function MoreSheet({ person, onClose, onBlocked }: { person: PublicProfile["profile"]; onClose: () => void; onBlocked: () => void }) {
+function MoreSheet({ person, canMessage, onClose, onBlocked }: { person: PublicProfile["profile"]; canMessage: boolean; onClose: () => void; onBlocked: () => void }) {
+  const router = useRouter();
   const [step, setStep] = useState<"menu" | "report" | "sent">("menu");
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [note, setNote] = useState("");
@@ -60,6 +61,7 @@ function MoreSheet({ person, onClose, onBlocked }: { person: PublicProfile["prof
     <Sheet title={step === "report" ? "Report " + handle : step === "sent" ? "Thanks. We got your report." : handle} onClose={onClose}>
       {step === "menu" ? (
         <div className="pf-menu">
+          {canMessage ? <button type="button" className="pf-menu__row" onClick={() => router.push(`/messages/new/${person.id}`)}><Icon name="message-circle" size={22} />{"Message " + handle}</button> : null}
           <button type="button" className="pf-menu__row" onClick={() => setStep("report")}><Icon name="flag" size={22} />{"Report " + handle}</button>
           <button type="button" className="pf-menu__row" onClick={block} disabled={busy}><Icon name="shield-alert" size={22} />{"Block " + handle}</button>
           <p className="pf-hint">Blocking hides you and them from each other.</p>
@@ -164,7 +166,7 @@ export function PersonPage({ segment }: { segment: string }) {
         </>
       )}
       {share ? <ShareSheet objectType="PROFILE" objectId={profile.id} onClose={() => setShare(false)} /> : null}
-      {more ? <MoreSheet person={profile} onClose={() => setMore(false)} onBlocked={() => setVersion((v) => v + 1)} /> : null}
+      {more ? <MoreSheet person={profile} canMessage={!data.isBlockedByMe} onClose={() => setMore(false)} onBlocked={() => setVersion((v) => v + 1)} /> : null}
     </div>
   );
 }
