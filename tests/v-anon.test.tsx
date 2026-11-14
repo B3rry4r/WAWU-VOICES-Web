@@ -150,3 +150,21 @@ describe("the profile tag", () => {
     expect(screen.queryByTestId("anon-tag")).toBeNull();
   });
 });
+
+describe("an anonymous mood answer offers no invite link", () => {
+  it("shows no Send it to 3 people, no invite QR, and asks for no invite link", async () => {
+    posted = { ...base, author: null, mood: "HOPEFUL" };
+    search = "a=a1";
+    render(<PostedScreen qid="q1" />);
+    await screen.findByTestId("anon-posted");
+    expect(screen.queryByText("Send it to 3 people.")).toBeNull();
+    expect(screen.queryByTestId("invite-qr")).toBeNull();
+    expect(calls.some((c) => c.url.endsWith("/me/invite"))).toBe(false);
+  });
+  it("a named mood answer still does", async () => {
+    posted = { ...base, mood: "HOPEFUL" };
+    search = "a=a1";
+    render(<PostedScreen qid="q1" />);
+    await screen.findByText("Send it to 3 people.");
+  });
+});

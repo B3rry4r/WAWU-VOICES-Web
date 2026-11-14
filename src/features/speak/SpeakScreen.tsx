@@ -117,7 +117,10 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const qid = question?.id;
   // V-ANON: "Post without my name", off until turned on; a choice made before signing in or buying tokens is kept for this question.
   const [anon, setAnon] = useState(false);
-  useEffect(() => { if (qid) setAnon(readAnonPref(qid)); }, [qid]);
+  // send() reads the choice from this ref at call time: a retry button on an old banner must never post with an old choice.
+  const anonRef = useRef(false);
+  const chooseAnon = (v: boolean) => { anonRef.current = v; setAnon(v); if (qid) writeAnonPref(qid, v); };
+  useEffect(() => { if (qid) { const v = readAnonPref(qid); anonRef.current = v; setAnon(v); } }, [qid]);
   const open = question ? question.status === "LIVE" : true;
 
   const pushNote = (n: Note) => setNotes((l) => [...l.filter((x) => x.text !== n.text), n]);
@@ -362,7 +365,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anon);
+      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current);
       writeAnonPref(qid, false);
       await clearDraft();
       writePick(qid, null);
@@ -506,7 +509,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         <>
           <TakePlayer blob={take.blob} seconds={take.seconds} peaks={take.peaks} />
           <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>
-          <AnonymousSwitch onForest on={anon} disabled={!!sending} onChange={(v) => { setAnon(v); if (qid) writeAnonPref(qid, v); }} />
+          <AnonymousSwitch onForest on={anon} disabled={!!sending} onChange={chooseAnon} />
           {signedIn === false ? <p className="sp-fine">You sign in to post. Your recording waits here in this browser.</p> : null}
           {sending ? (
             <div className="sp-progress" role="status" aria-live="polite">

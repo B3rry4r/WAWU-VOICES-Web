@@ -61,7 +61,7 @@ try {
       await ctx.close();
     });
   }
-  await t('posted screen of an anonymous mood answer: no name, no name-on-card switch', async () => {
+  await t('posted screen of an anonymous mood answer: no name, no name-on-card switch, no invite link', async () => {
     const { page, ctx } = await open(answer({ author: null, mood: 'HOPEFUL' }));
     await ctx.route('**/api/v1/answers/new1/where-you-sit', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answerId: 'new1', questionId: 'q1', mood: 'HOPEFUL', showNameOnCard: false, defaultScope: 'NIGERIA', showSwitch: false, nigeria: { percent: null, count: 3 }, world: { percent: null, count: 3 }, cardLine: 'You’re one of the first.', updatedAt: 'x' }) }));
     await ctx.route('**/api/v1/me/invite', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'ab', url: 'https://usevoices.com/go/ab', friendsAnswered: 0 }) }));
@@ -69,6 +69,7 @@ try {
     await page.getByTestId('anon-posted').waitFor();
     assert.equal(await page.getByRole('switch', { name: 'Show my name on the card' }).count(), 0);
     assert.ok(!(await page.locator('body').innerText()).includes('me.handle'));
+    assert.equal(await page.getByText('Send it to 3 people.').count(), 0);
     await ctx.close();
   });
   for (const on of [false, true]) {
@@ -92,5 +93,29 @@ try {
       await ctx.close();
     });
   }
+  await t('record screen, 500 then switch on then Try again sends anonymous true', async () => {
+    const { page, posts, ctx } = await open(answer({ author: null, kind: 'VOICE' }));
+    let failNext = true;
+    await ctx.route('**/api/v1/questions/q1/answers', async (route) => {
+      const req = route.request();
+      if (req.method() !== 'POST') return route.fallback();
+      posts.push(JSON.parse(req.postData() ?? '{}'));
+      if (failNext) { failNext = false; return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'INTERNAL', message: 'no' } }) }); }
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ answer: answer({ id: 'new1' }) }) });
+    });
+    await page.goto(`${ORIGIN}/q/q1/speak`);
+    await page.getByRole('button', { name: 'Start recording' }).click();
+    await page.waitForTimeout(2500);
+    await page.getByRole('button', { name: 'Stop recording' }).click();
+    await page.getByRole('button', { name: /^Send/ }).click();
+    await page.getByRole('button', { name: 'Try again' }).waitFor();
+    await page.getByRole('switch', { name: 'Post without my name' }).check();
+    await page.getByRole('button', { name: 'Try again' }).click();
+    await page.waitForURL('**/posted?a=new1', { timeout: 20000 });
+    assert.equal(posts.length, 2);
+    assert.ok(!('anonymous' in posts[0]));
+    assert.equal(posts[1].anonymous, true);
+    await ctx.close();
+  });
 } finally { await browser.close(); }
 if (failed) { console.log(failed + ' failed'); process.exit(1); }
