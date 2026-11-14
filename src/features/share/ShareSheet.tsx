@@ -73,11 +73,11 @@ export async function cardIsReady(code: string): Promise<boolean> {
   }
 }
 
-/** The question has not opened and the API will not make a share link for it yet: say so, and offer the address of this page. */
-function PageAddress() {
+/** The API will not make a share link for a question that has not opened: say so, and offer the question's own address on this site (never the page the sheet was opened from). */
+function QuestionAddress({ questionId }: { questionId: string }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
-    const url = window.location.href.split("#")[0];
+    const url = `${window.location.origin}/q/${encodeURIComponent(questionId)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -88,8 +88,8 @@ function PageAddress() {
   }
   return (
     <div className="flex flex-col gap-3" role="alert">
-      <p className="m-0 rounded-m bg-surface-2 p-3 text-caption text-ink-2">We cannot make a share link for this question yet. You can copy the address of this page and send that.</p>
-      <Button variant="secondary" icon={copied ? "check" : "link"} onClick={() => void copy()}>{copied ? "Copied" : "Copy this page’s address"}</Button>
+      <p className="m-0 rounded-m bg-surface-2 p-3 text-caption text-ink-2">We cannot make a share link for this question yet. You can copy the address of the question and send that.</p>
+      <Button variant="secondary" icon={copied ? "check" : "link"} onClick={() => void copy()}>{copied ? "Copied" : "Copy the question’s address"}</Button>
     </div>
   );
 }
@@ -187,11 +187,20 @@ export function ShareSheet({ objectType, objectId, notOpen, onClose }: { objectT
     }
   }
 
+  // Refused for a question that has not opened (or the server failed): only the plain message and the one button. No promise of a card, no greyed buttons.
+  if (failed && notOpen && objectType === "QUESTION") {
+    return (
+      <Sheet title={copy.title} variant={desktop ? "dialog" : "sheet"} onClose={onClose}>
+        <QuestionAddress questionId={objectId} />
+      </Sheet>
+    );
+  }
+
   return (
     <Sheet title={copy.title} subtitle={copy.subtitle} variant={desktop ? "dialog" : "sheet"} onClose={onClose}>
       <div className="flex flex-col gap-4">
         {failed ? (
-          notOpen ? <PageAddress /> : <p className="m-0 rounded-m bg-danger-bg p-3 text-caption text-danger" role="alert">We could not make your link. Close this and try again.</p>
+          <p className="m-0 rounded-m bg-danger-bg p-3 text-caption text-danger" role="alert">We could not make your link. Close this and try again.</p>
         ) : card.state === "ready" ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={card.url} alt="The card that goes out with your link" width={1200} height={630} className="block h-auto w-full rounded-m border border-line" />

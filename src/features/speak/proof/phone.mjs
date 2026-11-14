@@ -54,7 +54,7 @@ try {
     const { ctx, page } = await mk(browser, IPHONE, "sade");
     await page.goto(url()); await idle(page).waitFor();
     assert.equal(await page.locator(".sh-bottombar").isVisible(), false, "tab bar hidden");
-    assert.match(await page.locator(".vx-rec__hint").innerText(), /Tap to record\. You have 10 seconds on a free post\./);
+    assert.match(await page.locator(".vx-rec__hint").innerText(), /Tap to record\. You have \d+ seconds\. This one is free, up to 10 seconds\./);
     assert.ok(await page.getByText(/\d+ free posts? left/).first().isVisible());
     assert.ok(await page.getByRole("button", { name: /Up to 30 seconds/ }).isVisible());
     assert.ok(await page.getByText("₦150 for one message").isVisible());

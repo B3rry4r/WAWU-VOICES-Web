@@ -128,14 +128,17 @@ describe("the share page and the share sheet", () => {
   beforeEach(() => { vi.useFakeTimers({ now: OPENS - 60_000 }); refresh.mockClear(); });
   afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-  it("the server page is drawn again at the opening, and not before", async () => {
-    render(<ShareOpening opensAt={OPENS} />);
+  it("the server page is drawn again at the opening, and not before (once the API says the question is open)", async () => {
+    let answers = 0;
+    vi.stubGlobal("fetch", vi.fn(async () => { answers += 1; return json({ code: "c1", question: { ...launch(true) } }); }));
+    render(<ShareOpening code="c1" opensAt={OPENS} serverNow={Date.now()} />);
     await tick(59_000);
     expect(refresh).not.toHaveBeenCalled();
+    expect(answers).toBe(0);
     await tick(1_000 + 5_100);
     expect(refresh).toHaveBeenCalledTimes(1);
   });
-  it("if the API will not make a link for a question that has not opened, the sheet says so and offers to copy this page's address", async () => {
+  it("if the API will not make a link for a question that has not opened, the sheet says so and offers to copy the question's own address", async () => {
     vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q, addEventListener: () => undefined, removeEventListener: () => undefined }));
     vi.stubGlobal("fetch", vi.fn(async () => json({ error: { code: "NOT_FOUND", message: "no" } }, 404)));
     const write = vi.fn(async () => undefined);
@@ -144,8 +147,8 @@ describe("the share page and the share sheet", () => {
     await tick(200);
     expect(document.body.textContent).toContain("We cannot make a share link for this question yet.");
     expect(document.body.textContent).not.toContain("We could not make your link");
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Copy this page/ })); });
-    expect(write).toHaveBeenCalledWith(window.location.href.split("#")[0]);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Copy the question/ })); });
+    expect(write).toHaveBeenCalledWith(`${window.location.origin}/q/q9`);
   });
 });
 

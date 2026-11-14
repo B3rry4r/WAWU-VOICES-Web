@@ -93,6 +93,11 @@ export function getSharePage(code: string, fwd: Record<string, string> = {}): Pr
   return apiFetch<SharePage>(`/share/${encodeURIComponent(code)}`, { baseUrl: serverApiOrigin(), cache: "no-store", headers: fwd });
 }
 
+/** The same answer the share page's server render reads, asked from the browser (a waiting share page uses it to see whether the question has opened before it asks the server to draw the page again). */
+export function probeSharePage(code: string): Promise<SharePage> {
+  return apiFetch<SharePage>(`/share/${encodeURIComponent(code)}`, { cache: "no-store" });
+}
+
 // ---- notifications
 
 export function listNotifications(o: { filter?: NotificationFilter; cursor?: string | null; limit?: number } = {}): Promise<NotificationPage> {

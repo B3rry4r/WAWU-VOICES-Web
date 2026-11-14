@@ -83,7 +83,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
   return (
     <div className="min-h-dvh bg-bg text-ink" data-testid="share-page">
       <LinkOpened code={page.code} />
-      {opensAt !== null ? <ShareOpening opensAt={opensAt} /> : null}
+      {opensAt !== null ? <ShareOpening code={page.code} opensAt={opensAt} serverNow={now} /> : null}
       <header className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-3 dt:px-8 dt:py-5">
         <Logo height={36} />
         <span className="flex items-center gap-2">

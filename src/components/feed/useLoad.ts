@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/client";
+import { serverNow } from "@/lib/api/server-clock";
 
 export type Load<T> = { state: "loading" } | { state: "error"; error: ApiError | Error; retry: () => void } | { state: "ready"; data: T };
 
@@ -14,6 +15,8 @@ export const RETRY_MS = [5_000, 15_000, 30_000, 60_000];
 export const SPREAD_MS = 5_000;
 /** A page that comes back to the front with data older than this fetches again. */
 export const STALE_MS = 30_000;
+/** Coming back to the tab (visible or focus) asks the server at most this often. */
+export const BACK_MIN_MS = 5_000;
 /** A long timer is never trusted alone: wake at least this often and read the real clock. */
 const WAKE_MS = 15_000;
 
@@ -84,56 +87,64 @@ export function useStartWatch(at: number | null, refresh: () => Promise<unknown>
     let timer: ReturnType<typeof setTimeout> | undefined;
     let inflight = false;
     let tries = 0; // asks made after the instant
-    let lastAsk = 0;
+    let lastAsk = 0; // device clock
     const spread = Math.random() * SPREAD_MS;
     const visible = () => document.visibilityState !== "hidden";
-    const ask = () => {
-      if (inflight || !live) return;
+    const ask = (): boolean => {
+      if (inflight || !live) return false;
       inflight = true;
       lastAsk = Date.now();
       const done = () => { inflight = false; }; // on a failure keep what is on the screen; the next wake tries again
       refreshRef.current().then(done, done);
+      return true;
     };
+    // The opening instant is compared on the server's clock (corrected from the API's Date header); waits between asks use the device clock.
     const wake = () => {
       if (timer !== undefined) clearTimeout(timer);
       timer = undefined;
       if (!live) return;
-      const now = Date.now();
       const due = at + spread;
-      if (now < due) {
-        timer = setTimeout(wake, Math.min(due - now, WAKE_MS));
+      const toDue = due - serverNow();
+      if (toDue > 0) {
+        timer = setTimeout(wake, Math.min(toDue, WAKE_MS));
         return;
       }
       if (!visible()) return; // asleep or in the background: the visibility event wakes us
-      let next = tries === 0 ? due : lastAsk + RETRY_MS[Math.min(tries - 1, RETRY_MS.length - 1)];
+      const now = Date.now();
+      let next = tries === 0 ? now : lastAsk + RETRY_MS[Math.min(tries - 1, RETRY_MS.length - 1)];
       if (now >= next) {
-        tries += 1;
-        ask();
-        next = Date.now() + RETRY_MS[Math.min(tries - 1, RETRY_MS.length - 1)];
+        // An ask still in flight (a slow answer) does not use up a step: the step comes when it has ended.
+        if (ask()) {
+          tries += 1;
+          next = Date.now() + RETRY_MS[Math.min(tries - 1, RETRY_MS.length - 1)];
+        }
       }
       timer = setTimeout(wake, Math.max(250, Math.min(next - Date.now(), WAKE_MS)));
     };
-    const back = () => {
+    const back = (throttle: boolean) => () => {
       if (!visible()) return;
       const now = Date.now();
-      if (now >= at || now - fetchedAt.current >= STALE_MS) {
-        if (now >= at) tries = Math.max(tries, 1);
+      const pastIt = serverNow() >= at;
+      if ((pastIt || now - fetchedAt.current >= STALE_MS) && !(throttle && now - lastAsk < BACK_MIN_MS)) {
+        if (pastIt) tries = Math.max(tries, 1);
         ask();
       }
       wake();
     };
+    const backView = back(true);
+    const backNow = back(false);
     wake();
-    document.addEventListener("visibilitychange", back);
-    window.addEventListener("focus", back);
-    window.addEventListener("online", back);
-    window.addEventListener("pageshow", back);
+    document.addEventListener("visibilitychange", backView);
+    window.addEventListener("focus", backView);
+    window.addEventListener("online", backNow);
+    window.addEventListener("pageshow", backNow);
     return () => {
       live = false;
       if (timer !== undefined) clearTimeout(timer);
-      document.removeEventListener("visibilitychange", back);
-      window.removeEventListener("focus", back);
-      window.removeEventListener("online", back);
-      window.removeEventListener("pageshow", back);
+      document.removeEventListener("visibilitychange", backView);
+      window.removeEventListener("focus", backView);
+      window.removeEventListener("online", backNow);
+      window.removeEventListener("pageshow", backNow);
     };
   }, [at, fetchedAt]);
 }
