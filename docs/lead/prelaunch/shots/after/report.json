@@ -44,11 +44,9 @@
  {
   "file": "question-390",
   "path": "/q/01a1d7c8-041a-728e-9359-ce2600995f2d",
-  "txt": "Application error: a client-side exception has occurred (see the browser console for more information).",
+  "txt": "Today’s question Speak Discuss Vote What Next? HEALTH Are You Really Fine? You Dey Okay? How do you feel about Nigeria right now? With everything going on, say it in your voice. 10 seconds. AO T 5 voices · closes in 7 days Speak Write instead You have 10 seconds on a free post. Longer is charged when you send. Reading and listening are always free. How Nigeria feels so far 5 voices Angry 0% Tired 0% Proud 0% Hopeful 0% All Angry Tired Proud Hopeful Voices 5 Top HOPEFUL EE @excel.erikefe 3m Trending 0:08 1x 😮 1 reaction 0 React 1 Share View 1 reply 1 agree · 0 disagree HOPEFUL T @tunde 3m · Lagos Trending Hopeful, but tired of waiting. 😮 1 reaction 3 React 0 Share Add your voice in words Add your voice in words Home Discover Speak Profile",
   "overflow": 0,
-  "errs": [
-   "error: TypeError: Cannot read properties of undefined (reading 'toLocaleString')\n    at j (http://127.0.0.1:4000/_next/static/chunks/2777-e3c365d4e9c16714.js:1:3282)\n    at rE (http://127.0.0.1:4000/_next/static/chunks/fd9d1056-ee00f737f97b3896.js:1:40344)\n    at l$ (http://127.0.0.1:4000/_next/static/chun"
-  ]
+  "errs": []
  },
  {
   "file": "discover-390",
@@ -123,11 +121,9 @@
  {
   "file": "question-1440",
   "path": "/q/01a1d7c8-041a-728e-9359-ce2600995f2d",
-  "txt": "Application error: a client-side exception has occurred (see the browser console for more information).",
+  "txt": "Home Discover Weekly report Profile Speak Search VOICES Nigeria Sign in Back to Home Speak 5 Discuss 5 Vote What Next? 0 TODAY’S QUESTION HEALTH Are You Really Fine? You Dey Okay? How do you feel about Nigeria right now? With everything going on, say it in your voice. 10 seconds. 5 voices so far Closes in 7 days How Nigeria feels so far 5 voices Angry 0% Tired 0% Proud 0% Hopeful 0% All Angry Tired Proud Hopeful Top New Debated 5 voices HOPEFUL EE @excel.erikefe 3m Trending 0:08 1x 😮 1 reaction 0 React 1 Share View 1 reply 1 agree · 0 disagree HOPEFUL T @tunde 3m · Lagos Trending Hopeful, but tired of waiting. 😮 1 reaction 3 React 0 Share",
   "overflow": 0,
-  "errs": [
-   "error: TypeError: Cannot read properties of undefined (reading 'toLocaleString')\n    at j (http://127.0.0.1:4000/_next/static/chunks/2777-e3c365d4e9c16714.js:1:3282)\n    at rE (http://127.0.0.1:4000/_next/static/chunks/fd9d1056-ee00f737f97b3896.js:1:40344)\n    at l$ (http://127.0.0.1:4000/_next/static/chun"
-  ]
+  "errs": []
  },
  {
   "file": "discover-1440",
