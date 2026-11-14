@@ -117,6 +117,35 @@ describe("L-a: the device clock is corrected from the API's Date header", () => 
       expect(askedAtReal - OPENS).toBeLessThanOrEqual(5_100);
     });
   }
+  // C22: the same four cases with the 0 to 5 s spread pinned, so the timing is the same on every run (a spread that is not a whole millisecond, near 5 s, made the wake land early and wait 250 ms more: 1 run in 20).
+  for (const r of [0, 0.0001, 0.5, 0.5001, 0.99, 0.9907, 0.99973]) {
+    for (const [name, skew] of [["right", 0], ["10 minutes fast", 600_000], ["10 minutes slow", -600_000]] as const) {
+      it(`spread pinned at ${r}, device clock ${name}: asks within 0 to 5 s of the real instant`, async () => {
+        const rnd = vi.spyOn(Math, "random").mockReturnValue(r);
+        try {
+          const real = OPENS - 20_000;
+          vi.useFakeTimers({ now: real + skew });
+          noteServerDate(new Date(real).toUTCString());
+          let askedAtReal = -1;
+          const early: number[] = [];
+          const onAsk = () => {
+            const t = real + (Date.now() - (real + skew));
+            if (t < OPENS) early.push(t);
+            else if (askedAtReal < 0) askedAtReal = t;
+          };
+          function Pinned() { useStartWatch(OPENS, async () => onAsk(), { current: 0 }); return null; }
+          render(<Pinned />);
+          await tick(19_000);
+          expect(askedAtReal).toBe(-1);
+          if (skew > 0) expect(early.length).toBeLessThanOrEqual(1);
+          else expect(early.length).toBe(0);
+          await tick(6_000);
+          expect(askedAtReal).toBeGreaterThanOrEqual(OPENS);
+          expect(askedAtReal - OPENS).toBeLessThanOrEqual(5_100);
+        } finally { rnd.mockRestore(); }
+      });
+    }
+  }
 });
 
 describe("L-g: coming back to the tab asks at most once every 5 seconds", () => {

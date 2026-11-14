@@ -96,7 +96,7 @@ export function ProposePage({ questionId }: { questionId: string }) {
       key.current = null;
       router.push(`/q/${questionId}/next`);
     } catch (e) {
-      if (e instanceof ApiError && e.status > 0) key.current = null;
+      if (needsNewKey(e)) key.current = null; // the key is spent: the next tap carries a new one; any other failure keeps it
       if (needsNewKey(e)) setError({ title: "Not posted", text: newKeyLine("Post") });
       else if (e instanceof ApiError && e.status === 429) setError({ title: "Slow down a moment", text: "You have posted a lot in a short time. Try again in a few minutes." });
       else if (e instanceof ApiError && e.status === 403) setError({ title: "You cannot post right now", text: e.explained ? e.message : "Finish your profile first, then try again." });
