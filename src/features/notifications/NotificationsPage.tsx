@@ -60,6 +60,8 @@ export function targetHref(n: Pick<Notification, "targetType" | "targetId"> & { 
   // With no question to open (a topic poll whose week has none), the weekly page is where poll results are read.
   if (t === "poll" && n.type === "POLL_CLOSED") return n.questionId ? `/q/${n.questionId}/results` : "/weekly";
   if (t === "answer" && n.type === "TAG_FOLLOW") return `/news/${n.targetId}`;
+  // a tag notice with no question to open the thread under opens the Newsroom post instead of nothing
+  if (t === "answer" && n.type === "TAG_CHANGED" && !n.questionId) return `/news/${n.targetId}`;
   // LCH-07: a video notice opens that answer's share screen, where the video is
   if (t === "answer" && n.type === "VIDEO_READY") return n.questionId ? `/q/${n.questionId}/posted?a=${n.targetId}` : null;
   if (t === "answer") return n.questionId ? `/q/${n.questionId}/a/${n.targetId}` : null;

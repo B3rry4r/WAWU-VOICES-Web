@@ -22,6 +22,8 @@ function NewsBody() {
   // V-FIX-B round 2: the Verified News requests are the queue an editor opens first; with none waiting it opens on the flagged posts.
   const [tab, setTab] = useState("asking");
   const picked = useRef(false);
+  /** Requests that turned out to be decided already (409) or gone (404): the row leaves the list, the panel keeps its words. */
+  const [goneIds, setGoneIds] = useState<string[]>([]);
   const [items, setItems] = useState<AdminNewsItem[] | null>(null);
   const [counts, setCounts] = useState({ flagged: 0, askingVerified: 0, allChanges: 0 });
   const [waiting, setWaiting] = useState(0);
@@ -38,6 +40,7 @@ function NewsBody() {
     try {
       const p = await listNews({ tab: TAB_QUERY[tab] });
       if (my !== seq.current) return;
+      setGoneIds([]);
       setItems(p.items);
       setNext(p.nextCursor);
       setCounts(p.counts);
@@ -119,7 +122,7 @@ function NewsBody() {
       ) : (
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">
-            {items.map((i) => (
+            {items.filter((i) => !goneIds.includes(i.answer.id)).map((i) => (
               <button key={i.answer.id} type="button" role="listitem" className={queueRow(selected === i.answer.id)} onClick={() => setSelected(i.answer.id)} aria-current={selected === i.answer.id ? "true" : undefined}>
                 <span className="flex flex-wrap items-center gap-2">
                   <NewsTag kind={KIND[tagOf(i)]} />
@@ -142,7 +145,7 @@ function NewsBody() {
               </div>
             ) : null}
           </div>
-          {it ? <Decide key={it.answer.id} item={it} readOnly={tab === "changes"} onDone={(w) => decided(it.answer.id, w, tab)} onGone={(w) => { setSaved(w); void load(); reloadToday(); }} /> : null}
+          {it ? <Decide key={it.answer.id} item={it} readOnly={tab === "changes"} onDone={(w) => decided(it.answer.id, w, tab)} onGone={() => { setGoneIds((g) => [...g, it.answer.id]); setCounts((c) => ({ ...c, askingVerified: Math.max(0, c.askingVerified - 1) })); setWaiting((w) => Math.max(0, w - 1)); reloadToday(); }} /> : null}
         </div>
       )}
     </div>
@@ -150,6 +153,9 @@ function NewsBody() {
 }
 
 function Decide({ item, readOnly, onDone, onGone }: { item: AdminNewsItem; readOnly: boolean; onDone: (word: string) => void; onGone: (words: string) => void }) {
+  const [gone, setGone] = useState<string | null>(null);
+  const goneRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { if (gone) goneRef.current?.scrollIntoView({ block: "nearest" }); }, [gone]);
   const cur = tagOf(item);
   const [tag, setTag] = useState<NewsTagId>(cur);
   const [url, setUrl] = useState(item.sourceUrl ?? "");
@@ -173,7 +179,7 @@ function Decide({ item, readOnly, onDone, onGone }: { item: AdminNewsItem; readO
       }
     });
     if (r === "ok") onDone(word);
-    else if (r) onGone(r.gone);
+    else if (r) { setGone(r.gone); onGone(r.gone); }
   }
   const base = { reason: reason.trim() };
   const source = needSource ? { sourceName: name.trim() || undefined, sourceUrl: url.trim() || undefined } : {};
@@ -222,23 +228,29 @@ function Decide({ item, readOnly, onDone, onGone }: { item: AdminNewsItem; readO
             </>
           ) : null}
           <TextField label="Reason (the poster sees this)" multiline value={reason} onChange={setReason} hint="Required." />
-          <ErrorLine>{act.error}</ErrorLine>
-          <div className="flex flex-wrap items-center gap-3">
-            {item.verifiedRequested ? (
-              <>
-                <Button icon="check" loading={act.busy} disabled={!reasonOk || act.busy} onClick={() => go({ decision: "APPROVE_VERIFIED", ...base, sourceName: name.trim() || undefined, sourceUrl: url.trim() || undefined }, "Verified News approved. The poster is told why.")}>Approve Verified News</Button>
-                <Button variant="secondary" disabled={!reasonOk || act.busy} onClick={() => go({ decision: "DECLINE_VERIFIED", ...base }, "Request declined. The poster is told why.")}>Decline</Button>
-              </>
-            ) : (
-              <>
-                <Button icon="check" loading={act.busy} disabled={!reasonOk || act.busy} onClick={() => go({ decision: "KEEP", ...base }, `Kept as ${WORDS[cur]}. The reason is logged.`)}>{`Keep ${WORDS[cur]}`}</Button>
-                <Button variant="secondary" disabled={!reasonOk || act.busy || tag === cur} onClick={() => go({ decision: "CHANGE_TAG", newTag: tag, ...source, ...base }, `Changed to ${WORDS[tag]}. The poster is told why.`)}>Change tag</Button>
-              </>
-            )}
-          </div>
-          <div>
-            <Button variant="ghost" icon="flag" disabled={!reasonOk || act.busy} onClick={() => go({ decision: "SEND_TO_MODERATION", ...base }, "Sent to moderation.")}>Send to moderation</Button>
-          </div>
+          {gone ? (
+            <div ref={goneRef} data-testid="decision-gone"><ErrorLine>{gone}</ErrorLine></div>
+          ) : (
+            <>
+            <ErrorLine>{act.error}</ErrorLine>
+            <div className="flex flex-wrap items-center gap-3">
+              {item.verifiedRequested ? (
+                <>
+                  <Button icon="check" loading={act.busy} disabled={!reasonOk || act.busy} onClick={() => go({ decision: "APPROVE_VERIFIED", ...base, sourceName: name.trim() || undefined, sourceUrl: url.trim() || undefined }, "Verified News approved. The poster is told why.")}>Approve Verified News</Button>
+                  <Button variant="secondary" disabled={!reasonOk || act.busy} onClick={() => go({ decision: "DECLINE_VERIFIED", ...base }, "Request declined. The poster is told why.")}>Decline</Button>
+                </>
+              ) : (
+                <>
+                  <Button icon="check" loading={act.busy} disabled={!reasonOk || act.busy} onClick={() => go({ decision: "KEEP", ...base }, `Kept as ${WORDS[cur]}. The reason is logged.`)}>{`Keep ${WORDS[cur]}`}</Button>
+                  <Button variant="secondary" disabled={!reasonOk || act.busy || tag === cur} onClick={() => go({ decision: "CHANGE_TAG", newTag: tag, ...source, ...base }, `Changed to ${WORDS[tag]}. The poster is told why.`)}>Change tag</Button>
+                </>
+              )}
+            </div>
+            <div>
+              <Button variant="ghost" icon="flag" disabled={!reasonOk || act.busy} onClick={() => go({ decision: "SEND_TO_MODERATION", ...base }, "Sent to moderation.")}>Send to moderation</Button>
+            </div>
+            </>
+          )}
         </div>
       )}
 

@@ -284,9 +284,15 @@ try {
       await page.goto(`${ORIGIN}/admin/news`);
       await page.getByLabel('Reason (the poster sees this)').fill('Checked.');
       await page.getByRole('button', { name: 'Approve Verified News' }).click();
-      await page.getByText(words).waitFor();
-      await page.getByText('Nothing is waiting here').waitFor();
+      const line = page.getByTestId('decision-gone');
+      await line.waitFor();
+      assert.match(await line.innerText(), new RegExp(words.replace('.', '\\.')));
+      // the line stands where the buttons were: the buttons are gone, the row has left the list, and the line is in view
       assert.equal(await page.getByRole('button', { name: 'Approve Verified News' }).count(), 0);
+      assert.equal(await page.getByRole('list', { name: 'Queue' }).getByRole('listitem').count(), 0);
+      const box = await line.boundingBox();
+      assert.ok(box && box.y >= 0 && box.y + box.height <= 900, 'the line is in view: ' + JSON.stringify(box));
+      await shot(page, `admin-news-gone-${status}-1440`, false);
       await ctx.close();
     }
   });

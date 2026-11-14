@@ -21,6 +21,11 @@ describe("V-FIX-B round 2: every new notice opens something (the API's real payl
   it("POLL_CLOSED with no question opens the weekly page instead of nothing", () => {
     expect(targetHref({ type: "POLL_CLOSED", targetType: "poll", targetId: P, questionId: null })).toBe("/weekly");
   });
+  it("a tag notice (TAG_CHANGED) on an answer with no questionId opens the Newsroom post; with one it opens the thread as before; other types stay as they are", () => {
+    expect(targetHref({ type: "TAG_CHANGED", targetType: "answer", targetId: A, questionId: null })).toBe(`/news/${A}`);
+    expect(targetHref({ type: "TAG_CHANGED", targetType: "answer", targetId: A, questionId: Q })).toBe(`/q/${Q}/a/${A}`);
+    expect(targetHref({ type: "REPLY", targetType: "answer", targetId: A, questionId: null })).toBeNull();
+  });
   it("CATEGORY_ALERT: targetType question opens the question", () => {
     expect(targetHref({ type: "CATEGORY_ALERT", targetType: "question", targetId: Q, questionId: Q })).toBe(`/q/${Q}`);
   });
