@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api/client";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
+import { OTHER_TAB_NOTE } from "./draft";
 import { peaksFromLevels, refusalText, tokenFor, uuidKey } from "./logic";
 import { RecordStage, TakePlayer } from "./parts";
 import { AnonymousSwitch } from "@/features/talk/AnonymousSwitch";
@@ -33,7 +34,7 @@ export interface ReadyClip { clipId: string; tokenId?: string; key: string; seco
 /** What a box hands to `keep` when the person sends while offline: the take, and the Idempotency-Key and name switch it would have been sent with. */
 export interface KeepInput { blob: Blob; mime: string; seconds: number; peaks: number[]; key: string; anonymous: boolean }
 /** "kept": saved on this device. "exists": another recording already waits there (the person is asked before it is replaced). "failed": the device could not keep it. */
-export type KeepResult = "kept" | "exists" | "failed";
+export type KeepResult = "kept" | "exists" | "failed" | "other_tab";
 
 export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, anonSlot, keyPart, keep, onKept }: {
   /** Part of what the post says besides the recording (a reply's stance): a different one is a different request, so it gets a different Idempotency-Key. */
@@ -178,6 +179,8 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
     } else if (r === "exists") {
       setNote("A recording is already waiting to be sent on this device. Saving this one will replace it.");
       setReplaceOk(true);
+    } else if (r === "other_tab") {
+      setNote(OTHER_TAB_NOTE);
     } else {
       setNote("We could not keep your recording on this device. Stay on this page until you are back online, then tap Send.");
     }

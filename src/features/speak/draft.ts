@@ -49,6 +49,22 @@ export function currentOwner(): string | null {
   }
 }
 
+/** The person a screen was opened for: their WAWU ID subject, or null for a guest. */
+export type Owner = string | null;
+
+/** Shown when a screen was opened for one person and another person is now signed in on this browser (another tab). */
+export const OTHER_TAB_NOTE = "You are signed in as someone else in another tab. Nothing was saved. Reload to carry on.";
+
+/**
+ * True when someone is signed in here who is not `owner`. A screen opened for A must then keep, restore, clear and send
+ * nothing: the kept recording is A's, and the person now signed in is not. Nobody signed in (a session that ended) is not a
+ * different person, so that case behaves as it always did.
+ */
+export function signedInAsSomeoneElse(owner: Owner): boolean {
+  const me = currentOwner();
+  return me !== null && me !== owner;
+}
+
 const DB = "voices-speak";
 const STORE = "drafts";
 const ID = "current";
@@ -80,7 +96,8 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
 }
 
 /** True when the recording is really kept on this device. False means only this page holds it (storage blocked or full). */
-export async function saveDraft(input: Draft): Promise<boolean> {
+export async function saveDraft(input: Draft, owner: Owner): Promise<boolean> {
+  if (signedInAsSomeoneElse(owner)) return false; // refused: nothing is written; the caller says why with signedInAsSomeoneElse()
   const d: Draft = { ...input, owner: currentOwner() };
   memory = d;
   try {
@@ -103,23 +120,30 @@ async function rawLoad(): Promise<Draft | null> {
 }
 
 /** The kept recording for this person. A guest's recording is handed to the first person who signs in, once; another person's is never shown and is removed. */
-export async function loadDraft(): Promise<Draft | null> {
+export async function loadDraft(owner: Owner): Promise<Draft | null> {
+  if (signedInAsSomeoneElse(owner)) return null; // refused: nothing is returned and nothing is removed
   const d = await rawLoad();
   if (!d) return null;
   const me = currentOwner();
-  const owner = d.owner ?? null;
-  if (owner === me) return d;
-  if (owner === null && me !== null) {
+  const stored = d.owner ?? null;
+  if (stored === me) return d;
+  if (stored === null && me !== null) {
     const claimed = { ...d, owner: me };
     memory = claimed;
     try { await run("readwrite", (s) => s.put(claimed, ID)); } catch { /* memory copy serves */ }
     return claimed;
   }
-  if (me !== null) await clearDraft(); // someone else's recording on this browser
+  if (me !== null) await wipeDraft(); // someone else's recording on this browser
   return null;
 }
 
-export async function clearDraft(): Promise<void> {
+export async function clearDraft(owner: Owner): Promise<void> {
+  if (signedInAsSomeoneElse(owner)) return; // refused: not this person's to clear
+  await wipeDraft();
+}
+
+/** Removes the kept recording whoever it belongs to. Only for sign-out, which ends the session for every tab, and for removing a recording that is not the signed-in person's. */
+export async function wipeDraft(): Promise<void> {
   memory = null;
   try {
     await run("readwrite", (s) => s.delete(ID));
@@ -129,8 +153,9 @@ export async function clearDraft(): Promise<void> {
 }
 
 /** A waiting voice reply is a promise made to the person: a plain take on the record screen never overwrites it. Returns false when it held back. */
-export async function saveDraftKeepingReply(input: Draft): Promise<boolean> {
-  const cur = await loadDraft();
+export async function saveDraftKeepingReply(input: Draft, owner: Owner): Promise<boolean> {
+  if (signedInAsSomeoneElse(owner)) return false;
+  const cur = await loadDraft(owner);
   if (cur?.reply && cur.key !== input.key) return false;
-  return saveDraft(input);
+  return saveDraft(input, owner);
 }

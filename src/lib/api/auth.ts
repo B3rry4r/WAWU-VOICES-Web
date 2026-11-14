@@ -121,7 +121,7 @@ export function signOut(): void {
   clearKeptAddress();
   if (refreshToken) void idCall("/auth/logout", { refreshToken }).catch(() => undefined);
   // a kept recording belongs to the person who made it
-  void import("@/features/speak/draft").then((m) => m.clearDraft()).catch(() => undefined);
+  void import("@/features/speak/draft").then((m) => m.wipeDraft()).catch(() => undefined);
 }
 
 export function isSignedIn(): boolean {

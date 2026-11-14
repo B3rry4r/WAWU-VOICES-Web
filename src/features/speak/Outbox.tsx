@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Banner, Button } from "@/components/vx";
 import { isSignedIn } from "@/lib/api/auth";
 import * as api from "@/lib/api/speak";
-import { clearDraft, draftIsStale, loadDraft, STALE_NOTE, type Draft } from "./draft";
+import { clearDraft, currentOwner, draftIsStale, loadDraft, OTHER_TAB_NOTE, signedInAsSomeoneElse, STALE_NOTE, type Draft, type Owner } from "./draft";
 import { isSending, planFor, sendKeptRecording, type SendPlan } from "./outbox";
 import { isMoodQuestion } from "@/features/mood/mood";
 import { publishedFromLink } from "@/features/share/share-visit";
@@ -32,20 +32,26 @@ export function Outbox() {
   const pathname = usePathname() ?? "/";
   const [view, setView] = useState<View | null>(null);
   const running = useRef(false);
+  // The person the box last looked for. It lives across a sign-in in one tab, so it is read at the start of each look (not once at mount)
+  // and held for that whole pass: load, send and clear all name this person, and none of them acts if someone else has signed in since.
+  const owner = useRef<Owner>(currentOwner());
   const onSpeak = /(^|\/)speak(\/|$)/.test(pathname);
 
   const send = useCallback(async (d: Draft, plan: SendPlan) => {
     setView({ kind: "sending", reply: !!d.reply });
-    const r = await sendKeptRecording(d, plan.tokenId, async () => (await loadDraft())?.key === d.key, async () => {
+    const who = owner.current;
+    const r = await sendKeptRecording(d, plan.tokenId, async () => (await loadDraft(who))?.key === d.key, async () => {
       publishedFromLink(d.shareCode);
-      await clearDraft();
-    }, async () => (await loadDraft())?.key === d.key);
+      await clearDraft(who);
+    }, async () => (await loadDraft(who))?.key === d.key);
     if (r.ok && r.answerId === null) {
       setView(null); // another tab posted it: it says so, this one says nothing
     } else if (r.ok) {
       setView(r.replyTo
         ? { kind: "note", tone: "success", text: "Your saved voice reply was posted.", href: `/q/${r.questionId}/a/${r.replyTo}`, hrefLabel: "See it" }
         : { kind: "note", tone: "success", text: "Your saved voice was posted.", href: r.answerId ? `/q/${r.questionId}/posted?a=${r.answerId}` : undefined, hrefLabel: "See it" });
+    } else if (signedInAsSomeoneElse(who)) {
+      setView({ kind: "note", tone: "danger", text: OTHER_TAB_NOTE });
     } else if (r.reason === "offline") {
       setView(null); // stays kept; the next time the connection is back it is tried again
     } else if (r.reason === "needs_tokens") {
@@ -59,17 +65,19 @@ export function Outbox() {
     if (running.current || onSpeak || !isSignedIn()) return;
     running.current = true;
     try {
-      const d = await loadDraft();
+      owner.current = currentOwner();
+      const who = owner.current;
+      const d = await loadDraft(who);
       if (!d) return;
       if (draftIsStale(d)) {
-        await clearDraft();
+        await clearDraft(who);
         setView({ kind: "note", tone: "info", text: STALE_NOTE });
         return;
       }
       if (!d.queued || isSending(d.key) || (typeof navigator !== "undefined" && navigator.onLine === false)) return;
       const [question, config, allowance] = await Promise.all([api.getQuestion(d.questionId), api.getPublicConfig(), api.getAllowance()]);
       if (question.status !== "LIVE") {
-        await clearDraft();
+        await clearDraft(who);
         setView({ kind: "note", tone: "info", text: "The question for your saved recording has closed, so it was not sent and has been removed." });
         return;
       }
@@ -95,7 +103,9 @@ export function Outbox() {
   }, [look, pathname]);
 
   async function remove() {
-    await clearDraft();
+    // Closing a banner opened for A while B has kept a recording: B's is left alone, and the banner says why.
+    if (signedInAsSomeoneElse(owner.current)) { setView({ kind: "note", tone: "danger", text: OTHER_TAB_NOTE }); return; }
+    await clearDraft(owner.current);
     setView(null);
   }
 
