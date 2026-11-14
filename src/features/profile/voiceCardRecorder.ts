@@ -2,6 +2,7 @@
  * Browser recording and upload for the Voice Card. Local to this area because web/src/lib/audio-ref is a reference copy
  * (its relative ".js" imports do not build under webpack; W4 wires the shared one and should replace this file).
  */
+import { pauseSongForVoice } from "@/lib/theme-song";
 const CANDIDATES = ["audio/webm;codecs=opus", "audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/ogg;codecs=opus", "audio/webm"];
 
 export const baseMime = (m: string) => m.split(";")[0];
@@ -24,6 +25,7 @@ export class VoiceRecorder {
 
   /** Asks for the microphone. Call it from a tap: iOS needs a user gesture. */
   async start(): Promise<RecorderError | null> {
+    pauseSongForVoice();
     const mime = pickMime();
     if (!mime) return "unsupported";
     try {

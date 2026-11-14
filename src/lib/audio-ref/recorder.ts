@@ -1,3 +1,4 @@
+import { pauseSongForVoice } from "@/lib/theme-song";
 import { pickMime } from './mime';
 
 export type RecorderError = 'unsupported' | 'permission_denied' | 'no_microphone' | 'failed';
@@ -44,6 +45,7 @@ export class VoiceRecorder {
   /** Asks for the microphone. Must be called from a tap (iOS needs a user gesture). A second call while one is starting or recording does nothing. */
   async start(): Promise<RecorderError | null> {
     if (this.rec || this.starting) return null;
+    pauseSongForVoice();
     this.starting = true;
     // Safari only lets a context run if it is made inside the tap, so it is made before any await.
     const AC = typeof window !== 'undefined' ? (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext) : undefined;
