@@ -1,4 +1,5 @@
 "use client";
+import { pauseSongForVoice } from "@/lib/theme-song";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Button, FreePosts, Icon, IconButton } from "@/components/vx";
@@ -97,7 +98,7 @@ export function TakePlayer({ blob, seconds, peaks }: { blob: Blob; seconds: numb
     if (!a) return;
     setFailed(false);
     if (!a.paused) { a.pause(); return; }
-    try { a.playbackRate = speed; await a.play(); } catch { setFailed(true); }
+    try { a.playbackRate = speed; pauseSongForVoice(); await a.play(); } catch { setFailed(true); }
   }
   function cycle() {
     const n = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];

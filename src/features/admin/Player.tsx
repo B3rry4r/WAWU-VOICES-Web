@@ -1,5 +1,6 @@
 "use client";
 
+import { pauseSongForVoice } from "@/lib/theme-song";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/vx";
 import { makePlayer } from "@/lib/audio-ref/player";
@@ -49,6 +50,7 @@ export function AdminPlayer({ url, label, tone = "mint" }: { url: string; label:
       return;
     }
     try {
+      pauseSongForVoice();
       await a.play();
       setPlaying(true);
     } catch {
