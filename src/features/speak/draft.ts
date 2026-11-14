@@ -38,7 +38,10 @@ import type { TagChoice } from "@/features/news/tag-choice";
 
 /** Who is signed in, read from the token's subject (only to match a draft, never trusted for anything else). */
 export function currentOwner(): string | null {
-  const t = sessionStorage.getToken();
+  return subOf(sessionStorage.getToken());
+}
+
+function subOf(t: string | null | undefined): string | null {
   if (!t) return null;
   try {
     const b = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -54,6 +57,29 @@ export type Owner = string | null;
 
 /** Shown when a screen was opened for one person and another person is now signed in on this browser (another tab). */
 export const OTHER_TAB_NOTE = "You are signed in as someone else in another tab. Nothing was saved. Reload to carry on.";
+
+/**
+ * The person THIS tab is for. The sign-in is shared by every tab of the browser, so when another tab signs in as someone else,
+ * reading the token here would hand a screen opened later in this tab (record, voice reply) to the wrong person. The browser
+ * tells a tab only about writes made by OTHER tabs (the `storage` event); the first one freezes the person this tab last knew,
+ * and a sign-out (nobody signed in) lets go of it. Without another tab's write it is simply who is signed in.
+ */
+let tabKnew: Owner = typeof window === "undefined" ? null : currentOwner();
+let otherTabWrote = false;
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key !== "voices-web-session") return;
+    if (!otherTabWrote) {
+      otherTabWrote = true;
+      try { tabKnew = subOf((JSON.parse(e.oldValue ?? "null") as { accessToken?: string } | null)?.accessToken); } catch { /* keeps what it knew */ }
+    }
+  });
+}
+export function openedFor(): Owner {
+  const now = currentOwner();
+  if (!otherTabWrote || now === null) { tabKnew = now; otherTabWrote = false; }
+  return tabKnew;
+}
 
 /**
  * True when someone is signed in here who is not `owner`. A screen opened for A must then keep, restore, clear and send

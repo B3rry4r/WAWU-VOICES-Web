@@ -6,7 +6,7 @@ import { freeCovers, tokenFor, voicePriceMilli } from "@/features/speak/logic";
 import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { tokensLabel } from "@/lib/shared/text-price";
-import { currentOwner, loadDraft, OTHER_TAB_NOTE, saveDraft, signedInAsSomeoneElse, type Owner } from "@/features/speak/draft";
+import { currentOwner, loadDraft, openedFor, OTHER_TAB_NOTE, saveDraft, signedInAsSomeoneElse, type Owner } from "@/features/speak/draft";
 import { isOutOfPosts } from "./lib";
 import { OWN_NAMELESS_NOTE, replyAnonSlot } from "./reply-anon";
 
@@ -31,7 +31,7 @@ export function VoiceReplySheet({ aid, qid, who, stance, allow, onClose, onPoste
 }) {
   const [pick, setPick] = useState<ReplyStance | undefined>(stance);
   // The person this sheet was opened for, read once: a recording kept from it belongs to them.
-  const [owner] = useState<Owner>(() => currentOwner());
+  const [owner] = useState<Owner>(() => openedFor());
   const [short, setShort] = useState(false);
   const c = allow.costs;
   const limit = allow.maxVoiceSeconds ?? c.voiceMaxSeconds ?? 60;

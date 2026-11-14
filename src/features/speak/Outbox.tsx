@@ -35,6 +35,8 @@ export function Outbox() {
   // The person the box last looked for. It lives across a sign-in in one tab, so it is read at the start of each look (not once at mount)
   // and held for that whole pass: load, send and clear all name this person, and none of them acts if someone else has signed in since.
   const owner = useRef<Owner>(currentOwner());
+  // Who a banner on screen was opened for. Closing it removes that person's recording only, never one kept by someone who signed in since.
+  const shownFor = useRef<Owner>(null);
   const onSpeak = /(^|\/)speak(\/|$)/.test(pathname);
 
   const send = useCallback(async (d: Draft, plan: SendPlan) => {
@@ -57,6 +59,7 @@ export function Outbox() {
     } else if (r.reason === "needs_tokens") {
       setView({ kind: "note", tone: "danger", text: r.message ?? "You need more tokens to send your saved recording.", href: "/units/buy?from=%2F", hrefLabel: "Get tokens" });
     } else {
+      shownFor.current = who;
       setView({ kind: "offer", draft: r.draft ?? d, plan, error: r.message ?? "We could not send it. It is kept on this device." });
     }
   }, []);
@@ -82,12 +85,13 @@ export function Outbox() {
         return;
       }
       if (!d.reply && isMoodQuestion(question) && !d.mood) {
+        shownFor.current = who;
         setView({ kind: "finish", draft: d });
         return;
       }
       const plan = planFor(d, { allowance, config });
       if (plan.free) await send(d, plan);
-      else setView({ kind: "offer", draft: d, plan });
+      else { shownFor.current = who; setView({ kind: "offer", draft: d, plan }); }
     } catch {
       /* offline again, or the server is busy: the recording is kept and this runs again on the next open or reconnect */
     } finally {
@@ -104,8 +108,8 @@ export function Outbox() {
 
   async function remove() {
     // Closing a banner opened for A while B has kept a recording: B's is left alone, and the banner says why.
-    if (signedInAsSomeoneElse(owner.current)) { setView({ kind: "note", tone: "danger", text: OTHER_TAB_NOTE }); return; }
-    await clearDraft(owner.current);
+    if (signedInAsSomeoneElse(shownFor.current)) { setView({ kind: "note", tone: "danger", text: OTHER_TAB_NOTE }); return; }
+    await clearDraft(shownFor.current);
     setView(null);
   }
 
