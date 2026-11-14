@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Banner, Button, Icon, IconButton, Skeleton } from "@/components/vx";
-import { getPayment, getTiers, verifyPayment, type Payment, type PayMethod } from "@/lib/api/units";
+import { getPayment, getPlans, getTiers, verifyPayment, type Payment, type PayMethod } from "@/lib/api/units";
 import { clearByPayment, findByPayment, safePath, type Attempt } from "./attempt";
 import { startCheckout, startErrorText } from "./checkout";
 import { findPostedFor, getDraft } from "./draft";
@@ -188,8 +188,10 @@ export function PaymentDoneScreen() {
     try {
       const t = await getTiers();
       const tier = p ? t.tiers.find((x) => `${x.name} pack` === p.title) : undefined;
+      const planHit = p?.kind === "SUBSCRIPTION" && p.plan ? (await getPlans()).plans.find((x) => x.slug === p.plan?.slug) : undefined;
       const offer = p ? t.extraVoice.find((x) => extraVoiceTitle(x.maxSeconds) === p.title) : undefined;
-      if (tier) await startCheckout({ kind: "UNITS", tierId: tier.id, method: methodOf(p) }, from, undefined, attemptRef.current?.draftQuestionId);
+      if (planHit) await startCheckout({ kind: "SUBSCRIPTION", planId: planHit.id, method: methodOf(p) }, from);
+      else if (tier) await startCheckout({ kind: "UNITS", tierId: tier.id, method: methodOf(p) }, from, undefined, attemptRef.current?.draftQuestionId);
       else if (offer) await startCheckout({ kind: "EXTRA_VOICE", tokenKind: offer.kind }, from);
       else router.push("/units/buy");
     } catch (e) {
@@ -248,15 +250,16 @@ export function PaymentDoneScreen() {
   if (state.kind === "success") {
     const p = state.payment;
     const isUnits = p.kind === "UNITS" && p.unitsMilli !== null;
+    const isPlan = p.kind === "SUBSCRIPTION";
     const rows: Array<[string, string]> = [
       ["Pack", packLine(p)],
-      ["Paid", naira(p.amountKobo)],
+      ["Paid", naira(p.totalKobo ?? p.amountKobo)],
     ];
     const m = methodLabel(p);
     if (m) rows.push(["Method", m]);
     rows.push(["Reference", paymentRef(p)]);
     if (p.verifiedAt) rows.push(["Time", dateTimeLagos(p.verifiedAt)]);
-    if (!isUnits) rows[0][0] = "Item";
+    if (!isUnits) rows[0][0] = isPlan ? "Plan" : "Item";
     const posted = draft?.status === "posted" ? draft : null;
     const target = posted ? `/q/${posted.questionId}` : from ?? home;
     return (
@@ -264,9 +267,11 @@ export function PaymentDoneScreen() {
         <Hero
           tone="ok"
           big
-          title={isUnits ? `${unitsLabel(p.unitsMilli as number)} added` : "Extra voice token added"}
+          title={isPlan ? `${p.title} has started` : isUnits ? `${unitsLabel(p.unitsMilli as number)} added` : "Extra voice token added"}
           body={
-            isUnits ? (
+            isPlan ? (
+              <>Payment received.{p.plan ? ` Your first ${unitsLabel(p.plan.monthlyMilli)} are in your balance. The rest of your plan arrives one month at a time.` : " Your tokens arrive one month at a time."}</>
+            ) : isUnits ? (
               <>Payment received.{p.balanceMilli !== null ? <> Your balance is now <b className="text-ink">{units(p.balanceMilli)} {p.balanceMilli === 1000 ? "token" : "tokens"}</b>.</> : null}</>
             ) : (
               <>Payment received. Use it on one message{p.token ? ` of up to ${p.token.maxSeconds} seconds` : ""}. It does not renew.</>
@@ -307,7 +312,7 @@ export function PaymentDoneScreen() {
   }[state.kind];
   const rows: Array<[string, ReactNode]> = [];
   if (p && state.kind !== "cancelled") {
-    rows.push(["Pack", p.kind === "UNITS" ? `${p.title.replace(/ pack$/i, "")}, ${naira(p.amountKobo)}` : `${p.title}, ${naira(p.amountKobo)}`]);
+    rows.push([p.kind === "SUBSCRIPTION" ? "Plan" : "Pack", p.kind === "UNITS" ? `${p.title.replace(/ pack$/i, "")}, ${naira(p.totalKobo ?? p.amountKobo)}` : `${p.title}, ${naira(p.totalKobo ?? p.amountKobo)}`]);
     const m = methodLabel(p);
     if (m) rows.push(["Method", m]);
     rows.push(["Payment reference", <CopyRef key="ref" full={paymentRef(p)} />]);
@@ -321,7 +326,7 @@ export function PaymentDoneScreen() {
       {hold ? <Banner tone="info" title="Your draft is still saved">It posts as soon as your tokens arrive.</Banner> : null}
       {p && state.kind !== "refunded" && state.kind !== "cancelled" ? (
         <Banner tone="warning" title="Seeing a debit?">
-          If your bank shows one for this payment, it comes back to you. Support can trace it with reference {shortRef(paymentRef(p))}.
+          If your bank shows one for this payment, it comes back to you. <a className="text-green-text underline" href={`/settings/help?topic=PAYMENT&payment=${encodeURIComponent(p.id)}`}>Contact support</a> and they can trace it with reference {shortRef(paymentRef(p))}.
         </Banner>
       ) : null}
       {rows.length ? <Details rows={rows} /> : null}

@@ -5,7 +5,7 @@ import type { NewsTag } from "@/lib/api/news";
  * News" posts as Unverified News and asks the editors to check the named source; only an editor can choose "Verified News"
  * (an editor names the source at once).
  */
-export type TagPick = "UNVERIFIED_NEWS" | "GOSSIP" | "REQUEST_VERIFIED" | "VERIFIED_NEWS";
+export type TagPick = "NONE" | "UNVERIFIED_NEWS" | "GOSSIP" | "REQUEST_VERIFIED" | "VERIFIED_NEWS";
 
 export interface TagChoice {
   pick: TagPick | null;
@@ -13,7 +13,7 @@ export interface TagChoice {
   sourceUrl: string;
 }
 
-export const NO_TAG: TagChoice = { pick: null, sourceName: "", sourceUrl: "" };
+export const NO_TAG: TagChoice = { pick: "NONE", sourceName: "", sourceUrl: "" };
 
 const needsSource = (p: TagPick | null) => p === "REQUEST_VERIFIED" || p === "VERIFIED_NEWS";
 
@@ -38,8 +38,7 @@ export function tagReady(c: TagChoice): boolean {
 
 /** Why the button waits, in words for the person; null when it does not. */
 export function tagWaitText(c: TagChoice): string | null {
-  if (!c.pick) return "Choose a tag to post.";
-  if (needsSource(c.pick) && !c.sourceName.trim()) return "Name your source to ask for Verified News.";
+    if (needsSource(c.pick) && !c.sourceName.trim()) return "Name your source to ask for Verified News.";
   if (!linkOk(c.sourceUrl)) return "Use a full link that starts with https://.";
   return null;
 }
@@ -52,8 +51,8 @@ export interface TagFields {
   newsSourceUrl?: string;
 }
 
-/** What the person's choice adds to the post request. Call only when tagReady. */
-export function tagFields(c: TagChoice): TagFields {
+/** What the person's choice adds to the post request; null for "Not news" (nothing is sent). Call only when tagReady. */
+export function tagFields(c: TagChoice): TagFields | null {
   const src = {
     newsSourceName: c.sourceName.trim(),
     ...(c.sourceUrl.trim() ? { newsSourceUrl: c.sourceUrl.trim() } : {}),
@@ -65,7 +64,9 @@ export function tagFields(c: TagChoice): TagFields {
       return { isNews: true, newsTag: "VERIFIED_NEWS", ...src };
     case "GOSSIP":
       return { isNews: true, newsTag: "GOSSIP" };
-    default:
+    case "UNVERIFIED_NEWS":
       return { isNews: true, newsTag: "UNVERIFIED_NEWS" };
+    default:
+      return null;
   }
 }

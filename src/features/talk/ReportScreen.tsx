@@ -15,6 +15,7 @@ const REASONS: { id: ReportReason; label: string }[] = [
   { id: "SCAM_OR_SPAM", label: "Scam or spam" },
   { id: "PERSONAL_DETAILS", label: "Shares personal details" },
   { id: "MISLEADING_NEWS_TAG", label: "Misleading news tag" },
+  { id: "ABOUT_ME", label: "This is about me" },
   { id: "OTHER", label: "Something else" },
 ];
 

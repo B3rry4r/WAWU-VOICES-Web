@@ -122,7 +122,6 @@ describe("writing on a mood question", () => {
     expect(within(note).getByTestId("mood-chip").textContent).toBe("HOPEFUL");
     expect(within(note).getByRole("link", { name: "Change" }).getAttribute("href")).toBe("/q/q1/mood");
     await userEvent.type(screen.getByRole("textbox"), "Hopeful, because the young ones build.");
-    await userEvent.click(screen.getByRole("button", { name: "Gossip" })); // V-FIX-B: a post needs a tag the person chose
     await userEvent.click(screen.getByRole("button", { name: /^(Post|Send)/ }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/questions/q1/answers"))).toBe(true));
     const post = calls.find((c) => c.method === "POST")!;
@@ -135,7 +134,6 @@ describe("writing on a mood question", () => {
     stub((c) => (c.url.endsWith("/questions/q1") ? json(question({ moodOptions: [] })) : routes(c)));
     render(<WriteScreen qid="q1" />);
     await userEvent.type(await screen.findByRole("textbox"), "Salary goes in two hours.");
-    await userEvent.click(screen.getByRole("button", { name: "Gossip" })); // V-FIX-B: a post needs a tag the person chose
     await userEvent.click(screen.getByRole("button", { name: /^(Post|Send)/ }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST")).toBe(true));
     expect((calls.find((c) => c.method === "POST")!.body as Record<string, unknown>).mood).toBeUndefined();

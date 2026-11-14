@@ -2,6 +2,7 @@ import { apiFetch, ApiError, NetworkError } from "./client";
 import { API_BASE, REQUEST_TIMEOUT_MS } from "./config";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import type { components } from "./types";
+import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 
 /* tokens routes (contract tag voice-units), plus the three neighbours the tokens screens read:
  * GET /config/public, GET /ads/placement and POST /questions/{id}/answers (a held draft posts after a purchase, V-19).
@@ -23,11 +24,20 @@ export type Receipt = S["Receipt"];
 export type PublicConfig = S["PublicConfig"];
 export type AdPlacement = S["AdPlacement"];
 export type InitPaymentRequest = S["InitPaymentRequest"];
+export type SubscriptionPlan = S["SubscriptionPlan"];
+export type SubscriptionPlans = S["SubscriptionPlans"];
+export type MySubscriptions = S["MySubscriptions"];
+export type Quote = S["Quote"];
+export type Subscription = S["Subscription"];
 export type PayMethod = NonNullable<InitPaymentRequest["method"]>;
 
 export const getWallet = () => apiFetch<Wallet>("/wallet", { authed: true });
 /** Guest or signed in; the token is sent when there is one. */
 export const getTiers = () => apiFetch<TiersResponse>("/units/tiers", { authed: true });
+/** The subscription plans and what each gives (V-45). Guest or signed in. */
+export const getPlans = () => apiFetch<SubscriptionPlans>("/subscription-plans", { authed: true });
+/** My plan, the one waiting to start and my finished plans. */
+export const getMySubscriptions = () => apiFetch<MySubscriptions>("/subscriptions/me", { authed: true });
 export const getPublicConfig = () => apiFetch<PublicConfig>("/config/public");
 
 export function getHistory(cursor?: string, limit = 20): Promise<LedgerPage> {
@@ -69,8 +79,9 @@ export const postHeldAnswer = (questionId: string, body: string, idempotencyKey:
     method: "POST",
     authed: true,
     idempotencyKey,
-    body: { kind: "TEXT", body },
-  });
+    // V-ANON: a draft held while the person bought tokens keeps their "Post without my name" choice.
+    body: { kind: "TEXT", body, ...(readAnonPref(questionId) ? { anonymous: true } : {}) },
+  }).then((r) => { writeAnonPref(questionId, false); return r; });
 
 async function csvOnce(): Promise<Response> {
   const headers = new Headers({ Accept: "text/csv" });

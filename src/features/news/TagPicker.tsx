@@ -26,13 +26,14 @@ export function useIsEditor(enabled = true): boolean {
  * the source at once. The words under the chips say what each tag means in the same plain language as the Newsroom.
  */
 export function TagPicker({ value, onChange, editor, className }: { value: TagChoice; onChange: (c: TagChoice) => void; editor?: boolean; className?: string }) {
-  const pick = (p: TagPick) => onChange(value.pick === p ? { ...value, pick: null } : { ...value, pick: p });
+  const pick = (p: TagPick) => onChange({ ...value, pick: p });
   const askSource = value.pick === "REQUEST_VERIFIED" || value.pick === "VERIFIED_NEWS";
   const wait = tagWaitText(value);
   return (
     <div className={"vx-tagpick" + (className ? " " + className : "")} role="group" aria-label="Tag your post">
-      <span className="vx-caption">Choose a tag so readers know what this is. You need one to post.</span>
+      <span className="vx-caption">Is this news? Pick a tag so readers know.</span>
       <div className="vx-tagpick__row">
+        <TopicChip className="is-none" label="Not news" selected={value.pick === "NONE"} onClick={() => onChange({ ...value, pick: "NONE" })} />
         <TopicChip className="is-unverified" icon="shield-alert" label="Unverified News" selected={value.pick === "UNVERIFIED_NEWS"} onClick={() => pick("UNVERIFIED_NEWS")} />
         <TopicChip className="is-gossip" icon="messages-square" label="Gossip" selected={value.pick === "GOSSIP"} onClick={() => pick("GOSSIP")} />
         {editor ? (

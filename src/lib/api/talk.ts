@@ -64,15 +64,21 @@ export const removeReaction = (aid: string) => apiFetch<ReactionState>(`/answers
 
 export interface NewsInput { isNews: boolean; newsTag?: NewsTag; requestVerified?: boolean; newsSourceName?: string; newsSourceUrl?: string }
 /** `mood` is the one word of a mood question (LCH-02); an ordinary question sends none. */
-export const createAnswer = (qid: string, body: string, news: NewsInput, key: string, mood?: S["Mood"] | null) =>
+export const createAnswer = (qid: string, body: string, news: NewsInput, key: string, mood?: S["Mood"] | null, anonymous = false) =>
   apiFetch<PostReceipt>(`/questions/${id(qid)}/answers`, {
     method: "POST",
     authed: true,
     idempotencyKey: key,
-    body: { kind: "TEXT", body, ...(news.isNews ? { isNews: true, newsTag: news.newsTag, ...(news.requestVerified ? { requestVerified: true } : {}), ...(news.newsSourceName ? { newsSourceName: news.newsSourceName } : {}), ...(news.newsSourceUrl ? { newsSourceUrl: news.newsSourceUrl } : {}) } : {}), ...(mood ? { mood } : {}) },
+    body: { kind: "TEXT", body, ...(news.isNews ? { isNews: true, newsTag: news.newsTag, ...(news.requestVerified ? { requestVerified: true } : {}), ...(news.newsSourceName ? { newsSourceName: news.newsSourceName } : {}), ...(news.newsSourceUrl ? { newsSourceUrl: news.newsSourceUrl } : {}) } : {}), ...(mood ? { mood } : {}), ...(anonymous ? { anonymous: true } : {}) },
   });
 export const createReply = (aid: string, stance: ReplyStance, body: string, key: string) =>
   apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "TEXT", body } });
+/** A voice reply: the clip is already uploaded and READY. Charged and limited like a voice answer (the server decides). */
+export const createVoiceReply = (aid: string, stance: ReplyStance, clipId: string, key: string, extraVoiceTokenId?: string) =>
+  apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}) } });
+/** PATCH /answers/{id}: text answers only, inside the server's edit window. Returns the answer as it now reads. */
+export const editAnswer = (aid: string, body: string) => apiFetch<Answer>(`/answers/${id(aid)}`, { method: "PATCH", authed: true, body: { body } });
+export const deleteAnswer = (aid: string) => apiFetch<void>(`/answers/${id(aid)}`, { method: "DELETE", authed: true });
 export const deleteReply = (rid: string) => apiFetch<void>(`/replies/${id(rid)}`, { method: "DELETE", authed: true });
 export const markHelpful = (aid: string) => apiFetch<void>(`/answers/${id(aid)}/helpful`, { method: "PUT", authed: true });
 export const unmarkHelpful = (aid: string) => apiFetch<void>(`/answers/${id(aid)}/helpful`, { method: "DELETE", authed: true });

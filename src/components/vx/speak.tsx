@@ -53,7 +53,7 @@ export interface ComposerProps {
   replyTo?: string;
   intent?: IntentKind;
   showTags?: boolean;
-  /** V-FIX-B: the screen's own tag picker (nothing chosen to begin with, Request Verified News) in place of the built-in chips. */
+  /** V-FIX-B: the screen's own tag picker (Not news selected to begin with, Request Verified News, editors' Verified News) in place of the built-in chips. */
   tagSlot?: ReactNode;
   newsTag?: ComposerTag;
   /** With these, `intent` and `newsTag` are the truth and the box asks to change them. */
@@ -140,8 +140,10 @@ export function Composer(p: ComposerProps): ReactElement {
         <div className="vx-tagpick" role="group" aria-label="Is this news?">
           <span className="vx-caption">Is this news? Pick a tag so readers know.</span>
           <div className="vx-tagpick__row">
+            <TopicChip className="is-none" label="Not news" selected={tag === 'none'} onClick={() => pickTag('none')} />
             <TopicChip className="is-unverified" icon="shield-alert" label="Unverified News" selected={tag === 'unverified'} onClick={() => pickTag('unverified')} />
             <TopicChip className="is-gossip" icon="messages-square" label="Gossip" selected={tag === 'gossip'} onClick={() => pickTag('gossip')} />
+            <TopicChip icon="lock" label="Verified News" disabled aria-label="Verified News, editors only" />
           </div>
         </div>
       ) : null}

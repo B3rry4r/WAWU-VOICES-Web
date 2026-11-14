@@ -61,15 +61,14 @@ const shot = (page: import('playwright-core').Page, name: string, full = false) 
 
 try {
   for (const [w, h, tag] of [[390, 844, '390'], [1440, 900, '1440']] as const) {
-    await t(`write screen ${tag}: nothing chosen, no "Not news", Post waits; Request Verified News asks for a source and posts the request`, async () => {
+    await t(`write screen ${tag}: Not news selected, Post ready; Request Verified News asks for a source and posts the request`, async () => {
       const { page, posts, ctx } = await open({ w, h });
       await page.goto(`${ORIGIN}/q/q1/write`);
       await page.getByRole('group', { name: 'Tag your post' }).waitFor();
-      assert.equal(await page.getByText('Not news').count(), 0);
-      assert.equal(await page.locator('.vx-tagpick [aria-pressed="true"]').count(), 0);
+            assert.deepEqual(await page.locator('.vx-tagpick [aria-pressed="true"]').allInnerTexts(), ['Not news']);
       await page.getByRole('textbox').first().fill('Water is up to my knees on Admiralty Way.');
       const post = page.getByRole('button', { name: /^Post/ }).first();
-      assert.equal(await post.isDisabled(), true, 'Post waits for a tag');
+      assert.equal(await post.isDisabled(), false, 'Not news is selected, so Post is ready');
       await shot(page, `write-nothing-${tag}`, true);
       await page.getByRole('button', { name: 'Request Verified News' }).click();
       await page.getByTestId('tag-source').waitFor();
@@ -107,7 +106,7 @@ try {
     await e.ctx.close();
   });
   for (const [w, h, tag] of [[390, 844, '390'], [1440, 900, '1440']] as const) {
-    await t(`record screen ${tag}: a voice carries the tag; Send waits for it`, async () => {
+    await t(`record screen ${tag}: a voice carries the tag when one is picked`, async () => {
       const { page, posts, ctx } = await open({ w, h });
       await page.goto(`${ORIGIN}/q/q1/speak`);
       await page.getByRole('button', { name: 'Start recording' }).click();
@@ -115,8 +114,8 @@ try {
       await page.getByRole('button', { name: 'Stop recording' }).click();
       await page.getByRole('group', { name: 'Tag your post' }).waitFor();
       const send = page.getByRole('button', { name: /^Send/ });
-      assert.equal(await send.isDisabled(), true, 'Send waits for a tag');
-      assert.equal(await page.locator('.vx-tagpick [aria-pressed="true"]').count(), 0);
+      assert.equal(await send.isDisabled(), false, 'Not news is selected, so Send is ready');
+      assert.deepEqual(await page.locator('.vx-tagpick [aria-pressed="true"]').allInnerTexts(), ['Not news']);
       await shot(page, `speak-nothing-${tag}`, true);
       await page.getByRole('button', { name: 'Unverified News' }).click();
       assert.equal(await send.isDisabled(), false);
@@ -130,6 +129,30 @@ try {
       await ctx.close();
     });
   }
+  await t('write screen: with Not news left selected the post carries no tag, in one tap', async () => {
+    const g = await open();
+    await g.page.goto(`${ORIGIN}/q/q1/write`);
+    await g.page.getByRole('textbox').first().fill('Plain words.');
+    await g.page.getByRole('button', { name: /^Post/ }).first().click();
+    await g.page.waitForURL('**/posted?a=new1');
+    assert.deepEqual({ ...g.posts[0] }, { kind: 'TEXT', body: 'Plain words.' });
+    await g.ctx.close();
+  });
+  await t('Finish and post my voice: a held voice with autopost=1 sends itself in one tap, with no tag', async () => {
+    const { page, posts, ctx } = await open();
+    await page.goto(`${ORIGIN}/welcome`);
+    await page.evaluate(() => new Promise<void>((res, rej) => {
+      const r = indexedDB.open('voices-speak', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('drafts');
+      r.onsuccess = () => { const tx = r.result.transaction('drafts', 'readwrite'); tx.objectStore('drafts').put({ owner: null, questionId: 'q1', blob: new Blob([new Uint8Array(3000)], { type: 'audio/webm' }), mime: 'audio/webm', seconds: 4, peaks: [1, 2, 3], key: 'k-held', savedAt: Date.now() }, 'current'); tx.oncomplete = () => { r.result.close(); res(); }; tx.onerror = () => rej(tx.error); };
+      r.onerror = () => rej(r.error);
+    }));
+    await page.goto(`${ORIGIN}/q/q1/speak?autopost=1`);
+    await page.waitForURL('**/posted?a=new1', { timeout: 20000 });
+    assert.equal(posts.length, 1);
+    assert.deepEqual({ ...posts[0] }, { kind: 'VOICE', clipId: 'c1' });
+    await ctx.close();
+  });
   const override = { contentKind: 'TEXT', body: 'Tell us where you are. If you are safe, say so, so your people can hear it.', audioUrl: null, audioClipId: '44444444-4444-4444-8444-444444444444', audioDurationMs: 14000, imageUrl: 'https://cdn.fixb.test/file/override_image/x.png', linkUrl: 'https://example.com/flood-help', endsAt: new Date(Date.now() + 20 * 3600e3).toISOString() };
   for (const [w, h, tag, scheme] of [[390, 844, '390', 'light'], [390, 844, '390-dark', 'dark'], [1440, 900, '1440', 'light']] as const) {
     await t(`Home ${tag}: the override shows its message, picture, voice note and link button`, async () => {

@@ -99,7 +99,6 @@ async function writeAnswer(text: string) {
   render(<WriteScreen qid="q1" />);
   const box = await screen.findByRole("textbox");
   await userEvent.type(box, text);
-  await userEvent.click(screen.getByRole("button", { name: "Gossip" })); // V-FIX-B: a post needs a tag the person chose
   await userEvent.click(screen.getByRole("button", { name: /^Post/ }));
 }
 
@@ -118,7 +117,7 @@ describe("Write: posting spends free posts and units", () => {
     expect(held.body).toBe("Salary lands on the 25th.");
     const first = calls.find((c) => c.method === "POST")!;
     expect(first.headers.get("Idempotency-Key")).toBe(held.key);
-    expect(first.body).toEqual({ kind: "TEXT", body: "Salary lands on the 25th.", isNews: true, newsTag: "GOSSIP" });
+    expect(first.body).toEqual({ kind: "TEXT", body: "Salary lands on the 25th." });
     expect(n).toBe(1);
     expect(JSON.parse(window.localStorage.getItem("voices-typing-drafts")!)["q:q1"]).toBe("Salary lands on the 25th.");
   });
@@ -274,7 +273,6 @@ describe("Write: keys and double sends", () => {
     });
     render(<WriteScreen qid="q1" />);
     await userEvent.type(await screen.findByRole("textbox"), "Once");
-    await userEvent.click(screen.getByRole("button", { name: "Gossip" })); // V-FIX-B: a post needs a tag the person chose
     await userEvent.dblClick(screen.getByRole("button", { name: /^Post/ }));
     await waitFor(() => expect(push).toHaveBeenCalled());
     expect(calls.filter((c) => c.method === "POST").length).toBe(1);

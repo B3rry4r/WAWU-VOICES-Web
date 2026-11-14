@@ -34,10 +34,11 @@ vi.mock("@/features/profile/playback", () => ({
 beforeEach(() => { events.length = 0; played.length = 0; });
 afterEach(() => cleanup());
 
-describe("V-FIX-B tag choice: a post cannot publish without a tag the person chose", () => {
-  it("nothing is chosen to begin with, so a post is not ready", () => {
-    expect(tagReady(NO_TAG)).toBe(false);
-    expect(tagWaitText(NO_TAG)).toBe("Choose a tag to post.");
+describe("V-FIX-B tag choice: Not news is selected to begin with, so posting stays one tap", () => {
+  it("Not news is ready at once and sends no tag", () => {
+    expect(tagReady(NO_TAG)).toBe(true);
+    expect(tagWaitText(NO_TAG)).toBeNull();
+    expect(tagFields(NO_TAG)).toBeNull();
   });
   it("Unverified News and Gossip are ready at once and send isNews with the tag", () => {
     expect(tagReady({ ...NO_TAG, pick: "GOSSIP" })).toBe(true);
@@ -71,14 +72,13 @@ function Harness({ editor }: { editor?: boolean }) {
 }
 
 describe("V-FIX-B TagPicker", () => {
-  it("has no Not news chip, nothing pressed, and the Post button waits", () => {
+  it("opens with Not news selected and the Post button ready", () => {
     render(<Harness />);
-    expect(screen.queryByText("Not news")).toBeNull();
-    expect(screen.queryAllByRole("button", { pressed: true })).toHaveLength(0);
-    expect((screen.getByRole("button", { name: "Post" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByTestId("tag-wait").textContent).toBe("Choose a tag to post.");
+    const pressed = screen.queryAllByRole("button", { pressed: true });
+    expect(pressed.map((b) => b.textContent)).toEqual(["Not news"]);
+    expect((screen.getByRole("button", { name: "Post" }) as HTMLButtonElement).disabled).toBe(false);
   });
-  it("Request Verified News is enabled for everyone; choosing it asks for the source and the button waits for it", async () => {
+  it("Request Verified News is enabled for everyone; choosing it asks for the source and the button waits for it, and going back to Not news frees it", async () => {
     render(<Harness />);
     const u = userEvent.setup();
     const chip = screen.getByRole("button", { name: /Request Verified News/ });
@@ -88,15 +88,17 @@ describe("V-FIX-B TagPicker", () => {
     expect((screen.getByRole("button", { name: "Post" }) as HTMLButtonElement).disabled).toBe(true);
     await u.type(screen.getByLabelText("Your source"), "Lagos State Press Office");
     expect((screen.getByRole("button", { name: "Post" }) as HTMLButtonElement).disabled).toBe(false);
+    await u.click(screen.getByRole("button", { name: "Not news" }));
+    expect((screen.getByRole("button", { name: "Post" }) as HTMLButtonElement).disabled).toBe(false);
   });
-  it("choosing Gossip frees the button and says what Gossip means; choosing it again clears it", async () => {
+  it("choosing Gossip says what Gossip means; Not news puts it back", async () => {
     render(<Harness />);
     const u = userEvent.setup();
     await u.click(screen.getByRole("button", { name: "Gossip" }));
-    expect((screen.getByRole("button", { name: "Post" }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByTestId("tag-note").textContent).toContain("Not presented as fact");
-    await u.click(screen.getByRole("button", { name: "Gossip" }));
-    expect((screen.getByRole("button", { name: "Post" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryAllByRole("button", { pressed: true }).map((b) => b.textContent)).toEqual(["Gossip"]);
+    await u.click(screen.getByRole("button", { name: "Not news" }));
+    expect(screen.queryAllByRole("button", { pressed: true }).map((b) => b.textContent)).toEqual(["Not news"]);
   });
   it("an editor sees Verified News in place of the request", () => {
     render(<Harness editor />);

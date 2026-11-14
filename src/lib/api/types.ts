@@ -1984,6 +1984,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/subscription-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The subscription plans and what each gives
+         * @description V-45. Prices come from config. Auth: guest or signed in. Auth: guest or signed in.
+         */
+        get: operations["listSubscriptionPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscriptions/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My plan, the one waiting to start and my finished plans
+         * @description Auth: signed in with a finished profile.
+         */
+        get: operations["getMySubscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wallet": {
         parameters: {
             query?: never;
@@ -2054,7 +2094,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Start a payment for a unit pack or an extra voice token
+         * Start a payment for a token pack or a subscription plan
          * @description The server fixes the amount from config and returns the Flutterwave checkout link. Nothing is credited until verification. Auth: signed in with a finished profile. Rate limit: 10 per 10 minutes per account.
          */
         post: operations["initPayment"];
@@ -3253,7 +3293,7 @@ export interface components {
         /** @enum {string} */
         ShareTarget: "WHATSAPP" | "WHATSAPP_STATUS" | "INSTAGRAM_STORIES" | "FACEBOOK" | "X" | "TIKTOK" | "TELEGRAM" | "SMS" | "COPY_LINK" | "SYSTEM_SHEET";
         /** @enum {string} */
-        PaymentKind: "UNITS" | "EXTRA_VOICE";
+        PaymentKind: "UNITS" | "EXTRA_VOICE" | "SUBSCRIPTION";
         /** @enum {string} */
         PaymentStatus: "INITIATED" | "PENDING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "REFUNDED";
         /** @enum {string} */
@@ -3285,7 +3325,9 @@ export interface components {
         /** @enum {string} */
         FileKind: "AVATAR" | "RESULT_PHOTO" | "OVERRIDE_IMAGE" | "AD_CREATIVE";
         /** @enum {string} */
-        LedgerTxnKind: "PURCHASE" | "SPEND_POST" | "SPEND_REACTION" | "SPEND_VOTE" | "REVERSAL" | "ADJUSTMENT" | "REFUND";
+        LedgerTxnKind: "PURCHASE" | "SPEND_POST" | "SPEND_REACTION" | "SPEND_VOTE" | "REVERSAL" | "ADJUSTMENT" | "REFUND" | "SUBSCRIPTION_CREDIT";
+        /** @enum {string} */
+        SubscriptionStatus: "ACTIVE" | "QUEUED" | "ENDED" | "CANCELLED_DELETED";
         /** @enum {string} */
         AccountStatus: "ACTIVE" | "SUSPENDED" | "BANNED" | "DELETION_PENDING" | "DELETED";
         /** @enum {string} */
@@ -3790,7 +3832,7 @@ export interface components {
             answer?: components["schemas"]["Answer"];
             ad?: components["schemas"]["AdPlacement"];
         };
-        /** @description Text answers carry body. Voice answers carry clipId of a READY clip. A clip over the free length also needs an extra voice token. isNews requires newsTag (a post cannot be published without a tag the person chose: isNews false is 422 TAG_REQUIRED; the web composer always sends one); VERIFIED_NEWS needs an editor or admin role and a source. requestVerified (V-FIX-B) asks the editors for Verified News: it needs isNews, newsTag UNVERIFIED_NEWS and newsSourceName (the source the editors check, kept on the request, not shown on the post); the post goes up as Unverified News and waits in the editors' queue. On a question with moodOptions every answer, voice or text, carries one of them in mood (422 "Pick one word before you post." otherwise); on any other question mood is refused. showNameOnCard (LCH-03) is off unless true and ignored on an anonymous answer. */
+        /** @description Text answers carry body. Voice answers carry clipId of a READY clip. A clip over the free length also needs an extra voice token. isNews requires newsTag VERIFIED_NEWS needs an editor or admin role and a source. requestVerified (V-FIX-B) asks the editors for Verified News: it needs isNews, newsTag UNVERIFIED_NEWS and newsSourceName (the source the editors check, kept on the request, not shown on the post); the post goes up as Unverified News and waits in the editors' queue. On a question with moodOptions every answer, voice or text, carries one of them in mood (422 "Pick one word before you post." otherwise); on any other question mood is refused. showNameOnCard (LCH-03) is off unless true and ignored on an anonymous answer. */
         CreateAnswerRequest: {
             kind: components["schemas"]["PostKind"];
             body?: string;
@@ -4394,6 +4436,17 @@ export interface components {
             imageUrl: string;
             url: string;
         };
+        /** @description What the customer pays: the price, VAT on it and the payment charge, each rounded up to the kobo. The tokens or plan value are priced at priceKobo and never change; totalKobo is what is sent to Flutterwave and what verification requires. */
+        Quote: {
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo: number;
+        };
         /** @description effectiveKoboPerUnit is price divided by all units including the bonus; baseKoboPerUnit is price divided by units without the bonus. */
         UnitTier: {
             /** Format: uuid */
@@ -4408,8 +4461,10 @@ export interface components {
             bonusMilli: number;
             effectiveKoboPerUnit: number;
             baseKoboPerUnit: number;
+            quote?: components["schemas"]["Quote"];
         };
         TiersResponse: {
+            vatRateBps?: number;
             tiers: components["schemas"]["UnitTier"][];
             /** @description Naira in kobo (32-bit integer). */
             minPackKobo: number;
@@ -4467,12 +4522,15 @@ export interface components {
             items: components["schemas"]["LedgerItem"][];
             nextCursor: string | null;
         };
+        /** @description For kind SUBSCRIPTION send planId. A second plan is refused (409 SUBSCRIPTION_ACTIVE) while one runs or waits. */
         InitPaymentRequest: {
             /** @enum {string} */
             method?: "card" | "banktransfer" | "ussd";
             kind: components["schemas"]["PaymentKind"];
             /** Format: uuid */
             tierId?: string;
+            /** Format: uuid */
+            planId?: string;
             tokenKind?: components["schemas"]["ExtraVoiceTokenKind"];
             returnPath?: string;
         };
@@ -4484,6 +4542,12 @@ export interface components {
             reference?: string;
             /** @description Naira in kobo (32-bit integer). */
             amountKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo?: number | null;
             /** @enum {string} */
             currency: "NGN";
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
@@ -4492,6 +4556,7 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        /** @description For a SUBSCRIPTION, unitsMilli is the total over all its months: nothing is credited at once beyond the first month. */
         Payment: {
             /** Format: uuid */
             id: string;
@@ -4499,6 +4564,12 @@ export interface components {
             status: components["schemas"]["PaymentStatus"];
             /** @description Naira in kobo (32-bit integer). */
             amountKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo?: number | null;
             txRef: string;
             reference?: string;
             title: string;
@@ -4517,6 +4588,60 @@ export interface components {
             /** Format: date-time */
             verifiedAt: string | null;
             token: components["schemas"]["ExtraVoiceToken"] | null;
+            plan?: components["schemas"]["PaymentPlan"] | null;
+        };
+        PaymentPlan: {
+            slug: string;
+            name: string;
+            months: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            monthlyMilli: number;
+        };
+        SubscriptionPlan: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            months: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            monthlyMilli: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            totalMilli: number;
+            quote?: components["schemas"]["Quote"];
+        };
+        /** @description Prices and tokens come from config (docs/launch/PRICING.md). Paid once up front; tokens are credited month by month. */
+        SubscriptionPlans: {
+            vatRateBps?: number;
+            plans: components["schemas"]["SubscriptionPlan"][];
+        };
+        /** @description Days are Lagos calendar days, YYYY-MM-DD. Month n is credited on the same day of month n as the start day (the last day of a shorter month). */
+        Subscription: {
+            /** Format: uuid */
+            id: string;
+            planSlug: string;
+            planName: string;
+            status: components["schemas"]["SubscriptionStatus"];
+            months: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            monthlyMilli: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            totalMilli: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number;
+            creditedMonths: number;
+            startDay: string;
+            endDay: string;
+            nextCreditDay: string | null;
+            /** Format: uuid */
+            paymentId: string;
+        };
+        MySubscriptions: {
+            current: components["schemas"]["Subscription"] | null;
+            queued: components["schemas"]["Subscription"] | null;
+            past: components["schemas"]["Subscription"][];
+            canBuy: boolean;
         };
         /** @description The server never trusts this value alone: it calls Flutterwave's verify itself and compares reference, amount and currency. */
         VerifyPaymentRequest: {
@@ -4529,6 +4654,12 @@ export interface components {
             title: string;
             /** @description Naira in kobo (32-bit integer). */
             amountKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo?: number | null;
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             unitsMilli: number | null;
             method: string | null;
@@ -8478,6 +8609,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TiersResponse"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    listSubscriptionPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionPlans"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getMySubscriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySubscriptions"];
                 };
             };
             401: components["responses"]["E401"];

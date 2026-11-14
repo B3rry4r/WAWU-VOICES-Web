@@ -21,6 +21,8 @@ import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { voicesOf } from "@/lib/feed-format";
 import { TagPicker, useIsEditor } from "@/features/news/TagPicker";
 import { NO_TAG, tagFields, tagReady, type TagChoice } from "@/features/news/tag-choice";
+import { AnonymousSwitch } from "@/features/talk/AnonymousSwitch";
+import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 
 /** Where a guest goes to sign in. The recording waits in this browser (IndexedDB) until they are back (V-19). */
 export const JOIN_PATH = "/join";
@@ -117,6 +119,12 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const freeLeft = allowance?.freePostsRemaining ?? freeTotal;
   const offers = config?.extraVoice ?? [];
   const qid = question?.id;
+  // V-ANON: "Post without my name", off until turned on; a choice made before signing in or buying tokens is kept for this question.
+  const [anon, setAnon] = useState(false);
+  // send() reads the choice from this ref at call time: a retry button on an old banner must never post with an old choice.
+  const anonRef = useRef(false);
+  const chooseAnon = (v: boolean) => { anonRef.current = v; setAnon(v); if (qid) writeAnonPref(qid, v); };
+  useEffect(() => { if (qid) { const v = readAnonPref(qid); anonRef.current = v; setAnon(v); } }, [qid]);
   const open = question ? question.status === "LIVE" : true;
 
   const pushNote = (n: Note) => setNotes((l) => [...l.filter((x) => x.text !== n.text), n]);
@@ -134,15 +142,14 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     return () => { live = false; };
   }, [qid]);
 
-  // WF-6b (A-L6): "Finish and post my voice" returns here with autopost=1 and the held recording. V-FIX-B (addendum 1, "a post cannot
-  // be published without a tag"): a held voice has no tag the person chose, so it is not sent by itself any more. The recording is
-  // shown ready to send, the person picks a tag and taps Send, and the address is cleaned.
+  // WF-6b (A-L6): "Finish and post my voice" returns here with autopost=1 and the held recording: send it once, without a second tap.
   const autoPosted = useRef(false);
   useEffect(() => {
     if (autoPosted.current || params.get("autopost") !== "1") return;
     if (!signedIn || phase !== "preview" || !take || !info || !qid) return;
     autoPosted.current = true;
     window.history.replaceState(window.history.state, "", pathname + (qParam && !questionId ? `?q=${qParam}` : ""));
+    void send();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signedIn, phase, take, info, qid]);
 
@@ -364,7 +371,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, tagFields(tag));
+      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current, tagFields(tag));
+      writeAnonPref(qid, false);
       await clearDraft();
       writePick(qid, null);
       sendState.current = null;
@@ -508,6 +516,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           <TakePlayer blob={take.blob} seconds={take.seconds} peaks={take.peaks} />
           <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>
           <TagPicker value={tag} onChange={setTag} editor={editor} className="sp-tags" />
+          <AnonymousSwitch onForest on={anon} disabled={!!sending} onChange={chooseAnon} />
           {signedIn === false ? <p className="sp-fine">You sign in to post. Your recording waits here in this browser.</p> : null}
           {sending ? (
             <div className="sp-progress" role="status" aria-live="polite">
