@@ -454,6 +454,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const covered = (seconds: number) => freeLeft > 0 && freeCovers(seconds, freeSeconds);
   // An old extra voice token the person already paid for covers a message once the free posts are used.
   const usesToken = (seconds: number) => !!tokenFor(tokens, seconds, freeSeconds, freeLeft);
+  const held = freeLeft === 0 ? [...tokens].filter((t) => t.status === "AVAILABLE").sort((a, b) => b.maxSeconds - a.maxSeconds)[0] : undefined;
   const idleHint = (
     <p className="vx-rec__hint">
       {"Tap to record. You have "}
@@ -461,8 +462,10 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       {". "}
       {freeLeft > 0
         ? `This one is free, up to ${freeSeconds === 60 ? "a minute" : `${freeSeconds} seconds`}.`
-        : costs
-          ? `Up to ${t1} seconds is ${priceFor(t1)}, longer is ${priceFor(limit)}, charged when you send.`
+        : held
+          ? `Your extra voice token covers a message of up to ${held.maxSeconds} seconds. Nothing is charged in tokens.`
+          : costs
+            ? `Up to ${t1} seconds is ${priceFor(t1)}, longer is ${priceFor(limit)}, charged when you send.`
           : null}
     </p>
   );

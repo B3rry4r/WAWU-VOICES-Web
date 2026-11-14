@@ -25,7 +25,7 @@ const SORTS = [{ id: "TOP", label: "Top" }, { id: "NEW", label: "New" }, { id: "
 /** What the person has to post with (lead ruling WF-6, 6 Nov, B-N4): free posts while there are any; with none left, their units (or "Out of free posts"). Never "a free post" when there is none. */
 export function postingLine(seconds: number, allow: Allowances | null): string {
   const tail = "Reading and listening are always free.";
-  if (!allow || allow.freePostsRemaining > 0) return `You have ${allow?.costs.freeVoiceSeconds ?? 60} seconds on a free post. Longer is charged when you send. ${tail}`;
+  if (!allow || allow.freePostsRemaining > 0) return `You have ${allow?.costs.freeVoiceSeconds ?? 60} seconds on a free post. ${tail}`;
   const cost = allow.costs.extraVoice30Kobo * 10;
   if (allow.balanceMilli >= cost) return `You have ${unitsText(allow.balanceMilli)}. A voice message of up to ${allow.costs.voiceTier1Seconds ?? 30} seconds is ${unitsText(cost)}, up to ${seconds} seconds is ${unitsText(allow.costs.extraVoice60Kobo * 10)}. ${tail}`;
   return `Out of free posts. Get tokens to post. ${tail}`;
