@@ -100,6 +100,7 @@ export function ProposalItem({ p, groups, signedIn, questionId, onNeedSignIn, on
         avatarName={cur.author.displayName ?? cur.author.handle}
         avatarSrc={cur.author.avatarUrl ?? undefined}
         verified={cur.author.verified === true}
+        admin={(cur.author as { admin?: boolean }).admin === true}
         time={ago(cur.createdAt)}
         text={cur.body ?? ""}
         supports={cur.supportCount}
