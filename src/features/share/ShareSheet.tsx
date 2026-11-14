@@ -10,6 +10,7 @@ import { createShareLink, recordShareEvent } from "@/lib/api/reach";
 import type { ShareLink, ShareObjectType, ShareTarget } from "@/lib/api/reach";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import { useDesktop } from "@/features/reach/shared";
+import { saveCardPicture, type CardSize } from "./save-card";
 
 const COPY: Record<ShareObjectType, { title: string; subtitle: string }> = {
   ANSWER: { title: "Share this voice", subtitle: "A card and a link go out. The audio file never does." },
@@ -30,14 +31,24 @@ interface Row {
   icon?: IconName;
   /** `full` is the text with the link in it (for targets with no separate url); `body` is the text without the link. One link per message. */
   href?: (url: string, full: string, body: string) => string;
+  /** Stories and TikTok have no web address to open: the card is saved to the phone and the person adds it in the app. */
+  saves?: "Instagram" | "TikTok";
 }
 
 const enc = encodeURIComponent;
-/** What a browser can really do. Status, Stories and TikTok only exist inside their own apps, so a web page cannot open them. */
+/**
+ * The targets the ShareSheet boards draw, in the drawn order (WhatsApp, Status, Stories, Facebook, X, TikTok, Telegram, SMS, then Copy link
+ * and More below). What a browser can really do: Status cannot be posted from a web page, so it opens WhatsApp where the person picks Status
+ * or a chat (lead ruling WF, 6 Nov: the same words as WhatsApp); Stories and TikTok cannot be opened either, so the story card (1080 x 1920)
+ * is saved to the phone and a short how-to shows, with the square card (1080 x 1080) one tap away.
+ */
 const ROWS: Row[] = [
   { id: "whatsapp", label: "WhatsApp", target: "WHATSAPP", abbr: "WA", href: (_u, full) => `https://wa.me/?text=${enc(full)}` },
+  { id: "status", label: "Status", target: "WHATSAPP_STATUS", abbr: "WS", href: (_u, full) => `https://wa.me/?text=${enc(full)}` },
+  { id: "stories", label: "Stories", target: "INSTAGRAM_STORIES", abbr: "IG", saves: "Instagram" },
   { id: "facebook", label: "Facebook", target: "FACEBOOK", abbr: "FB", href: (u) => `https://www.facebook.com/sharer/sharer.php?u=${enc(u)}` },
   { id: "x", label: "X", target: "X", abbr: "X", href: (u, _f, body) => `https://twitter.com/intent/tweet?text=${enc(body)}&url=${enc(u)}` },
+  { id: "tiktok", label: "TikTok", target: "TIKTOK", abbr: "TT", saves: "TikTok" },
   { id: "telegram", label: "Telegram", target: "TELEGRAM", abbr: "TG", href: (u, _f, body) => `https://t.me/share/url?url=${enc(u)}&text=${enc(body)}` },
   { id: "sms", label: "SMS", target: "SMS", icon: "message-circle", href: (_u, full) => `sms:?&body=${enc(full)}` },
 ];
@@ -76,11 +87,11 @@ export async function cardIsReady(code: string): Promise<boolean> {
 function Round({ children, label, onClick, href, tone, disabled }: { children: ReactNode; label: string; onClick?: () => void; href?: string; tone?: "mint"; disabled?: boolean }) {
   const body = (
     <>
-      <span className={"flex h-14 w-14 items-center justify-center rounded-pill border border-line text-body-strong text-ink " + (tone === "mint" ? "bg-mint text-green-text" : "bg-surface-2")}>{children}</span>
-      <span className="text-label text-ink">{label}</span>
+      <span className={"flex h-[52px] w-[52px] items-center justify-center rounded-pill border border-line text-[15px] font-extrabold leading-none text-ink " + (tone === "mint" ? "bg-mint text-green-text" : "bg-surface-2")}>{children}</span>
+      <span className="text-[12px] font-semibold leading-4 text-ink">{label}</span>
     </>
   );
-  const cls = "flex w-[76px] flex-col items-center gap-1 border-0 bg-transparent p-0 text-center no-underline disabled:opacity-50";
+  const cls = "flex w-full flex-col items-center gap-[6px] border-0 bg-transparent p-0 text-center no-underline disabled:opacity-50";
   return href ? (
     <a className={cls} href={href} target="_blank" rel="noreferrer noopener" onClick={onClick} aria-label={label}>{body}</a>
   ) : (
@@ -105,6 +116,10 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [canNative, setCanNative] = useState(false);
+  // Stories and TikTok: which app the saved card is for, the size just saved, and whether a save is running or failed.
+  const [saved, setSaved] = useState<{ app: "Instagram" | "TikTok"; size: CardSize } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const signedIn = useRef(false);
   const copy = COPY[objectType];
 
@@ -156,6 +171,22 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
     }
   }
 
+  async function saveCard(size: CardSize, app: "Instagram" | "TikTok", target: ShareTarget) {
+    if (!link || saving) return;
+    intent(target);
+    setSaving(true);
+    setSaveFailed(false);
+    try {
+      await saveCardPicture(size === "story" ? link.storyImageUrl : link.squareImageUrl, size);
+      setSaved({ app, size });
+    } catch {
+      setSaved(null);
+      setSaveFailed(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function more() {
     if (!link) return;
     intent("SYSTEM_SHEET");
@@ -179,9 +210,15 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
         ) : (
           <p className="m-0 rounded-m bg-surface-2 p-3 text-caption text-ink-2">{text}</p>
         )}
-        <div className="flex flex-wrap justify-center gap-x-2 gap-y-4" role="group" aria-label="Share to">
+        <div className="grid grid-cols-5 gap-x-1 gap-y-3" role="group" aria-label="Share to">
           {ROWS.map((r) => (
-            <Round key={r.id} label={r.label} disabled={!link} href={link && r.href ? r.href(link.url, text, body) : undefined} onClick={link ? () => intent(r.target) : undefined}>
+            <Round
+              key={r.id}
+              label={r.label}
+              disabled={!link || (!!r.saves && saving)}
+              href={link && r.href ? r.href(link.url, text, body) : undefined}
+              onClick={link ? (r.saves ? () => void saveCard("story", r.saves!, r.target) : () => intent(r.target)) : undefined}
+            >
               {r.icon ? <Icon name={r.icon} size={24} /> : r.abbr}
             </Round>
           ))}
@@ -194,6 +231,22 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
             </Round>
           ) : null}
         </div>
+        {saved ? (
+          <div className="grid gap-2 rounded-m bg-surface-2 p-3" role="status" data-testid="card-saved">
+            <p className="m-0 text-body-strong text-ink">{saved.size === "story" ? "Your story card is saved" : "Your square card is saved"}</p>
+            <ol className="m-0 grid list-decimal gap-1 pl-5 text-caption text-ink-2">
+              <li>{saved.app === "Instagram" ? "Open Instagram and tap Your story." : "Open TikTok and tap the plus button."}</li>
+              <li>Pick the VOICES card from your photos.</li>
+              <li>{saved.app === "Instagram" ? "Add a link sticker with your link, then share." : "Add the link to your caption, then post."}</li>
+            </ol>
+            {saved.size === "story" ? (
+              <button type="button" className="justify-self-start border-0 bg-transparent p-0 text-label text-green-text underline" disabled={saving} onClick={() => void saveCard("square", saved.app, saved.app === "Instagram" ? "INSTAGRAM_STORIES" : "TIKTOK")}>
+                Save the square card instead (1080 x 1080)
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {saveFailed ? <p className="m-0 rounded-m bg-danger-bg p-3 text-caption text-danger" role="alert">The card is still being made. Try again in a moment.</p> : null}
         <p className="m-0 mx-auto text-center text-caption text-ink-2">
           {signedIn.current ? "Sharing is free. Your link carries your referral code." : "Sharing is free."}
         </p>

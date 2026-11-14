@@ -1912,8 +1912,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The square card image (mood card)
-         * @description LCH-03: the 1080x1080 mood card for WhatsApp and feeds. Drawn on request and cached. Only a mood answer's link has one, any other link is a 404, and so is a deleted, removed or leaving person's card. Auth: none (public).
+         * The square card image
+         * @description The 1080x1080 card for WhatsApp and feeds, for every kind of link (brief 6.8; the mood card has its own drawing). Same words as the card, text and brand only, so an anonymous voice carries no name and no invite code. Drawn on request and cached. 404 for an unknown link, a failed card, and a deleted, removed or leaving person's card. Auth: none (public).
          */
         get: operations["getShareSquareImage"];
         put?: never;
@@ -1934,7 +1934,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record a share intent, link open or Add your voice tap
+         * Record a share intent, link open, Add your voice tap, recording started or voice published from the link
          * @description Auth: guest or signed in. Rate limit: 300 per minute per IP or account.
          */
         post: operations["recordShareEvent"];
@@ -3868,13 +3868,14 @@ export interface components {
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
         };
+        /** @description author is null for a reply posted without the person's name, for every reader including the writer (isMine says it is theirs). A person's own page lists these replies for that person only. */
         Reply: {
             helpfulCount: number;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             answerId: string;
-            author: components["schemas"]["AuthorRef"];
+            author: components["schemas"]["AuthorRef"] | null;
             stance: components["schemas"]["ReplyStance"];
             kind: components["schemas"]["PostKind"];
             body?: string | null;
@@ -3895,6 +3896,7 @@ export interface components {
             disagree: number;
             experience: number;
         };
+        /** @description anonymous (default false) posts the reply without the person's name: no read of the reply, notice or mail carries the author. */
         CreateReplyRequest: {
             stance: components["schemas"]["ReplyStance"];
             kind: components["schemas"]["PostKind"];
@@ -3903,6 +3905,7 @@ export interface components {
             clipId?: string;
             /** Format: uuid */
             extraVoiceTokenId?: string;
+            anonymous?: boolean;
         };
         ReplyReceipt: {
             reply: components["schemas"]["Reply"];
@@ -4308,7 +4311,7 @@ export interface components {
             objectId: string;
             language?: string;
         };
-        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story), null only where that route would 404. squareImageUrl is the 1080x1080 mood card (GET /share/{code}/square) for a mood answer and null for every other link. */
+        /** @description imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story), null only where that route would 404. squareImageUrl is the 1080x1080 card (GET /share/{code}/square) for every kind (brief 6.8), null only where that route would 404. An anonymous voice carries no name and no invite code on any size. */
         ShareLink: {
             code: string;
             url: string;

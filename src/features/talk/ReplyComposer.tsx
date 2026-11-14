@@ -5,6 +5,8 @@ import type { IntentKind } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { countChars } from "@/lib/shared/text-price";
+import { AnonymousSwitch } from "./AnonymousSwitch";
+import { useReplyAnon } from "./reply-anon";
 import { failText, isOutOfPosts, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
 
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -22,6 +24,8 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
   const [msg, setMsg] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const slot = `r:${aid}`;
+  // V-FIX-D: "Post without my name". send() reads anon.ref at the moment it sends, never a value captured when an earlier try began.
+  const anon = useReplyAnon(aid);
   const [text, setText] = useState(() => typedDraft(slot));
   const [intent, setIntent] = useState<IntentKind | null>(stance ? INTENT_OF[stance] : null);
   const c = allow.costs;
@@ -37,8 +41,9 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
     setMsg(null);
     if (!key.current || key.current.text !== body) key.current = { text: body, k: uuidKey() };
     try {
-      await api.createReply(aid, st, body, key.current.k);
+      await api.createReply(aid, st, body, key.current.k, anon.ref.current);
       saveTyped(slot, "");
+      anon.clear();
       key.current = null;
       setText("");
       setIntent(stance ? INTENT_OF[stance] : null);
@@ -71,6 +76,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
         onVoice={onVoice ?? false}
         onSubmit={() => void send()}
       />
+      <AnonymousSwitch on={anon.on} disabled={sending} onChange={anon.set} />
       {sending ? <Banner tone="info">Posting your reply.</Banner> : null}
       {msg ? <Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner> : null}
     </div>

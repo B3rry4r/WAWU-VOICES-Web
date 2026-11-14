@@ -7,6 +7,7 @@ import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { tokensLabel } from "@/lib/shared/text-price";
 import { isOutOfPosts } from "./lib";
+import { replyAnonSlot } from "./reply-anon";
 
 const STANCES: { id: ReplyStance; label: string }[] = [
   { id: "AGREE", label: "I agree" },
@@ -41,7 +42,7 @@ export function VoiceReplySheet({ aid, who, stance, allow, onClose, onPosted, on
           onSend={async (clip) => {
             if (!pick) return;
             setShort(false);
-            await api.createVoiceReply(aid, pick, clip.clipId, clip.key, clip.tokenId);
+            await api.createVoiceReply(aid, pick, clip.clipId, clip.key, clip.tokenId, clip.anonymous);
             onPosted();
           }}
           errorText={(e) => {
@@ -50,6 +51,7 @@ export function VoiceReplySheet({ aid, who, stance, allow, onClose, onPosted, on
           }}
           extra={short ? <Button variant="onforest" size="l" block onClick={onBuy}>Get tokens</Button> : null}
           onCancel={onClose}
+          anonSlot={replyAnonSlot(aid)}
         />
       </div>
     </Sheet>

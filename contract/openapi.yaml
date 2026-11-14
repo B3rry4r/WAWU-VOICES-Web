@@ -3722,10 +3722,11 @@ paths:
       operationId: getShareSquareImage
       tags:
       - share
-      summary: The square card image (mood card)
+      summary: The square card image
       security: []
-      description: 'LCH-03: the 1080x1080 mood card for WhatsApp and feeds. Drawn on request and cached. Only a mood answer''s link has one, any
-        other link is a 404, and so is a deleted, removed or leaving person''s card. Auth: none (public).'
+      description: 'The 1080x1080 card for WhatsApp and feeds, for every kind of link (brief 6.8; the mood card has its own drawing). Same words
+        as the card, text and brand only, so an anonymous voice carries no name and no invite code. Drawn on request and cached. 404 for an unknown
+        link, a failed card, and a deleted, removed or leaving person''s card. Auth: none (public).'
       parameters:
       - name: code
         in: path
@@ -3749,7 +3750,7 @@ paths:
       operationId: recordShareEvent
       tags:
       - share
-      summary: Record a share intent, link open or Add your voice tap
+      summary: Record a share intent, link open, Add your voice tap, recording started or voice published from the link
       security:
       - {}
       - wawuId: []
@@ -8630,7 +8631,9 @@ components:
           type: string
           format: uuid
         author:
-          $ref: '#/components/schemas/AuthorRef'
+          oneOf:
+          - $ref: '#/components/schemas/AuthorRef'
+          - type: 'null'
         stance:
           $ref: '#/components/schemas/ReplyStance'
         kind:
@@ -8661,6 +8664,8 @@ components:
       - createdAt
       - status
       - isMine
+      description: author is null for a reply posted without the person's name, for every reader including the writer (isMine says it is theirs).
+        A person's own page lists these replies for that person only.
     ReplyPage:
       type: object
       properties:
@@ -8708,10 +8713,13 @@ components:
         extraVoiceTokenId:
           type: string
           format: uuid
+        anonymous:
+          type: boolean
       additionalProperties: false
       required:
       - stance
       - kind
+      description: 'anonymous (default false) posts the reply without the person''s name: no read of the reply, notice or mail carries the author.'
     ReplyReceipt:
       type: object
       properties:
@@ -9873,8 +9881,8 @@ components:
       - cardStatus
       - previewText
       description: imageUrl is the one 1200x630 card (V-22), null while PENDING or FAILED. storyImageUrl is the 1080x1920 Stories card (GET /share/{code}/story),
-        null only where that route would 404. squareImageUrl is the 1080x1080 mood card (GET /share/{code}/square) for a mood answer and null
-        for every other link.
+        null only where that route would 404. squareImageUrl is the 1080x1080 card (GET /share/{code}/square) for every kind (brief 6.8), null
+        only where that route would 404. An anonymous voice carries no name and no invite code on any size.
     ShareEventRequest:
       type: object
       properties:

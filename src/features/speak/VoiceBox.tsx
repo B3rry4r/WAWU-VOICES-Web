@@ -7,6 +7,8 @@ import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { peaksFromLevels, refusalText, tokenFor, uuidKey } from "./logic";
 import { RecordStage, TakePlayer } from "./parts";
+import { AnonymousSwitch } from "@/features/talk/AnonymousSwitch";
+import { onAnonPref, readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 import "./speak.css";
 
 /** One recording for a reply or an explain-my-vote: the same recorder, the same upload (create, PUT, complete, wait until READY) as an answer.
@@ -22,9 +24,10 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
   failed: { title: "Recording did not start", body: "Tap Try again. If it keeps happening, write it in words instead." },
 };
 
-export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number }
+/** `anonymous` is the "Post without my name" switch as it stood when Send was tapped (always false when the box has no switch). */
+export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number; anonymous: boolean }
 
-export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel }: {
+export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, anonSlot }: {
   purpose: Purpose;
   maxSeconds: number;
   /** The length a free post covers; a longer take may need an old voice token, as on the record screen. */
@@ -41,7 +44,19 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
   /** Anything the caller wants under a refusal, for example a Get tokens button. */
   extra?: ReactNode;
   onCancel?: () => void;
+  /** Shows "Post without my name" under the take. The choice is kept under this slot (anon-pref) and is read when Send runs. */
+  anonSlot?: string;
 }) {
+  const anonRef = useRef(false);
+  const [anon, setAnon] = useState(false);
+  useEffect(() => {
+    if (!anonSlot) return;
+    const v = readAnonPref(anonSlot);
+    anonRef.current = v;
+    setAnon(v);
+    return onAnonPref(anonSlot, (x) => { anonRef.current = x; setAnon(x); });
+  }, [anonSlot]);
+  const chooseAnon = (v: boolean) => { anonRef.current = v; setAnon(v); if (anonSlot) writeAnonPref(anonSlot, v); };
   const [phase, setPhase] = useState<"idle" | "recording" | "preview">("idle");
   const [left, setLeft] = useState(maxSeconds);
   const [levels, setLevels] = useState<number[]>([]);
@@ -162,7 +177,8 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds });
+      await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds, anonymous: !!anonSlot && anonRef.current });
+      if (anonSlot) { anonRef.current = false; writeAnonPref(anonSlot, false); }
       state.current = null;
       if (alive.current) { setSending(null); setTake(null); setPhase("idle"); }
     } catch (e) {
@@ -210,6 +226,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
         <>
           <TakePlayer blob={take.blob} seconds={take.seconds} peaks={take.peaks} />
           <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>
+          {anonSlot ? <AnonymousSwitch onForest on={anon} disabled={!!sending} onChange={chooseAnon} /> : null}
           {sending ? (
             <div className="sp-progress" role="status" aria-live="polite">
               <div className="sp-progress__bar"><i style={{ width: `${sending.step === "upload" ? sending.pct : 100}%` }} /></div>

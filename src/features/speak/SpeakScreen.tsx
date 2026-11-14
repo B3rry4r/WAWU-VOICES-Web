@@ -11,7 +11,8 @@ import * as api from "@/lib/api/speak";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
-import { clearDraft, loadDraft, saveDraft, type Draft } from "./draft";
+import { clearDraft, draftIsStale, loadDraft, saveDraft, STALE_NOTE, type Draft } from "./draft";
+import { claimSend, releaseSend } from "./outbox";
 import { freeCovers, peaksFromLevels, refusalText, tokenFor, uuidKey, voicePriceMilli } from "./logic";
 import { BackLink, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
 import { tokensLabel } from "@/lib/shared/text-price";
@@ -21,13 +22,14 @@ import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { voicesOf } from "@/lib/feed-format";
 import { AnonymousSwitch } from "@/features/talk/AnonymousSwitch";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
+import { noteRecordingStarted, notePublished, rememberShareVisit } from "@/features/share/share-visit";
 
 /** Where a guest goes to sign in. The recording waits in this browser (IndexedDB) until they are back (V-19). */
 export const JOIN_PATH = "/join";
 
 type Phase = "idle" | "recording" | "preview";
 type Step = { step: "upload"; pct: number } | { step: "process" } | { step: "post" };
-interface Take { blob: Blob; mime: string; seconds: number; peaks: number[]; key: string }
+interface Take { blob: Blob; mime: string; seconds: number; peaks: number[]; key: string; recordedAt?: number }
 interface Info { question: api.Question; config: api.PublicConfig; allowance: api.Allowances | null }
 interface Note { tone: "info" | "danger" | "success" | "offline"; title?: string; text: string; action?: string; onAction?: () => void }
 
@@ -70,6 +72,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const sendState = useRef<{ key: string; clipId?: string; putUrl?: string; tokenId?: string; uploaded?: boolean; completed?: boolean } | null>(null);
 
   useEffect(() => setSignedIn(isSignedIn()), []);
+  // A share link's "Add your voice" opens /speak?from=<code>: the visit is remembered (the tap itself is counted on the share page).
+  useEffect(() => { rememberShareVisit(params.get("from")); }, [params]);
 
   // The question, the public config and (signed in) my allowance.
   useEffect(() => {
@@ -132,11 +136,27 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     let live = true;
     loadDraft().then((d) => {
       if (!live || !d || d.questionId !== qid) return;
-      setTake({ blob: d.blob, mime: d.mime, seconds: d.seconds, peaks: d.peaks, key: d.key });
+      // addendum 7.7: a saved recording is removed after 7 days, with a plain note.
+      if (draftIsStale(d)) {
+        void clearDraft();
+        pushNote({ tone: "info", text: STALE_NOTE });
+        return;
+      }
+      setTake({ blob: d.blob, mime: d.mime, seconds: d.seconds, peaks: d.peaks, key: d.key, recordedAt: d.recordedAt ?? d.savedAt });
+      // A recording kept offline remembers the choices made when Send was tapped; the switch the person sees is the one that is sent.
+      if (d.anonymous) { anonRef.current = true; setAnon(true); }
       setPhase("preview");
     });
     return () => { live = false; };
   }, [qid]);
+
+  // V-FIX-D: back online with a recording waiting on this screen: say so, the Send button is right there (the outbox stays away from this page).
+  useEffect(() => {
+    const back = () => { if (take && phase === "preview" && !sending) pushNote({ tone: "info", text: "You are back online. Tap Send to post your recording." }); };
+    window.addEventListener("online", back);
+    return () => window.removeEventListener("online", back);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [take, phase, sending]);
 
   // WF-6b (A-L6): "Finish and post my voice" returns here with autopost=1 and the held recording: send it once, without a second tap.
   const autoPosted = useRef(false);
@@ -169,7 +189,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       pushNote({ tone: "info", text: "That recording was too short. Tap the button and say a little more." });
       return;
     }
-    const t: Take = { blob: r.blob, mime: r.mime, seconds: r.realSeconds, peaks: peaksFromLevels(levelsRef.current), key: uuidKey() };
+    const t: Take = { blob: r.blob, mime: r.mime, seconds: r.realSeconds, peaks: peaksFromLevels(levelsRef.current), key: uuidKey(), recordedAt: Date.now() };
     setTake(t);
     setPhase("preview");
     if (qid) void saveDraft({ ...t, questionId: qid, savedAt: Date.now() } satisfies Draft);
@@ -218,6 +238,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     }
     rec.current = r;
     startedAt.current = Date.now();
+    noteRecordingStarted();
     window.history.pushState({ speakRecording: true }, "");
     trapped.current = true;
     setPhase("recording");
@@ -327,6 +348,18 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     throw new Error("CLIP_SLOW");
   }
 
+  /** Keeps the recording on this device marked as waiting to go, with the switch and the word as they are now (read here, at the moment of keeping). */
+  async function keepForLater(t: Take) {
+    if (!qid) return;
+    await saveDraft({ ...t, questionId: qid, savedAt: Date.now(), queued: true, anonymous: anonRef.current, mood: mood.word ?? null } satisfies Draft);
+    pushNote({
+      tone: "offline",
+      text: "You are offline. Your recording is saved on this device. It will be offered for sending when you are back online, or tap Send again then.",
+      action: "Try again",
+      onAction: () => void send(),
+    });
+  }
+
   async function send() {
     if (!take || !qid || sending) return;
     if (!signedIn) {
@@ -335,6 +368,13 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       return;
     }
     clearNotes();
+    // V-FIX-D: offline, nothing is tried. The recording is kept on this device marked as waiting, and the outbox offers it again when the connection is back.
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      await keepForLater(take);
+      return;
+    }
+    // One send per recording at a time: the outbox may be holding the same recording.
+    if (!claimSend(take.key)) { pushNote({ tone: "info", text: "This recording is already being sent." }); return; }
     setSending({ step: "upload", pct: 0 });
     let st = sendState.current;
     if (!st || st.key !== take.key) st = sendState.current = { key: take.key };
@@ -367,11 +407,14 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       setSending({ step: "post" });
       const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current);
       writeAnonPref(qid, false);
+      notePublished();
       await clearDraft();
+      releaseSend(take.key);
       writePick(qid, null);
       sendState.current = null;
       router.push(`/q/${qid}/posted?a=${r.answer.id}`);
     } catch (e) {
+      releaseSend(take.key);
       setSending(null);
       if (stage === "upload" && st.clipId) {
         void api.deleteVoiceClip(st.clipId).catch(() => undefined);
@@ -401,6 +444,11 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       if (e instanceof ApiError && (e.code === "UNAUTHENTICATED" || e.code === "TOKEN_EXPIRED")) {
         await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
         window.location.assign(joinHref());
+        return;
+      }
+      // The upload goes straight to storage: offline there is a plain network error, not an ApiError with status 0.
+      if ((e instanceof ApiError && e.status === 0) || (typeof navigator !== "undefined" && navigator.onLine === false)) {
+        await keepForLater(take);
         return;
       }
       const retryable = !(e instanceof ApiError) || e.status === 0 || e.status >= 500;

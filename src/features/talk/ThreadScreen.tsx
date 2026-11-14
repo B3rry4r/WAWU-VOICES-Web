@@ -34,12 +34,14 @@ function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => Pro
   return (
     <>
     <div className="mt-2 hidden items-center gap-2 text-eyebrow uppercase text-[var(--ink-2)] dt:flex"><Icon name={stanceIcon[r.stance]} size={14} />{st.label}</div>
-    <article className="vx-answer" aria-label={`Reply from ${r.author.handle}`}>
+    <article className="vx-answer" aria-label={`Reply from ${r.author ? r.author.handle : "an anonymous poster"}`}>
       <div className="vx-answer__head">
-        <Avatar name={r.author.displayName ?? r.author.handle} src={r.author.avatarUrl ?? undefined} size="s" />
+        <Avatar name={r.author ? r.author.displayName ?? r.author.handle : "Anonymous"} src={r.author?.avatarUrl ?? undefined} size="s" />
         <div className="vx-answer__who">
-          <span className="vx-answer__name">{`@${r.author.handle}`}</span>
-          <span className="vx-answer__time">{ago(r.createdAt) + (r.author.state ? ` · ${r.author.state}` : "")}</span>
+          <span className="vx-answer__name">{r.author ? `@${r.author.handle}` : "Anonymous"}</span>
+          {/* V-FIX-D: an unnamed reply has no author for anyone; its writer alone is told it is theirs. */}
+          {!r.author && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
+          <span className="vx-answer__time">{ago(r.createdAt) + (r.author?.state ? ` · ${r.author.state}` : "")}</span>
         </div>
         <span className="dt:hidden"><Badge tone="proposed" icon={stanceIcon[r.stance]}>{st.label}</Badge></span>
         {r.isMine ? <IconButton icon="trash-2" label="Delete my reply" variant="ghost" size="s" onClick={() => setConfirm(true)} /> : null}

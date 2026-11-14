@@ -13,7 +13,19 @@ export interface Draft {
   /** Stays the same for this recording so a retried post cannot post twice. */
   key: string;
   savedAt: number;
+  /** When the recording was made (savedAt moves each time the draft is written again). The 7 day limit counts from here. */
+  recordedAt?: number;
+  /** The person tapped Send and it could not go (offline): it is offered for sending when the connection is back (V-FIX-D). */
+  queued?: boolean;
+  /** "Post without my name" and the mood word as they stood when Send was tapped, so a later send says the same. */
+  anonymous?: boolean;
+  mood?: string | null;
 }
+
+/** A saved recording is removed after 7 days (addendum 7.7). */
+export const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+export const draftIsStale = (d: Draft, now = Date.now()): boolean => now - (d.recordedAt ?? d.savedAt) > DRAFT_MAX_AGE_MS;
+export const STALE_NOTE = "A recording you saved more than 7 days ago was removed.";
 
 import { sessionStorage } from "@/lib/auth/session-storage";
 

@@ -71,11 +71,12 @@ export const createAnswer = (qid: string, body: string, news: NewsInput, key: st
     idempotencyKey: key,
     body: { kind: "TEXT", body, ...(news.isNews ? { isNews: true, newsTag: news.newsTag } : {}), ...(mood ? { mood } : {}), ...(anonymous ? { anonymous: true } : {}) },
   });
-export const createReply = (aid: string, stance: ReplyStance, body: string, key: string) =>
-  apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "TEXT", body } });
+/** `anonymous` is "Post without my name" (V-FIX-D): sent only when on, so a named reply sends exactly what it always did. */
+export const createReply = (aid: string, stance: ReplyStance, body: string, key: string, anonymous = false) =>
+  apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "TEXT", body, ...(anonymous ? { anonymous: true } : {}) } });
 /** A voice reply: the clip is already uploaded and READY. Charged and limited like a voice answer (the server decides). */
-export const createVoiceReply = (aid: string, stance: ReplyStance, clipId: string, key: string, extraVoiceTokenId?: string) =>
-  apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}) } });
+export const createVoiceReply = (aid: string, stance: ReplyStance, clipId: string, key: string, extraVoiceTokenId?: string, anonymous = false) =>
+  apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}), ...(anonymous ? { anonymous: true } : {}) } });
 /** PATCH /answers/{id}: text answers only, inside the server's edit window. Returns the answer as it now reads. */
 export const editAnswer = (aid: string, body: string) => apiFetch<Answer>(`/answers/${id(aid)}`, { method: "PATCH", authed: true, body: { body } });
 export const deleteAnswer = (aid: string) => apiFetch<void>(`/answers/${id(aid)}`, { method: "DELETE", authed: true });
