@@ -4542,6 +4542,17 @@ export interface components {
             imageUrl: string;
             url: string;
         };
+        /** @description What the customer pays: the price, VAT on it and the payment charge, each rounded up to the kobo. The tokens or plan value are priced at priceKobo and never change; totalKobo is what is sent to Flutterwave and what verification requires. */
+        Quote: {
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo: number;
+        };
         /** @description effectiveKoboPerUnit is price divided by all units including the bonus; baseKoboPerUnit is price divided by units without the bonus. */
         UnitTier: {
             /** Format: uuid */
@@ -4556,8 +4567,10 @@ export interface components {
             bonusMilli: number;
             effectiveKoboPerUnit: number;
             baseKoboPerUnit: number;
+            quote?: components["schemas"]["Quote"];
         };
         TiersResponse: {
+            vatRateBps?: number;
             tiers: components["schemas"]["UnitTier"][];
             /** @description Naira in kobo (32-bit integer). */
             minPackKobo: number;
@@ -4635,6 +4648,12 @@ export interface components {
             reference?: string;
             /** @description Naira in kobo (32-bit integer). */
             amountKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo?: number | null;
             /** @enum {string} */
             currency: "NGN";
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
@@ -4651,6 +4670,12 @@ export interface components {
             status: components["schemas"]["PaymentStatus"];
             /** @description Naira in kobo (32-bit integer). */
             amountKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo?: number | null;
             txRef: string;
             reference?: string;
             title: string;
@@ -4690,9 +4715,11 @@ export interface components {
             monthlyMilli: number;
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             totalMilli: number;
+            quote?: components["schemas"]["Quote"];
         };
         /** @description Prices and tokens come from config (docs/launch/PRICING.md). Paid once up front; tokens are credited month by month. */
         SubscriptionPlans: {
+            vatRateBps?: number;
             plans: components["schemas"]["SubscriptionPlan"][];
         };
         /** @description Days are Lagos calendar days, YYYY-MM-DD. Month n is credited on the same day of month n as the start day (the last day of a shorter month). */
@@ -4733,6 +4760,12 @@ export interface components {
             title: string;
             /** @description Naira in kobo (32-bit integer). */
             amountKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo?: number | null;
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             unitsMilli: number | null;
             method: string | null;

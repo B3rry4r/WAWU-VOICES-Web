@@ -10332,6 +10332,37 @@ components:
       - description
       - imageUrl
       - url
+    Quote:
+      type: object
+      properties:
+        priceKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        vatKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        chargeKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        totalKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+      additionalProperties: false
+      required:
+      - priceKobo
+      - vatKobo
+      - chargeKobo
+      - totalKobo
+      description: 'What the customer pays: the price, VAT on it and the payment charge, each rounded up to the kobo. The tokens or plan value
+        are priced at priceKobo and never change; totalKobo is what is sent to Flutterwave and what verification requires.'
     UnitTier:
       type: object
       properties:
@@ -10361,6 +10392,8 @@ components:
           type: integer
         baseKoboPerUnit:
           type: integer
+        quote:
+          $ref: '#/components/schemas/Quote'
       additionalProperties: false
       required:
       - id
@@ -10376,6 +10409,8 @@ components:
     TiersResponse:
       type: object
       properties:
+        vatRateBps:
+          type: integer
         tiers:
           type: array
           items:
@@ -10590,6 +10625,27 @@ components:
           minimum: 0
           maximum: 2000000000
           description: Naira in kobo (32-bit integer).
+        vatKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        chargeKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        totalKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
         currency:
           type: string
           enum:
@@ -10628,6 +10684,27 @@ components:
           $ref: '#/components/schemas/PaymentStatus'
         amountKobo:
           type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        vatKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        chargeKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        totalKobo:
+          type:
+          - integer
+          - 'null'
           minimum: 0
           maximum: 2000000000
           description: Naira in kobo (32-bit integer).
@@ -10756,6 +10833,8 @@ components:
           minimum: -2000000000
           maximum: 2000000000
           description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        quote:
+          $ref: '#/components/schemas/Quote'
       additionalProperties: false
       required:
       - id
@@ -10768,6 +10847,8 @@ components:
     SubscriptionPlans:
       type: object
       properties:
+        vatRateBps:
+          type: integer
         plans:
           type: array
           items:
@@ -10878,6 +10959,27 @@ components:
           type: string
         amountKobo:
           type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        vatKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        chargeKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        totalKobo:
+          type:
+          - integer
+          - 'null'
           minimum: 0
           maximum: 2000000000
           description: Naira in kobo (32-bit integer).
