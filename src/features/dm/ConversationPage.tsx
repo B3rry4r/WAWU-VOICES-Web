@@ -338,7 +338,10 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
       // Only an answer that proves nothing was stored (a 4xx refusal) makes the next try a new key. A 5xx, a timeout and a
       // lost connection may have stored the message already, so the retry keeps the key and the server answers with that message.
       const f = dmFailure(e);
-      if (e instanceof ApiError && e.status >= 400 && e.status < 500) key.current = { sig, k: uuidKey(), clipId: key.current?.clipId };
+      // Two 4xx answers do not prove that: 408 (the request timed out) and 409 REQUEST_IN_PROGRESS (the first send with this
+      // key is still running). Those keep the key, so a retry cannot send the message twice.
+      const unsure = e instanceof ApiError && (e.status === 408 || (e.status === 409 && e.code === "REQUEST_IN_PROGRESS"));
+      if (e instanceof ApiError && e.status >= 400 && e.status < 500 && !unsure) key.current = { sig, k: uuidKey(), clipId: key.current?.clipId };
       if (f.closed) setAccepts(false);
       return f;
     }

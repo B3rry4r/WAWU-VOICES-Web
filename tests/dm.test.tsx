@@ -417,6 +417,19 @@ describe("conversation", () => {
     expect(stored.size).toBe(1);
   });
 
+  it("a 409 REQUEST_IN_PROGRESS keeps the key: the first send may still finish, so the retry is the same send", async () => {
+    let n = 0;
+    stub(routes(() => { n++; return n === 1 ? err(409, "REQUEST_IN_PROGRESS", "x") : err(429, "RATE_LIMITED", "x"); }));
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    await userEvent.type(screen.getByLabelText("Your message"), "Hi Ada");
+    await userEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/dm/messages")).length).toBe(1));
+    await userEvent.click(await screen.findByRole("button", { name: "Send message" }));
+    await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/dm/messages")).length).toBe(2));
+    const keys = calls.filter((c) => c.url.endsWith("/dm/messages")).map((c) => c.headers.get("Idempotency-Key"));
+    expect(keys[0]).toBe(keys[1]);
+  });
   it("a refusal the server stood behind (4xx) starts a new key; the 'closed' refusal has no Retry and closes the chat", async () => {
     stub(routes(() => err(403, "dm_unavailable", "This person is not taking messages.")));
     render(<ConversationPage conversationId="c1" />);
