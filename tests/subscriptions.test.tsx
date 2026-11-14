@@ -256,3 +256,21 @@ describe("the customer pays VAT and the payment charge: the breakdown", () => {
     expect(screen.getByText("₦54.90")).toBeTruthy();
   });
 });
+
+describe("fix round 1 wording and support link", () => {
+  it("the price line stays true and says VAT and the charge are added at checkout", async () => {
+    api(NONE);
+    const { container } = render(<BuyUnitsScreen />);
+    await screen.findByTestId("plan-connect");
+    expect(container.textContent).toMatch(/1 token is ₦1\. You get exactly the tokens you pay for\. VAT and the payment charge are added at checkout/);
+    expect(container.textContent).not.toMatch(/[–—]/);
+  });
+  it("a failed payment links to support with the topic and the payment id", async () => {
+    search = `paymentId=${PID}&status=failed`;
+    const failed = { id: PID, kind: "SUBSCRIPTION", status: "FAILED", amountKobo: 299900, txRef: "voices-1", title: "VOICES CONNECT", unitsMilli: 1500000, bonusMilli: 0, method: "card", cardLast4: null, receiptNo: null, failureReason: "Declined", balanceMilli: null, createdAt: "2026-11-14T10:00:00Z", verifiedAt: null, token: null, plan: { slug: "connect", name: "VOICES CONNECT", months: 3, monthlyMilli: 500000 } };
+    api(NONE, (m) => (m === `GET /payments/${PID}` || m === `POST /payments/${PID}/verify` ? json(failed) : undefined));
+    render(<PaymentDoneScreen />);
+    const link = await screen.findByRole("link", { name: "Contact support" });
+    expect(link.getAttribute("href")).toBe(`/settings/help?topic=PAYMENT&payment=${PID}`);
+  });
+});

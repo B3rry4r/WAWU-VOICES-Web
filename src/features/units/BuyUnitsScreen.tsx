@@ -80,7 +80,7 @@ function Buy({ wallet, tiers, plans, mine }: { wallet: Wallet; tiers: TiersRespo
           <h2 className="m-0 font-display text-display-l">Get tokens</h2>
           <p className="m-0 text-body text-ink-2">Balance: {unitsLabel(wallet.balanceMilli)}</p>
         </div>
-        <p className="m-0 text-label text-ink-2">1 token is ₦1. You get exactly the tokens you pay for.</p>
+        <p className="m-0 text-label text-ink-2">1 token is ₦1. You get exactly the tokens you pay for. VAT and the payment charge are added at checkout, and the total is shown before you pay.</p>
         {holdsDraft && wallet.freePostsRemaining === 0 && min ? (
           <div className="vx-paywall" role="status">
             <Icon name="triangle-alert" size={20} />

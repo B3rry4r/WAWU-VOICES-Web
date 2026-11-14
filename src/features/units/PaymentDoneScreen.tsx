@@ -326,7 +326,7 @@ export function PaymentDoneScreen() {
       {hold ? <Banner tone="info" title="Your draft is still saved">It posts as soon as your tokens arrive.</Banner> : null}
       {p && state.kind !== "refunded" && state.kind !== "cancelled" ? (
         <Banner tone="warning" title="Seeing a debit?">
-          If your bank shows one for this payment, it comes back to you. Support can trace it with reference {shortRef(paymentRef(p))}.
+          If your bank shows one for this payment, it comes back to you. <a className="text-green-text underline" href={`/settings/help?topic=PAYMENT&payment=${encodeURIComponent(p.id)}`}>Contact support</a> and they can trace it with reference {shortRef(paymentRef(p))}.
         </Banner>
       ) : null}
       {rows.length ? <Details rows={rows} /> : null}
