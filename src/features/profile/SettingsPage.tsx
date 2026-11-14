@@ -232,6 +232,7 @@ function SettingsBody({ me }: { me: Me }) {
 
       <Section id="l-h" title="Help and legal">
         <div className="pf-card">
+          <Link href="/settings/help" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Help and contact</b></span><Icon name="chevron-right" size={20} /></Link>
           <Link href="/settings/legal/rules" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Community rules</b></span><Icon name="chevron-right" size={20} /></Link>
           <Link href="/settings/legal/terms" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Terms of use</b></span><Icon name="chevron-right" size={20} /></Link>
           <Link href="/settings/legal/privacy" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Privacy notice</b></span><Icon name="chevron-right" size={20} /></Link>

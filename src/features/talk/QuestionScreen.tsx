@@ -9,6 +9,7 @@ import { closesIn, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
+import { LiveResultsLink } from "@/components/feed/LinkCards";
 import { AppBar, BarButton, Problem, failText, unitsText, useSignedIn } from "./lib";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 import { TalkRail } from "./TalkRail";
@@ -67,6 +68,8 @@ export function QuestionScreen({ id }: { id: string }) {
     }
   }, [id, sort, mood]);
   useEffect(() => { void loadPage(); }, [loadPage, signedIn]);
+  const [removedN, setRemovedN] = useState(0);
+  useEffect(() => { setRemovedN(0); }, [q]);
 
   if (q.state === "loading" || signedIn === null) return <><AppBar title="Question" back="/" /><div className="mt-4 grid gap-4" aria-busy="true"><Skeleton variant="tile" /><Skeleton variant="answer" /></div></>;
   if (q.state === "error") {
@@ -81,7 +84,10 @@ export function QuestionScreen({ id }: { id: string }) {
       </>
     );
   }
-  const question = q.data;
+  const dropped = removedN;
+  const dec = (n: number | null | undefined) => (typeof n === "number" ? Math.max(0, n - dropped) : n);
+  // Deleting my own answer takes it out of every count on this page without a reload.
+  const question = dropped ? { ...q.data, voicesCount: dec(q.data.voicesCount) ?? undefined, answerCount: dec(q.data.answerCount) as number, voiceCount: dec(q.data.voiceCount) as number } : q.data;
   const open = question.status === "LIVE";
   const left = allow?.freePostsRemaining;
   const close = closesIn(question.endsAt);
@@ -110,6 +116,7 @@ export function QuestionScreen({ id }: { id: string }) {
         <BarButton icon="share-2" label="Share this question" onClick={() => share("QUESTION", id)} />
       </AppBar>
       <StageNav questionId={id} active="discuss" visited={["speak"]} counts={{ speak: short(voicesOf(question)), discuss: short(voicesOf(question)), next: short(question.proposalCount) }} />
+      <div className="mt-3 empty:hidden"><LiveResultsLink /></div>
 
       <section aria-label="The question" className="flex flex-col gap-3 pb-2 pt-5">
         <div className="flex flex-wrap items-center gap-2">
@@ -190,7 +197,7 @@ export function QuestionScreen({ id }: { id: string }) {
       <div className="grid gap-3">
         {items.map((a) => (
           <div key={a.id} className="grid gap-1">
-            <TalkCard answer={a} signedIn={!!signedIn} freeReactions={allow?.freeReactionsLeftToday} onAllowance={(p) => setAllow((c) => (c ? { ...c, ...p } : c))} push={push} />
+            <TalkCard answer={a} signedIn={!!signedIn} freeReactions={allow?.freeReactionsLeftToday} onAllowance={(p) => setAllow((c) => (c ? { ...c, ...p } : c))} push={push} onDeleted={(aid) => { setItems((cur) => cur.filter((x) => x.id !== aid)); setRemovedN((n) => n + 1); }} />
             {a.replyCount > 0 ? (
               <div className="flex items-center gap-2 px-2">
                 <Link href={`/q/${id}/a/${a.id}`} className="link-more text-label">{`View ${a.replyCount} ${a.replyCount === 1 ? "reply" : "replies"}`}</Link>

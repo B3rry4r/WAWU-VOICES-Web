@@ -122,8 +122,10 @@ describe("Settings", () => {
     signIn(); mockApi(meRoutes);
     render(<SettingsPage />);
     await screen.findByText("Community rules");
-    for (const t of ["Ad-free pass", "Language", "Country", "Help and contact", "Quiet hours"]) expect(screen.queryByText(t)).toBeNull();
+    for (const t of ["Ad-free pass", "Language", "Country", "Quiet hours"]) expect(screen.queryByText(t)).toBeNull();
     for (const h of ["rules", "terms", "privacy", "refunds"]) expect(document.querySelector(`a[href="/settings/legal/${h}"]`)).toBeTruthy();
+    // V-FIX-A: Help and contact is built now (POST /support/messages), so its row is there and opens its page.
+    expect(document.querySelector('a[href="/settings/help"]')?.textContent).toContain("Help and contact");
   });
   it("appearance saves the theme and applies it at once", async () => {
     signIn(); mockApi({ ...meRoutes, "PATCH /me/settings": ({ body }: { body: unknown }) => ({ ...me.settings, ...(body as object) }) });
