@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Avatar, Badge, Banner, Button, Dialog, EmptyState, Icon, IconButton, Skeleton, SponsoredSurvey, Switch, TextField } from "@/components/vx";
+import { Avatar, Badge, Banner, Button, Dialog, EmptyState, Icon, IconButton, Sheet, Skeleton, SponsoredSurvey, Switch, TextField } from "@/components/vx";
 import { useLoad } from "@/components/feed/useLoad";
 import { Rail } from "@/components/shell/ShellSlots";
 import { VoiceBox } from "@/features/speak/VoiceBox";
@@ -10,7 +10,7 @@ import { refusalText } from "@/features/speak/logic";
 import { isSignedIn } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { answerSurvey, getSurvey, recordSurveyEvent, type Survey, type SurveyQuestionView } from "@/lib/api/surveys";
-import { aboutMinutes, recapLine, TEXT_MAX, toInputs, type Given, type GivenByQuestion } from "./logic";
+import { aboutMinutes, clearDraft, loadDraft, markStarted, recapLine, saveDraft, TEXT_MAX, toInputs, wasStarted, type Given, type GivenByQuestion } from "./logic";
 
 /** The Sponsored Survey, one question at a time (Survey boards), then the Done screen. Answering is free; nothing here touches tokens or a free post. */
 export function SurveyScreen({ id }: { id: string }) {
@@ -69,28 +69,58 @@ function Ask({ survey }: { survey: Survey }) {
   const router = useRouter();
   const qs = survey.questions;
   const total = qs.length;
-  const [idx, setIdx] = useState(0);
-  const [given, setGiven] = useState<GivenByQuestion>({});
+  // A reload brings back the position, the answers (voice clip ids too) and the sharing choices kept for this survey in this tab.
+  const [saved] = useState(() => loadDraft(survey.id, qs, survey.ageBands));
+  const [idx, setIdx] = useState(saved?.idx ?? 0);
+  const [given, setGiven] = useState<GivenByQuestion>(saved?.given ?? {});
   const [choice, setChoice] = useState<string | null>(null);
   const [text, setText] = useState("");
-  const [anonymous, setAnonymous] = useState(false);
-  const [shareState, setShareState] = useState(false);
-  const [ageBand, setAgeBand] = useState("");
+  const [anonymous, setAnonymous] = useState(saved?.anonymous ?? false);
+  const [shareState, setShareState] = useState(saved?.shareState ?? false);
+  const [ageBand, setAgeBand] = useState(saved?.ageBand ?? "");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [why, setWhy] = useState(false);
   const [recap, setRecap] = useState<{ prompt: string; line: string }[] | null | undefined>(undefined);
-  const started = useRef(false);
+  const finished = useRef(false); // the answers were sent (or the survey was already answered): nothing more to count
+  const skipSent = useRef(false); // SKIP goes once
+  const alive = useRef(false);
+  const guard = useRef(false); // the history entry that lets Back ask first is in place
+  const hasAnswers = useRef(false);
+  hasAnswers.current = Object.keys(given).length > 0;
   const q = qs[idx];
   const last = idx === total - 1;
   const minutes = aboutMinutes(total);
 
-  // START is counted once, when the first question is shown.
+  // START is counted once per person per survey: the flag lives in this tab's session storage, so a reload or a second open does not send it again.
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
+    if (wasStarted(survey.id)) return;
+    markStarted(survey.id);
     void recordSurveyEvent(survey.id, "START");
   }, [survey.id]);
+
+  // What a reload must bring back is written as it changes.
+  useEffect(() => {
+    if (!finished.current) saveDraft(survey.id, { idx, given, anonymous, shareState, ageBand });
+  }, [survey.id, idx, given, anonymous, shareState, ageBand]);
+
+  // SKIP, once, when the person goes without finishing: Back, a closed tab, a hidden page, or a link away. keepalive lets it finish while the page closes.
+  const sendSkip = useCallback(() => {
+    if (finished.current || skipSent.current) return;
+    skipSent.current = true;
+    void recordSurveyEvent(survey.id, "SKIP", { keepalive: true });
+  }, [survey.id]);
+
+  const releaseGuard = useCallback(() => {
+    if (!guard.current) return;
+    guard.current = false;
+    try {
+      window.history.back();
+    } catch {
+      /* nothing to undo */
+    }
+  }, []);
 
   // A question opens with what the person gave before (Back), or empty.
   useEffect(() => {
@@ -102,9 +132,50 @@ function Ask({ survey }: { survey: Survey }) {
   }, [idx]);
 
   const leave = useCallback(() => {
-    void recordSurveyEvent(survey.id, "SKIP");
+    sendSkip();
+    clearDraft(survey.id);
+    guard.current = false;
     router.push("/");
-  }, [router, survey.id]);
+  }, [router, sendSkip, survey.id]);
+
+  useEffect(() => {
+    alive.current = true;
+    const onPageHide = () => sendSkip();
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") sendSkip();
+    };
+    // Back asks first (the browser's own box does not show here): one extra history entry is kept on top, and a Back press lands on it.
+    const onPop = () => {
+      if (!guard.current || finished.current) return;
+      if (hasAnswers.current) {
+        window.history.pushState(window.history.state, "", window.location.href);
+        setLeaving(true);
+      } else {
+        guard.current = false;
+        sendSkip();
+        window.history.back();
+      }
+    };
+    try {
+      window.history.pushState(window.history.state, "", window.location.href);
+      guard.current = true;
+    } catch {
+      guard.current = false;
+    }
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("popstate", onPop);
+    return () => {
+      alive.current = false;
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("popstate", onPop);
+      // Gone from the page without a Back or a close (a link away): count the skip, unless the page came straight back (a development double mount).
+      setTimeout(() => {
+        if (!alive.current) sendSkip();
+      }, 0);
+    };
+  }, [sendSkip]);
 
   const submit = useCallback(
     async (all: GivenByQuestion) => {
@@ -118,16 +189,23 @@ function Ask({ survey }: { survey: Survey }) {
           answers,
           ...(anonymous ? { anonymous: true } : { ...(shareState ? { shareState: true } : {}), ...(ageBand ? { ageBand: ageBand as "18-24" } : {}) }),
         });
+        finished.current = true;
+        clearDraft(survey.id);
+        releaseGuard();
         setRecap(qs.filter((x) => all[x.id]).map((x) => ({ prompt: x.prompt, line: recapLine(all[x.id]) })));
       } catch (e) {
         // A second answer is not an error: the survey is already answered, so the Done screen shows.
-        if (e instanceof ApiError && e.status === 409) setRecap(null);
-        else setProblem(refusalText(e));
+        if (e instanceof ApiError && e.status === 409) {
+          finished.current = true;
+          clearDraft(survey.id);
+          releaseGuard();
+          setRecap(null);
+        } else setProblem(refusalText(e));
       } finally {
         setBusy(false);
       }
     },
-    [anonymous, ageBand, leave, qs, shareState, survey.id],
+    [anonymous, ageBand, leave, qs, releaseGuard, shareState, survey.id],
   );
 
   function keep(g: Given | null) {
@@ -223,13 +301,20 @@ function Ask({ survey }: { survey: Survey }) {
 
         <p className="m-0 flex items-start gap-[10px] rounded-l bg-surface-2 px-4 py-[14px] text-count dt:hidden">
           <Icon name="info" size={18} className="mt-[1px] flex-none" />
-          <span>{`${survey.brandName} paid for this survey and WAWU approved it. Answering is free, optional, and never uses a free post.`}</span>
+          <span>
+            {`${survey.brandName} paid for this survey and WAWU approved it. Answering is free, optional, and never uses a free post. `}
+            <button type="button" onClick={() => setWhy(true)} className="inline cursor-pointer border-0 bg-transparent p-0 text-count font-bold text-green-text">Why am I seeing this?</button>
+          </span>
         </p>
       </div>
 
       <Rail>
         <AboutRail survey={survey} />
       </Rail>
+
+      <Sheet title="Why am I seeing this?" open={why} onClose={() => setWhy(false)}>
+        <p className="m-0 px-5 pb-6 text-body text-ink-2">{WHY_TEXT}</p>
+      </Sheet>
 
       <Dialog title="Leave the survey?" open={leaving} confirmLabel="Leave" cancelLabel="Keep going" destructive onConfirm={leave} onClose={() => setLeaving(false)}>
         Your answers so far have not been sent. They are lost if you leave.
@@ -326,6 +411,9 @@ function SponsoredSurveyCard(p: {
   );
 }
 
+/** The server does not say what a brand aimed at, so this says only what is true of every survey. */
+const WHY_TEXT = "The brand chose who to ask by topic, and sometimes by state. A state is used only if you turned on \u201CUse my state to choose surveys for me\u201D in Settings. Nothing else about you was used.";
+
 /** The desktop right rail of the Survey screen: who is asking, and what they can and cannot see. */
 function AboutRail({ survey }: { survey: Survey }) {
   return (
@@ -345,7 +433,7 @@ function AboutRail({ survey }: { survey: Survey }) {
       </section>
       <section aria-labelledby="sv-why" className="flex flex-col gap-2 rounded-l bg-surface-2 p-5">
         <h2 id="sv-why" className="m-0 text-body-strong">Why am I seeing this?</h2>
-        <p className="m-0 text-count text-ink-2">The brand chose who to ask by place and topic. Nothing else about you was used.</p>
+        <p className="m-0 text-count text-ink-2">{WHY_TEXT}</p>
       </section>
     </>
   );

@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { AdSlot, Avatar, Badge, Banner, Button, EmptyState, IconButton, Skeleton, SponsoredSurvey } from "@/components/vx";
+import { useState } from "react";
+import { AdSlot, Avatar, Badge, Banner, Button, EmptyState, IconButton, Sheet, Skeleton, SponsoredSurvey } from "@/components/vx";
 import { useLoad } from "@/components/feed/useLoad";
 import { Rail } from "@/components/shell/ShellSlots";
 import { ApiError } from "@/lib/api/client";
@@ -51,6 +52,7 @@ function Loaded({ page }: { page: BrandPage }) {
   const router = useRouter();
   const b = page.brand;
   const any = page.surveys.length + page.ads.length > 0;
+  const [why, setWhy] = useState(false);
   return (
     <>
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5 dt:gap-6" data-testid="brand-page">
@@ -81,7 +83,7 @@ function Loaded({ page }: { page: BrandPage }) {
           <h2 id="bp-from" className="vx-eyebrow m-0 text-ink-2">{`From ${b.name}`}</h2>
           {any ? (
             <>
-              <div className="grid grid-cols-1 items-start gap-4 dt:grid-cols-2">
+              <div className={`grid grid-cols-1 items-start gap-4 ${page.ads.length > 1 ? "dt:grid-cols-2" : ""}`}>
                 {page.ads.map((a) => (
                   <AdSlot
                     key={a.id}
@@ -90,7 +92,7 @@ function Loaded({ page }: { page: BrandPage }) {
                     body={a.body ?? undefined}
                     cta={a.linkUrl ? (a.ctaLabel ?? "Learn more") : false}
                     href={a.linkUrl ?? undefined}
-                    onWhy={false}
+                    onWhy={() => setWhy(true)}
                     onOpen={() => { recordAdEvent(a.id, "TAP").catch(() => undefined); }}
                   />
                 ))}
@@ -109,6 +111,9 @@ function Loaded({ page }: { page: BrandPage }) {
       <Rail>
         <Why />
       </Rail>
+      <Sheet title="Why this ad?" open={why} onClose={() => setWhy(false)}>
+        <p className="m-0 px-5 pb-6 text-body text-ink-2">{`${b.name} paid for this spot. WAWU approved it before it ran. It does not change rankings or poll results, and ${b.name} never sees who you are.`}</p>
+      </Sheet>
     </>
   );
 }

@@ -14,7 +14,23 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn() }), 
 vi.mock("next/link", () => ({ default: ({ href, children, ...r }: { href: string; children: React.ReactNode }) => <a href={href} {...r}>{children}</a> }));
 
 beforeEach(() => { push.mockClear(); signIn(); });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.localStorage.clear(); });
+// A page that is left sends its SKIP on the next tick, and the START flag and the kept answers live in the tab's session storage: both are cleared between tests.
+afterEach(async () => { cleanup(); await new Promise((r) => setTimeout(r, 5)); vi.unstubAllGlobals(); window.localStorage.clear(); window.sessionStorage.clear(); });
+
+/** A stand-in IntersectionObserver the test can fire by hand. */
+function stubObserver() {
+  const seen: { fire: (ratio: number) => void; el: Element | null; disconnected: boolean }[] = [];
+  class IO {
+    cb: (e: Partial<IntersectionObserverEntry>[]) => void;
+    rec = { el: null as Element | null, disconnected: false, fire: (ratio: number) => this.cb([{ isIntersecting: ratio > 0, intersectionRatio: ratio }]) };
+    constructor(cb: (e: Partial<IntersectionObserverEntry>[]) => void) { this.cb = cb; seen.push(this.rec); }
+    observe(el: Element) { this.rec.el = el; }
+    disconnect() { this.rec.disconnected = true; }
+    unobserve() {}
+  }
+  vi.stubGlobal("IntersectionObserver", IO);
+  return seen;
+}
 
 const opt = (id: string, label: string) => ({ id, label });
 const survey = (over: Record<string, unknown> = {}) => ({
@@ -34,16 +50,38 @@ describe("the feed card", () => {
     const { container } = render(<SurveyFeedCard survey={null} />);
     expect(container.innerHTML).toBe("");
   });
-  it("is labelled, links to the survey, and counts one VIEW", async () => {
-    mockApi({ "POST /surveys/s1/events": null });
-    const { rerender } = render(<SurveyFeedCard survey={card} />);
+  it("is labelled and links to the survey", () => {
+    stubObserver();
+    render(<SurveyFeedCard survey={card} />);
     expect(screen.getByText("Sponsored Survey")).toBeTruthy();
     expect(screen.getByText("by Zobo Fresh")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Start the survey/ }).getAttribute("href")).toBe("/surveys/s1");
+  });
+  it("counts no VIEW when it mounts, and one VIEW once at least half of it is on screen", async () => {
+    mockApi({ "POST /surveys/s1/events": null });
+    const seen = stubObserver();
+    const { rerender } = render(<SurveyFeedCard survey={card} />);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(events()).toEqual([]);
+    seen[0].fire(0.3); // a corner of it
+    await new Promise((r) => setTimeout(r, 5));
+    expect(events()).toEqual([]);
+    seen[0].fire(0.6);
+    seen[0].fire(1);
     rerender(<SurveyFeedCard survey={{ ...card }} />);
     await waitFor(() => expect(events()).toEqual(["VIEW"]));
+    await new Promise((r) => setTimeout(r, 5));
+    expect(events()).toEqual(["VIEW"]);
+  });
+  it("counts nothing where the browser cannot say what is on screen", async () => {
+    mockApi({ "POST /surveys/s1/events": null });
+    vi.stubGlobal("IntersectionObserver", undefined);
+    render(<SurveyFeedCard survey={card} />);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(events()).toEqual([]);
   });
   it("shows no price, no token and no free-post word to a member", () => {
+    stubObserver();
     const { container } = render(<SurveyFeedCard survey={card} />);
     expect(container.textContent).not.toMatch(/₦|token|free post|price/i);
   });

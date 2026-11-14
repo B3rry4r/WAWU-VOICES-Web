@@ -41,3 +41,82 @@ export function recapLine(g: Given): string {
 
 /** Text answers are at most 500 characters (the API refuses 501). */
 export const TEXT_MAX = 500;
+
+// ---- What the page keeps for one survey in this tab (sessionStorage; every call is wrapped, a blocked store means nothing is kept) ----
+
+const startedKey = (id: string) => `wawu.survey.${id}.started`;
+const draftKey = (id: string) => `wawu.survey.${id}.draft`;
+
+function store(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** True once START has gone for this survey in this tab. One START per person per survey: a reload or a second open does not send it again. */
+export function wasStarted(id: string): boolean {
+  try {
+    return store()?.getItem(startedKey(id)) === "1";
+  } catch {
+    return false;
+  }
+}
+export function markStarted(id: string): void {
+  try {
+    store()?.setItem(startedKey(id), "1");
+  } catch {
+    /* nothing kept */
+  }
+}
+
+/** What a reload brings back: the position, the answers (voice clip ids too) and the sharing choices. */
+export interface Draft {
+  idx: number;
+  given: GivenByQuestion;
+  anonymous: boolean;
+  shareState: boolean;
+  ageBand: string;
+}
+
+export function saveDraft(id: string, d: Draft): void {
+  try {
+    const s = store();
+    if (!s) return;
+    if (Object.keys(d.given).length === 0 && d.idx === 0 && !d.anonymous && !d.shareState && !d.ageBand) s.removeItem(draftKey(id));
+    else s.setItem(draftKey(id), JSON.stringify(d));
+  } catch {
+    /* nothing kept */
+  }
+}
+
+export function clearDraft(id: string): void {
+  try {
+    store()?.removeItem(draftKey(id));
+  } catch {
+    /* nothing kept */
+  }
+}
+
+/** The saved draft for this survey, or null. Anything that does not fit the survey as it is now (a question or choice that is gone) is dropped. */
+export function loadDraft(id: string, questions: SurveyQuestionView[], ageBands: string[]): Draft | null {
+  try {
+    const raw = store()?.getItem(draftKey(id));
+    if (!raw) return null;
+    const d = JSON.parse(raw) as Partial<Draft>;
+    const given: GivenByQuestion = {};
+    for (const q of questions) {
+      const g = d.given?.[q.id] as Given | undefined;
+      if (!g) continue;
+      if (g.kind === "choice" && q.kind === "SINGLE_CHOICE" && q.options.some((o) => o.id === g.optionId)) given[q.id] = g;
+      else if (g.kind === "text" && q.kind === "TEXT" && typeof g.text === "string") given[q.id] = { kind: "text", text: g.text.slice(0, TEXT_MAX) };
+      else if (g.kind === "voice" && q.kind === "VOICE" && typeof g.clipId === "string" && g.clipId) given[q.id] = { kind: "voice", clipId: g.clipId, seconds: Number(g.seconds) || 0 };
+    }
+    const idx = Number.isInteger(d.idx) ? Math.min(Math.max(d.idx as number, 0), questions.length - 1) : 0;
+    const band = typeof d.ageBand === "string" && ageBands.includes(d.ageBand) ? d.ageBand : "";
+    return { idx, given, anonymous: d.anonymous === true, shareState: d.shareState === true, ageBand: band };
+  } catch {
+    return null;
+  }
+}
