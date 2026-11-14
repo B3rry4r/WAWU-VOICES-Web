@@ -153,11 +153,13 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
         <VoiceReplySheet
           ownNameless={ans.author === null && ans.isMine}
           aid={aid}
+          qid={qid}
           who={who}
           stance={pick}
           allow={allow}
           onClose={() => setVoiceOpen(false)}
           onPosted={() => { setVoiceOpen(false); push("Reply posted.", "success"); void load(); void api.getAllowance().then(setAllow, () => undefined); }}
+          onKept={() => push("You are offline. Your voice reply is saved on this device. It will be sent when you are back online, or you will be asked to tap Send.", "info")}
           onBuy={() => router.push(`/units/buy?from=${encodeURIComponent(`/q/${qid}/a/${aid}`)}`)}
         />
       ) : null}

@@ -4,6 +4,7 @@ import { needsNewKey } from "@/lib/api/keys";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Banner, Button, Icon } from "@/components/vx";
 import * as api from "@/lib/api/speak";
+import { ApiError } from "@/lib/api/client";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
@@ -29,7 +30,18 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
 /** `anonymous` is the "Post without my name" switch as it stood when Send was tapped (always false when the box has no switch). */
 export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number; anonymous: boolean }
 
-export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, anonSlot }: {
+/** What a box hands to `keep` when the person sends while offline: the take, and the Idempotency-Key and name switch it would have been sent with. */
+export interface KeepInput { blob: Blob; mime: string; seconds: number; peaks: number[]; key: string; anonymous: boolean }
+/** "kept": saved on this device. "exists": another recording already waits there (the person is asked before it is replaced). "failed": the device could not keep it. */
+export type KeepResult = "kept" | "exists" | "failed";
+
+export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, anonSlot, keyPart, keep, onKept }: {
+  /** Part of what the post says besides the recording (a reply's stance): a different one is a different request, so it gets a different Idempotency-Key. */
+  keyPart?: string;
+  /** Keeps the take on this device when Send is tapped offline, to be sent later. Without it, offline only says the take stays on this page. */
+  keep?: (t: KeepInput, replace: boolean) => Promise<KeepResult>;
+  /** Called after `keep` saved the take, so the caller can close and say so. */
+  onKept?: () => void;
   purpose: Purpose;
   maxSeconds: number;
   /** The length a free post covers; a longer take may need an old voice token, as on the record screen. */
@@ -68,6 +80,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   const [take, setTake] = useState<Take | null>(null);
   const [sending, setSending] = useState<Step | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [replaceOk, setReplaceOk] = useState(false);
   const rec = useRef<VoiceRecorder | null>(null);
   const levelsRef = useRef<number[]>([]);
   const starting = useRef(false);
@@ -149,10 +162,34 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
     throw new Error("CLIP_SLOW");
   }
 
+  /** The key this take is posted with: the recording's own key, plus what else the post says (the stance, the name switch). */
+  const keyNow = (t: Take, anonNow: boolean) => `${t.key}${keyPart ? `-${keyPart}` : ""}${anonNow ? "-anon" : ""}`;
+
+  async function tryKeep(t: Take, replace: boolean): Promise<boolean> {
+    if (!keep) return false;
+    const anonNow = !!anonSlot && anonRef.current;
+    const r = await keep({ blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: keyNow(t, anonNow), anonymous: anonNow }, replace);
+    if (!alive.current) return true;
+    setSending(null);
+    if (r === "kept") {
+      if (anonSlot) { anonRef.current = false; writeAnonPref(anonSlot, false); }
+      state.current = null;
+      onKept?.();
+    } else if (r === "exists") {
+      setNote("A recording is already waiting to be sent on this device. Saving this one will replace it.");
+      setReplaceOk(true);
+    } else {
+      setNote("We could not keep your recording on this device. Stay on this page until you are back online, then tap Send.");
+    }
+    return true;
+  }
+
   async function send() {
     if (!take || sending || disabled) return;
     if (take.seconds > maxSeconds + 0.5) return;
     setNote(null);
+    setReplaceOk(false);
+    if (keep && typeof navigator !== "undefined" && navigator.onLine === false) { setSending({ step: "post" }); await tryKeep(take, false); return; }
     setSending({ step: "upload", pct: 0 });
     let st = state.current;
     if (!st || st.key !== take.key) st = state.current = { key: take.key };
@@ -183,12 +220,17 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
       setSending({ step: "post" });
       // The key belongs to the exact body: the same recording sent unnamed is a different request from the named one.
       const anonNow = !!anonSlot && anonRef.current;
-      await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: anonNow ? `${take.key}-anon` : take.key, seconds: take.seconds, anonymous: anonNow });
+      await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: keyNow(take, anonNow), seconds: take.seconds, anonymous: anonNow });
       if (anonSlot) { anonRef.current = false; writeAnonPref(anonSlot, false); }
       state.current = null;
       if (alive.current) { setSending(null); setTake(null); setPhase("idle"); }
     } catch (e) {
       if (!alive.current) return;
+      if (keep && ((e instanceof ApiError && e.status === 0) || (!(e instanceof ApiError) && typeof navigator !== "undefined" && navigator.onLine === false))) {
+        if (stage === "upload" && st.clipId) void api.deleteVoiceClip(st.clipId).catch(() => undefined);
+        await tryKeep(take, false);
+        return;
+      }
       setSending(null);
       if (stage === "upload" && st.clipId) { void api.deleteVoiceClip(st.clipId).catch(() => undefined); state.current = null; }
       if (e instanceof Error && e.message === "CLIP_FAILED") { state.current = null; setNote("We could not process that recording. Record it again and send it."); return; }
@@ -200,7 +242,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
         return;
       }
       if (e instanceof Error && e.message === "CLIP_SLOW") { setNote("Your voice is still being prepared. Tap Send again in a moment."); return; }
-      setNote(errorText?.(e) ?? refusalText(e));
+      setNote(errorText?.(e) ?? (!keep && e instanceof ApiError && e.status === 0 ? "You are offline. Your recording stays on this page. Check your connection and tap Send again." : refusalText(e)));
     }
   }
 
@@ -219,7 +261,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   return (
     <section className={"vx-rec" + (live ? " is-live" : "")} aria-label="Voice recorder" data-testid="voice-box">
       {live ? <div className="vx-rec__top"><span className="vx-rec__dot">Recording</span></div> : null}
-      {note ? <InView key={note}><Banner tone="danger" onClose={() => setNote(null)}>{note}</Banner></InView> : null}
+      {note ? <InView key={note}><Banner tone={replaceOk ? "info" : "danger"} onClose={() => { setNote(null); setReplaceOk(false); }} action={replaceOk ? "Replace it" : undefined} onAction={replaceOk && take ? () => { setNote(null); setReplaceOk(false); setSending({ step: "post" }); void tryKeep(take, true); } : undefined}>{note}</Banner></InView> : null}
       {note && extra ? extra : null}
       {phase !== "preview" && help ? (
         <div className="sp-help" role="alert">

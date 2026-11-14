@@ -39,7 +39,7 @@ export function WriteScreen({ qid }: { qid: string }) {
   const [text, setText] = useState("");
   const [tag, setTag] = useState<ComposerTag>("none");
   const [intent, setIntent] = useState<IntentKind | null>(stanceQ ? INTENT_OF[stanceQ] ?? null : null);
-  const key = useRef<{ text: string; anon: boolean; k: string } | null>(null);
+  const key = useRef<{ text: string; anon: boolean; st: string | null; k: string } | null>(null);
   // V-ANON: "Post without my name" on a new answer, off until turned on. V-FIX-D: the same switch on a reply (useReplyAnon, read at send time).
   const [anon, setAnon] = useState(() => (replyTo ? false : readAnonPref(qid)));
   const replyAnon = useReplyAnon(replyTo ?? "none");
@@ -88,9 +88,9 @@ export function WriteScreen({ qid }: { qid: string }) {
     if (replyTo && !stance) { setMsg("Pick how you are replying: I agree, I disagree or My experience."); return; }
     // The held draft carries the post's Idempotency-Key (same text, same key), so a post after a purchase is the same post.
     const held = replyTo ? undefined : saveDraft(qid, body);
-    // The key belongs to the exact body, the reply switch included: flipping it makes a new request.
+    // The key belongs to the exact body: the words, the reply switch and the stance. Changing any of them makes a new request.
     const anonNow = replyTo ? (ownNameless || replyAnon.ref.current) : anon;
-    if (!key.current || key.current.text !== body || key.current.anon !== anonNow) key.current = { text: body, anon: anonNow, k: held ? held.key : uuidKey() };
+    if (!key.current || key.current.text !== body || key.current.anon !== anonNow || key.current.st !== (replyTo ? stance : null)) key.current = { text: body, anon: anonNow, st: replyTo ? stance : null, k: held ? held.key : uuidKey() };
     busy.current = true;
     setSending(true);
     setMsg(null);

@@ -13,7 +13,7 @@ import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { needsNewKey } from "@/lib/api/keys";
 import { InView } from "@/components/InView";
-import { clearDraft, draftIsStale, loadDraft, saveDraft, STALE_NOTE, type Draft } from "./draft";
+import { clearDraft, draftIsStale, loadDraft, saveDraft, saveDraftKeepingReply, STALE_NOTE, type Draft } from "./draft";
 import { claimSend, releaseSend } from "./outbox";
 import { freeCovers, peaksFromLevels, refusalText, tokenFor, uuidKey, voicePriceMilli } from "./logic";
 import { BackLink, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
@@ -137,7 +137,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     if (!qid) return;
     let live = true;
     loadDraft().then((d) => {
-      if (!live || !d || d.questionId !== qid) return;
+      if (!live || !d || d.questionId !== qid || d.reply) return; // a kept voice reply belongs to the outbox, never to this screen
       // addendum 7.7: a saved recording is removed after 7 days, with a plain note.
       if (draftIsStale(d)) {
         void clearDraft();
@@ -194,7 +194,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     const t: Take = { blob: r.blob, mime: r.mime, seconds: r.realSeconds, peaks: peaksFromLevels(levelsRef.current), key: uuidKey(), recordedAt: Date.now() };
     setTake(t);
     setPhase("preview");
-    if (qid) void saveDraft({ ...t, questionId: qid, savedAt: Date.now() } satisfies Draft);
+    if (qid) void saveDraftKeepingReply({ ...t, questionId: qid, savedAt: Date.now() } satisfies Draft);
     if (r.overLimit) {
       interrupted.current = false;
       pushNote({ tone: "info", text: `That recording ran past ${wasLimit} seconds, so it cannot be sent as it is. Record it again.` });
@@ -351,8 +351,14 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   }
 
   /** Keeps the recording on this device marked as waiting to go, with the switch and the word as they are now (read here, at the moment of keeping). */
-  async function keepForLater(t: Take) {
+  async function keepForLater(t: Take, replace = false) {
     if (!qid) return;
+    // One kept recording only. A voice reply already waiting is never replaced without the person saying so.
+    const cur = await loadDraft();
+    if (!replace && cur?.reply && cur.key !== t.key) {
+      pushNote({ tone: "info", text: "A voice reply is already waiting to be sent on this device. Saving this recording will replace it.", action: "Replace it", onAction: () => void keepForLater(t, true) });
+      return;
+    }
     const kept = await saveDraft({ ...t, questionId: qid, savedAt: Date.now(), queued: true, anonymous: anonRef.current, mood: mood.word ?? null, shareCode: shareVisitCode() } satisfies Draft);
     if (!kept) {
       // The device could not keep it (storage full or blocked): never say it is saved.
@@ -441,7 +447,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         sendState.current = null;
         const next: Take = { ...take, key: uuidKey() };
         setTake(next);
-        void saveDraft({ ...next, questionId: qid, savedAt: Date.now() } satisfies Draft);
+        void saveDraftKeepingReply({ ...next, questionId: qid, savedAt: Date.now() } satisfies Draft);
         pushNote({ tone: "danger", text: refusalText(e) });
         return;
       }
@@ -452,13 +458,13 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           text: refusalText(e),
           action: "Get tokens",
           onAction: () => {
-            void saveDraft({ ...take, questionId: qid, savedAt: Date.now() }).finally(() => router.push(`/units/buy?from=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}`));
+            void saveDraftKeepingReply({ ...take, questionId: qid, savedAt: Date.now() }).finally(() => router.push(`/units/buy?from=${encodeURIComponent(pathname + (qParam && !questionId ? `?q=${qParam}` : ""))}`));
           },
         });
         return;
       }
       if (e instanceof ApiError && (e.code === "UNAUTHENTICATED" || e.code === "TOKEN_EXPIRED")) {
-        await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
+        await saveDraftKeepingReply({ ...take, questionId: qid, savedAt: Date.now() });
         window.location.assign(joinHref());
         return;
       }

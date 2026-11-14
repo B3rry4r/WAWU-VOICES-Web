@@ -22,7 +22,7 @@ import { publishedFromLink } from "@/features/share/share-visit";
  */
 type View =
   | { kind: "offer"; draft: Draft; plan: SendPlan; error?: string }
-  | { kind: "sending" }
+  | { kind: "sending"; reply?: boolean }
   | { kind: "finish"; draft: Draft }
   | { kind: "note"; tone: "info" | "success" | "danger"; text: string; href?: string; hrefLabel?: string };
 
@@ -35,13 +35,17 @@ export function Outbox() {
   const onSpeak = /(^|\/)speak(\/|$)/.test(pathname);
 
   const send = useCallback(async (d: Draft, plan: SendPlan) => {
-    setView({ kind: "sending" });
+    setView({ kind: "sending", reply: !!d.reply });
     const r = await sendKeptRecording(d, plan.tokenId, async () => (await loadDraft())?.key === d.key, async () => {
       publishedFromLink(d.shareCode);
       await clearDraft();
-    });
-    if (r.ok) {
-      setView({ kind: "note", tone: "success", text: "Your saved voice was posted.", href: r.answerId ? `/q/${r.questionId}/posted?a=${r.answerId}` : undefined, hrefLabel: "See it" });
+    }, async () => (await loadDraft())?.key === d.key);
+    if (r.ok && r.answerId === null) {
+      setView(null); // another tab posted it: it says so, this one says nothing
+    } else if (r.ok) {
+      setView(r.replyTo
+        ? { kind: "note", tone: "success", text: "Your saved voice reply was posted.", href: `/q/${r.questionId}/a/${r.replyTo}`, hrefLabel: "See it" }
+        : { kind: "note", tone: "success", text: "Your saved voice was posted.", href: r.answerId ? `/q/${r.questionId}/posted?a=${r.answerId}` : undefined, hrefLabel: "See it" });
     } else if (r.reason === "offline") {
       setView(null); // stays kept; the next time the connection is back it is tried again
     } else if (r.reason === "needs_tokens") {
@@ -69,7 +73,7 @@ export function Outbox() {
         setView({ kind: "note", tone: "info", text: "The question for your saved recording has closed, so it was not sent and has been removed." });
         return;
       }
-      if (isMoodQuestion(question) && !d.mood) {
+      if (!d.reply && isMoodQuestion(question) && !d.mood) {
         setView({ kind: "finish", draft: d });
         return;
       }
@@ -99,14 +103,14 @@ export function Outbox() {
   return (
     <div className="fixed inset-x-0 bottom-[96px] z-40 mx-auto grid max-w-[560px] gap-2 px-4 dt:bottom-4 dt:left-auto dt:right-4 dt:mx-0 dt:w-[560px]" data-testid="outbox">
       {view.kind === "offer" ? (
-        <Banner tone={view.error ? "danger" : "info"} title="A recording is waiting" onClose={() => void remove()}>
+        <Banner tone={view.error ? "danger" : "info"} title={view.draft.reply ? "A voice reply is waiting" : "A recording is waiting"} onClose={() => void remove()}>
           <span className="block">{view.error ?? `Saved while you were offline, ${secondsText(view.draft.seconds)}.`}</span>
           <span className="mt-2 block">
             <Button variant="secondary" size="s" onClick={() => void send(view.draft, view.plan)}>{view.error && view.plan.free ? "Try again" : view.plan.label}</Button>
           </span>
         </Banner>
       ) : view.kind === "sending" ? (
-        <Banner tone="info" title="Sending your saved voice">Keep this page open until it is posted.</Banner>
+        <Banner tone="info" title={view.reply ? "Sending your saved voice reply" : "Sending your saved voice"}>Keep this page open until it is posted.</Banner>
       ) : view.kind === "finish" ? (
         <Banner tone="info" title="A recording is waiting" onClose={() => void remove()}>
           <Link href={`/speak?q=${encodeURIComponent(view.draft.questionId)}`} className="underline">Pick your word and send it</Link>

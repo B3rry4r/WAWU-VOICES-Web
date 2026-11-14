@@ -22,6 +22,8 @@ export interface Draft {
   mood?: string | null;
   /** The share link this recording came from, so the post can be counted as published from it (V-FIX-D). */
   shareCode?: string | null;
+  /** Set when this recording is a voice reply, not an answer: the parent answer and the stance it was sent with. It is sent as that same reply. */
+  reply?: { answerId: string; stance: "AGREE" | "DISAGREE" | "EXPERIENCE" };
 }
 
 /** A saved recording is removed after 7 days (addendum 7.7). */
@@ -121,4 +123,11 @@ export async function clearDraft(): Promise<void> {
   } catch {
     /* nothing to clear */
   }
+}
+
+/** A waiting voice reply is a promise made to the person: a plain take on the record screen never overwrites it. Returns false when it held back. */
+export async function saveDraftKeepingReply(input: Draft): Promise<boolean> {
+  const cur = await loadDraft();
+  if (cur?.reply && cur.key !== input.key) return false;
+  return saveDraft(input);
 }

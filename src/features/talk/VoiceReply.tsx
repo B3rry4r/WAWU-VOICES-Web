@@ -6,6 +6,7 @@ import { freeCovers, tokenFor, voicePriceMilli } from "@/features/speak/logic";
 import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { tokensLabel } from "@/lib/shared/text-price";
+import { currentOwner, loadDraft, saveDraft } from "@/features/speak/draft";
 import { isOutOfPosts } from "./lib";
 import { OWN_NAMELESS_NOTE, replyAnonSlot } from "./reply-anon";
 
@@ -17,7 +18,11 @@ const STANCES: { id: ReplyStance; label: string }[] = [
 
 /** Reply by voice: the same recorder and upload as an answer, posted to POST /answers/{id}/replies with kind VOICE.
  *  A voice reply spends a free post or tokens like a voice answer; the server decides, and the button shows the same price. */
-export function VoiceReplySheet({ aid, who, stance, allow, onClose, onPosted, onBuy, ownNameless }: {
+export function VoiceReplySheet({ aid, qid, who, stance, allow, onClose, onPosted, onBuy, onKept, ownNameless }: {
+  /** The question the answer is under: a reply kept offline is sent later with it, and only while the question is open. */
+  qid: string;
+  /** The recording was kept on this device (sent offline). The caller closes the sheet and tells the person. */
+  onKept?: () => void;
   /** The writer of a nameless answer replying under it: always nameless, no switch. */
   ownNameless?: boolean;
   aid: string; who: string; stance?: ReplyStance; allow: Allowances; onClose: () => void; onPosted: () => void; onBuy: () => void;
@@ -55,6 +60,16 @@ export function VoiceReplySheet({ aid, who, stance, allow, onClose, onPosted, on
           }}
           extra={short ? <Button variant="onforest" size="l" block onClick={onBuy}>Get tokens</Button> : null}
           onCancel={onClose}
+          keyPart={pick}
+          onKept={() => { onKept?.(); onClose(); }}
+          keep={async (t, replace) => {
+            // Offline: the recording goes into the same on-device store a voice answer uses, with all it needs to be sent later as this same reply.
+            if (!pick || !currentOwner()) return "failed";
+            const cur = await loadDraft();
+            if (!replace && cur && cur.key !== t.key) return "exists";
+            const ok = await saveDraft({ blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: t.key, savedAt: Date.now(), questionId: qid, queued: true, anonymous: ownNameless ? true : t.anonymous, reply: { answerId: aid, stance: pick } });
+            return ok ? "kept" : "failed";
+          }}
           anonSlot={ownNameless ? undefined : replyAnonSlot(aid)}
         />
       </div>

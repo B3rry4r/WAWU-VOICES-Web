@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/api/client";
 import { freshKey, needsNewKey } from "@/lib/api/keys";
 import * as api from "@/lib/api/speak";
+import { createVoiceReply } from "@/lib/api/talk";
 import type { Mood } from "@/lib/api/mood";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { putWithRetry } from "@/lib/audio-ref/upload";
@@ -46,7 +47,7 @@ export function claimSend(key: string): boolean {
 export const releaseSend = (key: string): void => { inFlight.delete(key); };
 
 export type SendResult =
-  | { ok: true; answerId: string; questionId: string }
+  | { ok: true; answerId: string; questionId: string; /** Set when the kept recording was a voice reply: the answer it was posted under. */ replyTo?: string }
   /** Another tab sent this recording while this one waited: it is done, and there is nothing more to do here. */
   | { ok: true; answerId: null; questionId: string; byOtherTab: true }
   | { ok: false; reason: "busy" | "offline" | "needs_tokens" | "failed"; message?: string; draft?: Draft };
@@ -72,12 +73,18 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
       sizeBytes: d.blob.size,
       durationMs: Math.round(d.seconds * 1000),
       extraVoiceTokenId: tokenId,
+      ...(d.reply ? { purpose: "REPLY" as const } : {}),
     });
     clipId = up.clip.id;
     await putWithRetry({ url: up.putUrl, key: "", headers: {} }, d.blob, () => undefined);
     uploaded = true;
     await api.completeVoiceClip(clipId);
     await waitReady(clipId);
+    if (d.reply) {
+      // The same reply it was made as: the parent answer, the stance, the name switch and the Idempotency-Key it was kept with.
+      const rr = await createVoiceReply(d.reply.answerId, d.reply.stance, clipId, d.key, tokenId, !!d.anonymous);
+      return { ok: true, answerId: String((rr as { reply?: { id?: string } }).reply?.id ?? d.reply.answerId), questionId: d.questionId, replyTo: d.reply.answerId };
+    }
     const r = await api.createVoiceAnswer(d.questionId, clipId, d.key, tokenId, (d.mood as Mood | null | undefined) ?? null, !!d.anonymous);
     return { ok: true, answerId: r.answer.id, questionId: d.questionId };
   } catch (e) {
@@ -112,8 +119,12 @@ export async function sendKeptRecording(
   stillKept: () => Promise<boolean> = async () => false,
   /** Runs inside the lock after a successful post (the caller removes the kept copy here, so a waiting tab never sees a posted recording as kept). */
   onPosted: () => Promise<void> = async () => undefined,
+  /** Asked once the lock is held, before anything is sent: is this same recording still the one waiting? When it was posted by another tab in the meantime, it is gone and nothing is sent. */
+  stillWaiting: () => Promise<boolean> = async () => true,
 ): Promise<SendResult> {
   const sendThenTidy = async (): Promise<SendResult> => {
+    // A tab that waited for the lock reads the kept copy again: the first tab may have posted and cleared it already.
+    if (!(await stillWaiting())) return { ok: true, answerId: null, questionId: d.questionId, byOtherTab: true };
     const r = await sendHere(d, tokenId);
     if (r.ok) await onPosted();
     return r;
