@@ -135,3 +135,10 @@
 .pf-vcard .vx-btn--onforest { color: var(--on-forest); }
 .pf-rulelist li { padding: var(--space-3) var(--space-4); border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); align-items: center; }
 .pf-steps__n { background: var(--forest); color: var(--on-forest); }
+
+/* L4: on a phone the Settings switches are 44 px tall, so a thumb can hit them. The look at 1440 is unchanged. */
+@media (max-width: 1023px) {
+  .pf-row-item .vx-switch { width: 72px; height: 44px; }
+  .pf-row-item .vx-switch::after { width: 36px; height: 36px; }
+  .pf-row-item .vx-switch:checked::after { transform: translateX(28px); }
+}

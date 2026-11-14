@@ -21,8 +21,10 @@ type Load = "loading" | "missing" | "error" | "ready";
 function chosenLine(p: NewsAnswer): string | null {
   const n = p.news;
   if (!n) return null;
-  const byPoster = n.chosenBy.startsWith("@") || n.chosenBy === "the poster";
-  return `Tag chosen by ${n.chosenBy}${byPoster ? " when posting" : ""}, ${lagosClock(n.chosenAt)}`;
+  const by = typeof n.chosenBy === "string" ? n.chosenBy : "";
+  if (!by) return `Tag chosen ${lagosClock(n.chosenAt)}`;
+  const byPoster = by.startsWith("@") || by === "the poster";
+  return `Tag chosen by ${by}${byPoster ? " when posting" : ""}, ${lagosClock(n.chosenAt)}`;
 }
 
 function ReplyCard({ r }: { r: NewsReply }) {

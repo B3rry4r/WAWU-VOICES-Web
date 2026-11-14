@@ -347,6 +347,8 @@ export interface ProposalCardProps {
   avatarSrc?: string;
   /** V-46: a tick beside the name. */
   verified?: boolean;
+  /** The Admin pill beside the name; drawn only for `true`. */
+  admin?: boolean;
   time: string;
   text: string;
   supports?: number;
@@ -377,6 +379,7 @@ export function ProposalCard(p: ProposalCardProps): ReactElement {
           <span className="vx-answer__name">
             {p.author}
             {p.verified ? <Icon name="badge-check" size={16} label="Verified" className="vx-tick" /> : null}
+            <AdminPill admin={p.admin} />
           </span>
           <span className="vx-answer__time">{p.time}</span>
         </div>
