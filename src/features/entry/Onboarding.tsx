@@ -147,7 +147,12 @@ export function Onboarding() {
         </EntryScroll>
         <div className="flex flex-none flex-col gap-4 bg-bg px-4 pb-6 pt-3">
           {dots}
-          {last ? <Button size="l" icon="mic" block href="/join/country">Start</Button> : <Button size="l" block iconEnd="chevron-right" onClick={() => setI(i + 1)}>Next</Button>}
+          {last ? (
+            <>
+              <Button size="l" icon="mic" block href="/join/country">Start</Button>
+              <Button size="l" variant="secondary" block href="/sign-in" className="min-h-11">I have an account</Button>
+            </>
+          ) : <Button size="l" block iconEnd="chevron-right" onClick={() => setI(i + 1)}>Next</Button>}
         </div>
       </div>
       {/* desktop: one centred card */}
