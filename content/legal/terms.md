@@ -1,11 +1,11 @@
 ---
 title: Terms of use
-updated: [OWNER: approval date]
+updated: 14 November 2026
 lead: These are the rules for using VOICES. Please read them before you join.
 ---
 
 ## Who we are
-VOICES is run by WAWUAfrica (“WAWU”, “we”, “us”). These Terms are the agreement between you and WAWU (“this Agreement”). [OWNER: WAWU’s registered company name and address, as they should appear here.] You can reach us at support@wawuafrica.com.
+VOICES is run by WAWU Technology Ltd (“WAWU”, “we”, “us”), a company incorporated in Nigeria under the Companies and Allied Matters Act 2020, with its registered address at 5 Ikoyi Crescent, Lagos, Nigeria. These Terms are the agreement between you and WAWU (“this Agreement”). You can reach us at support@wawuafrica.com.
 
 ## Signing in
 You sign in with your WAWU ID. When you join, you confirm that you are 18 or older and that you accept the Community rules and these Terms. If you are under 18, do not use VOICES. Keep your sign-in details safe. What happens on your account is your responsibility.
