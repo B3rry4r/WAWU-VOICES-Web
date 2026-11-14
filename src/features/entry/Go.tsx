@@ -9,7 +9,7 @@ import { getTodaysQuestion } from "@/lib/api/feed";
 import { isSignedIn } from "@/lib/api/auth";
 import { getInviter } from "@/lib/api/invite";
 import { keptInviteCode } from "@/lib/invite";
-import { closesIn, comingUp, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, voicesOf } from "@/lib/feed-format";
 import { TONE, isMoodQuestion, pickHref, writePick } from "@/features/mood/mood";
 import type { Mood } from "@/lib/api/mood";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner } from "./ui";
@@ -25,7 +25,7 @@ import { LANDING_EYEBROW, LANDING_HEADLINE_EN, LANDING_HEADLINE_YO, LANDING_INTR
  */
 export function Go() {
   const router = useRouter();
-  const load = useLoad(() => getTodaysQuestion(), []);
+  const load = useLoad(() => getTodaysQuestion(), [], questionStart);
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => setSignedIn(isSignedIn()), []);
   const [inviter, setInviter] = useState<string | null>(null);

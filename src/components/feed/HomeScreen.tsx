@@ -7,7 +7,7 @@ import { getHome, getMe, getTrendingQuestions, type Home } from "@/lib/api/feed"
 import { listMyAnswers } from "@/lib/api/profile";
 import { getAdPlacement, getFlashPolls, type AdPlacement, type Poll } from "@/lib/api/polls";
 import { isSignedIn } from "@/lib/api/auth";
-import { closesIn, comingUp, shortCount, uniqueVoices, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, shortCount, soonest, topicStart, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
 import { WeeklyReportLink } from "./LinkCards";
@@ -51,7 +51,7 @@ export function HomeScreen() {
     const today = home.dailyQuestion?.id;
     const answered = signedIn && today ? await listMyAnswers().then((p) => p.items.some((i) => i.answer?.questionId === today), () => false) : false;
     return { home, flash, trending, ad, firstName: who.firstName, suspended: who.suspended, answered };
-  }, [signedIn]);
+  }, [signedIn], (d) => soonest(questionStart(d.home.dailyQuestion), topicStart(d.home.topicOfWeek)));
   if (signedIn === null || load.state === "loading") return <Loading />;
   if (load.state === "error") return <Failed load={load} />;
   const { home: h, flash, trending, ad, firstName, suspended, answered } = load.data;

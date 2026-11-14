@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Avatar, Banner, Button, EmptyState, FreePosts, NotFoundState, Icon, Sheet, Skeleton, Tabs } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, AnswerSort, Question } from "@/lib/api/talk";
-import { closesIn, comingUp, uniqueVoices, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
@@ -36,7 +36,7 @@ export function QuestionScreen({ id }: { id: string }) {
   const signedIn = useSignedIn();
   const [toast, push] = useToast();
   const [shareNode, share] = useShareSheet();
-  const q = useLoad<Question>(() => api.getQuestion(id), [id, signedIn]);
+  const q = useLoad<Question>(() => api.getQuestion(id), [id, signedIn], questionStart);
   const [allow, setAllow] = useState<Allowances | null>(null);
   useEffect(() => {
     if (signedIn) api.getAllowance().then(setAllow, () => setAllow(null));
@@ -67,7 +67,9 @@ export function QuestionScreen({ id }: { id: string }) {
       setState("error");
     }
   }, [id, sort, mood]);
-  useEffect(() => { void loadPage(); }, [loadPage, signedIn]);
+  // The question turning from SCHEDULED to open reloads the voices too.
+  const status = q.state === "ready" ? q.data.status : null;
+  useEffect(() => { void loadPage(); }, [loadPage, signedIn, status]);
   const [removedN, setRemovedN] = useState(0);
   useEffect(() => { setRemovedN(0); }, [q]);
 

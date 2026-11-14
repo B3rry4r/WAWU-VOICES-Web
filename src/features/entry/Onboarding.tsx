@@ -7,7 +7,7 @@ import { useLoad } from "@/components/feed/useLoad";
 import { getPublicConfig, getTodaysQuestion } from "@/lib/api/feed";
 import { apiFetch } from "@/lib/api/client";
 import type { components } from "@/lib/api/types";
-import { closesIn, comingUp, voicesLabel, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, voicesLabel, voicesOf } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { holdReturn } from "@/lib/auth/entry-draft";
 import { fromPrice, textPostNaira } from "./format";
@@ -39,7 +39,7 @@ export function Onboarding() {
       /* no address to read: they land on Home */
     }
   }, []);
-  const load = useLoad(() => Promise.all([getTodaysQuestion(), getPublicConfig(), getCurrentPoll()]), []);
+  const load = useLoad(() => Promise.all([getTodaysQuestion(), getPublicConfig(), getCurrentPoll()]), [], ([q]) => questionStart(q));
   if (skipping) return null;
   const logo = <Link href="/welcome" className="flex" aria-label="VOICES"><Logo height={34} alt="VOICES" /></Link>;
   const skip = <Link href="/join/country" className="-mr-2 inline-flex min-h-[44px] items-center px-2 text-label link-more">Skip</Link>;

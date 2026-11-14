@@ -27,18 +27,15 @@ const LAUNCH = { id: "q9", kind: "DAILY", status: "SCHEDULED", startsAt: OPENS, 
 const TOPIC = { id: "t1", weekNumber: 1, title: "Are You Really Fine? You Dey Okay?", questionCount: 10, status: "SCHEDULED", startsOn: "2026-11-16", endsOn: "2026-11-22", weeklyPollId: "p1", reportId: null, voiceCount: 0, voicesCount: 0 };
 
 describe("V-PRELAUNCH helpers", () => {
-  it("a scheduled question is not open before startsAt and is again at it", () => {
-    expect(notOpenYet({ status: "SCHEDULED", startsAt: OPENS }, BEFORE)).toBe(true);
-    expect(comingUp({ status: "SCHEDULED", startsAt: OPENS }, BEFORE)).toBe("Opens Sunday 15 November");
-    const at = Date.parse(OPENS);
-    expect(comingUp({ status: "SCHEDULED", startsAt: OPENS }, at)).toBeUndefined();
-    expect(comingUp({ status: "LIVE", startsAt: OPENS }, BEFORE)).toBeUndefined();
-    expect(comingUp({ status: "CLOSED", startsAt: OPENS }, BEFORE)).toBeUndefined();
+  it("a scheduled question is not open, whatever this device's clock says; only the API's word opens it", () => {
+    expect(notOpenYet({ status: "SCHEDULED", startsAt: OPENS })).toBe(true);
+    expect(comingUp({ status: "SCHEDULED", startsAt: OPENS })).toBe("Opens Sunday 15 November");
+    expect(comingUp({ status: "LIVE", startsAt: OPENS })).toBeUndefined();
+    expect(comingUp({ status: "CLOSED", startsAt: OPENS })).toBeUndefined();
   });
-  it("a topic that has not begun says when it starts, in Lagos time", () => {
-    expect(topicNotStarted({ status: "SCHEDULED", startsOn: "2026-11-16" }, BEFORE)).toBe(true);
-    expect(topicNotStarted({ status: "LIVE", startsOn: "2026-11-16" }, BEFORE)).toBe(false);
-    expect(topicNotStarted({ status: "SCHEDULED", startsOn: "2026-11-16" }, Date.parse("2026-11-15T23:00:00Z"))).toBe(false);
+  it("a topic the API calls scheduled has not begun and says when it starts, in Lagos time", () => {
+    expect(topicNotStarted({ status: "SCHEDULED", startsOn: "2026-11-16" })).toBe(true);
+    expect(topicNotStarted({ status: "LIVE", startsOn: "2026-11-16" })).toBe(false);
     expect(startsLabel({ startsOn: "2026-11-16" })).toBe("Starts Monday 16 November");
   });
 });

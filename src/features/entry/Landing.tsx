@@ -5,7 +5,7 @@ import { Button, Icon, Logo, QuestionHero, Skeleton, type IconName } from "@/com
 import { Answers } from "@/components/feed/parts";
 import { useLoad } from "@/components/feed/useLoad";
 import { getPublicConfig, getTodaysQuestion, getTrending } from "@/lib/api/feed";
-import { closesIn, comingUp, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, voicesOf } from "@/lib/feed-format";
 import { SoundButton } from "@/components/shell/SoundButton";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { fromPrice } from "./format";
@@ -28,7 +28,7 @@ const TRUST: { icon: IconName; text: string }[] = [
 export function Landing() {
   const router = useRouter();
   const skipping = useSkipIfSignedIn();
-  const load = useLoad(() => Promise.all([getTodaysQuestion(), getTrending(1), getPublicConfig()]), []);
+  const load = useLoad(() => Promise.all([getTodaysQuestion(), getTrending(1), getPublicConfig()]), [], ([q]) => questionStart(q));
   if (skipping) return null;
   const header = (
     <>
