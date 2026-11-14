@@ -81,7 +81,7 @@ export function HomeScreen() {
               closesIn={closesIn(q.endsAt)}
               avatars={uniqueVoices(q.recentVoices).map((v) => v.handle)}
               opensLabel={comingUp(q)}
-              onShare={() => share("QUESTION", q.id, { notOpen: true })}
+              onShare={() => share("QUESTION", q.id, comingUp(q) ? { notOpen: true } : undefined)}
               speakLabel={answered ? "Listen to answers" : signedIn ? undefined : "Add your voice"}
               speakIcon={answered ? "headphones" : undefined}
               answered={answered}
