@@ -33,3 +33,34 @@
   .ad-nav-item { min-height: var(--space-8); }
   .ad-nav-head { margin-top: var(--space-2); padding-bottom: 0; }
 }
+
+/* Tables below 1024 px: one card per row, the column name above each value. From 1024 px none of this applies. */
+@media (max-width: 1023.98px) {
+  .ad-stack, .ad-stack tbody, .ad-stack td { display: block; }
+  .ad-stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ad-stack tr { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); padding: var(--space-3) var(--space-2); }
+  .ad-stack td:first-child, .ad-stack td:last-child:not(:first-child) { grid-column: 1 / -1; }
+  .ad-stack td { padding: var(--space-1) var(--space-2); text-align: left; min-width: 0; white-space: normal; }
+  .ad-stack td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--ink-2);
+    font-family: var(--font-body);
+    font-size: var(--t-eyebrow-size);
+    line-height: var(--t-eyebrow-line);
+    font-weight: var(--t-eyebrow-weight);
+    letter-spacing: var(--t-eyebrow-tracking);
+    text-transform: uppercase;
+  }
+}
+@media (max-width: 1023.98px) {
+  .ad-stack td:empty { display: none; }
+}
+
+/* Below 1024 px every control is at least 44 px to tap (the small buttons are 36 px on a computer). */
+@media (max-width: 1023.98px) {
+  .ad-root .vx-btn--s { height: var(--touch-min); }
+  .ad-root .vx-iconbtn { min-width: var(--touch-min); min-height: var(--touch-min); }
+  .ad-root .vx-seg .vx-tab { min-height: var(--touch-min); }
+  .ad-root select.vx-field__input { min-height: var(--touch-min); }
+}

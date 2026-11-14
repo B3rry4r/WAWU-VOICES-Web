@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Avatar, EmptyState, Icon } from "@/components/vx";
+import { Avatar, EmptyState, Icon, Sheet } from "@/components/vx";
 import type { IconName } from "@/components/vx";
 import { getAdminToday } from "@/lib/api/admin";
 import type { AdminToday, Role } from "@/lib/api/admin";
@@ -132,15 +132,12 @@ export function AdminFrame({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       <div className="ad-root min-h-screen bg-bg text-ink">
-        <div className="hidden min-h-full dt:grid dt:grid-cols-[248px_minmax(0,1fr)]">
-          <Sidebar />
-          <div className="min-w-0 px-10 pb-16 pt-8">{children}</div>
-        </div>
-        <div className="flex min-h-screen items-center justify-center p-6 dt:hidden">
-          <div className="flex flex-col items-center gap-3">
-            <p className="m-0 mx-auto max-w-[320px] text-center text-body text-ink-2">Open the admin on a computer.</p>
-            <button type="button" className="link inline-flex min-h-[44px] items-center border-0 bg-transparent p-0" onClick={value.signOut}>Sign out</button>
+        <div className="min-h-full dt:grid dt:grid-cols-[248px_minmax(0,1fr)]">
+          <div className="hidden dt:contents">
+            <Sidebar />
           </div>
+          <PhoneBar />
+          <div className="min-w-0 px-4 pb-12 pt-4 dt:px-10 dt:pb-16 dt:pt-8">{children}</div>
         </div>
       </div>
     </Ctx.Provider>
@@ -164,6 +161,78 @@ function countFor(id: AdminPageId, t: AdminToday | null): number | null {
     default:
       return null;
   }
+}
+
+/** "/admin/money" is a page of its own and the parent of the other Money pages: it is current only on itself. */
+function isCurrent(p: (typeof ADMIN_PAGES)[number], path: string): boolean {
+  const own = ADMIN_PAGES.some((o) => o.href.startsWith(p.href + "/"));
+  return p.href === "/admin" || own ? path === p.href : path === p.href || path.startsWith(p.href + "/");
+}
+
+/** The name of the page the person is on, for the phone's top bar. */
+function pageName(path: string): string {
+  const hit = ADMIN_PAGES.filter((p) => isCurrent(p, path))[0];
+  return hit ? hit.label : "Admin";
+}
+
+/** Below 1024 px: a top bar with the mark, the page name and a menu button. The menu lists what the sidebar lists, with Sign out at the bottom. */
+function PhoneBar() {
+  const { roles, name, today, signOut } = useAdmin();
+  const path = usePathname() ?? "/admin";
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    setOpen(false);
+  }, [path]);
+  const items = ADMIN_PAGES.filter((p) => canOpen(roles, p.id));
+  return (
+    <div className="sticky top-0 z-sticky flex min-h-[56px] items-center gap-3 bg-forest px-4 text-forest-on dt:hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/brand/logo-wordmark-white.png" alt="VOICES admin" className="h-7 w-auto flex-none" />
+      <span className="min-w-0 flex-1 truncate text-label" data-testid="phone-page-name">
+        {pageName(path)}
+      </span>
+      <button
+        type="button"
+        aria-label="Menu"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        className="flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-m border-0 bg-transparent text-forest-on hover:bg-forest-2"
+      >
+        <Icon name="menu" size={24} />
+      </button>
+      {open ? (
+        <Sheet title="Admin pages" subtitle={`${name}, ${roleLine(roles)}`} onClose={() => setOpen(false)}>
+          <nav aria-label="Admin pages" className="flex max-h-[60vh] flex-col overflow-y-auto px-4 pb-2 text-ink">
+            {items.map((p, i) => {
+              const on = isCurrent(p, path);
+              const c = countFor(p.id, today);
+              const heading = p.group && p.group !== items[i - 1]?.group ? p.group : null;
+              return (
+                <div key={p.id} className="contents">
+                  {heading ? <div className="vx-eyebrow mt-3 px-3 pb-1 text-ink-2" role="presentation">{heading}</div> : null}
+                  <Link
+                    href={p.href}
+                    aria-current={on ? "page" : undefined}
+                    className={`flex min-h-[44px] items-center gap-3 rounded-m px-3 text-label text-ink no-underline a-plain ${on ? "bg-mint" : "hover:bg-surface-2"}`}
+                  >
+                    <Icon name={p.icon as IconName} size={22} />
+                    <span className="min-w-0 flex-1">{p.label}</span>
+                    {c ? <span className="rounded-pill bg-green px-2 py-0.5 text-count text-green-on">{c}</span> : null}
+                  </Link>
+                </div>
+              );
+            })}
+          </nav>
+          <div className="border-t border-line px-4 py-3">
+            <button type="button" onClick={signOut} className="flex min-h-[48px] w-full cursor-pointer items-center rounded-m border-0 bg-transparent px-3 text-left text-label text-ink hover:bg-surface-2">
+              Sign out
+            </button>
+          </div>
+        </Sheet>
+      ) : null}
+    </div>
+  );
 }
 
 function Sidebar() {
