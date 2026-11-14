@@ -69,4 +69,4 @@ Subject to the law, you can ask to see your information, correct it, delete it, 
 If we change this notice, the new text replaces this one on this page.
 
 ## Contact
-WAWU Technology Ltd, 5 Ikoyi Crescent, Lagos, Nigeria. General questions: support@wawuafrica.com. Data protection questions: our Data Protection Officer at privacy@wawuafrica.com.
+WAWU Technology Ltd, 5 Ikoyi Crescent, Lagos, Nigeria. For anything about your personal data and your rights, write to support@wawuafrica.com.

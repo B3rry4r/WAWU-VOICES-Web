@@ -34,13 +34,13 @@ describe("legal texts", () => {
     expect(html).toContain('href="mailto:a@b.com"');
     expect(html).toContain("<li>two</li>");
   });
-  it("never shows an [OWNER: ...] gap, and the gaps are listed for the lead", () => {
+  it("never shows an [OWNER: ...] gap, and the pages have no open owner gaps", () => {
     for (const s of ["terms", "privacy", "refunds"] as const) {
       const d = loadLegal(s);
       expect(renderToStaticMarkup(<Markdown source={d.body} />), s).not.toMatch(/OWNER|\[|\]/);
     }
     const all = ["terms", "privacy", "refunds"].flatMap((f) => ownerGaps(readFileSync(path.join(DIR, f + ".md"), "utf8")));
-    expect(all.length).toBe(6);
+    expect(all.length).toBe(0);
   });
   it("says nothing the code does not do: no prices in naira, no anonymous posting, no device fingerprint", () => {
     for (const f of readdirSync(DIR).filter((x) => x.endsWith(".md") && x !== "CLAIMS.md")) {
