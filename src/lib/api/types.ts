@@ -4081,6 +4081,7 @@ export interface components {
         PublicConfig: {
             /** @enum {string} */
             currency: "NGN";
+            dmsLive?: boolean;
             freePosts: number;
             /** @description Naira in kobo (32-bit integer). */
             unitBaseKobo: number;
@@ -5975,6 +5976,7 @@ export interface components {
             id: string;
             handle: string;
             displayName: string | null;
+            avatarUrl?: string | null;
             place: string | null;
             verified: boolean;
             deleted: boolean;

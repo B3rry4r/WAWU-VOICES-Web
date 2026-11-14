@@ -18,6 +18,7 @@ import { notePublished } from "@/features/share/share-visit";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { AppBar, Problem, failText, needsNewKey, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
+import { textLimit } from "./textLimit";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -148,7 +149,7 @@ export function WriteScreen({ qid }: { qid: string }) {
         <div>
           <Composer
             freeLeft={left}
-            maxChars={c?.textMaxChars}
+            maxChars={textLimit(c)}
             countChars={countChars}
             value={text}
             onChange={(t) => { setText(t); saveTyped(slot, t); }}

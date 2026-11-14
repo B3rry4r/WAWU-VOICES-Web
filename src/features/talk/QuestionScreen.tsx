@@ -11,6 +11,7 @@ import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
 import { LiveResultsLink } from "@/components/feed/LinkCards";
 import { AppBar, BarButton, Problem, failText, unitsText, useSignedIn } from "./lib";
+import { textLimit } from "./textLimit";
 import { ComingUpQuestion } from "./ComingUp";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 import { TalkRail } from "./TalkRail";
@@ -164,7 +165,7 @@ export function QuestionScreen({ id }: { id: string }) {
       {open && seconds && allow ? (
         <section aria-label="Add your voice" className="mt-4 hidden rounded-[var(--radius-l)] bg-[var(--surface)] p-5 shadow-[inset_0_0_0_1px_var(--line)] dt:block">
           <h2 className="m-0 text-title">Add your voice</h2>
-          <p className="m-0 mt-2 text-caption text-[var(--ink-2)]">{`Speak for up to ${seconds} seconds, or write up to ${allow.costs.textMaxChars} characters.`}</p>
+          <p className="m-0 mt-2 text-caption text-[var(--ink-2)]">{`Speak for up to ${seconds} seconds, or write up to ${textLimit(allow.costs).toLocaleString("en-NG")} characters.`}</p>
           <div className="mt-4 flex items-center gap-3">
             <Button size="l" icon="mic" href={speakHref}>Speak</Button>
             <Button size="l" variant="secondary" href={writeHref}>Write instead</Button>
@@ -202,9 +203,9 @@ export function QuestionScreen({ id }: { id: string }) {
       {state !== "loading" && !(state === "error" && !items.length) && !items.length ? (
         <EmptyState icon="mic" title="No voices yet" body="Be the first to answer this question." action={open ? "Write instead" : undefined} onAction={open ? () => router.push(writeHref) : undefined} />
       ) : null}
-      <div className="grid gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {items.map((a) => (
-          <div key={a.id} className="grid gap-1">
+          <div key={a.id} className="grid grid-cols-[minmax(0,1fr)] gap-1">
             <TalkCard answer={a} signedIn={!!signedIn} freeReactions={allow?.freeReactionsLeftToday} onAllowance={(p) => setAllow((c) => (c ? { ...c, ...p } : c))} push={push} onDeleted={(aid) => { setItems((cur) => cur.filter((x) => x.id !== aid)); setRemovedN((n) => n + 1); }} />
             {a.replyCount > 0 ? (
               <div className="flex items-center gap-2 px-2">

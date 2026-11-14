@@ -62,7 +62,7 @@ export function Answers({ items, unfolded, signedIn }: { items: Answer[]; unfold
   const own = useSignedIn();
   const known = signedIn ?? own;
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
       {items.map((a) => (
         <TalkCard
           key={a.id}

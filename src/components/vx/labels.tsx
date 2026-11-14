@@ -28,6 +28,11 @@ export function Badge(p: BadgeProps): ReactElement {
   );
 }
 
+/** The small "Admin" pill after an admin's name. Draws only for `admin === true`, so a missing or false flag draws nothing. */
+export function AdminPill(p: { admin?: boolean | null }): ReactElement | null {
+  return p.admin === true ? <Badge tone="neutral" className="vx-admin-pill">Admin</Badge> : null;
+}
+
 const NEWS: Record<NewsKind, { label: string; icon: IconName; note: string }> = {
   verified: { label: 'Verified News', icon: 'shield-check', note: "Confirmed by WAWU’s editors against a named source. The source is linked." },
   unverified: { label: 'Unverified News', icon: 'shield-alert', note: 'A news claim WAWU has not confirmed. Treat it with care.' },

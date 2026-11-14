@@ -132,6 +132,7 @@ export function Composer(p: ComposerProps): ReactElement {
         />
         <span id={countId} className={cx('vx-compose__count', n >= max ? 'is-over' : n >= max * 0.9 && 'is-near')}>{fmt(n) + ' / ' + fmt(max)}</span>
       </div>
+      {n >= max ? <p className="vx-compose__limit" role="status">{'Keep it to ' + fmt(max) + ' characters.'}</p> : null}
       {p.extra}
       {p.showTags ? (
         <div className="vx-tagpick" role="group" aria-label="Is this news?">

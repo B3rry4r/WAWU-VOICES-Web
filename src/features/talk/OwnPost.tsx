@@ -4,7 +4,9 @@ import { Banner, Button, Sheet, TextField } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Answer } from "@/lib/api/talk";
+import { countChars } from "@/lib/shared/text-price";
 import { failText, isOutOfPosts } from "./lib";
+import { limitWords, useTextLimit } from "./textLimit";
 
 /** Plain words for a refused edit. The server names the time limit itself, so its own line is shown for that one. */
 export function editFailText(e: unknown): string {
@@ -25,6 +27,8 @@ export function EditSheet({ answer, onClose, onSaved }: { answer: Answer; onClos
   const [text, setText] = useState(answer.body ?? "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const limit = useTextLimit();
+  const n = countChars(text);
   const same = text.trim() === (answer.body ?? "").trim();
   async function save() {
     if (busy || same || !text.trim()) return;
@@ -41,7 +45,8 @@ export function EditSheet({ answer, onClose, onSaved }: { answer: Answer; onClos
     >
       <div className="grid gap-3 pb-2">
         {msg ? <Banner tone="danger" title="Not saved">{msg}</Banner> : null}
-        <TextField label="Your words" multiline value={text} onChange={setText} />
+        <TextField label="Your words" multiline value={text} onChange={(v) => setText(countChars(v) > limit ? [...v].slice(0, limit).join("") : v)} />
+        <p className={`m-0 text-caption ${n >= limit ? "text-[var(--danger)]" : "text-[var(--ink-2)]"}`} role={n >= limit ? "status" : undefined}>{n >= limit ? limitWords(limit) : `${n.toLocaleString("en-NG")} / ${limit.toLocaleString("en-NG")}`}</p>
       </div>
     </Sheet>
   );

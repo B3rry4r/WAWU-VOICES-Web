@@ -8,7 +8,7 @@ import { Avatar } from './identity';
 import { clock, cx, fmt, short, waveBars } from './helpers';
 import type { NewsKind, Person } from './helpers';
 import { Icon } from './Icon';
-import { Badge, NewsTag } from './labels';
+import { AdminPill, Badge, NewsTag } from './labels';
 import { TopicChip } from './navigation';
 
 export interface VoicePlayerProps {
@@ -247,8 +247,9 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
         <Avatar name={a.name || a.handle} src={a.avatar} playing={playing} />
         <div className="vx-answer__who">
           <span className="vx-answer__name">
-            {a.handle || a.name}
+            <span className="vx-answer__nm">{a.handle || a.name}</span>
             {p.sponsor ? <Icon name="badge-check" size={16} label="Verified brand" /> : a.verified ? <Icon name="badge-check" size={16} label="Verified" className="vx-tick" /> : null}
+            {a.handle ? <AdminPill admin={a.admin} /> : null}
           </span>
           <span className="vx-answer__time">{p.time + (p.place ? ' · ' + p.place : '')}</span>
         </div>
@@ -342,6 +343,8 @@ export interface ProposalCardProps {
   author: string;
   /** What the avatar draws its initials from, when that differs from the shown name (the name is a "@handle"). */
   avatarName?: string;
+  /** The person's picture, when they have one. */
+  avatarSrc?: string;
   /** V-46: a tick beside the name. */
   verified?: boolean;
   time: string;
@@ -369,7 +372,7 @@ export function ProposalCard(p: ProposalCardProps): ReactElement {
   return (
     <article className={cx('vx-prop', p.className)}>
       <div className="vx-answer__head">
-        <Avatar name={p.avatarName ?? p.author} size="s" />
+        <Avatar name={p.avatarName ?? p.author} src={p.avatarSrc} size="s" />
         <div className="vx-answer__who">
           <span className="vx-answer__name">
             {p.author}

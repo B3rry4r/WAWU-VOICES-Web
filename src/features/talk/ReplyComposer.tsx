@@ -9,6 +9,7 @@ import { AnonymousSwitch } from "./AnonymousSwitch";
 import { OWN_NAMELESS_NOTE, useReplyAnon } from "./reply-anon";
 import { InView } from "@/components/InView";
 import { failText, isOutOfPosts, needsNewKey, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
+import { textLimit } from "./textLimit";
 
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
@@ -67,7 +68,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
       {ownNameless ? <p data-testid="own-nameless" className="m-0 rounded-[var(--radius-l)] bg-[var(--surface)] px-4 py-[14px] text-[13px] font-medium leading-[18px] text-[var(--ink-2)] shadow-[inset_0_0_0_1px_var(--line)]">{OWN_NAMELESS_NOTE}</p> : <AnonymousSwitch on={anon.on} disabled={sending} onChange={anon.set} />}
       <Composer
         freeLeft={allow.freePostsRemaining}
-        maxChars={c.textMaxChars}
+        maxChars={textLimit(c)}
         countChars={countChars}
         value={text}
         onChange={(t) => { setText(t); saveTyped(slot, t); }}
