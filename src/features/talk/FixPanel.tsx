@@ -1,4 +1,5 @@
 "use client";
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { Banner, Button, Icon } from "@/components/vx";
@@ -41,6 +42,7 @@ function errorText(e: unknown): { text: string; buy: boolean } {
   if (e instanceof ApiError) {
     if (e.status === 0) return { text: "You are offline. Check your connection and try again. You have not been charged.", buy: false };
     if (e.status === 402) return { text: "You need more tokens to fix your text.", buy: true };
+    if (needsNewKey(e)) return { text: newKeyLine("Fix my text", "work") + " You have not been charged.", buy: false };
     if (e.status === 429) return { text: "You are going fast. Wait a moment and try again.", buy: false };
     if (e.status === 401) return { text: "Sign in to fix your text.", buy: false };
     if (e.explained && e.message.trim()) return { text: e.message, buy: false };
@@ -67,6 +69,7 @@ export function FixPanel({ text, costMilli, buyHref, onUse }: { text: string; co
       if (!r.changed || r.changes.length === 0) setSt({ s: "nothing" });
       else setSt({ s: "result", of: text, fixed: r.fixedText, changes: r.changes });
     } catch (e) {
+      if (needsNewKey(e)) key.current = null; // the key is spent: the next tap carries a new one
       setSt({ s: "error", ...errorText(e) });
     } finally {
       busy.current = false;

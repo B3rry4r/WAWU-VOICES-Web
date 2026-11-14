@@ -8,6 +8,8 @@ import { StageNav } from "@/features/stage/StageNav";
 import { ApiError } from "@/lib/api/client";
 import { explainMyVote, explainMyVoteByVoice, getPollResults, getQuestion, getVoteAllowance, loadQuestionPolls, newKey } from "@/lib/api/vote";
 import { VoiceBox } from "@/features/speak/VoiceBox";
+import { InView } from "@/components/InView";
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import type { Poll as PollT, PollResults, Question } from "@/lib/api/vote";
 import { closesIn, voicesOf } from "@/lib/feed-format";
 import { LiveResultsLink } from "@/components/feed/LinkCards";
@@ -188,7 +190,7 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
       setState("done");
     } catch (e) {
       if (e instanceof ApiError && e.status > 0) key.current = null;
-      setState({ error: e instanceof ApiError && e.status > 0 && e.explained ? e.message : "We could not post that. Check your connection and try again." });
+      setState({ error: needsNewKey(e) ? newKeyLine("Post") : e instanceof ApiError && e.status > 0 && e.explained ? e.message : "We could not post that. Check your connection and try again." });
     } finally {
       busy.current = false;
     }
@@ -204,7 +206,7 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
         </Banner>
       ) : mode ? (
         <div className="vt-explain">
-          {typeof state === "object" ? <Banner tone="danger" title="Not posted">{state.error}</Banner> : null}
+          {typeof state === "object" ? <InView key={state.error}><Banner tone="danger" title="Not posted">{state.error}</Banner></InView> : null}
           {needsWord ? (
             <>
               <p className="m-0 text-caption text-ink-2">{word ? "Your word goes with your reason. Tap another to change it." : "Pick one word to go with your reason."}</p>

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Banner, Button, Icon, IconButton, NotFoundState } from "@/components/vx";
 import { signInHref } from "@/lib/auth/entry-draft";
 import { ApiError } from "@/lib/api/client";
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import { isSignedIn } from "@/lib/api/auth";
 import { getPlayUrl } from "@/lib/api/talk";
@@ -52,8 +53,12 @@ export function offline(e: unknown): boolean {
 }
 
 /** Plain copy for a failed call, keyed on the code (the server's message is never shown raw). */
-export function failText(e: unknown): string {
+export { needsNewKey };
+
+/** `word` is the button's own word on the screen (default "Post"). */
+export function failText(e: unknown, word = "Post"): string {
   if (!(e instanceof ApiError)) return "Something went wrong. Try again in a moment.";
+  if (needsNewKey(e)) return newKeyLine(word);
   if (e.status === 0) return "You are offline. Check your connection and try again.";
   switch (e.code) {
     case "DAILY_LIMIT_REACHED": return "You have sent the most messages one day allows. Come back after midnight.";

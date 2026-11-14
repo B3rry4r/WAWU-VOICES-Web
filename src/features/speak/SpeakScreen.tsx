@@ -11,6 +11,8 @@ import * as api from "@/lib/api/speak";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
+import { needsNewKey } from "@/lib/api/keys";
+import { InView } from "@/components/InView";
 import { clearDraft, loadDraft, saveDraft, type Draft } from "./draft";
 import { freeCovers, peaksFromLevels, refusalText, tokenFor, uuidKey, voicePriceMilli } from "./logic";
 import { BackLink, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
@@ -386,6 +388,15 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         pushNote({ tone: "info", text: "Your voice is still being prepared. Tap Send again in a moment.", action: "Send", onAction: () => void send() });
         return;
       }
+      if (needsNewKey(e)) {
+        // The server refused the key as spent: the same recording goes out under a new key (and a new clip), here and in the kept draft.
+        sendState.current = null;
+        const next: Take = { ...take, key: uuidKey() };
+        setTake(next);
+        void saveDraft({ ...next, questionId: qid, savedAt: Date.now() } satisfies Draft);
+        pushNote({ tone: "danger", text: refusalText(e) });
+        return;
+      }
       if (e instanceof ApiError && e.status === 402) {
         // Not enough tokens (or the free posts are used): the recording is kept, and the person goes to get tokens.
         pushNote({
@@ -488,9 +499,11 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         {live ? <span className="vx-rec__dot">Recording</span> : <Pill left={freeLeft} total={freeTotal} />}
       </div>
       {notes.map((n) => (
-        <Banner key={n.text} tone={n.tone} title={n.title} action={n.action} onAction={n.onAction} onClose={() => setNotes((l) => l.filter((x) => x !== n))}>
-          {n.text}
-        </Banner>
+        <InView key={n.text}>
+          <Banner tone={n.tone} title={n.title} action={n.action} onAction={n.onAction} onClose={() => setNotes((l) => l.filter((x) => x !== n))}>
+            {n.text}
+          </Banner>
+        </InView>
       ))}
       <p className="vx-rec__q">{question.text}</p>
       {mood.word && qid ? <div className="sp-mood"><MoodWordNote mood={mood.word} changeHref={pickHref(qid)} /></div> : null}

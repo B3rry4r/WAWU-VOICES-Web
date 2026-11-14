@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ShareUnavailable } from "@/features/share/ShareUnavailable";
 import { SharePageView } from "@/features/share/SharePageView";
 import type { ShareExtras } from "@/features/share/SharePageView";
 import { ApiError, NetworkError } from "@/lib/api/client";
@@ -8,6 +7,8 @@ import { isBusy } from "@/lib/api/busy";
 import { getPollTitle, getProfileVoices, getSharePage } from "@/lib/api/reach";
 import type { SharePage } from "@/lib/api/reach";
 import { requestForward } from "@/lib/api/forward-server";
+import { ShareGate } from "@/features/share/ShareGate";
+import { questionStart } from "@/lib/feed-format";
 
 export const dynamic = "force-dynamic";
 
@@ -42,8 +43,8 @@ export async function generateMetadata({ params }: { params: { code: string } })
 
 export default async function Page({ params }: { params: { code: string } }) {
   const page = await load(params.code);
-  if (page === "busy") return <ShareUnavailable busy />;
-  if (page === "unreachable") return <ShareUnavailable />;
+  // A server fault is never an error page: the visitor gets the waiting state, which asks again from the browser until the page can be drawn (or the link is found to be gone).
+  if (page === "busy" || page === "unreachable") return <ShareGate code={params.code} />;
   if (!page) notFound();
   // lead ruling WF-6, 6 Nov (RX5): the poll's own title on a question page, the person's voicesCount on a profile page.
   const extras: ShareExtras = {};
@@ -52,5 +53,9 @@ export default async function Page({ params }: { params: { code: string } }) {
     const handle = /^@(\S+) on VOICES$/.exec(page.topicLine)?.[1];
     extras.profileVoices = handle ? await getProfileVoices(handle, requestForward()) : null;
   }
-  return <SharePageView page={page} now={Date.now()} extras={extras} />;
+  const now = Date.now();
+  const view = <SharePageView page={page} now={now} extras={extras} />;
+  // A question that has not opened: the gate keeps this drawing on the screen and turns it into the live page from the browser at the instant.
+  const opensAt = page.question ? questionStart(page.question) : null;
+  return opensAt !== null ? <ShareGate code={page.code} opensAt={opensAt} serverNow={now}>{view}</ShareGate> : view;
 }
