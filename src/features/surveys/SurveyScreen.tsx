@@ -7,12 +7,12 @@ import { useLoad } from "@/components/feed/useLoad";
 import { Rail } from "@/components/shell/ShellSlots";
 import { VoiceBox } from "@/features/speak/VoiceBox";
 import { refusalText } from "@/features/speak/logic";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, WrongPersonError } from "@/lib/api/client";
 import { freshKey, needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { deleteVoiceClip } from "@/lib/api/speak";
 import { answerSurvey, getSurvey, recordSurveyEvent, type Survey, type SurveyQuestionView } from "@/lib/api/surveys";
 import { useSameWho, useWhoNow, whoNow } from "./who";
-import { aboutMinutes, clearDraft, clock, loadDraft, markSkipped, markStarted, recapLine, saveDraft, TEXT_MAX, toInputs, wasSkipped, wasStarted, type Given, type GivenByQuestion } from "./logic";
+import { aboutMinutes, surveySendFailText, clearDraft, clock, loadDraft, markSkipped, markStarted, recapLine, saveDraft, TEXT_MAX, toInputs, wasSkipped, wasStarted, type Given, type GivenByQuestion } from "./logic";
 
 /** The Sponsored Survey, one question at a time (Survey boards), then the Done screen. Answering is free; nothing here touches tokens or a free post. */
 export function SurveyScreen({ id }: { id: string }) {
@@ -126,7 +126,7 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
     if (wasStarted(survey.id, owner)) return;
     if (!check()) return;
     markStarted(survey.id, owner);
-    void recordSurveyEvent(survey.id, "START");
+    void recordSurveyEvent(survey.id, "START", { expectSubject: owner });
   }, [survey.id, owner, check]);
 
   // What a reload must bring back is written as it changes.
@@ -143,7 +143,7 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
     if (skipSent.current || wasSkipped(survey.id, owner)) return;
     skipSent.current = true;
     markSkipped(survey.id, owner);
-    void recordSurveyEvent(survey.id, "SKIP", { keepalive: true });
+    void recordSurveyEvent(survey.id, "SKIP", { keepalive: true, expectSubject: owner });
   }, [survey.id, owner, check]);
 
   const releaseGuard = useCallback(() => {
@@ -218,14 +218,17 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
       // The same answers keep the same key (a retry after a 500 is the same request); other answers are another request and get their own.
       if (!sendKey.current || sendKey.current.body !== json) sendKey.current = { key: freshKey(), body: json };
       try {
-        await answerSurvey(survey.id, body, sendKey.current.key);
+        await answerSurvey(survey.id, body, sendKey.current.key, owner);
         sendKey.current = null;
         finished.current = true;
         clearDraft(survey.id, owner);
         releaseGuard();
         setRecap(qs.filter((x) => all[x.id]).map((x) => ({ prompt: x.prompt, line: recapLine(all[x.id]) })));
       } catch (e) {
-        if (e instanceof ApiError && e.status === 409 && /closed/i.test(e.message)) {
+        if (e instanceof WrongPersonError) {
+          // The sign-in changed while the answers were on their way: nothing went out under it. The tab turns stale (its notice says so).
+          if (check()) setProblem("Nothing was sent, because the sign-in changed. Tap Send again.");
+        } else if (e instanceof ApiError && e.status === 409 && /closed/i.test(e.message)) {
           // The survey ended before this answer arrived: say so in the server's words. Nothing more to count, and the draft goes.
           finished.current = true;
           clearDraft(survey.id, owner);
@@ -240,7 +243,7 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
           clearDraft(survey.id, owner);
           releaseGuard();
           setRecap(null);
-        } else setProblem(refusalText(e));
+        } else setProblem(surveySendFailText(e));
       } finally {
         setBusy(false);
       }
@@ -317,6 +320,8 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
           }}
           last={last}
           check={check}
+          problem={problem}
+          onCloseProblem={() => setProblem(null)}
         />
 
         {last ? (
@@ -345,8 +350,6 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
             {anonymous ? <p className="m-0 text-caption text-ink-2">Nothing about you is kept with this answer.</p> : null}
           </section>
         ) : null}
-
-        {problem ? <Banner tone="danger" title="Your answers were not sent" onClose={() => setProblem(null)}>{problem}</Banner> : null}
 
         <div className="hidden justify-between gap-2 dt:flex">
           <Button variant="ghost" icon="chevron-left" disabled={idx === 0 || busy} onClick={() => setIdx(idx - 1)}>Back</Button>
@@ -397,9 +400,13 @@ function QuestionCard(p: {
   last: boolean;
   /** True while the person is the one this tab loaded for; asked before every voice upload call. */
   check: () => boolean;
+  /** A failed send, drawn inside the card right above the Send button. */
+  problem: string | null;
+  onCloseProblem: () => void;
 }) {
   const { survey, q } = p;
   const total = survey.questions.length;
+  const note = <SendProblem text={p.problem} onClose={p.onCloseProblem} />;
   if (q.kind === "SINGLE_CHOICE") {
     const sel = q.options.findIndex((o) => o.id === p.choice);
     return (
@@ -413,13 +420,16 @@ function QuestionCard(p: {
         sendBusy={p.busy}
         onSend={p.onSend}
         total={total}
-      />
+      >
+        {note}
+      </SponsoredSurveyCard>
     );
   }
   if (q.kind === "TEXT") {
     return (
       <SponsoredSurveyCard survey={survey} question={q.prompt} sendDisabled={p.sendDisabled} sendBusy={p.busy} onSend={p.onSend} total={total} sendLabel="Send answer">
         <TextField label="Your answer" multiline value={p.text} onChange={p.onText} maxLength={TEXT_MAX} hint={`Up to ${TEXT_MAX} characters. Please leave out phone numbers and email addresses.`} />
+        {note}
       </SponsoredSurveyCard>
     );
   }
@@ -433,6 +443,7 @@ function QuestionCard(p: {
             <Button variant="secondary" icon="rotate-ccw" disabled={p.busy} onClick={p.onRerecord}>Record again</Button>
             <Button size="l" icon="send" loading={p.busy} disabled={p.busy} onClick={p.onSendVoice}>Send answer</Button>
           </div>
+          {note}
         </section>
       </SponsoredSurveyCard>
     );
@@ -452,6 +463,20 @@ function QuestionCard(p: {
         onReady={(c) => p.onVoiceReady({ clipId: c.clipId, seconds: c.seconds })}
       />
     </SponsoredSurveyCard>
+  );
+}
+
+/** The failed-send line: beside the Send button, announced (role alert), and scrolled into view when it appears. */
+function SendProblem({ text, onClose }: { text: string | null; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (text) ref.current?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  }, [text]);
+  if (!text) return null;
+  return (
+    <div ref={ref} data-testid="survey-problem">
+      <Banner tone="danger" title="Your answers may not have arrived" onClose={onClose}>{text}</Banner>
+    </div>
   );
 }
 

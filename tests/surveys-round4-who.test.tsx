@@ -176,7 +176,7 @@ describe("the key rule (needsNewKey): a writer drops its Idempotency-Key only af
     render(<SurveyScreen id="s1" />);
     await toLast(u);
     await u.click(screen.getByRole("button", { name: "Send answer" }));
-    await screen.findByText("Your answers were not sent");
+    await screen.findByTestId("survey-problem");
     await u.click(screen.getByRole("button", { name: "Send answer" }));
     await screen.findByText("Thanks. Your answers are in.");
     expect(seen.length).toBe(2);

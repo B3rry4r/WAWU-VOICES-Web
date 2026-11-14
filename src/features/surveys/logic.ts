@@ -1,5 +1,6 @@
 import { currentOwner } from "@/features/speak/draft";
 import { SURVEY_KEEP_PREFIX } from "@/lib/auth/survey-keeps";
+import { ApiError } from "@/lib/api/client";
 import type { SurveyAnswerInput, SurveyQuestionView } from "@/lib/api/surveys";
 
 /** "About 1 min": about three questions a minute, never less than one. The API carries no time, so this is counted here. */
@@ -142,4 +143,21 @@ export function loadDraft(id: string, questions: SurveyQuestionView[], ageBands:
   } catch {
     return null;
   }
+}
+
+
+const SAFE = "Tap Send again: it is safe, your answers are only counted once.";
+
+/**
+ * The words for a survey send that did not finish. A survey has no recording, and a lost reply may still have landed,
+ * so these lines never say "not sent" and always say that sending again is safe.
+ */
+export function surveySendFailText(e: unknown): string {
+  if (e instanceof ApiError && e.status === 0) {
+    return e.code === "OFFLINE"
+      ? `You look offline. We could not confirm your answers were received. Check your connection. ${SAFE}`
+      : `We could not confirm your answers were received. ${SAFE}`;
+  }
+  if (e instanceof ApiError && e.explained && e.status < 500 && e.message.trim()) return e.message;
+  return `Something went wrong on our side. We could not confirm your answers were received. ${SAFE}`;
 }

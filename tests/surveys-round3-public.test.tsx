@@ -130,7 +130,7 @@ describe("N3: a recorded voice answer is kept", () => {
     const u = userEvent.setup();
     render(<SurveyScreen id="s1" />);
     await u.click(await screen.findByRole("button", { name: "Send answer" }));
-    await screen.findByText("Your answers were not sent");
+    await screen.findByTestId("survey-problem");
     expect(draftOf("userA").given.q3).toEqual({ kind: "voice", clipId: "c9", seconds: 12 });
   });
   it("Record again drops the clip from the draft and shows the recorder", async () => {

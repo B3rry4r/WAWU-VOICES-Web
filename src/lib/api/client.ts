@@ -56,6 +56,26 @@ export class NetworkError extends ApiError {
   }
 }
 
+/** A call that must go out only as one named person found that the sign-in in storage is someone else's (or nobody's). Nothing was sent. */
+export class WrongPersonError extends Error {
+  constructor() {
+    super("The sign-in changed in another tab. Nothing was sent.");
+    this.name = "WrongPersonError";
+  }
+}
+
+/** The subject of a token ("unknown" when it has none), the same word the survey screen keeps for "who". */
+export function tokenSubject(token: string | null): string | null {
+  if (!token) return null;
+  try {
+    const b = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const sub = (JSON.parse(atob(b + "=".repeat((4 - (b.length % 4)) % 4))) as { sub?: unknown }).sub;
+    return typeof sub === "string" ? sub : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 export interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   /** Attach the signed-in bearer token (or `token`). Guests call without it. */
@@ -65,6 +85,12 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   baseUrl?: string;
   /** Sent as the Idempotency-Key header (required on every money POST). */
   idempotencyKey?: string;
+  /**
+   * Opt in: send only with the sign-in of this person (a token subject). Checked right before the first send and again before any
+   * retry after a refresh; on a mismatch nothing is sent and WrongPersonError is thrown. A refresh started by this call never
+   * overwrites or clears a sign-in that belongs to someone else. Only meaningful with `authed`.
+   */
+  expectSubject?: string;
 }
 
 async function readError(res: Response): Promise<ApiError> {
@@ -102,7 +128,7 @@ async function rotatedElsewhere(before: string): Promise<boolean> {
   return false;
 }
 
-async function doRefresh(before: string, retried = false): Promise<boolean | null> {
+async function doRefresh(before: string, retried = false, expect?: string): Promise<boolean | null> {
   const current = sessionStorage.getRefreshToken();
   if (!current) return false;
   // Another tab won while we waited for the lock: its tokens are already in storage.
@@ -124,7 +150,7 @@ async function doRefresh(before: string, retried = false): Promise<boolean | nul
         /* no body */
       }
       await wait(Math.min(Math.max(secs, 0), 30) * 1000);
-      return doRefresh(before, true);
+      return doRefresh(before, true, expect);
     }
     if (!res.ok) {
       if (res.status >= 500) return null;
@@ -139,24 +165,26 @@ async function doRefresh(before: string, retried = false): Promise<boolean | nul
       sessionStorage.clear();
       throw new AccountBlockedError();
     }
+    // A call tied to one person: never write tokens over a sign-in that is not theirs (someone signed in meanwhile), or tokens that are not theirs.
+    if (expect !== undefined && (tokenSubject(sessionStorage.getToken()) !== expect || tokenSubject(d.accessToken) !== expect)) throw new WrongPersonError();
     sessionStorage.setTokens(d.accessToken, d.refreshToken);
     return true;
   } catch (e) {
-    if (e instanceof AccountBlockedError) throw e;
+    if (e instanceof AccountBlockedError || e instanceof WrongPersonError) throw e;
     return null;
   }
 }
 
 /** One refresh at a time across tabs (Web Locks), and one per tab. true: new tokens in storage. false: refused. null: could not ask. */
-async function refreshSession(): Promise<boolean | null> {
+async function refreshSession(expect?: string): Promise<boolean | null> {
   const before = sessionStorage.getRefreshToken();
   if (!before) return false;
   const locks = typeof navigator !== "undefined" ? (navigator as Navigator & { locks?: { request: <T>(name: string, cb: () => Promise<T>) => Promise<T> } }).locks : undefined;
-  return locks ? locks.request("voices-refresh", () => doRefresh(before)) : doRefresh(before);
+  return locks ? locks.request("voices-refresh", () => doRefresh(before, false, expect)) : doRefresh(before, false, expect);
 }
 
 async function raw(path: string, opts: RequestOptions, isRetry = false): Promise<Response> {
-  const { body, authed, token, baseUrl, idempotencyKey, ...rest } = opts;
+  const { body, authed, token, baseUrl, idempotencyKey, expectSubject, ...rest } = opts;
   const headers = new Headers(rest.headers);
   headers.set("Accept", "application/json");
   const isRaw = typeof Blob !== "undefined" && body instanceof Blob; // a file sent as the body itself (V-46: ID and utility bill)
@@ -165,6 +193,8 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
   if (authed || token) {
     const t = token ?? sessionStorage.getToken();
+    // Tied to one person: the token that goes out is the one checked, read once in the same step.
+    if (expectSubject !== undefined && !token && tokenSubject(t) !== expectSubject) throw new WrongPersonError();
     if (t) headers.set("Authorization", `Bearer ${t}`);
   }
   const controller = new AbortController();
@@ -185,10 +215,13 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   // The server's clock, from the answer the app already has (the browser only: the server render has no device clock to correct).
   if (typeof window !== "undefined" && !baseUrl) noteServerDate(res.headers?.get?.("date"), res.headers?.get?.("age"));
   if (res.status === 401 && authed && !token && !isRetry) {
-    if (!refreshing) refreshing = refreshSession().finally(() => { refreshing = null; });
+    // Tied to one person: if the stored sign-in is no longer theirs, do not refresh with it, and leave it alone.
+    if (expectSubject !== undefined && tokenSubject(sessionStorage.getToken()) !== expectSubject) throw new WrongPersonError();
+    if (!refreshing) refreshing = refreshSession(expectSubject).finally(() => { refreshing = null; });
     const ok = await refreshing;
     if (ok) return raw(path, opts, true);
-    if (ok === false) sessionStorage.clear();
+    // A refused refresh clears the shared session, but never one that belongs to someone else by now.
+    if (ok === false && (expectSubject === undefined || tokenSubject(sessionStorage.getToken()) === expectSubject)) sessionStorage.clear();
   }
   if (!res.ok) {
     const err = await readError(res);
