@@ -61,10 +61,10 @@ export function DmUnreadProvider({ children }: { children: ReactNode }) {
 /** The messages icon in the top bar: opens /messages, with the number of unread messages on it. Signed in only. */
 export function MessagesIcon({ className }: { className?: string }) {
   const unread = useContext(DmUnreadContext);
-  const on = (usePathname() ?? "").startsWith("/messages");
   if (unread === null) return null;
+  // Drawn plain on every page, as the boards draw it (the bell is the one that lights up).
   return (
-    <Link href="/messages" aria-current={on ? "page" : undefined} className={"sh-iconbtn" + (on ? " sh-iconbtn--on" : "") + (className ? " " + className : "")} aria-label={unread > 0 ? `Messages, ${unread} unread` : "Messages"}>
+    <Link href="/messages" className={"sh-iconbtn" + (className ? " " + className : "")} aria-label={unread > 0 ? `Messages, ${unread} unread` : "Messages"}>
       <MessageCircle size={22} aria-hidden="true" />
       {unread > 0 ? <span className="sh-iconbtn__dot" data-testid="messages-dot" aria-hidden="true" /> : null}
     </Link>

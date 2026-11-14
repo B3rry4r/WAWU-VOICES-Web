@@ -158,7 +158,9 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   const { body, authed, token, baseUrl, idempotencyKey, ...rest } = opts;
   const headers = new Headers(rest.headers);
   headers.set("Accept", "application/json");
-  if (body !== undefined && !(typeof FormData !== "undefined" && body instanceof FormData)) headers.set("Content-Type", "application/json");
+  const isRaw = typeof Blob !== "undefined" && body instanceof Blob; // a file sent as the body itself (V-46: ID and utility bill)
+  if (isRaw) headers.set("Content-Type", (body as Blob).type || "application/octet-stream");
+  else if (body !== undefined && !(typeof FormData !== "undefined" && body instanceof FormData)) headers.set("Content-Type", "application/json");
   if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
   if (authed || token) {
     const t = token ?? sessionStorage.getToken();
@@ -172,7 +174,7 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
       ...rest,
       headers,
       signal: controller.signal,
-      body: body === undefined ? undefined : typeof FormData !== "undefined" && body instanceof FormData ? body : JSON.stringify(body),
+      body: body === undefined ? undefined : isRaw || (typeof FormData !== "undefined" && body instanceof FormData) ? (body as BodyInit) : JSON.stringify(body),
     });
   } catch {
     throw new NetworkError(controller.signal.aborted ? "timeout" : "offline");

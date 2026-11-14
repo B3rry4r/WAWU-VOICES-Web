@@ -32,7 +32,7 @@ const err = (status: number, code: string, message: string) => json({ error: { c
 
 const FREE: DmCosts & { maxChars: number; messagesPerDay: number; balanceMilli: number } = { textPriceMilli: 0, textPriceChars: 150, voicePriceMilli: 0, voiceMaxSeconds: 60, messagesLeftToday: 100, maxChars: 5000, messagesPerDay: 100, balanceMilli: 0 };
 const PRICED = { ...FREE, textPriceMilli: 5000, voicePriceMilli: 78000 };
-const PERSON = { id: "u2", handle: "ada", displayName: "Ada", place: "Abuja", deleted: false };
+const PERSON = { id: "u2", handle: "ada", displayName: "Ada", place: "Abuja", verified: true, deleted: false };
 const MSG = (o: object = {}) => ({ id: "m1", conversationId: "c1", senderId: "u2", mine: false, kind: "TEXT", body: "Hello there", clip: null, status: "PUBLISHED", readAt: null, createdAt: new Date().toISOString(), ...o });
 
 beforeEach(() => {
@@ -71,10 +71,8 @@ describe("the words for each refusal", () => {
   it("verification_required asks for a subscription and points at the plans", () => {
     expect(dmFailure(e(403, "verification_required"))).toMatchObject({ text: "Subscribe and get verified to send messages.", plans: true });
   });
-  it("blocked and unavailable say the same neutral thing", () => {
-    expect(dmFailure(e(403, "blocked")).text).toBe("You can't message this person.");
-    expect(dmFailure(e(403, "recipient_unavailable")).text).toBe("You can't message this person.");
-    expect(dmFailure(e(403, "dm_closed")).text).toBe("This person is not taking messages.");
+  it("one refusal for blocked, messages off and suspended: the same words", () => {
+    expect(dmFailure(e(403, "dm_unavailable")).text).toBe("This person is not taking messages.");
   });
   it("402, the daily limit, and offline", () => {
     expect(dmFailure(e(402, "INSUFFICIENT_UNITS"))).toMatchObject({ buy: true });
@@ -82,7 +80,7 @@ describe("the words for each refusal", () => {
     expect(dmFailure(new ApiError(0, "OFFLINE", "x", false)).text).toContain("offline");
   });
   it("no refusal text has an em-dash", () => {
-    for (const code of ["verification_required", "blocked", "dm_closed", "ACCOUNT_SUSPENDED", "DAILY_LIMIT_REACHED", "INSUFFICIENT_UNITS", "VOICE_TOO_LONG", "x"])
+    for (const code of ["verification_required", "dm_unavailable", "ACCOUNT_SUSPENDED", "DAILY_LIMIT_REACHED", "INSUFFICIENT_UNITS", "VOICE_TOO_LONG", "x"])
       expect(dmFailure(e(403, code)).text).not.toContain(String.fromCharCode(0x2014));
   });
 });
@@ -115,6 +113,7 @@ const convs = () => ({
   items: [
     { id: "c1", person: PERSON, lastMessage: { id: "m1", kind: "TEXT", preview: "Perfect. Send me the link when you post.", mine: false, createdAt: new Date().toISOString() }, unread: 2, muted: false, updatedAt: new Date().toISOString() },
     { id: "c2", person: { ...PERSON, id: "u3", handle: "tunde.a", displayName: "Tunde Adewale" }, lastMessage: { id: "m2", kind: "VOICE", preview: "Voice message · 0:09", mine: false, createdAt: new Date().toISOString() }, unread: 0, muted: false, updatedAt: new Date().toISOString() },
+    { id: "c4", person: { ...PERSON, id: "u5", handle: "ifeoma.n", displayName: "Ifeoma Nnaji" }, lastMessage: { id: "m4", kind: "TEXT", preview: "Did you see the poll?", mine: false, createdAt: new Date().toISOString() }, unread: 1, muted: false, updatedAt: new Date().toISOString() },
     { id: "c3", person: { ...PERSON, id: "u4", handle: "chidi.o", displayName: "Chidi Okeke" }, lastMessage: { id: "m3", kind: "TEXT", preview: "Pay yourself first.", mine: true, createdAt: new Date().toISOString() }, unread: 0, muted: false, updatedAt: new Date().toISOString() },
   ],
   nextCursor: null,
@@ -125,11 +124,12 @@ describe("inbox", () => {
     stub((c) => (c.url.includes("/dm/conversations") ? json(convs()) : c.url.endsWith("/dm/unread") ? json({ unread: 2 }) : undefined));
     render(<InboxPage />);
     expect(await screen.findByText("Perfect. Send me the link when you post.")).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /Unread/ })).toBeTruthy();
+    // the Unread tab is the number of unread messages (rows with 2 and 1 make 3), not the number of chats
+    expect(screen.getByRole("tab", { name: /Unread\s*3/ })).toBeTruthy();
     expect(screen.getByText("@ada")).toBeTruthy();
     expect(screen.getByText("Voice message · 0:09")).toBeTruthy();
     expect(screen.getByText("You: Pay yourself first.")).toBeTruthy();
-    expect(screen.getByTestId("row-unread").textContent).toBe("2");
+    expect(screen.getAllByTestId("row-unread").map((n) => n.textContent)).toEqual(["2", "1"]);
     expect(screen.getByRole("link", { name: "Ada, 2 unread" }).getAttribute("href")).toBe("/messages/c1");
     expect(screen.getByText("Messages are private between you and the other person. You can report or block from any chat.")).toBeTruthy();
   });
@@ -140,6 +140,35 @@ describe("inbox", () => {
     await userEvent.click(screen.getByRole("tab", { name: /Unread/ }));
     expect(screen.queryByText("Voice message · 0:09")).toBeNull();
     expect(screen.getByText("Perfect. Send me the link when you post.")).toBeTruthy();
+    expect(screen.getByText("Did you see the poll?")).toBeTruthy();
+  });
+  it("the verified tick shows beside the name in the rows and in the chat header", async () => {
+    stub((c) => (c.url.includes("/dm/conversations") && !c.url.includes("/messages") ? json(convs()) : c.url.endsWith("/dm/unread") ? json({ unread: 2 }) : undefined));
+    const { unmount } = render(<InboxPage />);
+    await screen.findByText("Voice message · 0:09");
+    expect(screen.getAllByLabelText("Verified")).toHaveLength(4);
+    unmount();
+    stub((c) => (c.url.includes("/dm/conversations/c1/messages") ? json({ person: PERSON, muted: false, acceptsMessages: true, items: [MSG()], nextCursor: null }) : c.url.endsWith("/dm/limits") ? json(FREE) : json({ unread: 0 })));
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    expect(screen.getAllByLabelText("Verified").length).toBeGreaterThan(0);
+  });
+  it("a muted chat shows a muted bell and the word Muted, and leaves the Unread tab", async () => {
+    const c = convs();
+    c.items[0].muted = true;
+    stub((x) => (x.url.includes("/dm/conversations") ? json(c) : json({ unread: 0 })));
+    render(<InboxPage />);
+    await screen.findByText("Voice message · 0:09");
+    expect(screen.getByTestId("row-muted").textContent).toBe("Muted");
+    expect(screen.getByRole("tab", { name: /Unread\s*1/ })).toBeTruthy();
+  });
+  it("a guest sees the sign-in note and no search or plus", async () => {
+    window.localStorage.clear();
+    stub(() => json({}));
+    render(<InboxPage />);
+    expect(await screen.findByText(/Sign in to read your messages/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Search messages" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "New message" })).toBeNull();
   });
   it("an empty inbox says how to start", async () => {
     stub((c) => (c.url.includes("/dm/conversations") ? json({ items: [], nextCursor: null }) : json({ unread: 0 })));
@@ -164,7 +193,7 @@ describe("inbox", () => {
 describe("conversation", () => {
   const routes = (send?: (c: Call) => Response, limits = FREE) => (c: Call) => {
     if (c.url.endsWith("/dm/limits")) return json(limits);
-    if (c.url.includes("/dm/conversations/c1/messages")) return json({ person: PERSON, muted: false, items: [MSG()], nextCursor: null });
+    if (c.url.includes("/dm/conversations/c1/messages")) return json({ person: PERSON, muted: false, acceptsMessages: true, items: [MSG()], nextCursor: null });
     if (c.url.includes("/dm/conversations/c1/read")) return new Response(null, { status: 204 });
     if (c.url.includes("/dm/conversations/c1/mute")) return new Response(null, { status: 204 });
     if (c.url.endsWith("/dm/unread")) return json({ unread: 0 });
@@ -186,7 +215,7 @@ describe("conversation", () => {
   });
 
   it("a voice message shows its transcript when there is one, and nothing when there is not", async () => {
-    stub((c) => (c.url.includes("/dm/conversations/c1/messages") ? json({ person: PERSON, muted: false, nextCursor: null, items: [
+    stub((c) => (c.url.includes("/dm/conversations/c1/messages") ? json({ person: PERSON, muted: false, acceptsMessages: true, nextCursor: null, items: [
       MSG({ id: "v1", kind: "VOICE", body: null, clip: { id: "k1", durationMs: 9000, peaks: null, transcript: "The generator man is too real." } }),
       MSG({ id: "v2", kind: "VOICE", body: null, createdAt: new Date(Date.now() - 60000).toISOString(), clip: { id: "k2", durationMs: 9000, peaks: null, transcript: null } }),
     ] }) : routes()(c)));
@@ -250,14 +279,14 @@ describe("conversation", () => {
     expect(screen.getByTestId("dm-caption").textContent).toBe("150 of 5,000 characters. Costs 5 tokens.");
   });
 
-  it("a 403 verification_required becomes a prompt that links to the subscription plans, and keeps the words", async () => {
+  it("a 403 verification_required becomes a prompt that links to /verify, and keeps the words", async () => {
     stub(routes(() => err(403, "verification_required", "Subscribe and get verified to send messages.")));
     render(<ConversationPage conversationId="c1" />);
     await screen.findByText("Hello there");
     await userEvent.type(screen.getByLabelText("Your message"), "Hi Ada");
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
     expect(await screen.findByText("Subscribe and get verified to send messages.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "See subscription plans" }).getAttribute("href")).toBe("/units/buy");
+    expect(screen.getByRole("link", { name: "See how to get verified" }).getAttribute("href")).toBe("/verify");
     expect((screen.getByLabelText("Your message") as HTMLInputElement).value).toBe("Hi Ada");
   });
 
@@ -266,7 +295,7 @@ describe("conversation", () => {
     stub(routes(() => {
       n++;
       if (n === 1) throw new TypeError("network");
-      return err(403, "blocked", "You can't message this person.");
+      return err(403, "dm_unavailable", "This person is not taking messages.");
     }));
     render(<ConversationPage conversationId="c1" />);
     await screen.findByText("Hello there");
@@ -274,7 +303,7 @@ describe("conversation", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
     await screen.findByText(/offline/i);
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
-    await screen.findByText("You can't message this person.");
+    await screen.findByText("This person is not taking messages.");
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
     await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/dm/messages")).length).toBe(3));
     const keys = calls.filter((c) => c.url.endsWith("/dm/messages")).map((c) => c.headers.get("Idempotency-Key"));
@@ -282,11 +311,78 @@ describe("conversation", () => {
     expect(keys[2]).not.toBe(keys[1]);
   });
 
-  it("a person who is not taking messages cannot be written to", async () => {
+  it("a person who is not taking messages cannot be written to: no Say hello, no composer, the one line", async () => {
     stub((c) => (c.url.includes("/dm/with/u2") ? json({ person: PERSON, conversationId: null, acceptsMessages: false }) : routes()(c)));
     render(<ConversationPage userId="u2" />);
-    expect(await screen.findByText("You can't message this person.")).toBeTruthy();
+    expect(await screen.findByText("This person is not taking messages.")).toBeTruthy();
     expect(screen.queryByLabelText("Your message")).toBeNull();
+    expect(screen.queryByText("Say hello")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Record a voice message" })).toBeNull();
+  });
+
+  it("an existing chat with someone who no longer takes messages, or a deleted account, closes the composer and keeps the history readable", async () => {
+    for (const person of [PERSON, { ...PERSON, handle: "deleted-abc", displayName: null, deleted: true, verified: false, place: null }]) {
+      stub((c) => (c.url.includes("/dm/conversations/c1/messages") ? json({ person, muted: false, acceptsMessages: false, items: [MSG()], nextCursor: null }) : routes()(c)));
+      const { unmount } = render(<ConversationPage conversationId="c1" />);
+      expect(await screen.findByText("Hello there")).toBeTruthy();
+      expect(screen.getByText("This person is not taking messages.")).toBeTruthy();
+      expect(screen.queryByLabelText("Your message")).toBeNull();
+      unmount();
+    }
+  });
+
+  it("a failed send shows Retry beside the error, focus goes back to the field, and the retry works", async () => {
+    let n = 0;
+    stub(routes((c) => (++n === 1 ? err(500, "INTERNAL", "x") : sent(c))));
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    await userEvent.type(screen.getByLabelText("Your message"), "Hi Ada");
+    await userEvent.click(screen.getByRole("button", { name: "Send message" }));
+    const retry = await screen.findByRole("button", { name: "Retry" });
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Your message")));
+    await userEvent.click(retry);
+    expect(await screen.findAllByText("Hi Ada")).toBeTruthy();
+    expect(n).toBe(2);
+  });
+
+  it("the More menu: aria-expanded, focus into the menu, Escape closes and returns focus, a click outside closes", async () => {
+    stub(routes());
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    const btn = screen.getByRole("button", { name: "More: mute, report or block" });
+    expect(btn.getAttribute("aria-expanded")).toBe("false");
+    await userEvent.click(btn);
+    expect(btn.getAttribute("aria-expanded")).toBe("true");
+    await waitFor(() => expect(document.activeElement?.getAttribute("role")).toBe("menuitem"));
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(btn);
+    await userEvent.click(btn);
+    await userEvent.click(document.body);
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("the longest text is the server's maxChars, not a fixed 5,000", async () => {
+    stub(routes(sent, { ...FREE, maxChars: 20 }));
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    await waitFor(() => expect(screen.getByTestId("dm-caption").textContent).toContain("Messages are free"));
+    await userEvent.type(screen.getByLabelText("Your message"), "a".repeat(21));
+    expect(screen.getByTestId("dm-caption").textContent).toBe("Keep it to 20 characters.");
+    expect((screen.getByRole("button", { name: "Send message" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("the chat opens at its newest message and goes there again after my own send", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    stub(routes(sent));
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+    await userEvent.type(screen.getByLabelText("Your message"), "Hi Ada");
+    await userEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await screen.findByText("Hi Ada");
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(2));
   });
 
   it("opening by person goes to the conversation when there already is one", async () => {

@@ -1,14 +1,16 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Avatar, Banner, Button, EmptyState, Icon, IconButton, Sheet, Skeleton, VoicePlayer } from "@/components/vx";
 import * as api from "@/lib/api/dm";
 import { ApiError } from "@/lib/api/client";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { announceDmUnread } from "@/components/shell/Messages";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { Problem, SignInNote, uuidKey, useClipPlayback, useSignedIn } from "@/features/talk/lib";
-import { DM_MAX_CHARS, PLANS_HREF, caption, clockOf, dayLabel, dmFailure, personName, textPrice, tokensText, voicePrice, type DmCosts, type DmFailure } from "./dm-logic";
+import { DmRail } from "./DmRail";
+import { CLOSED_TEXT, PLANS_HREF, caption, clockOf, dayLabel, dmFailure, personName, textPrice, tokensText, voicePrice, type DmCosts, type DmFailure } from "./dm-logic";
 import { uploadDmVoice } from "./dm-voice";
 import "./dm.css";
 
@@ -42,8 +44,8 @@ function Bubble({ m, onFail }: { m: api.DmMessage; onFail: (e: unknown) => void 
       <div className={"dm-bubble" + (!gone && m.clip ? " dm-bubble--voice" : "")}>
         {gone ? <p className="dm-bubble__gone">This message was removed.</p> : null}
         {!gone && m.clip ? <Clip clip={m.clip} tone={m.mine ? "surface" : "mint"} onFail={onFail} /> : null}
-        {!gone && m.clip?.transcript ? <p className="dm-bubble__transcript"><b>Transcript </b>{m.clip.transcript}</p> : null}
-        {!gone && m.body ? <p className="dm-bubble__text">{m.body}</p> : null}
+        {!gone && m.clip?.transcript ? <p className="dm-bubble__transcript" dir="auto"><b>Transcript </b>{m.clip.transcript}</p> : null}
+        {!gone && m.body ? <p className="dm-bubble__text" dir="auto">{m.body}</p> : null}
       </div>
       <span className="dm-time">{clockOf(m.createdAt)}</span>
     </div>
@@ -92,7 +94,7 @@ type Out = { kind: "TEXT"; body: string } | { kind: "VOICE"; take: Take };
 
 /** The bottom bar as the board draws it: a "Write a message" pill and a round green mic, one caption line under it.
  *  Typing turns the mic into Send. The cost is in the caption only when a price is set (0 is free). */
-function Composer({ costs, canType, blockedText, onSend }: { costs: DmCosts | null; canType: boolean; blockedText: string | null; onSend: (m: Out) => Promise<DmFailure | null> }) {
+function Composer({ costs, canType, onSend }: { costs: DmCosts | null; canType: boolean; onSend: (m: Out) => Promise<DmFailure | null> }) {
   const [text, setText] = useState("");
   const [take, setTake] = useState<Take | null>(null);
   const [recording, setRecording] = useState(false);
@@ -101,12 +103,15 @@ function Composer({ costs, canType, blockedText, onSend }: { costs: DmCosts | nu
   const [fail, setFail] = useState<DmFailure | null>(null);
   const [busy, setBusy] = useState(false);
   const rec = useRef<VoiceRecorder | null>(null);
+  const field = useRef<HTMLInputElement | null>(null);
   useEffect(() => () => rec.current?.cancel(), []);
   const maxSeconds = costs?.voiceMaxSeconds ?? 60;
 
   const hasText = text.trim().length > 0;
   const price = costs ? textPrice(text, costs) : null;
-  const tooLong = (price?.chars ?? text.trim().length) > DM_MAX_CHARS;
+  // The longest text is the server's number (maxChars from /dm/limits), never a figure typed here.
+  const maxChars = costs?.maxChars ?? 5000;
+  const tooLong = (price?.chars ?? text.trim().length) > maxChars;
 
   async function startRec() {
     if (recording || busy) return;
@@ -131,18 +136,18 @@ function Composer({ costs, canType, blockedText, onSend }: { costs: DmCosts | nu
     setBusy(true); setFail(null);
     const r = take ? await onSend({ kind: "VOICE", take }) : await onSend({ kind: "TEXT", body: text.trim() });
     setBusy(false);
-    if (r) { setFail(r); return; }
+    if (r) { setFail(r); setTimeout(() => field.current?.focus(), 0); return; }
     setText(""); setTake(null);
+    setTimeout(() => field.current?.focus(), 0);
   }
 
-  if (blockedText) return <div className="dm-compose"><p className="dm-caption" role="status">{blockedText}</p></div>;
   const voiceCost = costs && take ? voicePrice(take.seconds, costs) : 0;
-  const line = hasText && price && price.milli > 0 ? `${price.chars.toLocaleString("en-NG")} of ${DM_MAX_CHARS.toLocaleString("en-NG")} characters. Costs ${tokensText(price.milli)}.` : take && voiceCost > 0 ? `Costs ${tokensText(voiceCost)}.` : caption(costs);
+  const line = hasText && price && price.milli > 0 ? `${price.chars.toLocaleString("en-NG")} of ${maxChars.toLocaleString("en-NG")} characters. Costs ${tokensText(price.milli)}.` : take && voiceCost > 0 ? `Costs ${tokensText(voiceCost)}.` : caption(costs);
   return (
     <div className="dm-compose">
       {fail ? (
-        <Banner tone="danger" title={fail.text}>
-          {fail.plans ? <Link href={PLANS_HREF} className="link">See subscription plans</Link> : null}
+        <Banner tone="danger" title={fail.text} action="Retry" actionIcon="refresh-cw" onAction={() => void submit()}>
+          {fail.plans ? <Link href={PLANS_HREF} className="link">See how to get verified</Link> : null}
           {fail.buy ? <Link href={`${PLANS_HREF}?from=${encodeURIComponent("/messages")}`} className="link">Get tokens</Link> : null}
         </Banner>
       ) : null}
@@ -150,7 +155,7 @@ function Composer({ costs, canType, blockedText, onSend }: { costs: DmCosts | nu
       {recording ? (
         <div className="dm-rec" role="status">
           <Icon name="mic" size={22} />
-          <span className="dm-rec__t">{`Recording ${mmss(maxSeconds - left)} of ${mmss(maxSeconds)}`}</span>
+          <span className="dm-rec__t">{`Recording ${mmss(maxSeconds - left)} / ${mmss(maxSeconds)}`}</span>
           <Button variant="secondary" icon="square" onClick={() => rec.current?.stop()}>Stop</Button>
         </div>
       ) : take ? (
@@ -164,7 +169,7 @@ function Composer({ costs, canType, blockedText, onSend }: { costs: DmCosts | nu
         <div className="dm-compose__row">
           <label className="dm-field">
             <span className="vx-sr">Message</span>
-            <input type="text" value={text} disabled={!canType || busy} placeholder="Write a message" enterKeyHint="send" aria-label="Your message"
+            <input ref={field} type="text" value={text} readOnly={busy} disabled={!canType} placeholder="Write a message" enterKeyHint="send" aria-label="Your message"
               onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && hasText && !tooLong) { e.preventDefault(); void submit(); } }} />
           </label>
           {hasText ? (
@@ -174,7 +179,7 @@ function Composer({ costs, canType, blockedText, onSend }: { costs: DmCosts | nu
           )}
         </div>
       )}
-      {!recording ? <p className={"dm-caption" + (tooLong ? " dm-caption--err" : "")} data-testid="dm-caption">{tooLong ? `Keep it to ${DM_MAX_CHARS.toLocaleString("en-NG")} characters.` : line}</p> : null}
+      {!recording ? <p className={"dm-caption" + (tooLong ? " dm-caption--err" : "")} data-testid="dm-caption">{tooLong ? `Keep it to ${maxChars.toLocaleString("en-NG")} characters.` : line}</p> : null}
     </div>
   );
 }
@@ -197,11 +202,16 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
   const [note, setNote] = useState<string | null>(null);
   const [tries, setTries] = useState(0);
   const key = useRef<{ sig: string; k: string; clipId?: string } | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
+  const moreBtn = useRef<HTMLButtonElement | null>(null);
+  const menuEl = useRef<HTMLDivElement | null>(null);
+  const toEnd = useRef(true); // land on the newest message when the chat opens, and after my own send
 
   const pull = useCallback(async (id: string) => {
     const p = await api.listMessages(id);
     setPerson(p.person);
     setMuted(p.muted);
+    setAccepts(p.acceptsMessages);
     setItems((cur) => {
       const seen = new Set(p.items.map((m) => m.id));
       return [...p.items, ...cur.filter((m) => !seen.has(m.id))].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : a.id < b.id ? 1 : -1));
@@ -248,6 +258,30 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
     return () => { clearInterval(t); window.removeEventListener("focus", look); };
   }, [conversationId, ready, pull]);
 
+  // The newest message is at the bottom. Open there, and go there after my own send; a message that arrives while I read
+  // older ones does not pull the page away.
+  useLayoutEffect(() => {
+    if (!ready || !toEnd.current) return;
+    toEnd.current = false;
+    endRef.current?.scrollIntoView?.({ block: "end" });
+  }, [ready, items]);
+
+  // The More menu: Escape and a click outside close it, focus goes into it on open and back to the button on close.
+  useEffect(() => {
+    if (!menu) return;
+    menuEl.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    const close = () => { setMenu(false); moreBtn.current?.focus(); };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    const away = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (menuEl.current?.contains(t) || moreBtn.current?.contains(t)) return;
+      setMenu(false);
+    };
+    document.addEventListener("keydown", key);
+    document.addEventListener("mousedown", away);
+    return () => { document.removeEventListener("keydown", key); document.removeEventListener("mousedown", away); };
+  }, [menu]);
+
   async function older() {
     if (!next || !convId) return;
     try {
@@ -272,6 +306,7 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
       }
       const r = await api.sendDm(body, key.current.k);
       key.current = null;
+      toEnd.current = true;
       setItems((cur) => (cur.some((x) => x.id === r.message.id) ? cur : [r.message, ...cur]));
       api.getDmLimits().then(setCosts, () => undefined);
       if (!convId) { setConvId(r.message.conversationId); router.replace(`/messages/${r.message.conversationId}`); }
@@ -303,24 +338,29 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
 
   const handle = person ? `@${person.handle}` : "";
   const header = (
-    <header className="dm-bar sticky top-0 z-[var(--z-sticky)] -mx-4 flex min-h-14 items-center gap-1 border-b border-[var(--line)] bg-[var(--bg)] px-2 dt:static dt:mx-0 dt:border-0 dt:px-0">
-      <Link href="/messages" aria-label="Back to messages" className="sh-iconbtn border-0 bg-transparent shadow-none"><Icon name="arrow-left" size={24} /></Link>
-      <div className="dm-head">
-        {person ? <Avatar name={personName(person)} /> : null}
-        <div className="dm-head__who">
-          <span className="dm-head__name">{person ? personName(person) : "Message"}</span>
-          {person && !person.deleted ? <span className="dm-head__sub">{`${handle}${person.place ? ` · ${person.place}` : ""}`}</span> : null}
+    <>
+      <Link href="/messages" className="dm-backrow dm-only-desk"><Icon name="arrow-left" size={20} />Back to messages</Link>
+      <header className="dm-bar">
+        <Link href="/messages" aria-label="Back to messages" className="sh-iconbtn dm-only-phone dm-bar__back"><Icon name="arrow-left" size={24} /></Link>
+        <div className="dm-head">
+          {person ? <Avatar name={personName(person)} /> : null}
+          <div className="dm-head__who">
+            <span className="dm-head__name">{person ? personName(person) : "Message"}<VerifiedTick verified={person?.verified} /></span>
+            {person && !person.deleted ? <span className="dm-head__sub">{`${handle}${person.place ? ` · ${person.place}` : ""}`}</span> : null}
+          </div>
         </div>
-      </div>
-      {person && !person.deleted ? <IconButton icon="ellipsis" label="More: mute, report or block" variant="ghost" iconSize={24} onClick={() => setMenu((v) => !v)} /> : null}
-      {menu && person ? (
-        <div role="menu" aria-label={`Chat with ${handle}`} className="dm-pop">
-          {convId ? <button type="button" role="menuitem" className="dm-menu__row" onClick={() => void toggleMute()}><Icon name="bell" size={20} />{muted ? "Unmute this chat" : "Mute this chat"}</button> : null}
-          <button type="button" role="menuitem" className="dm-menu__row" onClick={() => { setMenu(false); setReporting(true); }}><Icon name="flag" size={20} />{`Report ${handle}`}</button>
-          <button type="button" role="menuitem" className="dm-menu__row dm-menu__row--danger" onClick={() => void block()}><Icon name="circle-x" size={20} />{`Block ${handle}`}</button>
-        </div>
-      ) : null}
-    </header>
+        {person && !person.deleted ? (
+          <button ref={moreBtn} type="button" className="vx-iconbtn vx-iconbtn--ghost" aria-label="More: mute, report or block" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((v) => !v)}><Icon name="ellipsis" size={24} /></button>
+        ) : null}
+        {menu && person ? (
+          <div ref={menuEl} role="menu" aria-label={`Chat with ${handle}`} className="dm-pop">
+            {convId ? <button type="button" role="menuitem" className="dm-menu__row" onClick={() => void toggleMute()}><Icon name="bell" size={20} />{muted ? "Unmute this chat" : "Mute this chat"}</button> : null}
+            <button type="button" role="menuitem" className="dm-menu__row" onClick={() => { setMenu(false); setReporting(true); }}><Icon name="flag" size={20} />{`Report ${handle}`}</button>
+            <button type="button" role="menuitem" className="dm-menu__row dm-menu__row--danger" onClick={() => void block()}><Icon name="circle-x" size={20} />{`Block ${handle}`}</button>
+          </div>
+        ) : null}
+      </header>
+    </>
   );
 
   if (signedIn === false) return <div className="dm-page">{header}<SignInNote from="/messages">Sign in to message people.</SignInNote></div>;
@@ -328,12 +368,13 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
   if (!ready) return <div className="dm-page" aria-busy="true">{header}<Skeleton variant="answer" /></div>;
 
   const chrono = [...items].reverse();
+  const closed = !accepts || person?.deleted;
   return (
-    <div className="dm-page">
+    <div className="dm-page dm-chat">
       {header}
       {note ? <p className="dm-note dm-note--err" role="alert">{note}</p> : null}
       {next ? <Button variant="secondary" block onClick={() => void older()}>Show older messages</Button> : null}
-      {items.length === 0 ? (
+      {items.length === 0 && !closed ? (
         <EmptyState icon="message-circle" title="Say hello" body="Write a message or tap the microphone to send a voice message." />
       ) : (
         <div className="dm-thread" role="log" aria-label="Messages">
@@ -345,8 +386,10 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
           ))}
         </div>
       )}
-      <Composer costs={costs} canType={accepts} blockedText={accepts ? null : "You can't message this person."} onSend={send} />
+      <div ref={endRef} className="dm-end" aria-hidden="true" />
+      {closed ? <p className="dm-closed" role="status">{CLOSED_TEXT}</p> : <Composer costs={costs} canType onSend={send} />}
       {reporting && person ? <ReportSheet handle={handle} onClose={() => setReporting(false)} onSend={report} /> : null}
+      <DmRail />
     </div>
   );
 }

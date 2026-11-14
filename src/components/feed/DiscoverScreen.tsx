@@ -11,6 +11,7 @@ import { isSignedIn } from "@/lib/api/auth";
 import { shortCount } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
+import { WeeklyReportLink } from "./LinkCards";
 import { Failed, Loading, NothingYet, SearchBox, Section, WeekCard } from "./parts";
 import { trendItems } from "./trend";
 import { useLoad } from "./useLoad";
@@ -115,6 +116,8 @@ export function DiscoverScreen() {
           </div>
           <Link href="/news" className="link-more hidden text-label dt:inline-flex">Open the Newsroom</Link>
         </section>
+
+        <WeeklyReportLink className="order-4 dt:hidden" />
 
         <div className="order-5 dt:order-3">{week}</div>
 

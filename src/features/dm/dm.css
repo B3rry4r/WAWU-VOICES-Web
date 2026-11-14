@@ -63,3 +63,33 @@
 .dm-pop { position: absolute; top: 56px; right: 12px; z-index: 9; width: 240px; padding: 6px 0; border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-2), inset 0 0 0 1px var(--line); }
 .dm-bar { position: relative; }
 .dm-people { display: flex; flex-direction: column; }
+
+/* Round 2: the boards. 390 rows run edge to edge and the tabs are a compact pill on the left; 1440 puts the list in a rounded white card. */
+.dm-tabs { padding: 4px 0; display: flex; }
+.dm-tabs > * { width: fit-content; max-width: 100%; }
+.dm-list { margin: 0 -16px; border-left: 0; border-right: 0; }
+.dm-muted { display: inline-flex; align-items: center; gap: 4px; font: 500 13px/18px var(--font-body); color: var(--ink-2); }
+.dm-end { height: 1px; scroll-margin-bottom: 200px; }
+.dm-closed { margin: var(--space-4) 0 0; padding: var(--space-4); text-align: center; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font: 500 15px/21px var(--font-body); color: var(--ink-2); }
+.dm-backrow { align-items: center; gap: var(--space-2); font: 600 15px/21px var(--font-body); color: var(--ink); text-decoration: none; }
+.dm-backrow:hover { color: var(--green-text); }
+.dm-bar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--space-1); min-height: 56px; margin: 0 -16px; padding: 0 8px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.dm-bar .dm-head { flex: 1; }
+.dm-pop { top: 52px; }
+.dm-chat .dm-thread { padding-bottom: 8px; }
+.dm-msg, .dm-bubble { min-width: 0; }
+.dm-bubble { max-width: 100%; }
+.dm-rec { flex-wrap: nowrap; }
+.dm-rec__t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; min-width: 0; }
+@media (min-width: 1024px) {
+  .dm-list { margin: 0; border: 1px solid var(--line); border-radius: var(--radius-l); background: var(--surface); overflow: hidden; }
+  .dm-row { background: var(--surface); }
+  .dm-row--unread, .dm-row--unread:hover { background: var(--mint); }
+  .dm-bar { position: static; margin: 0; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-l); background: var(--surface); }
+  .dm-pop { top: 64px; right: 8px; }
+  .dm-compose { background: var(--surface); border-radius: var(--radius-l); padding: 16px; box-shadow: none; position: static; margin-top: var(--space-2); }
+  .dm-chat .dm-thread { padding-bottom: 8px; }
+}
+.dm-bar__back { border: 0; background: transparent; box-shadow: none; }
+.dm-foot { align-self: stretch; width: 100%; box-sizing: border-box; }
+@media (min-width: 1024px) { .dm-bar { position: relative; } }

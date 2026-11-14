@@ -6,4 +6,4 @@ export const LANDING_HEADLINE_EN = "Let\u2019s talk.";
 /** The two lines as one string (page titles, link previews, share text, tests). The h1 puts a line break after the first. */
 export const LANDING_HEADLINE = `${LANDING_HEADLINE_YO} ${LANDING_HEADLINE_EN}`;
 export const LANDING_INTRO =
-  "One question a day about life in Nigeria. Say your answer in 10 seconds, or type it. Hear people who agree and people who don’t. Vote. Then back the ideas that could actually help.";
+  "One question a day about life in Nigeria. Say your answer in a minute or less, or type it. Hear people who agree and people who don’t. Vote. Then back the ideas that could actually help.";

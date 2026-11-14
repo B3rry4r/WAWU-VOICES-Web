@@ -18,6 +18,8 @@ security:
 tags:
 - name: me-profile
   description: My account, profile, settings, blocks, data export and delete
+- name: verification
+  description: 'Verification by ID and utility bill (V-46): the person''s side and the admin queue'
 - name: topics-calendar
   description: Topic of the week, the calendar, categories
 - name: questions-feed
@@ -73,7 +75,7 @@ paths:
       security:
       - wawuId: []
       description: 'Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and
-        3 or more categories. Creates the tokens balance, free allowance (10 posts) and settings. Records the referral if a code is sent. Auth:
+        3 or more categories. Creates the tokens balance, free allowance (2 posts) and settings. Records the referral if a code is sent. Auth:
         WAWU ID token; works before the VOICES profile exists.'
       requestBody:
         required: true
@@ -830,6 +832,313 @@ paths:
           $ref: '#/components/responses/E409'
         '429':
           $ref: '#/components/responses/E429'
+  /me/verification:
+    get:
+      operationId: getMyVerification
+      tags:
+      - verification
+      summary: Where my verification stands
+      security:
+      - wawuId: []
+      description: 'V-46: state is NOT_SUBSCRIBED, READY, UNDER_REVIEW, VERIFIED, REJECTED (reason in request.reason, in plain words), EXPIRED
+        (sent and never decided for 90 days: send again) or LAPSED. Verified means an admin approved the ID and utility bill and the subscription
+        is running; verifiedUntil is the end of the plan (a renewal extends it). Auth: signed in with a finished profile.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationState'
+        '401':
+          $ref: '#/components/responses/E401'
+        '429':
+          $ref: '#/components/responses/E429'
+  /me/verification/documents/{kind}:
+    put:
+      operationId: putVerificationDocument
+      tags:
+      - verification
+      summary: Upload my ID (kind id) or my utility bill (kind bill)
+      security:
+      - wawuId: []
+      description: 'V-46: the body is the file itself (not JSON, not a form): jpeg, png, webp, heic or pdf, at most 10 MB. The type is read from
+        the bytes, never from the name. Stored privately; no link to it is ever given to the person or the public. Sending again replaces that
+        document. 403 subscription_required (message: Subscribe to get verified.) without a running subscription; 409 while the request is with
+        the team or the person is already verified. Auth: signed in with a finished profile. Rate limit: 30 per 10 minutes per account.'
+      parameters:
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationState'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '409':
+          $ref: '#/components/responses/E409'
+        '413':
+          $ref: '#/components/responses/E413'
+        '415':
+          $ref: '#/components/responses/E415'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /me/verification/submit:
+    post:
+      operationId: submitVerification
+      tags:
+      - verification
+      summary: Send both documents to the team
+      security:
+      - wawuId: []
+      description: 'V-46: needs both documents and a running subscription (403 subscription_required). Moves the request to UNDER_REVIEW. After
+        a rejection the person uploads again and submits again. Auth: signed in with a finished profile.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationState'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/verification:
+    get:
+      operationId: adminListVerification
+      tags:
+      - verification
+      summary: The verification queue
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - ADMIN
+      description: 'V-46: each item has the person, the plan and its end date. The documents are not in the list: open one to get their links.
+        Auth: signed in with role ADMIN.'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Opaque cursor from nextCursor
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+        description: 1 to 50, default 20
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+        description: pending (default, oldest first) or decided (newest first)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVerificationPage'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/verification/{requestId}:
+    get:
+      operationId: adminGetVerification
+      tags:
+      - verification
+      summary: One request (no documents, no links)
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - ADMIN
+      description: 'V-46: who, the plan, the state, and whether each document is still there. Never cached (Cache-Control: no-store). Auth: signed
+        in with role ADMIN.'
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVerification'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/verification/{requestId}/documents/{kind}:
+    get:
+      operationId: adminOpenVerificationDocument
+      tags:
+      - verification
+      summary: 'Open one document: a signed link'
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - ADMIN
+      description: 'V-46: kind is id or bill. The link stops working after 5 minutes (expiresAt), serves the stored type as an attachment, and
+        is made only here. Each open is written to the audit log (who and which document, never the link). 404 once the files are deleted. Never
+        cached. Auth: signed in with role ADMIN.'
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationDocumentLink'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/verification/{requestId}/approve:
+    post:
+      operationId: adminApproveVerification
+      tags:
+      - verification
+      summary: Approve a request
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - ADMIN
+      description: 'V-46: the person is verified until the end of their subscription. 409 if another admin decided first, or the person has no
+        running subscription. An admin cannot decide their own request (403). Writes an audit row and sends the person a mail. Auth: signed in
+        with role ADMIN.'
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveVerificationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVerificationDecision'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/verification/{requestId}/reject:
+    post:
+      operationId: adminRejectVerification
+      tags:
+      - verification
+      summary: Reject a request with a reason
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - ADMIN
+      description: 'V-46: a reason code is required (OTHER needs a note). The person sees the words for the code, then the note, and can upload
+        again. 409 if another admin decided first. Writes an audit row and sends the person a mail. Auth: signed in with role ADMIN.'
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectVerificationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVerificationDecision'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
   /topics/current:
     get:
       operationId: getCurrentTopic
@@ -1438,8 +1747,9 @@ paths:
       summary: 'Start a voice upload: get a presigned PUT to Spaces'
       security:
       - wawuId: []
-      description: 'Checks the length against the person''s limit (10 s, or 30 or 60 s with an extra voice token). Guests record and preview in
-        the browser only; the upload starts after sign-in. Auth: signed in with a finished profile. Rate limit: 20 per 10 minutes per account.'
+      description: 'Checks the length against the person''s limit (60 s; before V-36 a longer clip needed an extra voice token). Guests record
+        and preview in the browser only; the upload starts after sign-in. Auth: signed in with a finished profile. Rate limit: 20 per 10 minutes
+        per account.'
       requestBody:
         required: true
         content:
@@ -6489,12 +6799,13 @@ paths:
       security:
       - wawuId: []
       description: 'V-DM. Only a verified sender (for now: a member with a running subscription), else 403 verification_required. A person who
-        blocked you, who turned messages off, or who is suspended is a 403 (blocked, dm_closed, recipient_unavailable). The price comes from config
-        (dm.text_price_milli per 150 characters in proportion, dm.voice_price_milli per voice message; both 0 by default, so messages are free);
-        text is at most 5,000 characters and voice at most dm.voice_max_seconds (60). Free posts do not apply. A direct message has its own cap,
-        dm.messages_per_day (100 by default, 429 DAILY_LIMIT_REACHED), and does not count toward the 20 posts a day. Charged only when the message
-        is stored: a refused or failed send costs nothing, and a repeat with the same Idempotency-Key returns the first result and charges once.
-        Auth: signed in with a finished profile. Rate limit: 20 posts per 10 minutes per account.'
+        blocked you (or whom you blocked), who turned messages off, or who is suspended, banned or leaving is one and the same 403 `dm_unavailable`
+        ("This person is not taking messages."), so nobody can tell which; an unknown or deleted person is 404. The price comes from config (dm.text_price_milli
+        per 150 characters in proportion, dm.voice_price_milli per voice message; both 0 by default, so messages are free); text is at most 5,000
+        characters and voice at most dm.voice_max_seconds (60). Free posts do not apply. A direct message has its own cap, dm.messages_per_day
+        (100 by default, 429 DAILY_LIMIT_REACHED), and does not count toward the 20 posts a day. Charged only when the message is stored: a refused
+        or failed send costs nothing, and a repeat with the same Idempotency-Key returns the first result and charges once. Auth: signed in with
+        a finished profile. Rate limit: 20 posts per 10 minutes per account.'
       parameters:
       - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -7204,15 +7515,16 @@ components:
       - PAYMENT_EXPIRED
       - CONTENT_REMOVED
       - BLOCKED_BY_USER
-      - verification_required
-      - blocked
-      - dm_closed
-      - recipient_unavailable
       - RATE_LIMITED
       - PAYLOAD_TOO_LARGE
       - UNSUPPORTED_MEDIA_TYPE
       - UNAVAILABLE
       - INTERNAL
+      - subscription_required
+      - verification_required
+      - blocked
+      - dm_closed
+      - recipient_unavailable
     Error:
       type: object
       properties:
@@ -7499,6 +7811,8 @@ components:
           type: integer
         reactionsReceived:
           type: integer
+        verified:
+          type: boolean
       additionalProperties: false
       required:
       - id
@@ -8262,11 +8576,14 @@ components:
           type:
           - string
           - 'null'
+        verified:
+          type: boolean
       additionalProperties: false
       required:
       - id
       - handle
-      description: Anonymous posts carry author null.
+      description: Anonymous posts carry author null. verified (V-46) is true while an admin-approved ID and bill and a running subscription stand;
+        the web shows a tick beside the name.
     NewsLabel:
       type: object
       properties:
@@ -8534,6 +8851,7 @@ components:
           - PROPOSAL
           - RESULT_POST
           - USER
+          - DM_MESSAGE
         targetId:
           type: string
           format: uuid
@@ -12702,6 +13020,342 @@ components:
       required:
       - items
       - nextCursor
+    VerificationState:
+      type: object
+      properties:
+        state:
+          type: string
+          enum:
+          - NOT_SUBSCRIBED
+          - READY
+          - UNDER_REVIEW
+          - VERIFIED
+          - REJECTED
+          - EXPIRED
+          - LAPSED
+        verified:
+          type: boolean
+        verifiedUntil:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        subscription:
+          oneOf:
+          - $ref: '#/components/schemas/VerificationPlan'
+          - type: 'null'
+        canUpload:
+          type: boolean
+        canSubmit:
+          type: boolean
+        documents:
+          $ref: '#/components/schemas/VerificationDocuments'
+        request:
+          oneOf:
+          - $ref: '#/components/schemas/VerificationRequestView'
+          - type: 'null'
+        lastDecision:
+          oneOf:
+          - $ref: '#/components/schemas/VerificationLastDecision'
+          - type: 'null'
+      additionalProperties: false
+      required:
+      - state
+      - verified
+      - verifiedUntil
+      - subscription
+      - canUpload
+      - canSubmit
+      - documents
+      - request
+      - lastDecision
+      description: V-46. canUpload is true with a running subscription unless the person is verified or under review. documents says which of
+        the two files are in the draft (the files themselves are never returned).
+    VerificationPlan:
+      type: object
+      properties:
+        planName:
+          type: string
+        endDay:
+          type: string
+        endLabel:
+          type: string
+      additionalProperties: false
+      required:
+      - planName
+      - endDay
+      - endLabel
+      description: endDay is the Lagos day the plan ends, YYYY-MM-DD; endLabel is the same day as 14 Feb 2027.
+    VerificationDocuments:
+      type: object
+      properties:
+        id:
+          type: boolean
+        bill:
+          type: boolean
+      additionalProperties: false
+      required:
+      - id
+      - bill
+    VerificationRequestView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - PENDING
+          - APPROVED
+          - REJECTED
+          - EXPIRED
+        submittedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        decidedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        reason:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      required:
+      - id
+      - status
+      - submittedAt
+      - decidedAt
+      - reason
+      description: 'reason is set for a rejection: plain words, the admin''s reason.'
+    VerificationLastDecision:
+      type: object
+      properties:
+        outcome:
+          type: string
+          enum:
+          - APPROVED
+          - REJECTED
+        decidedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      additionalProperties: false
+      required:
+      - outcome
+      - decidedAt
+    AdminVerificationPerson:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        handle:
+          type: string
+        displayName:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      required:
+      - id
+      - handle
+      - displayName
+    AdminVerificationItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+        submittedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        decidedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        person:
+          $ref: '#/components/schemas/AdminVerificationPerson'
+        subscription:
+          oneOf:
+          - $ref: '#/components/schemas/VerificationPlan'
+          - type: 'null'
+        decidedBy:
+          type:
+          - string
+          - 'null'
+        reason:
+          type:
+          - string
+          - 'null'
+        documentsDeleted:
+          type: boolean
+      additionalProperties: false
+      required:
+      - id
+      - status
+      - submittedAt
+      - decidedAt
+      - person
+      - subscription
+      - decidedBy
+      - reason
+      - documentsDeleted
+    AdminVerificationPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminVerificationItem'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      required:
+      - items
+      - nextCursor
+    VerificationDocumentLink:
+      type: object
+      properties:
+        url:
+          type: string
+        mime:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+      required:
+      - url
+      - mime
+      - expiresAt
+      description: A signed link that stops working at expiresAt (5 minutes after it was given). Never log it, never store it.
+    AdminVerification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+        submittedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        decidedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        person:
+          $ref: '#/components/schemas/AdminVerificationPerson'
+        subscription:
+          oneOf:
+          - $ref: '#/components/schemas/VerificationPlan'
+          - type: 'null'
+        reason:
+          type:
+          - string
+          - 'null'
+        documentsDeleted:
+          type: boolean
+        idDocument:
+          oneOf:
+          - $ref: '#/components/schemas/VerificationDocumentInfo'
+          - type: 'null'
+        billDocument:
+          oneOf:
+          - $ref: '#/components/schemas/VerificationDocumentInfo'
+          - type: 'null'
+      additionalProperties: false
+      required:
+      - id
+      - status
+      - submittedAt
+      - decidedAt
+      - person
+      - subscription
+      - reason
+      - documentsDeleted
+      - idDocument
+      - billDocument
+    VerificationDocumentInfo:
+      type: object
+      properties:
+        mime:
+          type: string
+      additionalProperties: false
+      required:
+      - mime
+      description: That the document is there and its type. Its link is made by GET /admin/verification/{requestId}/documents/{kind} when an admin
+        opens it.
+    ApproveVerificationRequest:
+      type: object
+      properties:
+        note:
+          type: string
+      additionalProperties: false
+      description: note is for the audit line only; the person does not see it.
+    RejectVerificationRequest:
+      type: object
+      properties:
+        reasonCode:
+          type: string
+          enum:
+          - ID_UNREADABLE
+          - ID_NOT_VALID
+          - ID_EXPIRED
+          - BILL_UNREADABLE
+          - BILL_TOO_OLD
+          - DETAILS_DO_NOT_MATCH
+          - SUBSCRIPTION_ENDED
+          - OTHER
+        note:
+          type: string
+      additionalProperties: false
+      required:
+      - reasonCode
+      description: The person reads the short words for the code, then the note. OTHER needs a note (at most 500 characters).
+    AdminVerificationDecision:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - APPROVED
+          - REJECTED
+        verifiedUntil:
+          type: string
+          format: date-time
+      additionalProperties: false
+      required:
+      - id
+      - status
     AdminUserPage:
       type: object
       properties:
@@ -12928,6 +13582,8 @@ components:
           type:
           - string
           - 'null'
+        verified:
+          type: boolean
         deleted:
           type: boolean
       additionalProperties: false
@@ -12936,6 +13592,7 @@ components:
       - handle
       - displayName
       - place
+      - verified
       - deleted
     DmClip:
       type: object
@@ -13102,6 +13759,8 @@ components:
           type: integer
         muted:
           type: boolean
+        acceptsMessages:
+          type: boolean
         updatedAt:
           type: string
           format: date-time
@@ -13112,6 +13771,7 @@ components:
       - lastMessage
       - unread
       - muted
+      - acceptsMessages
       - updatedAt
     DmMessagePage:
       type: object
@@ -13119,6 +13779,8 @@ components:
         person:
           $ref: '#/components/schemas/DmPerson'
         muted:
+          type: boolean
+        acceptsMessages:
           type: boolean
         items:
           type: array
@@ -13132,6 +13794,7 @@ components:
       required:
       - person
       - muted
+      - acceptsMessages
       - items
       - nextCursor
     DmWith:

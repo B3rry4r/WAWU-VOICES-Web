@@ -52,7 +52,7 @@ export function voiceTooLong(durationMs: number, maxSeconds = 60): boolean {
 }
 
 /** A free post covers a voice of up to `freeSeconds` plus the grace. */
-export function voiceFreeCovers(durationMs: number, freeSeconds = 10): boolean {
+export function voiceFreeCovers(durationMs: number, freeSeconds = 60): boolean {
   return durationMs <= freeSeconds * 1000 + VOICE_GRACE_MS;
 }
 

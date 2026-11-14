@@ -12,7 +12,7 @@ import { fromPrice } from "./format";
 import { LANDING_EYEBROW, LANDING_HEADLINE_EN, LANDING_HEADLINE_YO, LANDING_INTRO } from "./landing-words";
 
 const STEPS: { icon: IconName; title: string; phone: string; desk: string }[] = [
-  { icon: "mic", title: "Speak", phone: "Record up to 10 seconds or write up to 500 characters.", desk: "Record up to 10 seconds or write up to 500 characters. Hear it back before you post." },
+  { icon: "mic", title: "Speak", phone: "Record up to 1 minute or write up to 500 characters.", desk: "Record up to 1 minute or write up to 500 characters. Hear it back before you post." },
   { icon: "messages-square", title: "Discuss", phone: "Reply, and say if you agree, disagree or have lived it too.", desk: "Reply by voice or text. Say if you agree, disagree or have lived it too." },
   { icon: "vote", title: "Vote", phone: "One vote per account. Nobody can buy extra votes.", desk: "One vote per account in open polls. Nobody can buy extra votes." },
   { icon: "lightbulb", title: "What Next?", phone: "Suggest what should change. Every idea is labelled Proposed.", desk: "Suggest what should change. Every idea is labelled Proposed until it is proven." },

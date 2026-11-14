@@ -10,6 +10,7 @@ import { isSignedIn } from "@/lib/api/auth";
 import { closesIn, shortCount, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
+import { WeeklyReportLink } from "./LinkCards";
 import { Answers, Failed, Loading, NothingYet, Section, TextLink, Tiles, WeekCard } from "./parts";
 import { useFinishProfile } from "@/features/entry/ui";
 import { SuspendedBanner } from "@/features/profile/SuspendedBanner";
@@ -96,6 +97,7 @@ export function HomeScreen() {
           </div>
         )}
         <div className="order-4 dt:hidden"><WeekCard topic={h.topicOfWeek} questionId={q?.id} /></div>
+        <div className="order-4 dt:hidden"><WeeklyReportLink /></div>
 
         {flash ? (
           <Section className="order-5 dt:order-5" title={<>Flash poll <Badge tone="live" /></>}>
