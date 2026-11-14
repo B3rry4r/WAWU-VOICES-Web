@@ -88,6 +88,17 @@ export function SponsoredSurvey(p: SponsoredSurveyProps): ReactElement {
   const controlled = p.onSelect !== undefined;
   const sel = controlled ? (p.selected ?? null) : own;
   const pick = (i: number) => (controlled ? p.onSelect?.(i) : setOwn(i));
+  // A radio group is one tab stop: the chosen choice (or the first, when none is chosen). The arrow keys move the choice and the focus.
+  const count = p.options?.length ?? 0;
+  const stop = sel !== null && sel >= 0 && sel < count ? sel : 0;
+  const onKey = (e: React.KeyboardEvent<HTMLButtonElement>, i: number) => {
+    const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+    if (!step || count === 0) return;
+    e.preventDefault();
+    const n = (i + step + count) % count;
+    pick(n);
+    (e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[n])?.focus();
+  };
   return (
     <section className={cx('vx-poll vx-poll--sponsored vx-survey', p.className)} aria-label={'Sponsored Survey from ' + p.brand}>
       <div className="vx-poll__head">
@@ -100,7 +111,7 @@ export function SponsoredSurvey(p: SponsoredSurveyProps): ReactElement {
           {p.options.map((o, i) => {
             const on = sel === i;
             return (
-              <button key={i} type="button" role="radio" aria-checked={on ? 'true' : 'false'} className="vx-opt" onClick={() => pick(i)}>
+              <button key={i} type="button" role="radio" aria-checked={on ? 'true' : 'false'} tabIndex={i === stop ? 0 : -1} className="vx-opt" onClick={() => pick(i)} onKeyDown={(e) => onKey(e, i)}>
                 <span className="vx-opt__radio">{on ? <Icon name="check" size={14} strokeWidth={3.5} /> : null}</span>
                 {o}
               </button>

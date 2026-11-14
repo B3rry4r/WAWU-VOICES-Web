@@ -101,7 +101,7 @@ export interface paths {
         };
         /**
          * My settings
-         * @description Auth: signed in with a finished profile.
+         * @description useMyStateForSurveys (default false): allow Sponsored Surveys aimed at states to be shown to me when my state is one of them. Auth: signed in with a finished profile.
          */
         get: operations["getSettings"];
         put?: never;
@@ -3275,7 +3275,7 @@ export interface paths {
         head?: never;
         /**
          * Edit a sponsored survey
-         * @description Any subset of the fields. 409 for an approved or rejected survey, and for new questions once anyone has answered. Changing the words of a paused survey sends it back to the approval queue. Auth: signed in with role AD_MANAGER or ADMIN.
+         * @description Any subset of the fields. 409 for an approved or rejected survey, for a survey whose results are fixed, and for new questions once anyone has answered. Changing the words of a paused survey sends it back to the approval queue. Auth: signed in with role AD_MANAGER or ADMIN.
          */
         patch: operations["adminUpdateSurvey"];
         trace?: never;
@@ -3328,10 +3328,70 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The brand's results, combined and anonymous
-         * @description No name, handle, photo or id is ever returned. Free answers and transcripts have emails, phone numbers, @handles and links removed. State and age band appear only for people who agreed to share them. No group smaller than weekly.min_group_size is shown: while fewer people than that have answered, belowMinimum is true and only the view, start and skip counts are returned. The web builds the CSV from this body. Auth: signed in with role AD_MANAGER or ADMIN.
+         * The brand's results, combined and anonymous (once released)
+         * @description Nothing is worked out while the survey runs: stage RUNNING (or NOT_LIVE), ready false, only answeredSoFar. When the survey is over (end date passed or response target reached) its results are fixed once and no answer is accepted after that; until staff release them the report is stage REVIEW, ready true, released false, answeredSoFar only. After POST /admin/surveys/{surveyId}/release it is stage RELEASED, released true, and every read returns the same stored report. No name, handle, photo or id is ever returned. Free answers and transcripts are scrubbed and any staff hid are left out. State and age band appear only for people who agreed to share them. No group smaller than weekly.min_group_size is shown, and no hidden group can be worked out by subtraction: a hidden total that is under the minimum pulls the next smallest group in, and hidden groups are shown together as other only when their sum is at least the minimum. Every read writes an audit row (who, when, which survey). The web builds the CSV from a released body only. Auth: signed in with role AD_MANAGER or ADMIN.
          */
         get: operations["adminSurveyReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff have read the free answers: release the results to the brand
+         * @description Once only (409 after). Builds and stores the brand's report from the fixed results and the free answers left in, writes an audit row (who, when, how many hidden), then sends email F04 to the brand contact. mailed is false when the mail could not go yet: it is tried again every ten minutes and never sent twice. F04 is never sent before release. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        post: operations["adminReleaseSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}/free-answers/{answerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Hide one free answer from the brand (or show it again)
+         * @description One call per answer. 409 before the survey is over and after release. Audited (the answer id, never its words). Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        patch: operations["adminHideSurveyFreeAnswer"];
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}/free-answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every free answer and transcript, for staff to read before release
+         * @description 409 while the survey is still running. Scrubbed (emails, links, bare domains, t.me and wa.me, 'name at provider dot com', numbers also in words, handles after insta, ig, twitter, x, tiktok, snap). A name or address typed in plain words is not found by pattern: read each one. Listed alphabetically inside a question, never in the order people answered. Audited. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        get: operations["adminSurveyFreeAnswers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3355,7 +3415,7 @@ export interface paths {
         put?: never;
         /**
          * Set up a brand page
-         * @description Auth: signed in with role AD_MANAGER or ADMIN.
+         * @description 409 when another brand has the same name ignoring case and spaces. Auth: signed in with role AD_MANAGER or ADMIN.
          */
         post: operations["adminCreateBrand"];
         delete?: never;
@@ -3379,7 +3439,7 @@ export interface paths {
         head?: never;
         /**
          * Edit a brand
-         * @description Auth: signed in with role AD_MANAGER or ADMIN.
+         * @description 409 when the new name matches another brand ignoring case and spaces. Auth: signed in with role AD_MANAGER or ADMIN.
          */
         patch: operations["adminUpdateBrand"];
         trace?: never;
@@ -3413,7 +3473,7 @@ export interface paths {
         };
         /**
          * A sponsored survey to answer
-         * @description 404 unless the survey is live, in the person's state and not skipped twice. myStatus ANSWERED returns no questions. Auth: signed in with a finished profile.
+         * @description 404 unless the survey is live, not skipped twice, and, when it is aimed at states, the person turned on useMyStateForSurveys (PATCH /me/settings) and their state is one of them. myStatus ANSWERED returns no questions. Auth: signed in with a finished profile.
          */
         get: operations["getSurvey"];
         put?: never;
@@ -3473,7 +3533,7 @@ export interface paths {
         };
         /**
          * A brand's public page
-         * @description V-SURVEYS: name, logo, one line, its live Sponsored Surveys and live adverts, labelled as a brand. Never a contact address. Auth: none (public).
+         * @description V-SURVEYS: name, logo, one line, its live Sponsored Surveys and the live adverts the ad manager tied to this brand (Ad.brandId; a matching name alone adds nothing), labelled as a brand. Never a contact address. A slug that is not 1 to 60 of a-z, 0-9 and - answers 404. Auth: none (public).
          */
         get: operations["getBrandPage"];
         put?: never;
@@ -3741,6 +3801,7 @@ export interface components {
             notifyCategoryAlerts: boolean;
             dailyQuestionMinute: number;
             shareMyWord: boolean;
+            useMyStateForSurveys: boolean;
         };
         UpdateSettingsRequest: {
             language?: string;
@@ -3758,6 +3819,7 @@ export interface components {
             notifyCategoryAlerts?: boolean;
             dailyQuestionMinute?: number;
             shareMyWord?: boolean;
+            useMyStateForSurveys?: boolean;
         };
         CategoryFollow: {
             /** Format: uuid */
@@ -5362,6 +5424,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             brand: string;
+            /** Format: uuid */
+            brandId: string | null;
             kind: components["schemas"]["AdKind"];
             status: components["schemas"]["AdStatus"];
             headline: string;
@@ -5394,6 +5458,8 @@ export interface components {
         UpsertAdRequest: {
             ageBands?: string[];
             brand: string;
+            /** Format: uuid */
+            brandId?: string | null;
             kind: components["schemas"]["AdKind"];
             headline: string;
             body?: string;
@@ -5682,6 +5748,10 @@ export interface components {
             submittedAt: string | null;
             /** Format: date-time */
             approvedAt: string | null;
+            /** Format: date-time */
+            snapshotAt: string | null;
+            /** Format: date-time */
+            releasedAt: string | null;
         };
         AdminSurveyPage: {
             items: components["schemas"]["AdminSurvey"][];
@@ -5696,6 +5766,16 @@ export interface components {
             share: number | null;
             hidden: boolean;
         };
+        SurveyBreakdownOther: {
+            responses: number;
+            share: number;
+        };
+        /** @description The choices that are hidden, together. Present only when their sum is at least weekly.min_group_size. When a hidden group would follow from the totals, the next smallest shown group is hidden too and joins this line. */
+        SurveyReportOther: {
+            label: string;
+            count: number;
+            share: number;
+        };
         SurveyReportVoice: {
             transcript: string;
             seconds: number;
@@ -5709,6 +5789,7 @@ export interface components {
             prompt: string;
             answered: number | null;
             options: components["schemas"]["SurveyReportOption"][];
+            other: components["schemas"]["SurveyReportOther"] | null;
             texts: string[];
             voices: components["schemas"]["SurveyReportVoice"][];
         };
@@ -5741,15 +5822,58 @@ export interface components {
             endsOn: string | null;
             responseTarget: number | null;
         };
+        /** @description While the survey runs (and until staff release it) only stage, ready, released, answeredSoFar and note are present. The counts, shares, free answers and breakdowns exist only when released is true, and are then the stored report, never recomputed. */
         SurveyReport: {
             survey: components["schemas"]["SurveyReportHead"];
-            minGroupSize: number;
-            belowMinimum: boolean;
-            totals: components["schemas"]["SurveyReportTotals"];
-            questions: components["schemas"]["SurveyReportQuestion"][];
-            byState: components["schemas"]["SurveyReportState"][];
-            byAgeBand: components["schemas"]["SurveyReportAge"][];
+            /** @enum {string} */
+            stage: "NOT_LIVE" | "RUNNING" | "REVIEW" | "RELEASED";
+            ready: boolean;
+            released: boolean;
+            answeredSoFar?: number;
+            /** Format: date-time */
+            releasedAt?: string;
+            minGroupSize?: number;
+            belowMinimum?: boolean;
+            totals?: components["schemas"]["SurveyReportTotals"];
+            questions?: components["schemas"]["SurveyReportQuestion"][];
+            byState?: components["schemas"]["SurveyReportState"][];
+            byStateOther?: components["schemas"]["SurveyBreakdownOther"] | null;
+            byAgeBand?: components["schemas"]["SurveyReportAge"][];
+            byAgeBandOther?: components["schemas"]["SurveyBreakdownOther"] | null;
             note: string;
+        };
+        SurveyReleaseResult: {
+            released: boolean;
+            /** Format: date-time */
+            releasedAt: string;
+            hiddenCount: number;
+            mailed: boolean;
+        };
+        HideFreeAnswerResult: {
+            /** Format: uuid */
+            id: string;
+            hidden: boolean;
+        };
+        HideFreeAnswerRequest: {
+            hidden: boolean;
+        };
+        SurveyFreeAnswers: {
+            released: boolean;
+            items: components["schemas"]["SurveyFreeItem"][];
+            total: number;
+            hiddenCount: number;
+        };
+        SurveyFreeItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            questionId: string;
+            prompt: string;
+            /** @enum {string} */
+            kind: "TEXT" | "VOICE";
+            text: string;
+            seconds: number | null;
+            hidden: boolean;
         };
         SurveyCard: {
             /** Format: uuid */
@@ -11262,6 +11386,93 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
+    adminReleaseSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyReleaseResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminHideSurveyFreeAnswer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+                answerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HideFreeAnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HideFreeAnswerResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminSurveyFreeAnswers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyFreeAnswers"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            429: components["responses"]["E429"];
+        };
+    };
     adminListBrands: {
         parameters: {
             query?: never;
@@ -11309,6 +11520,7 @@ export interface operations {
             };
             401: components["responses"]["E401"];
             403: components["responses"]["E403"];
+            409: components["responses"]["E409"];
             422: components["responses"]["E422"];
             429: components["responses"]["E429"];
         };
@@ -11340,6 +11552,7 @@ export interface operations {
             401: components["responses"]["E401"];
             403: components["responses"]["E403"];
             404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
             422: components["responses"]["E422"];
             429: components["responses"]["E429"];
         };

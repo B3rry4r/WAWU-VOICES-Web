@@ -28,9 +28,12 @@ export async function getSurveyPlacement(): Promise<SurveyCard | null> {
 /** One survey to answer. `myStatus` ANSWERED comes back with no questions. A signed-in person with a finished profile only. */
 export const getSurvey = (id: string) => apiFetch<Survey>(`/surveys/${enc(id)}`, { authed: true });
 
-/** VIEW (the card was seen), START (the first question opened), SKIP (the person left it). Never throws: a lost count must not stop the person. */
-export const recordSurveyEvent = (id: string, kind: SurveyEventKind): Promise<void> =>
-  apiFetch<void>(`/surveys/${enc(id)}/events`, { method: "POST", authed: true, body: { kind } }).then(
+/**
+ * VIEW (the card was seen), START (the first question opened), SKIP (the person left it). Never throws: a lost count must not stop the person.
+ * `keepalive` lets the request finish while the page closes (leaving by Back, closing the tab). A beacon cannot carry the sign-in header, so fetch is used.
+ */
+export const recordSurveyEvent = (id: string, kind: SurveyEventKind, opts?: { keepalive?: boolean }): Promise<void> =>
+  apiFetch<void>(`/surveys/${enc(id)}/events`, { method: "POST", authed: true, body: { kind }, ...(opts?.keepalive ? { keepalive: true } : {}) }).then(
     () => undefined,
     () => undefined,
   );

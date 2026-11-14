@@ -205,9 +205,9 @@ describe("Brands", () => {
 describe("the results page", () => {
   const report = (over: Record<string, unknown> = {}) => ({
     survey: { id: "s1", brandName: "Zobo Fresh", title: "Power and light", status: "APPROVED", startsOn: "2026-11-20", endsOn: "2026-11-30", responseTarget: 100 },
-    minGroupSize: 20, belowMinimum: false, totals: { views: 500, starts: 120, skips: 30, responses: 60, completionRate: 50 },
-    questions: [{ id: "q1", position: 1, kind: "SINGLE_CHOICE", prompt: "How do you keep cool?", answered: 60, options: [{ id: "o1", label: "Cold drinks", count: 40, share: 67, hidden: false }, { id: "o2", label: "A fan", count: null, share: null, hidden: true }], texts: [], voices: [] },
-      { id: "q2", position: 2, kind: "TEXT", prompt: "Anything else?", answered: 2, options: [], texts: ["Ice please"], voices: [] }],
+    stage: "RELEASED", ready: true, released: true, releasedAt: "2026-12-02T09:00:00Z", minGroupSize: 20, belowMinimum: false, totals: { views: 500, starts: 120, skips: 30, responses: 60, completionRate: 50 },
+    questions: [{ id: "q1", position: 1, kind: "SINGLE_CHOICE", prompt: "How do you keep cool?", answered: 60, options: [{ id: "o1", label: "Cold drinks", count: 40, share: 67, hidden: false }, { id: "o2", label: "A fan", count: null, share: null, hidden: true }], other: null, texts: [], voices: [] },
+      { id: "q2", position: 2, kind: "TEXT", prompt: "Anything else?", answered: 2, options: [], other: null, texts: ["Ice please"], voices: [] }],
     byState: [{ state: "Lagos", responses: 30, share: 50 }], byAgeBand: [{ ageBand: "25-34", responses: 25, share: 42 }], note: "Combined and anonymous.", ...over,
   });
   it("shows totals, counts and shares, free answers, state and age band exactly as the API gives them", async () => {

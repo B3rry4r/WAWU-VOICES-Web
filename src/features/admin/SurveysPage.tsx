@@ -18,7 +18,14 @@ const KIND_WORDS: Record<SurveyQuestionInput["kind"], string> = {
 
 function statusPill(s: AdminSurvey) {
   if (s.status === "AWAITING_APPROVAL") return <Pill tone="sun">Awaiting approval</Pill>;
-  if (s.status === "APPROVED") return s.live ? <Pill tone="red" dot>Live</Pill> : <Pill tone="green">Approved</Pill>;
+  if (s.releasedAt) return <Pill tone="blue">Results released</Pill>;
+  if (s.snapshotAt) return <Pill tone="sun">Over, results to review</Pill>;
+  if (s.status === "APPROVED") {
+    if (s.live) return <Pill tone="red" dot>Live</Pill>;
+    // Approved is not the same as running: say when it will start, so a quiet row is not read as a fault.
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" });
+    return <Pill tone="green">{s.startsOn && s.startsOn > today ? `Approved, starts ${dayMonth(s.startsOn + "T12:00:00+01:00")}` : "Approved"}</Pill>;
+  }
   if (s.status === "PAUSED") return <Pill>Paused</Pill>;
   if (s.status === "DRAFT") return s.changeRequest ? <Pill tone="blue">Changes asked</Pill> : <Pill>Draft</Pill>;
   return (
@@ -221,8 +228,8 @@ function Review({ survey, cats, onDone, onEdit }: { survey: AdminSurvey; cats: R
       {survey.changeRequest ? <p className="m-0 mt-4 rounded-m bg-surface-2 p-3 text-caption">{`Changes asked: ${survey.changeRequest}`}</p> : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        {survey.status === "DRAFT" || waiting || survey.status === "PAUSED" ? <Button variant="secondary" onClick={onEdit}>Edit survey</Button> : null}
-        {survey.status === "APPROVED" || survey.status === "PAUSED" || survey.responses > 0 ? (
+        {!survey.snapshotAt && (survey.status === "DRAFT" || waiting || survey.status === "PAUSED") ? <Button variant="secondary" onClick={onEdit}>Edit survey</Button> : null}
+        {survey.status === "APPROVED" || survey.status === "PAUSED" || survey.snapshotAt || survey.responses > 0 ? (
           <Link href={`/admin/surveys/${survey.id}/results`} className="vx-btn vx-btn--secondary no-underline">Results for the brand</Link>
         ) : null}
       </div>
@@ -244,6 +251,8 @@ function Review({ survey, cats, onDone, onEdit }: { survey: AdminSurvey; cats: R
             <Button variant="ghost" disabled={!needReason || act.busy} onClick={() => go("REJECT", "Rejected. The brand sees your note.")}>Reject</Button>
           </div>
         </div>
+      ) : survey.snapshotAt ? (
+        <p className="m-0 mt-4 text-caption text-ink-2">{survey.releasedAt ? "The results are released and fixed. This survey can no longer be changed or paused." : "The survey is over and its results are fixed. Read the answers and release them from the results page."}</p>
       ) : survey.status === "APPROVED" || survey.status === "PAUSED" ? (
         <div className="mt-4 flex flex-col gap-3">
           <ErrorLine>{act.error}</ErrorLine>

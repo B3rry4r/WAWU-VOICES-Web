@@ -9,6 +9,9 @@ export type UpsertSurveyRequest = S["UpsertSurveyRequest"];
 export type SurveyQuestionInput = S["SurveyQuestionInput"];
 export type SurveyDecision = S["SurveyDecision"];
 export type SurveyReport = S["SurveyReport"];
+export type SurveyFreeAnswers = S["SurveyFreeAnswers"];
+export type SurveyFreeItem = S["SurveyFreeItem"];
+export type SurveyReleaseResult = S["SurveyReleaseResult"];
 export type AdminBrand = S["AdminBrand"];
 export type BrandInput = S["BrandInput"];
 
@@ -30,6 +33,13 @@ export const updateSurvey = (id: string, body: Partial<UpsertSurveyRequest>) => 
 export const submitSurvey = (id: string) => apiFetch<AdminSurvey>(`/admin/surveys/${enc(id)}/submit`, { ...A, method: "POST" });
 export const decideSurvey = (id: string, body: SurveyDecision) => apiFetch<AdminSurvey>(`/admin/surveys/${enc(id)}/decision`, { ...A, method: "POST", body });
 export const getSurveyReport = (id: string) => apiFetch<SurveyReport>(`/admin/surveys/${enc(id)}/report`, A);
+/** Over and not released: every free answer and transcript, scrubbed by the server, for staff to read. 409 while the survey runs. */
+export const getSurveyFreeAnswers = (id: string) => apiFetch<SurveyFreeAnswers>(`/admin/surveys/${enc(id)}/free-answers`, A);
+/** Hide one free answer from the brand, or show it again. One call each. */
+export const hideSurveyFreeAnswer = (id: string, answerId: string, hidden: boolean) =>
+  apiFetch<S["HideFreeAnswerResult"]>(`/admin/surveys/${enc(id)}/free-answers/${enc(answerId)}`, { ...A, method: "PATCH", body: { hidden } });
+/** Release the results to the brand. Once only. */
+export const releaseSurvey = (id: string) => apiFetch<SurveyReleaseResult>(`/admin/surveys/${enc(id)}/release`, { ...A, method: "POST" });
 
 // Brands
 export const listBrands = () => apiFetch<S["AdminBrandList"]>("/admin/brands", A);

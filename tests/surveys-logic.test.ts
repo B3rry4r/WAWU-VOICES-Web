@@ -23,13 +23,17 @@ describe("survey logic", () => {
 
 const report = (over: Partial<SurveyReport> = {}): SurveyReport => ({
   survey: { id: "11111111-1111-4111-8111-111111111111", brandName: "Zobo Fresh", title: "Power and light", status: "APPROVED", startsOn: "2026-11-20", endsOn: "2026-11-30", responseTarget: 100 },
+  stage: "RELEASED",
+  ready: true,
+  released: true,
+  releasedAt: "2026-12-02T09:00:00Z",
   minGroupSize: 20,
   belowMinimum: false,
   totals: { views: 500, starts: 120, skips: 30, responses: 60, completionRate: 50 },
   questions: [
-    { id: "q1", position: 1, kind: "SINGLE_CHOICE", prompt: "How do you keep cool?", answered: 60, options: [{ id: "o1", label: "Cold drinks", count: 40, share: 67, hidden: false }, { id: "o2", label: "A fan, \"battery\"", count: null, share: null, hidden: true }], texts: [], voices: [] },
-    { id: "q2", position: 2, kind: "TEXT", prompt: "Anything else?", answered: 3, options: [], texts: ["=SUM(1)", "Fine, thanks"], voices: [] },
-    { id: "q3", position: 3, kind: "VOICE", prompt: "Say it", answered: 2, options: [], texts: [], voices: [{ transcript: "We need light", seconds: 12 }] },
+    { id: "q1", position: 1, kind: "SINGLE_CHOICE", prompt: "How do you keep cool?", answered: 60, options: [{ id: "o1", label: "Cold drinks", count: 40, share: 67, hidden: false }, { id: "o2", label: "A fan, \"battery\"", count: null, share: null, hidden: true }], other: null, texts: [], voices: [] },
+    { id: "q2", position: 2, kind: "TEXT", prompt: "Anything else?", answered: 3, options: [], other: null, texts: ["=SUM(1)", "Fine, thanks"], voices: [] },
+    { id: "q3", position: 3, kind: "VOICE", prompt: "Say it", answered: 2, options: [], other: null, texts: [], voices: [{ transcript: "We need light", seconds: 12 }] },
   ],
   byState: [{ state: "Lagos", responses: 30, share: 50 }],
   byAgeBand: [{ ageBand: "25-34", responses: 25, share: 42 }],
@@ -43,7 +47,7 @@ describe("the results CSV", () => {
     const lines = csv.replace("\uFEFF", "").trim().split("\r\n");
     expect(lines[0]).toBe("Section,Question,Answer,Count,Share (%),Seconds");
     expect(lines).toContain("Choice,How do you keep cool?,Cold drinks,40,67,");
-    expect(lines).toContain('Choice,How do you keep cool?,"A fan, ""battery""",,,');
+    expect(lines).toContain('Choice,How do you keep cool?,"A fan, ""battery""",hidden,,');
     expect(lines).toContain("Free answer,Anything else?,'=SUM(1),,,");
     expect(lines).toContain("Voice answer,Say it,We need light,,,12");
     expect(lines).toContain("State,,Lagos,30,50,");
