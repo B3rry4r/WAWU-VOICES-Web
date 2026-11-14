@@ -47,7 +47,7 @@ export function Outbox() {
     } else if (r.reason === "needs_tokens") {
       setView({ kind: "note", tone: "danger", text: r.message ?? "You need more tokens to send your saved recording.", href: "/units/buy?from=%2F", hrefLabel: "Get tokens" });
     } else {
-      setView({ kind: "offer", draft: d, plan, error: r.message ?? "We could not send it. It is kept on this device." });
+      setView({ kind: "offer", draft: r.draft ?? d, plan, error: r.message ?? "We could not send it. It is kept on this device." });
     }
   }, []);
 

@@ -1,11 +1,12 @@
 import { ApiError } from "@/lib/api/client";
+import { freshKey, needsNewKey } from "@/lib/api/keys";
 import * as api from "@/lib/api/speak";
 import type { Mood } from "@/lib/api/mood";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { tokensLabel } from "@/lib/shared/text-price";
 import { freeCovers, tokenFor, voicePriceMilli } from "./logic";
-import type { Draft } from "./draft";
+import { saveDraft, type Draft } from "./draft";
 
 /**
  * Recordings made offline (addendum 7.7). A recording whose Send could not go is kept on the device with `queued` set. When the
@@ -48,7 +49,7 @@ export type SendResult =
   | { ok: true; answerId: string; questionId: string }
   /** Another tab sent this recording while this one waited: it is done, and there is nothing more to do here. */
   | { ok: true; answerId: null; questionId: string; byOtherTab: true }
-  | { ok: false; reason: "busy" | "offline" | "needs_tokens" | "failed"; message?: string };
+  | { ok: false; reason: "busy" | "offline" | "needs_tokens" | "failed"; message?: string; draft?: Draft };
 
 async function waitReady(clipId: string): Promise<void> {
   for (let i = 0; i < 90; i++) {
@@ -81,6 +82,13 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
     return { ok: true, answerId: r.answer.id, questionId: d.questionId };
   } catch (e) {
     if (clipId && !uploaded) void api.deleteVoiceClip(clipId).catch(() => undefined);
+    // The recording's key is dropped only when the server says it is spent (a 409 asking for a new key). A 500, 502, 504, 429 or a
+    // network failure keeps it, so the retry is the same request and the server can hand the first post back.
+    if (needsNewKey(e)) {
+      const next: Draft = { ...d, key: freshKey() };
+      await saveDraft(next);
+      return { ok: false, reason: "failed", message: e instanceof ApiError && e.explained && e.message.trim() ? e.message : undefined, draft: next };
+    }
     if (e instanceof ApiError && e.status === 402) return { ok: false, reason: "needs_tokens", message: e.explained && e.message.trim() ? e.message : undefined };
     // The upload goes straight to storage, so being offline there is a plain network error, not an ApiError.
     if ((e instanceof ApiError && e.status === 0) || (typeof navigator !== "undefined" && navigator.onLine === false)) return { ok: false, reason: "offline" };

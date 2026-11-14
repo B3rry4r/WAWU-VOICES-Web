@@ -1,4 +1,6 @@
 "use client";
+import { InView } from "@/components/InView";
+import { needsNewKey } from "@/lib/api/keys";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Banner, Button, Icon } from "@/components/vx";
 import * as api from "@/lib/api/speak";
@@ -27,11 +29,13 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
 /** `anonymous` is the "Post without my name" switch as it stood when Send was tapped (always false when the box has no switch). */
 export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number; anonymous: boolean }
 
-export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, anonSlot }: {
+export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, anonSlot }: {
   purpose: Purpose;
   maxSeconds: number;
   /** The length a free post covers; a longer take may need an old voice token, as on the record screen. */
   freeSeconds: number;
+  /** Free posts the person has left. With none, a token they already hold covers the message. Default: some left. */
+  freeLeft?: number;
   tokens?: api.ExtraVoiceToken[];
   hint?: ReactNode;
   /** The words on the Send button for this length ("Send" or "Send for 3 tokens"). */
@@ -155,7 +159,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
     let stage: "create" | "upload" | "later" = "create";
     try {
       if (!st.clipId) {
-        const tok = purpose === "REPLY" ? tokenFor(tokens ?? [], take.seconds, freeSeconds) : undefined;
+        const tok = purpose === "REPLY" ? tokenFor(tokens ?? [], take.seconds, freeSeconds, freeLeft) : undefined;
         const up = await api.createVoiceClip({
           purpose,
           mime: baseMime(take.mime) as "audio/webm" | "audio/mp4" | "audio/ogg",
@@ -188,6 +192,13 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
       setSending(null);
       if (stage === "upload" && st.clipId) { void api.deleteVoiceClip(st.clipId).catch(() => undefined); state.current = null; }
       if (e instanceof Error && e.message === "CLIP_FAILED") { state.current = null; setNote("We could not process that recording. Record it again and send it."); return; }
+      if (needsNewKey(e)) {
+        // The server refused the key as spent: the same recording goes out under a new key (and a new clip). The recording is kept.
+        state.current = null;
+        setTake((t) => (t ? { ...t, key: uuidKey() } : t));
+        setNote(refusalText(e));
+        return;
+      }
       if (e instanceof Error && e.message === "CLIP_SLOW") { setNote("Your voice is still being prepared. Tap Send again in a moment."); return; }
       setNote(errorText?.(e) ?? refusalText(e));
     }
@@ -208,7 +219,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
   return (
     <section className={"vx-rec" + (live ? " is-live" : "")} aria-label="Voice recorder" data-testid="voice-box">
       {live ? <div className="vx-rec__top"><span className="vx-rec__dot">Recording</span></div> : null}
-      {note ? <Banner tone="danger" onClose={() => setNote(null)}>{note}</Banner> : null}
+      {note ? <InView key={note}><Banner tone="danger" onClose={() => setNote(null)}>{note}</Banner></InView> : null}
       {note && extra ? extra : null}
       {phase !== "preview" && help ? (
         <div className="sp-help" role="alert">

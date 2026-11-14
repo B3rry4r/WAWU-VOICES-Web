@@ -1,4 +1,5 @@
 "use client";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { countText } from "@/lib/format/plural";
 import Link from "next/link";
 import { useState } from "react";
@@ -87,7 +88,7 @@ export function ReplyRow({ r }: { r: Reply }) {
         <div className="vx-answer__head">
           <Avatar name={r.author ? r.author.displayName || r.author.handle : "Anonymous"} src={r.author?.avatarUrl ?? undefined} />
           <div className="vx-answer__who">
-            <span className="vx-answer__name">{r.author ? "@" + r.author.handle : "Anonymous"}</span>
+            <span className="vx-answer__name">{r.author ? "@" + r.author.handle : "Anonymous"}{r.author ? <VerifiedTick verified={r.author.verified} /> : null}</span>
             {/* V-FIX-D: the API lists a person's unnamed replies on their own page only; the tag is theirs alone. */}
             {!r.author && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
             <span className="vx-answer__time">{ago(r.createdAt) + " · " + stance}</span>

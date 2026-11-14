@@ -1,5 +1,6 @@
 "use client";
 
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { useEffect, useRef, useState } from "react";
 import { Rail } from "@/components/shell/ShellSlots";
 import { useRouter } from "next/navigation";
@@ -69,10 +70,11 @@ export function PostResultPage({ threadId }: { threadId: string }) {
       await createResultPost(threadId, photoFileId ? { ...body, photoFileId } : body, key.current.id);
       router.push(`${back}?posted=1`);
     } catch (err) {
+      if (needsNewKey(err)) key.current = null; // the key is spent: the next tap carries a new one
       const fields = serverFieldErrors(err);
       if (Object.keys(fields).length) setErrors(fields);
       if (err instanceof ApiError && err.code === "CONFLICT" && (err.details as { reason?: string } | undefined)?.reason === "THREAD_CLOSED") setClosed(true);
-      else setFormError(Object.keys(fields).length ? "Some details need fixing." : postErrorMessage(err));
+      else setFormError(Object.keys(fields).length ? "Some details need fixing." : needsNewKey(err) ? newKeyLine("Post") : postErrorMessage(err));
       setBusy(false);
     }
   }

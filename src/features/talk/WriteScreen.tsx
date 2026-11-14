@@ -6,17 +6,18 @@ import type { ComposerTag, IntentKind } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
-import { clearDraft, saveDraft } from "@/features/units/draft";
+import { InView } from "@/components/InView";
+import { clearDraft, renewDraftKey, saveDraft } from "@/features/units/draft";
 import { StageNav } from "@/features/stage/StageNav";
 import { countChars } from "@/lib/shared/text-price";
 import { FixPanel } from "./FixPanel";
 import { AnonymousSwitch } from "./AnonymousSwitch";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
-import { useReplyAnon } from "./reply-anon";
+import { OWN_NAMELESS_NOTE, useReplyAnon } from "./reply-anon";
 import { notePublished } from "@/features/share/share-visit";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
-import { AppBar, Problem, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
+import { AppBar, Problem, failText, needsNewKey, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -69,6 +70,8 @@ export function WriteScreen({ qid }: { qid: string }) {
   if (q.status !== "LIVE") return <>{header}<div className="mt-4"><Banner tone="info" title="This question has closed.">You can still read and listen to every voice.</Banner></div></>;
 
   const whoLabel = parent?.author ? `@${parent.author.handle}` : "Anonymous";
+  // The writer of a nameless answer replying under it: always nameless (the server decides), so no switch is offered.
+  const ownNameless = !!replyTo && !!parent && parent.author === null && parent.isMine;
   const left = allow?.freePostsRemaining ?? 0;
   const c = allow?.costs;
   const price = allow ? postPrice(text, allow) : null;
@@ -86,7 +89,7 @@ export function WriteScreen({ qid }: { qid: string }) {
     // The held draft carries the post's Idempotency-Key (same text, same key), so a post after a purchase is the same post.
     const held = replyTo ? undefined : saveDraft(qid, body);
     // The key belongs to the exact body, the reply switch included: flipping it makes a new request.
-    const anonNow = replyTo ? replyAnon.ref.current : anon;
+    const anonNow = replyTo ? (ownNameless || replyAnon.ref.current) : anon;
     if (!key.current || key.current.text !== body || key.current.anon !== anonNow) key.current = { text: body, anon: anonNow, k: held ? held.key : uuidKey() };
     busy.current = true;
     setSending(true);
@@ -117,6 +120,11 @@ export function WriteScreen({ qid }: { qid: string }) {
         }
         router.push(outOfPostsHref(qid));
         return;
+      }
+      // The key was refused as spent: forget it, here and in the held draft, so the next tap goes out with a new one.
+      if (needsNewKey(e)) {
+        key.current = null;
+        if (!replyTo) renewDraftKey(qid);
       }
       setMsg(failText(e));
     }
@@ -161,10 +169,10 @@ export function WriteScreen({ qid }: { qid: string }) {
             onSubmit={() => void send()}
           />
         </div>
-        {replyTo ? <AnonymousSwitch on={replyAnon.on} disabled={sending} onChange={replyAnon.set} /> : <AnonymousSwitch on={anon} disabled={sending} onChange={(v) => { setAnon(v); writeAnonPref(qid, v); }} />}
+        {replyTo && ownNameless ? <p data-testid="own-nameless" className="m-0 rounded-[var(--radius-l)] bg-[var(--surface)] px-4 py-[14px] text-[13px] font-medium leading-[18px] text-[var(--ink-2)] shadow-[inset_0_0_0_1px_var(--line)]">{OWN_NAMELESS_NOTE}</p> : replyTo ? <AnonymousSwitch on={replyAnon.on} disabled={sending} onChange={replyAnon.set} /> : <AnonymousSwitch on={anon} disabled={sending} onChange={(v) => { setAnon(v); writeAnonPref(qid, v); }} />}
         {dayLeft === 0 ? <Banner tone="info" title="You have reached the daily limit">{`You can send ${c?.messagesPerDay ?? 20} messages a day. Come back after midnight, Lagos time. Reading, listening, likes, shares and reactions never count.`}</Banner> : null}
         {sending ? <Banner tone="info">Posting your answer.</Banner> : null}
-        {msg ? <Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner> : null}
+        {msg ? <InView key={msg}><Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner></InView> : null}
         {left === 1 && c ? (
           <Banner tone="warning" title="Last free post">{`This post is free if it is up to ${c.freePostTextChars ?? 500} characters. After it, text costs ${unitsText(c.textPostMilli)} for every ${c.textPriceChars ?? 150} characters and a voice message up to ${c.voiceTier1Seconds ?? 30} seconds costs ${voice30} (${voiceNaira}).`}</Banner>
         ) : null}

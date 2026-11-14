@@ -6,15 +6,18 @@ import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { countChars } from "@/lib/shared/text-price";
 import { AnonymousSwitch } from "./AnonymousSwitch";
-import { useReplyAnon } from "./reply-anon";
-import { failText, isOutOfPosts, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
+import { OWN_NAMELESS_NOTE, useReplyAnon } from "./reply-anon";
+import { InView } from "@/components/InView";
+import { failText, isOutOfPosts, needsNewKey, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
 
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 
 /** The reply box drawn inside the Thread at 1440. A reply spends a free post or tokens like an answer, so a 402 keeps the words in this browser
  *  and sends the person to buy tokens, then back here. */
-export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, onVoice }: {
+export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, onVoice, ownNameless }: {
+  /** The writer of a nameless answer replying under it: always nameless (the server decides), so no switch is offered. */
+  ownNameless?: boolean;
   aid: string; qid: string; who: string; stance?: ReplyStance; allow: Allowances; onPosted: () => void; onBuy: (href: string) => void;
   /** Opens the voice reply (the same recorder as an answer). */
   onVoice?: () => void;
@@ -40,7 +43,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
     setSending(true);
     setMsg(null);
     // The Idempotency-Key belongs to the exact body: the words, the stance and the switch. Flip the switch and it is a new request.
-    const anonNow = anon.ref.current;
+    const anonNow = ownNameless ? true : anon.ref.current;
     if (!key.current || key.current.text !== body || key.current.anon !== anonNow || key.current.st !== st) key.current = { text: body, anon: anonNow, st, k: uuidKey() };
     try {
       await api.createReply(aid, st, body, key.current.k, anonNow);
@@ -52,6 +55,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
       onPosted();
     } catch (e) {
       if (isOutOfPosts(e)) { saveTyped(slot, body); onBuy(`/units/buy?from=${encodeURIComponent(`/q/${qid}/a/${aid}`)}`); return; }
+      if (needsNewKey(e)) key.current = null; // the server refused the key as spent: the next tap carries a new one
       setMsg(failText(e));
     } finally {
       busy.current = false;
@@ -60,7 +64,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
   }
   return (
     <div className="grid gap-2">
-      <AnonymousSwitch on={anon.on} disabled={sending} onChange={anon.set} />
+      {ownNameless ? <p data-testid="own-nameless" className="m-0 rounded-[var(--radius-l)] bg-[var(--surface)] px-4 py-[14px] text-[13px] font-medium leading-[18px] text-[var(--ink-2)] shadow-[inset_0_0_0_1px_var(--line)]">{OWN_NAMELESS_NOTE}</p> : <AnonymousSwitch on={anon.on} disabled={sending} onChange={anon.set} />}
       <Composer
         freeLeft={allow.freePostsRemaining}
         maxChars={c.textMaxChars}
@@ -80,7 +84,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
         onSubmit={() => void send()}
       />
       {sending ? <Banner tone="info">Posting your reply.</Banner> : null}
-      {msg ? <Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner> : null}
+      {msg ? <InView key={msg}><Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner></InView> : null}
     </div>
   );
 }

@@ -25,6 +25,7 @@ vi.mock("@/lib/audio-ref/recorder", () => {
 import { ReplyComposer } from "@/features/talk/ReplyComposer";
 import { VoiceBox } from "@/features/speak/VoiceBox";
 import { readAnonPref } from "@/lib/anon-pref";
+import { ApiError } from "@/lib/api/client";
 import { ReplyRow } from "@/features/profile/PostRow";
 import type { Reply } from "@/lib/api/talk";
 
@@ -101,6 +102,49 @@ describe("V-FIX-D: Post without my name on a text reply", () => {
     // the key belongs to the exact body: each flip of the switch is a new request with a new key
     const keys = talk.createReply.mock.calls.map((c) => c[3]);
     expect(new Set(keys).size).toBe(3);
+  });
+});
+
+describe("V-FIX-D: the writer of a nameless answer replying under it", () => {
+  it("is shown that the reply stays nameless, is offered no switch, and sends anonymous true", async () => {
+    render(<ReplyComposer ownNameless aid="a1" qid="q1" who="Anonymous" allow={allow} onPosted={() => {}} onBuy={() => {}} />);
+    expect(screen.queryByRole("switch", { name: "Post without my name" })).toBeNull();
+    expect(screen.getByTestId("own-nameless").textContent).toContain("stays without your name");
+    await typeAndPick("Under my own");
+    await userEvent.click(post());
+    await waitFor(() => expect(talk.createReply).toHaveBeenCalledTimes(1));
+    expect(talk.createReply.mock.calls[0][4]).toBe(true);
+  });
+});
+
+describe("V-FIX-D: a reply drops its Idempotency-Key only after success or when the server asks for a new one", () => {
+  const fail = (status: number, code: string, message = "x") => new ApiError(status, code, message, true);
+  async function retried(err: ApiError | Error): Promise<[unknown, unknown]> {
+    talk.createReply.mockRejectedValueOnce(err).mockResolvedValue({});
+    render(<ReplyComposer aid="a1" qid="q1" who="@tunde.a" allow={allow} onPosted={() => {}} onBuy={() => {}} />);
+    await typeAndPick("Same words");
+    await userEvent.click(post());
+    await waitFor(() => expect(talk.createReply).toHaveBeenCalledTimes(1));
+    await screen.findByText("This did not post");
+    await userEvent.click(post());
+    await waitFor(() => expect(talk.createReply).toHaveBeenCalledTimes(2));
+    return [talk.createReply.mock.calls[0][3], talk.createReply.mock.calls[1][3]];
+  }
+  for (const [name, err] of [
+    ["500", fail(500, "INTERNAL")], ["502", fail(502, "BAD_GATEWAY")], ["504", fail(504, "TIMEOUT")], ["429", fail(429, "RATE_LIMITED")],
+    ["a network failure", new ApiError(0, "NETWORK", "offline", false)], ["a plain 409 CONFLICT", fail(409, "CONFLICT", "Another request is running.")],
+  ] as [string, ApiError][])
+    it(`keeps the key after ${name}`, async () => {
+      const [a, b] = await retried(err);
+      expect(b).toBe(a);
+    });
+  it("takes a new key after the 409 CONFLICT that asks for one, and after IDEMPOTENCY_KEY_REUSED", async () => {
+    const [a, b] = await retried(fail(409, "CONFLICT", "Start again with a new key."));
+    expect(b).not.toBe(a);
+    cleanup();
+    talk.createReply.mockReset().mockResolvedValue({});
+    const [c, d] = await retried(fail(409, "IDEMPOTENCY_KEY_REUSED"));
+    expect(d).not.toBe(c);
   });
 });
 

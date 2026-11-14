@@ -19,6 +19,10 @@ export interface QuestionHeroProps {
   speakLabel?: string;
   /** The big button's icon. Default the microphone. */
   speakIcon?: IconName;
+  /** V-PRELAUNCH: set while the question has not opened ("Opens Sunday 15 November"). The card says "Coming up", shows this in place of the counts and has no buttons. */
+  opensLabel?: string;
+  /** The one thing a coming-up card can do: share the question. */
+  onShare?: () => void;
   /** True once the viewer has answered: the card says so and the quick Listen button (now the big one) is not repeated. */
   answered?: boolean;
   onSpeak?: () => void;
@@ -33,8 +37,11 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
     <section className={cx('vx-hero', p.className)} aria-labelledby="vx-hero-q">
       <div className="vx-hero__card">
         <img className="vx-hero__motif" src={ASSETS.markWhite} alt="" aria-hidden="true" />
-        <span className="vx-hero__sticker">{p.eyebrow || "Today’s question"}</span>
+        <span className="vx-hero__sticker">{p.opensLabel ? "Coming up" : p.eyebrow || "Today’s question"}</span>
         <h2 className="vx-hero__q" id="vx-hero-q">{p.question}</h2>
+        {p.opensLabel ? (
+          <div className="vx-hero__meta"><span>{p.opensLabel}</span>{p.onShare ? <Button size="s" icon="share-2" onClick={p.onShare}>Share</Button> : null}</div>
+        ) : (
         <div className="vx-hero__meta">
           {p.avatars ? <AvatarStack names={p.avatars} /> : null}
           <span className="vx-num">{voicesText(p.voices) + ' so far'}</span>
@@ -51,6 +58,8 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
             </>
           ) : null}
         </div>
+        )}
+        {p.opensLabel ? null : (
         <div className="vx-hero__cta">
           <Button variant="dark" size="l" icon={p.speakIcon || 'mic'} className="vx-hero__speak" onClick={p.onSpeak}>{p.speakLabel || 'Speak'}</Button>
           <div className="vx-hero__quick">
@@ -59,6 +68,7 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
             <Button size="s" icon="vote" onClick={p.onVote}>Vote</Button>
           </div>
         </div>
+        )}
       </div>
     </section>
   );
@@ -67,6 +77,8 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
 export interface TopicOfWeekProps {
   title: string;
   meta?: string;
+  /** The week has not begun: the rail card has no "Join the conversation" button. */
+  upcoming?: boolean;
   eyebrow?: string;
   icon?: IconName;
   variant?: 'banner' | 'rail';
@@ -81,7 +93,7 @@ export function TopicOfWeek(p: TopicOfWeekProps): ReactElement {
         <span className="vx-eyebrow vx-totw__eye">Topic of the week</span>
         <span className="vx-totw__title">{p.title}</span>
         {p.meta ? <span className="vx-totw__meta">{p.meta}</span> : null}
-        <Button block onClick={p.onClick}>Join the conversation</Button>
+        {p.upcoming ? null : <Button block onClick={p.onClick}>Join the conversation</Button>}
       </section>
     );
   }

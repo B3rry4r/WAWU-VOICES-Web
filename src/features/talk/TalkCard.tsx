@@ -45,10 +45,10 @@ export function useToast(): [ReactNode, PushToast] {
 }
 
 /** The share sheet from the reach screens (W8b), opened for a question or a voice. */
-export function useShareSheet(): [ReactNode, (type: "QUESTION" | "ANSWER", id: string) => void] {
-  const [t, setT] = useState<{ type: "QUESTION" | "ANSWER"; id: string } | null>(null);
-  const node = t ? <ShareSheet objectType={t.type} objectId={t.id} onClose={() => setT(null)} /> : null;
-  return [node, (type, id) => setT({ type, id })];
+export function useShareSheet(): [ReactNode, (type: "QUESTION" | "ANSWER", id: string, opts?: { notOpen?: boolean }) => void] {
+  const [t, setT] = useState<{ type: "QUESTION" | "ANSWER"; id: string; notOpen?: boolean } | null>(null);
+  const node = t ? <ShareSheet objectType={t.type} objectId={t.id} notOpen={t.notOpen} onClose={() => setT(null)} /> : null;
+  return [node, (type, id, opts) => setT({ type, id, notOpen: opts?.notOpen })];
 }
 
 interface Props {
@@ -62,6 +62,8 @@ interface Props {
   unfolded?: boolean;
   compact?: boolean;
   className?: string;
+  /** A list may draw the card inside its own frame (a tap target). Only the card itself goes in it, never the sheets, and a hidden card draws no frame. */
+  frame?: (card: ReactNode) => ReactNode;
   /** Called after a change the parent may want (reaction or like totals). */
   onChange?: (a: Answer) => void;
   /** Called after I delete my own voice, so the page can leave it. */
@@ -88,7 +90,7 @@ function useBlockedHere(id: string | undefined): boolean {
 
 /** The design system card wired to the real API. The card is controlled (liked, likeCount, reaction, reactionCounts, trayOpen, playing):
  *  it shows what the server last said, a tap is sent through onLike / onReact / onReply / onShare / onMore, and a refusal puts the props back. */
-export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, className, onChange, onDeleted }: Props) {
+export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, className, frame, onChange, onDeleted }: Props) {
   const router = useRouter();
   const [a, setA] = useState(answer);
   const [more, setMore] = useState(false);
@@ -209,7 +211,10 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   return (
     <>
       {/* LCH-02: the word sits above the card, as the MoodAnswers board draws it. */}
-      {a.mood ? <div className="grid gap-[6px]"><MoodChip mood={a.mood} />{cardEl}</div> : cardEl}
+      {(() => {
+        const body = a.mood ? <div className="grid gap-[6px]"><MoodChip mood={a.mood} className="justify-self-start" />{cardEl}</div> : cardEl;
+        return frame ? frame(body) : body;
+      })()}
       {shareNode}
       {editing ? <EditSheet answer={a} onClose={() => setEditing(false)} onSaved={(n) => { upd(n); setEditing(false); push("Your post is updated.", "success"); }} /> : null}
       {deleting ? (

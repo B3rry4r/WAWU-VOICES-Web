@@ -3,11 +3,23 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/vx";
 import { listResultThreads } from "@/lib/api/results";
+import { getLatestWeeklyReport } from "@/lib/api/reach";
 
 const CARD = "flex items-center gap-3 rounded-[var(--radius-l)] bg-[var(--surface)] p-4 text-[var(--ink)] no-underline shadow-[inset_0_0_0_1px_var(--line)]";
 
-/** The weekly report on a phone. Desktop has it in the side bar, and phone has no room for a sixth tab, so Home and Discover carry this row. */
-export function WeeklyReportLink({ className }: { className?: string }) {
+/**
+ * The weekly report on a phone. Desktop has it in the side bar, and phone has no room for a sixth tab, so Home and Discover carry this row.
+ * V-PRELAUNCH round 2: drawn only when a report exists. While that is being asked it is not drawn; if the API cannot say, it is drawn
+ * only when `questionOpen` (as before the launch work).
+ */
+export function WeeklyReportLink({ className, questionOpen = true }: { className?: string; questionOpen?: boolean }) {
+  const [has, setHas] = useState<"yes" | "none" | "unknown" | null>(null);
+  useEffect(() => {
+    let live = true;
+    getLatestWeeklyReport().then((r) => live && setHas(r ? "yes" : "none"), () => live && setHas("unknown"));
+    return () => { live = false; };
+  }, []);
+  if (has === null || has === "none" || (has === "unknown" && !questionOpen)) return null;
   return (
     <Link href="/weekly" className={`${CARD} ${className ?? ""}`}>
       <Icon name="chart-column" size={24} />

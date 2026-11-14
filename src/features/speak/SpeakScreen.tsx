@@ -11,6 +11,8 @@ import * as api from "@/lib/api/speak";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
+import { needsNewKey } from "@/lib/api/keys";
+import { InView } from "@/components/InView";
 import { clearDraft, draftIsStale, loadDraft, saveDraft, STALE_NOTE, type Draft } from "./draft";
 import { claimSend, releaseSend } from "./outbox";
 import { freeCovers, peaksFromLevels, refusalText, tokenFor, uuidKey, voicePriceMilli } from "./logic";
@@ -111,11 +113,11 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const mood = useMoodWord(question);
   const config = info?.config;
   const allowance = info?.allowance ?? null;
-  const freeSeconds = allowance?.costs.freeVoiceSeconds ?? config?.voiceFreeSeconds ?? 10;
+  const freeSeconds = allowance?.costs.freeVoiceSeconds ?? config?.voiceFreeSeconds ?? 60;
   const tokens = allowance?.extraVoiceTokens ?? [];
   // V-36: anyone may record up to the longest voice message; the price follows the length when it is sent.
   const limit = allowance?.maxVoiceSeconds ?? allowance?.costs.voiceMaxSeconds ?? 60;
-  const freeTotal = config?.freePosts ?? 10;
+  const freeTotal = config?.freePosts ?? 2;
   const freeLeft = allowance?.freePostsRemaining ?? freeTotal;
   const offers = config?.extraVoice ?? [];
   const qid = question?.id;
@@ -386,7 +388,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     let stage: "create" | "upload" | "later" = "create";
     try {
       if (!st.clipId) {
-        const tok = tokenFor(tokens, take.seconds, freeSeconds);
+        const tok = tokenFor(tokens, take.seconds, freeSeconds, freeLeft);
         const up = await api.createVoiceClip({
           mime: baseMime(take.mime) as "audio/webm" | "audio/mp4" | "audio/ogg",
           sizeBytes: take.blob.size,
@@ -432,6 +434,15 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       }
       if (e instanceof Error && e.message === "CLIP_SLOW") {
         pushNote({ tone: "info", text: "Your voice is still being prepared. Tap Send again in a moment.", action: "Send", onAction: () => void send() });
+        return;
+      }
+      if (needsNewKey(e)) {
+        // The server refused the key as spent: the same recording goes out under a new key (and a new clip), here and in the kept draft.
+        sendState.current = null;
+        const next: Take = { ...take, key: uuidKey() };
+        setTake(next);
+        void saveDraft({ ...next, questionId: qid, savedAt: Date.now() } satisfies Draft);
+        pushNote({ tone: "danger", text: refusalText(e) });
         return;
       }
       if (e instanceof ApiError && e.status === 402) {
@@ -505,13 +516,21 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     return `${tokensLabel(voicePriceMilli(seconds, costs))} tokens`;
   };
   const covered = (seconds: number) => freeLeft > 0 && freeCovers(seconds, freeSeconds);
+  // An old extra voice token the person already paid for covers a message once the free posts are used.
+  const usesToken = (seconds: number) => !!tokenFor(tokens, seconds, freeSeconds, freeLeft);
+  const held = freeLeft === 0 ? [...tokens].filter((t) => t.status === "AVAILABLE").sort((a, b) => b.maxSeconds - a.maxSeconds)[0] : undefined;
   const idleHint = (
     <p className="vx-rec__hint">
       {"Tap to record. You have "}
       <b>{`${limit} seconds`}</b>
       {". "}
-      {freeLeft > 0 ? `A free post covers ${freeSeconds} seconds. ` : ""}
-      {costs ? `Up to ${t1} seconds is ${priceFor(t1)}, longer is ${priceFor(limit)}, charged when you send.` : null}
+      {freeLeft > 0
+        ? `This one is free, up to ${freeSeconds === 60 ? "a minute" : `${freeSeconds} seconds`}.`
+        : held
+          ? `Your extra voice token covers a message of up to ${held.maxSeconds} seconds. Nothing is charged in tokens.`
+          : costs
+            ? `Up to ${t1} seconds is ${priceFor(t1)}, longer is ${priceFor(limit)}, charged when you send.`
+          : null}
     </p>
   );
   const liveHint = (
@@ -533,9 +552,11 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         {live ? <span className="vx-rec__dot">Recording</span> : <Pill left={freeLeft} total={freeTotal} />}
       </div>
       {notes.map((n) => (
-        <Banner key={n.text} tone={n.tone} title={n.title} action={n.action} onAction={n.onAction} onClose={() => setNotes((l) => l.filter((x) => x !== n))}>
-          {n.text}
-        </Banner>
+        <InView key={n.text}>
+          <Banner tone={n.tone} title={n.title} action={n.action} onAction={n.onAction} onClose={() => setNotes((l) => l.filter((x) => x !== n))}>
+            {n.text}
+          </Banner>
+        </InView>
       ))}
       <p className="vx-rec__q">{question.text}</p>
       {mood.word && qid ? <div className="sp-mood"><MoodWordNote mood={mood.word} changeHref={pickHref(qid)} /></div> : null}
@@ -562,6 +583,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         <>
           <TakePlayer blob={take.blob} seconds={take.seconds} peaks={take.peaks} />
           <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>
+          {usesToken(take.seconds) ? <p className="vx-rec__hint" role="status">This message uses the extra voice token you already bought. Nothing is charged in tokens.</p> : null}
           <AnonymousSwitch onForest on={anon} disabled={!!sending} onChange={chooseAnon} />
           {signedIn === false ? <p className="sp-fine">You sign in to post. Your recording waits here in this browser.</p> : null}
           {sending ? (
@@ -573,7 +595,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           <div className="vx-rec__actions">
             <Button variant="onforest" icon="rotate-ccw" disabled={!!sending} onClick={() => dropTake(true)}>Re-record</Button>
             <Button variant="onforest" icon="trash-2" disabled={!!sending} onClick={() => dropTake(true)}>Delete</Button>
-            <Button size="l" icon="send" loading={!!sending} onClick={() => void send()}>{covered(take.seconds) ? "Send" : `Send for ${priceFor(take.seconds)}`}</Button>
+            <Button size="l" icon="send" loading={!!sending} onClick={() => void send()}>{covered(take.seconds) || usesToken(take.seconds) ? "Send" : `Send for ${priceFor(take.seconds)}`}</Button>
           </div>
         </>
       ) : null}

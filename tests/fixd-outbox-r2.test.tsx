@@ -90,6 +90,29 @@ describe("V-FIX-D round 2: the outbox says what it is doing and can be retried",
   });
 });
 
+describe("V-FIX-D: the offline sender drops its key only after success or when the server asks for a new one", () => {
+  const keysAfter = async (err: ApiError) => {
+    speak.createVoiceAnswer.mockRejectedValueOnce(err).mockResolvedValue({ answer: { id: "ans1" } });
+    await saveDraft(draft());
+    render(<Outbox />);
+    await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
+    await screen.findByText(/Your saved voice was posted/);
+    return speak.createVoiceAnswer.mock.calls.map((c) => c[2]);
+  };
+  for (const [name, err] of [
+    ["500", new ApiError(500, "INTERNAL", "x", false)], ["502", new ApiError(502, "BAD_GATEWAY", "x", false)], ["504", new ApiError(504, "TIMEOUT", "x", false)],
+    ["429", new ApiError(429, "RATE_LIMITED", "x", true)], ["a plain 409 CONFLICT", new ApiError(409, "CONFLICT", "Another request is running.", true)],
+  ] as [string, ApiError][])
+    it(`keeps the key after ${name}`, async () => {
+      expect(await keysAfter(err)).toEqual(["key-r2", "key-r2"]);
+    });
+  it("takes a new key (kept on the device) after the 409 that asks for one", async () => {
+    const keys = await keysAfter(new ApiError(409, "CONFLICT", "Start again with a new key.", true));
+    expect(keys[0]).toBe("key-r2");
+    expect(keys[1]).not.toBe("key-r2");
+  });
+});
+
 describe("V-FIX-D round 2: two tabs never send one recording", () => {
   function fakeLocks() {
     const held = new Map<string, Promise<unknown>>();

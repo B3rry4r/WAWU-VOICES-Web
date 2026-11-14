@@ -1,5 +1,6 @@
 "use client";
 
+import { needsNewKey } from "@/lib/api/keys";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, NetworkError } from "@/lib/api/client";
 import { initPayment, type ExtraVoiceTokenKind, type PayMethod } from "@/lib/api/units";
@@ -18,6 +19,7 @@ export function startErrorText(e: unknown): string {
   if (e instanceof NetworkError) return "Could not reach VOICES. Check your connection and try again.";
   if (e instanceof ApiError) {
     if (e.status === 401) return "Your sign-in has ended. Sign in again to continue.";
+    if (needsNewKey(e)) return "That did not go through. Tap Pay to try again. Nothing was charged.";
     if (e.explained && e.message) return e.message;
   }
   return "Something went wrong. Nothing was charged. Try again.";
@@ -62,7 +64,7 @@ export function startCheckout(spec: CheckoutSpec, from?: string, go: (url: strin
       // The server refused the request itself (bad choice, no pack, key used for something else): the next tap is a clean
       // attempt. A 409 CONFLICT (a simultaneous request with this key won the race), a rate limit or a 5xx keeps the key,
       // so the retry gets the first payment back instead of making a second one.
-      if (e instanceof ApiError && (REFUSED.has(e.status) || e.code === "IDEMPOTENCY_KEY_REUSED" || e.code === "SUBSCRIPTION_ACTIVE")) dropAttempt(choice);
+      if (e instanceof ApiError && (REFUSED.has(e.status) || e.code === "IDEMPOTENCY_KEY_REUSED" || e.code === "SUBSCRIPTION_ACTIVE" || needsNewKey(e))) dropAttempt(choice);
       throw e;
     },
   );

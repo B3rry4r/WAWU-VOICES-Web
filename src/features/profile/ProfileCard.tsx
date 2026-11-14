@@ -54,6 +54,7 @@ export function ProfileCard(p: {
     <ProfileHeader
       name={name}
       handle={"@" + profile.handle}
+      verified={profile.verified === true}
       avatar={profile.avatarUrl ?? undefined}
       place={place ?? undefined}
       joined={joinedLabel(profile.joinedAt)}

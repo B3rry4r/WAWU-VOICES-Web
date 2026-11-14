@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { onAnonPref, readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 
+/** Said under a reply box when the writer of a nameless answer replies under it: the server makes that reply nameless whatever is sent. */
+export const OWN_NAMELESS_NOTE = "Your reply stays without your name, because your answer is without your name.";
+
 /** The stored-choice slot of one reply box. A reply and the answer it hangs off never share a choice. */
 export const replyAnonSlot = (answerId: string) => `reply:${answerId}`;
 
