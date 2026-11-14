@@ -437,7 +437,7 @@ export interface paths {
         };
         /**
          * Where my verification stands
-         * @description V-46: state is NOT_SUBSCRIBED, READY, UNDER_REVIEW, VERIFIED, REJECTED (reason in request.reason, in plain words) or LAPSED. Verified means an admin approved the ID and utility bill and the subscription is running; verifiedUntil is the end of the plan (a renewal extends it). Auth: signed in with a finished profile.
+         * @description V-46: state is NOT_SUBSCRIBED, READY, UNDER_REVIEW, VERIFIED, REJECTED (reason in request.reason, in plain words), EXPIRED (sent and never decided for 90 days: send again) or LAPSED. Verified means an admin approved the ID and utility bill and the subscription is running; verifiedUntil is the end of the plan (a renewal extends it). Auth: signed in with a finished profile.
          */
         get: operations["getMyVerification"];
         put?: never;
@@ -516,10 +516,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One request with signed links to the two documents
-         * @description V-46: the links stop working after 5 minutes (expiresAt). This is the only route that gives them. Each look is written to the audit log. Auth: signed in with role ADMIN.
+         * One request (no documents, no links)
+         * @description V-46: who, the plan, the state, and whether each document is still there. Never cached (Cache-Control: no-store). Auth: signed in with role ADMIN.
          */
         get: operations["adminGetVerification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verification/{requestId}/documents/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open one document: a signed link
+         * @description V-46: kind is id or bill. The link stops working after 5 minutes (expiresAt), serves the stored type as an attachment, and is made only here. Each open is written to the audit log (who and which document, never the link). 404 once the files are deleted. Never cached. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminOpenVerificationDocument"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5363,7 +5383,7 @@ export interface components {
         /** @description V-46. canUpload is true with a running subscription unless the person is verified or under review. documents says which of the two files are in the draft (the files themselves are never returned). */
         VerificationState: {
             /** @enum {string} */
-            state: "NOT_SUBSCRIBED" | "READY" | "UNDER_REVIEW" | "VERIFIED" | "REJECTED" | "LAPSED";
+            state: "NOT_SUBSCRIBED" | "READY" | "UNDER_REVIEW" | "VERIFIED" | "REJECTED" | "EXPIRED" | "LAPSED";
             verified: boolean;
             /** Format: date-time */
             verifiedUntil: string | null;
@@ -5389,7 +5409,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED";
+            status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
             /** Format: date-time */
             submittedAt: string | null;
             /** Format: date-time */
@@ -5447,8 +5467,12 @@ export interface components {
             subscription: components["schemas"]["VerificationPlan"] | null;
             reason: string | null;
             documentsDeleted: boolean;
-            idDocument: components["schemas"]["VerificationDocumentLink"] | null;
-            billDocument: components["schemas"]["VerificationDocumentLink"] | null;
+            idDocument: components["schemas"]["VerificationDocumentInfo"] | null;
+            billDocument: components["schemas"]["VerificationDocumentInfo"] | null;
+        };
+        /** @description That the document is there and its type. Its link is made by GET /admin/verification/{requestId}/documents/{kind} when an admin opens it. */
+        VerificationDocumentInfo: {
+            mime: string;
         };
         /** @description note is for the audit line only; the person does not see it. */
         ApproveVerificationRequest: {
@@ -6520,6 +6544,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminVerification"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminOpenVerificationDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationDocumentLink"];
                 };
             };
             401: components["responses"]["E401"];

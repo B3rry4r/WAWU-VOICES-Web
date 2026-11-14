@@ -22,7 +22,7 @@ lead: What VOICES collects, why, who helps us handle it, and what you can ask us
 - A guest id: if you have not signed in, your browser makes a random id so we can count a like or an advert once. It is kept in your browser.
 - Our servers see your network address when you connect. We use it to limit abuse.
 - A photo of a result sheet, if you add one to a result post.
-- Verification: if you ask to be verified, a photo or PDF of your government ID and of a utility bill. They are kept privately, are not shown to other people, and only the WAWU team who check them can open them. We keep the decision (who decided, when, and the result). The files are deleted 90 days after the decision, or at once if you delete your account.
+- Verification: if you ask to be verified, a photo or PDF of your government ID and of a utility bill. They are kept privately, are not shown to other people, and only the WAWU team who check them can open them. We keep the decision (who decided, when, and the result). The files are deleted 90 days after the decision, or when your account is deleted, after the 14-day wait. If nobody decides, they are deleted 90 days after you send them.
 
 ## Why we use it
 To run VOICES: sign you in, show your posts, count votes once per person, take payments, keep the community safe, answer reports and support messages, choose adverts, and write the weekly report. We do not sell your personal information to advertisers.
@@ -45,7 +45,7 @@ A photo of a result sheet is never public. Only the WAWU team can see it, to che
 ## How long we keep it
 - Your account data and posts stay while your account is open. A post you delete disappears from the app, and its text is blanked when your account is deleted.
 - When you delete your account we keep it for 14 days. Then every post and reply is blanked, including ones you deleted yourself. Your profile details, likes, reactions, saves, the record of which voices you played, blocks, notifications, settings and invite links (the one you sent and the one that brought you) are deleted. Your link is removed from support messages and from share, advert and usage events. Transcripts are wiped. Unspent tokens are lost.
-- ID and utility bill files are deleted 90 days after the team decides, and at once when your account is deleted.
+- ID and utility bill files are deleted 90 days after the team decides (90 days after you send them, if nobody decides), and when your account is deleted, after the 14-day wait.
 - Recordings, profile photos, result sheet photos, data download files, share images and videos you asked us to make are deleted from storage by a regular clean-up. A video is deleted when its answer is deleted or removed, and when your account is deleted. Uploads that were never finished are deleted after 24 hours.
 - Some records stay without your name on them: votes, which keep the one-way code made from your phone number so that one phone votes once; result totals, which stay as a public record; payment records, so that our accounts add up; and moderation records. We keep payment records for seven years, as financial and tax rules require.
 - Nightly database copies are kept for 7 days.

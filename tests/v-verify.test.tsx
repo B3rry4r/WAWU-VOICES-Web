@@ -203,11 +203,8 @@ describe("admin: the Verification queue", () => {
     documentsDeleted: false,
     ...over,
   });
-  const detail = (it: ReturnType<typeof item>) => ({
-    ...it,
-    idDocument: { url: "https://signed.test/verification/a?exp=1", mime: "image/jpeg", expiresAt: new Date(Date.now() + 300_000).toISOString() },
-    billDocument: { url: "https://signed.test/verification/b?exp=1", mime: "application/pdf", expiresAt: new Date(Date.now() + 300_000).toISOString() },
-  });
+  const detail = (it: ReturnType<typeof item>) => ({ ...it, idDocument: { mime: "image/jpeg" }, billDocument: { mime: "application/pdf" } });
+  const link = (kind: string) => ({ url: `https://signed.test/verification/${kind === "id" ? "a" : "b"}?exp=1`, mime: kind === "id" ? "image/jpeg" : "application/pdf", expiresAt: new Date(Date.now() + 300_000).toISOString() });
   function stubAdmin(roles: string[], items = [item("r1", "ada"), item("r2", "bola")], decide?: (c: Call) => Response | undefined) {
     vi.stubGlobal(
       "fetch",
@@ -217,6 +214,8 @@ describe("admin: the Verification queue", () => {
         if (c.url.endsWith("/me")) return json(200, me(roles));
         const d = decide?.(c);
         if (d) return d;
+        const dm = c.url.match(/\/admin\/verification\/[^/?]+\/documents\/(id|bill)$/);
+        if (dm) return json(200, link(dm[1]));
         const m = c.url.match(/\/admin\/verification\/([^/?]+)$/);
         if (m && c.method === "GET") return json(200, detail(items.find((i) => i.id === m[1]) ?? items[0]));
         if (c.url.includes("/admin/verification") && c.method === "GET") return json(200, { items, nextCursor: null });
@@ -250,9 +249,14 @@ describe("admin: the Verification queue", () => {
     expect(calls.find((c) => c.url.includes("/admin/verification?status=pending"))).toBeTruthy();
     const docs = await screen.findAllByTestId("doc");
     expect(docs).toHaveLength(2);
-    expect(within(docs[0]).getByRole("img", { name: "Government ID" }).getAttribute("src")).toBe("https://signed.test/verification/a?exp=1");
-    expect(within(docs[1]).getByRole("link", { name: "Open the PDF" }).getAttribute("href")).toBe("https://signed.test/verification/b?exp=1");
-    expect(screen.getByText(/stop working after 5 minutes/)).toBeTruthy();
+    // opening the page asked for no link: a document is opened on its own, by a tap
+    expect(calls.some((c) => c.url.includes("/documents/"))).toBe(false);
+    await userEvent.click(within(docs[0]).getByRole("button", { name: "Show the government id" }));
+    await userEvent.click(within(docs[1]).getByRole("button", { name: "Show the utility bill" }));
+    expect(calls.filter((c) => c.url.includes("/documents/")).map((c) => c.url.split("/documents/")[1])).toEqual(["id", "bill"]);
+    expect((await within(docs[0]).findByRole("img", { name: "Government ID" })).getAttribute("src")).toBe("https://signed.test/verification/a?exp=1");
+    expect((await within(docs[1]).findByRole("link", { name: "Open the PDF" })).getAttribute("href")).toBe("https://signed.test/verification/b?exp=1");
+    expect(screen.getAllByText(/stops working after 5 minutes/).length).toBe(2);
   });
 
   it("Approve posts to the approve route and takes the row off the list", async () => {
@@ -305,7 +309,40 @@ describe("admin: the Verification queue", () => {
   });
 });
 
+describe("what the person reads", () => {
+  it("the reject choices carry the exact words the API sends the person", async () => {
+    const { REASONS } = await import("@/features/admin/VerificationPage");
+    expect(REASONS.map((r) => r.code)).toEqual(["ID_UNREADABLE", "ID_NOT_VALID", "ID_EXPIRED", "BILL_UNREADABLE", "BILL_TOO_OLD", "DETAILS_DO_NOT_MATCH", "SUBSCRIPTION_ENDED", "OTHER"]);
+    for (const r of REASONS) expect(r.person).not.toMatch(/[\u2013\u2014]/);
+  });
+  it("an expired request tells the person it ran out and shows the form", async () => {
+    signIn();
+    stubVerify(() => withState({ state: "EXPIRED" }));
+    render(<VerifyScreen />);
+    expect(await screen.findByText("Your request ran out")).toBeTruthy();
+    expect(screen.getByText("Send your documents")).toBeTruthy();
+  });
+  it("no screen promises DMs", async () => {
+    signIn();
+    for (const st of [withState({ state: "NOT_SUBSCRIBED", subscription: null }), withState({ state: "VERIFIED", verified: true, verifiedUntil: "2027-02-13T23:00:00.000Z" })]) {
+      stubVerify(() => st);
+      const { unmount } = render(<VerifyScreen />);
+      await screen.findByRole("heading", { level: 2 });
+      expect(document.body.textContent).not.toMatch(/\bDMs?\b|chat/i);
+      unmount();
+    }
+  });
+});
+
 describe("the verified tick", () => {
+  it("VerifiedTick draws only for a verified person", async () => {
+    const { VerifiedTick } = await import("@/features/verify/VerifiedTick");
+    const { unmount } = render(<VerifiedTick verified />);
+    expect(screen.getByRole("img", { name: "Verified" })).toBeTruthy();
+    unmount();
+    render(<VerifiedTick verified={false} />);
+    expect(screen.queryByRole("img", { name: "Verified" })).toBeNull();
+  });
   it("shows beside the name on an answer, only for a verified author", () => {
     const a = (v: boolean) => ({ id: "a1", author: { id: "u", handle: "ada", displayName: "Ada", state: null, avatarUrl: null, verified: v }, createdAt: new Date().toISOString(), kind: "TEXT", body: "hi", clip: null, labels: [], likeCount: 0, replyCount: 0, reactionCount: 0, reactionBreakdown: [], iLiked: false, news: null }) as never;
     const props = (v: boolean) => answerCardProps(a(v));

@@ -87,14 +87,15 @@ describe("SpeakScreen", () => {
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.localStorage.clear(); });
 
-  it("a guest sees the ready recorder, the free post pill and the voice prices from the API; no extra voice to buy", async () => {
+  it("a guest sees the ready recorder, the free post pill and the free line (prices only once no free post is left); no extra voice to buy", async () => {
     render(<SpeakScreen questionId="q1" />);
     await screen.findByRole("button", { name: "Start recording" });
     expect(screen.getAllByText("10 free posts left").length).toBeGreaterThan(0);
     const hint = screen.getByText(/Tap to record\. You have/).textContent ?? "";
     expect(hint).toContain("60 seconds");
-    expect(hint).toContain("A free post covers 10 seconds.");
-    expect(hint).toContain("Up to 30 seconds is 78 tokens, longer is 100 tokens, charged when you send.");
+    // V-46: with a free post left the hint says only that this one is free; token prices show when none are left
+    expect(hint).toContain("This one is free, up to 10 seconds.");
+    expect(hint).not.toMatch(/tokens/);
     expect(screen.queryByText("Need more time?")).toBeNull();
     expect(screen.queryByRole("button", { name: /Up to 1 minute/ })).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();

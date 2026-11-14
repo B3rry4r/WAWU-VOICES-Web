@@ -838,9 +838,9 @@ paths:
       summary: Where my verification stands
       security:
       - wawuId: []
-      description: 'V-46: state is NOT_SUBSCRIBED, READY, UNDER_REVIEW, VERIFIED, REJECTED (reason in request.reason, in plain words) or LAPSED.
-        Verified means an admin approved the ID and utility bill and the subscription is running; verifiedUntil is the end of the plan (a renewal
-        extends it). Auth: signed in with a finished profile.'
+      description: 'V-46: state is NOT_SUBSCRIBED, READY, UNDER_REVIEW, VERIFIED, REJECTED (reason in request.reason, in plain words), EXPIRED
+        (sent and never decided for 90 days: send again) or LAPSED. Verified means an admin approved the ID and utility bill and the subscription
+        is running; verifiedUntil is the end of the plan (a renewal extends it). Auth: signed in with a finished profile.'
       responses:
         '200':
           description: OK
@@ -978,13 +978,13 @@ paths:
       operationId: adminGetVerification
       tags:
       - verification
-      summary: One request with signed links to the two documents
+      summary: One request (no documents, no links)
       security:
       - wawuId: []
       x-wawu-roles:
       - ADMIN
-      description: 'V-46: the links stop working after 5 minutes (expiresAt). This is the only route that gives them. Each look is written to
-        the audit log. Auth: signed in with role ADMIN.'
+      description: 'V-46: who, the plan, the state, and whether each document is still there. Never cached (Cache-Control: no-store). Auth: signed
+        in with role ADMIN.'
       parameters:
       - name: requestId
         in: path
@@ -999,6 +999,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminVerification'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/verification/{requestId}/documents/{kind}:
+    get:
+      operationId: adminOpenVerificationDocument
+      tags:
+      - verification
+      summary: 'Open one document: a signed link'
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - ADMIN
+      description: 'V-46: kind is id or bill. The link stops working after 5 minutes (expiresAt), serves the stored type as an attachment, and
+        is made only here. Each open is written to the audit log (who and which document, never the link). 404 once the files are deleted. Never
+        cached. Auth: signed in with role ADMIN.'
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: kind
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationDocumentLink'
         '401':
           $ref: '#/components/responses/E401'
         '403':
@@ -12698,6 +12739,7 @@ components:
           - UNDER_REVIEW
           - VERIFIED
           - REJECTED
+          - EXPIRED
           - LAPSED
         verified:
           type: boolean
@@ -12776,6 +12818,7 @@ components:
           - PENDING
           - APPROVED
           - REJECTED
+          - EXPIRED
         submittedAt:
           type:
           - string
@@ -12948,11 +12991,11 @@ components:
           type: boolean
         idDocument:
           oneOf:
-          - $ref: '#/components/schemas/VerificationDocumentLink'
+          - $ref: '#/components/schemas/VerificationDocumentInfo'
           - type: 'null'
         billDocument:
           oneOf:
-          - $ref: '#/components/schemas/VerificationDocumentLink'
+          - $ref: '#/components/schemas/VerificationDocumentInfo'
           - type: 'null'
       additionalProperties: false
       required:
@@ -12966,6 +13009,16 @@ components:
       - documentsDeleted
       - idDocument
       - billDocument
+    VerificationDocumentInfo:
+      type: object
+      properties:
+        mime:
+          type: string
+      additionalProperties: false
+      required:
+      - mime
+      description: That the document is there and its type. Its link is made by GET /admin/verification/{requestId}/documents/{kind} when an admin
+        opens it.
     ApproveVerificationRequest:
       type: object
       properties:

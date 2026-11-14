@@ -20,7 +20,7 @@ export function MoodPickScreen({ qid }: { qid: string }) {
   const [q, setQ] = useState<api.Question | null>(null);
   const [err, setErr] = useState<unknown>(null);
   const [tries, setTries] = useState(0);
-  const [seconds, setSeconds] = useState(10);
+  const [seconds, setSeconds] = useState<number | null>(null);
   const [word, setWord] = useState<Mood | null>(null);
   const [hint, setHint] = useState(false);
   // LCH-06: "Share my word", on by default. Signed in it is saved at once; before that it waits in this browser.
@@ -102,7 +102,7 @@ export function MoodPickScreen({ qid }: { qid: string }) {
           </p>
         </section>
         <section className="flex flex-col gap-[10px]">
-          <Button size="l" icon="mic" block onClick={() => go("speak")}>{`Say it in ${seconds} seconds`}</Button>
+          <Button size="l" icon="mic" block onClick={() => go("speak")}>{seconds ? `Say it in ${seconds} seconds` : "Say it"}</Button>
           <Button size="l" variant="secondary" icon="message-square" block onClick={() => go("write")}>Type it instead</Button>
         </section>
         <ShareWordSwitch on={shareWord} busy={shareBusy} onChange={(v) => void changeShareWord(v)} />

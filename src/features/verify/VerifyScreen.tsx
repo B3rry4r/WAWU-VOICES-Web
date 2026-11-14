@@ -114,7 +114,7 @@ function Body({ state, onState }: { state: VerificationState; onState: (s: Verif
       return (
         <Card label="Subscribe first" className="flex flex-col gap-3">
           <h2 className="m-0 text-body-strong">Verification comes with a subscription</h2>
-          <p className="m-0 text-body text-ink-2">Subscribe to a plan, then send your government ID and a utility bill. When the team has checked them you get a verified tick, and you can suggest ideas and chat other people in their DMs.</p>
+          <p className="m-0 text-body text-ink-2">Subscribe to a plan, then send your government ID and a utility bill. When the team has checked them you get a verified tick, and you can suggest ideas on What Next.</p>
           <Button size="l" block href="/units/buy#plans">
             See the plans
           </Button>
@@ -143,7 +143,7 @@ function Body({ state, onState }: { state: VerificationState; onState: (s: Verif
           </div>
           <p className="m-0 text-body text-ink-2">
             {state.verifiedUntil ? `Your tick shows beside your name until ${dayLabel(state.verifiedUntil)}, when your plan ends. ` : ""}
-            Renew your plan to stay verified. You can suggest ideas on What Next and chat other people in their DMs.
+            Renew your plan to stay verified. You can suggest ideas on What Next.
           </p>
           <div>
             <Button variant="secondary" size="s" href="/units/buy#plans">
@@ -157,6 +157,15 @@ function Body({ state, onState }: { state: VerificationState; onState: (s: Verif
         <div className="flex flex-col gap-4">
           <Banner tone="danger" title="We could not approve your documents">
             {state.request?.reason ?? "Send them again and we will look again."}
+          </Banner>
+          <Documents state={state} onState={onState} />
+        </div>
+      );
+    case "EXPIRED":
+      return (
+        <div className="flex flex-col gap-4">
+          <Banner tone="info" title="Your request ran out">
+            Nobody checked it in 90 days, so your documents were deleted. Send them again and we will look.
           </Banner>
           <Documents state={state} onState={onState} />
         </div>

@@ -24,11 +24,13 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
 
 export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number }
 
-export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel }: {
+export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel }: {
   purpose: Purpose;
   maxSeconds: number;
   /** The length a free post covers; a longer take may need an old voice token, as on the record screen. */
   freeSeconds: number;
+  /** Free posts the person has left. With none, a token they already hold covers the message. Default: some left. */
+  freeLeft?: number;
   tokens?: api.ExtraVoiceToken[];
   hint?: ReactNode;
   /** The words on the Send button for this length ("Send" or "Send for 3 tokens"). */
@@ -140,7 +142,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, tokens, hint, sendL
     let stage: "create" | "upload" | "later" = "create";
     try {
       if (!st.clipId) {
-        const tok = purpose === "REPLY" ? tokenFor(tokens ?? [], take.seconds, freeSeconds) : undefined;
+        const tok = purpose === "REPLY" ? tokenFor(tokens ?? [], take.seconds, freeSeconds, freeLeft) : undefined;
         const up = await api.createVoiceClip({
           purpose,
           mime: baseMime(take.mime) as "audio/webm" | "audio/mp4" | "audio/ogg",

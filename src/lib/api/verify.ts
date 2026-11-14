@@ -33,3 +33,6 @@ export const getVerification = (id: string) => apiFetch<AdminVerification>(`/adm
 export const approveVerification = (id: string) => apiFetch<S["AdminVerificationDecision"]>(`/admin/verification/${enc(id)}/approve`, { ...A, method: "POST", body: {} });
 export const rejectVerification = (id: string, body: { reasonCode: RejectReasonCode; note?: string }) =>
   apiFetch<S["AdminVerificationDecision"]>(`/admin/verification/${enc(id)}/reject`, { ...A, method: "POST", body });
+export type VerificationDocumentLink = S["VerificationDocumentLink"];
+/** Opens one document: a signed link that stops working after 5 minutes. Written to the audit log. kind: "id" or "bill". */
+export const openVerificationDocument = (id: string, kind: "id" | "bill") => apiFetch<VerificationDocumentLink>(`/admin/verification/${enc(id)}/documents/${kind}`, A);

@@ -2,40 +2,64 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar, Button, EmptyState, Icon, Tabs, TextField } from "@/components/vx";
-import { approveVerification, getVerification, listVerification, rejectVerification } from "@/lib/api/verify";
-import type { AdminVerification, AdminVerificationItem, RejectReasonCode } from "@/lib/api/verify";
+import { approveVerification, getVerification, listVerification, openVerificationDocument, rejectVerification } from "@/lib/api/verify";
+import type { AdminVerification, AdminVerificationItem, RejectReasonCode, VerificationDocumentLink } from "@/lib/api/verify";
 import { ago, clock } from "./time";
-import { Card, CardTitle, ErrorLine, Eyebrow, Gated, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, queueRow, useAction } from "./ui";
+import { Card, CardTitle, ErrorLine, Eyebrow, Gated, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, queueRow, refusalWords, useAction } from "./ui";
 
 /** The short reasons an admin picks from. The person reads the words in `person`, then the admin's own note. */
 export const REASONS: { code: RejectReasonCode; label: string; person: string }[] = [
   { code: "ID_UNREADABLE", label: "ID not readable", person: "We could not read your ID. Upload a clear, full photo or scan." },
-  { code: "ID_NOT_VALID", label: "Not a valid ID", person: "That is not a valid government ID." },
-  { code: "ID_EXPIRED", label: "ID expired", person: "Your ID has expired." },
-  { code: "BILL_UNREADABLE", label: "Bill not readable", person: "We could not read your utility bill." },
-  { code: "BILL_TOO_OLD", label: "Bill too old", person: "Your utility bill is too old." },
-  { code: "DETAILS_DO_NOT_MATCH", label: "Names do not match", person: "The name on your documents does not match." },
-  { code: "SUBSCRIPTION_ENDED", label: "Subscription ended", person: "Their plan ended before the check." },
-  { code: "OTHER", label: "Something else (write why)", person: "" },
+  { code: "ID_NOT_VALID", label: "Not a valid ID", person: "That is not a valid government ID. Use a national ID card, passport, driver's licence or voter's card." },
+  { code: "ID_EXPIRED", label: "ID expired", person: "Your ID has expired. Upload one that is still valid." },
+  { code: "BILL_UNREADABLE", label: "Bill not readable", person: "We could not read your utility bill. Upload a clear, full photo or scan." },
+  { code: "BILL_TOO_OLD", label: "Bill too old", person: "Your utility bill is too old. Upload one from the last 3 months." },
+  { code: "DETAILS_DO_NOT_MATCH", label: "Names do not match", person: "The name on your documents does not match. Both must show the same name." },
+  { code: "SUBSCRIPTION_ENDED", label: "Subscription ended", person: "Your subscription ended before we could check your documents. Subscribe again and send them again." },
+  { code: "OTHER", label: "Something else (write why)", person: "We could not approve your documents." },
 ];
 
-function Doc({ title, doc }: { title: string; doc: AdminVerification["idDocument"] }) {
-  if (!doc) return null;
-  const isPdf = doc.mime === "application/pdf";
+function Doc({ requestId, kind, title, info }: { requestId: string; kind: "id" | "bill"; title: string; info: { mime: string } | null }) {
+  const [link, setLink] = useState<VerificationDocumentLink | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (!info) return null;
+  async function open() {
+    setBusy(true);
+    setErr(null);
+    try {
+      setLink(await openVerificationDocument(requestId, kind));
+    } catch (e) {
+      setErr(refusalWords(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const isPdf = info.mime === "application/pdf";
   return (
     <figure className="m-0 flex flex-col gap-2 rounded-l border border-line p-3" data-testid="doc">
       <figcaption className="text-label">{title}</figcaption>
-      {isPdf ? (
-        <a className="link inline-flex items-center gap-2" href={doc.url} target="_blank" rel="noopener noreferrer">
+      {!link ? (
+        <div>
+          <Button variant="secondary" size="s" loading={busy} onClick={() => void open()}>{`Show the ${title.toLowerCase()}`}</Button>
+        </div>
+      ) : isPdf ? (
+        <a className="link inline-flex items-center gap-2" href={link.url} target="_blank" rel="noopener noreferrer">
           <Icon name="link" size={18} />
           Open the PDF
         </a>
       ) : (
-        <a href={doc.url} target="_blank" rel="noopener noreferrer" aria-label={`Open the ${title.toLowerCase()} full size`}>
+        <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={`Open the ${title.toLowerCase()} full size`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={doc.url} alt={title} className="max-h-[360px] w-full rounded-m bg-surface-2 object-contain" referrerPolicy="no-referrer" />
+          <img src={link.url} alt={title} className="max-h-[360px] w-full rounded-m bg-surface-2 object-contain" referrerPolicy="no-referrer" />
         </a>
       )}
+      {link ? (
+        <p className="m-0 text-caption text-ink-2">This link stops working after 5 minutes.{" "}
+          <button type="button" className="link cursor-pointer border-0 bg-transparent p-0" onClick={() => void open()}>Get a new link</button>
+        </p>
+      ) : null}
+      <ErrorLine>{err}</ErrorLine>
     </figure>
   );
 }
@@ -114,11 +138,8 @@ function Decide({ item, onDone }: { item: AdminVerificationItem; onDone: (word: 
           <p className="m-0 mt-4 text-caption text-ink-2">The documents were deleted 90 days after the decision, or when the account was deleted.</p>
         ) : (
           <div className="mt-4 flex flex-col gap-3">
-            <Doc title="Government ID" doc={detail.idDocument} />
-            <Doc title="Utility bill" doc={detail.billDocument} />
-            <p className="m-0 text-caption text-ink-2">These links stop working after 5 minutes.{" "}
-              <button type="button" className="link cursor-pointer border-0 bg-transparent p-0" onClick={() => void load()}>Get new links</button>
-            </p>
+            <Doc requestId={item.id} kind="id" title="Government ID" info={detail.idDocument} />
+            <Doc requestId={item.id} kind="bill" title="Utility bill" info={detail.billDocument} />
           </div>
         )
       ) : !loadError ? (
