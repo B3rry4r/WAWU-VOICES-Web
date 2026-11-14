@@ -6,7 +6,7 @@ import { getMoneyOverview } from "@/lib/api/admin";
 import type { MoneyOverview, MoneyWindow } from "@/lib/api/admin";
 import { Card, CardTitle, Eyebrow, Gated, ListSkeleton, LoadFailed, PageHead } from "../ui";
 import { count, dayWords, naira, tokens } from "./format";
-import { Td, Th } from "./parts";
+import { Td, Th, useStackLabels } from "./parts";
 
 type Cell = (w: MoneyWindow) => string;
 interface Row {
@@ -62,45 +62,52 @@ const SECTIONS: { title: string; sub?: string; rows: Row[] }[] = [
   },
 ];
 
+function FigureTable({ s, windows }: { s: { title: string; rows: Row[] }; windows: MoneyWindow[] }) {
+  const ref = useStackLabels();
+  return (
+        <div className="overflow-x-auto">
+          <table ref={ref} className="ad-stack w-full border-collapse dt:min-w-[640px] text-left text-body" aria-label={s.title}>
+            <thead>
+              <tr className="text-ink-2">
+                <Th>Figure</Th>
+                {windows.map((w) => (
+                  <Th key={w.label} right>
+                    {w.label}
+                  </Th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {s.rows.map((r) => (
+                <tr key={r.label} className="border-t border-line">
+                  <Td>
+                    <div className={r.strong ? "text-body-strong" : ""}>{r.label}</div>
+                    {r.hint ? <div className="text-caption text-ink-2">{r.hint}</div> : null}
+                  </Td>
+                  {windows.map((w) => (
+                    <Td key={w.label} right className={r.strong ? "text-body-strong" : ""}>
+                      {r.cell(w)}
+                    </Td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+  );
+}
+
 function Totals({ o }: { o: MoneyOverview }) {
   const windows = [o.windows.today, o.windows.last7, o.windows.last30];
   return (
     <div className="flex flex-col gap-5">
       {SECTIONS.map((s) => (
         <Card key={s.title} className="!p-0 overflow-hidden">
-          <div className="px-6 pt-5">
+          <div className="px-4 pt-5 dt:px-6">
             <CardTitle>{s.title}</CardTitle>
             {s.sub ? <p className="m-0 mb-2 text-caption text-ink-2">{s.sub}</p> : null}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-left text-body" aria-label={s.title}>
-              <thead>
-                <tr className="text-ink-2">
-                  <Th>Figure</Th>
-                  {windows.map((w) => (
-                    <Th key={w.label} right>
-                      {w.label}
-                    </Th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {s.rows.map((r) => (
-                  <tr key={r.label} className="border-t border-line">
-                    <Td>
-                      <div className={r.strong ? "text-body-strong" : ""}>{r.label}</div>
-                      {r.hint ? <div className="text-caption text-ink-2">{r.hint}</div> : null}
-                    </Td>
-                    {windows.map((w) => (
-                      <Td key={w.label} right className={r.strong ? "text-body-strong" : ""}>
-                        {r.cell(w)}
-                      </Td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <FigureTable s={s} windows={windows} />
         </Card>
       ))}
     </div>
@@ -141,7 +148,7 @@ function OverviewBody() {
         <ListSkeleton rows={4} />
       ) : (
         <div className="flex flex-col gap-5">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 dt:grid-cols-4">
             <Headline label="Received today" value={naira(t!.received.total.totalKobo)} sub={`${count(t!.payments.paid)} paid`} />
             <Headline label="WAWU revenue today" value={naira(t!.received.total.priceKobo)} sub="The price, without VAT or charges" />
             <Headline label="Tokens sold today" value={tokens(t!.tokens.soldMilli)} sub={`${tokens(t!.tokens.netSpentMilli)} spent`} />

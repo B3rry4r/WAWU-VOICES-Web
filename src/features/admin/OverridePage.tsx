@@ -7,6 +7,7 @@ import type { AdminOverride, CreateOverrideRequest, OverridePreview } from "@/li
 import { useAdmin } from "./AdminFrame";
 import { dayKey } from "@/lib/format/date";
 import { clock, dayClock, dayStringWeekday, fromLocalInput, longDate, toLocalInput, weekdayDay } from "./time";
+import { StackTable } from "./money/parts";
 import { Card, CardTitle, ErrorLine, Eyebrow, ListSkeleton, PageHead, SavedLine, StatePill, Switch, useAction, Gated, DateTimeField } from "./ui";
 import { voicesOf } from "@/lib/feed-format";
 
@@ -124,7 +125,7 @@ function OverrideBody() {
           <SavedLine>{saved}</SavedLine>
         </div>
       ) : null}
-      <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start gap-5">
+      <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-5">
           {/* lead ruling WF, 6 Nov (C-M7): while an override is live, today's question is the override itself, so the card never calls it scheduled. It shows the question the override replaced, if there was one. */}
           {live ? (
@@ -160,7 +161,7 @@ function OverrideBody() {
         <div className="flex flex-col gap-5">
           <Card>
             <CardTitle>When and how</CardTitle>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <DateTimeField label="Starts" value={starts} onChange={setStarts} />
               <DateTimeField label="Ends" value={ends} onChange={setEnds} hint="Lagos time. You can change it." error={timesOk ? undefined : "The end has to be after the start."} />
             </div>
@@ -211,7 +212,7 @@ function OverrideBody() {
           <div className="rounded-xl border border-line bg-surface p-5 text-caption text-ink-2">No overrides yet. Every one will be listed here.</div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-line bg-surface">
-            <table className="w-full border-collapse text-left text-caption">
+            <StackTable className="w-full border-collapse text-left text-caption">
               <thead>
                 <tr className="text-ink-2">
                   {["When", "What went up", "It replaced", "By", "Result"].map((h) => (
@@ -224,7 +225,7 @@ function OverrideBody() {
                   <LogRow key={o.id} o={o} onChanged={() => { loadLog(); reloadToday(); }} />
                 ))}
               </tbody>
-            </table>
+            </StackTable>
           </div>
         )}
       </div>

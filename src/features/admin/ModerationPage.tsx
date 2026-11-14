@@ -8,7 +8,7 @@ import type { ModerationActionKind, ModerationItem, ModerationItemDetail } from 
 import { useAdmin } from "./AdminFrame";
 import { AdminPlayer } from "./Player";
 import { ago, clock, dayMonth, minutesWords } from "./time";
-import { AuditList, Card, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction, Gated } from "./ui";
+import { AuditList, Card, ErrorLine, Eyebrow, ListSkeleton, LoadFailed, PageHead, SavedLine, DetailPane, queueRow, useAction, Gated } from "./ui";
 
 type Counts = Record<string, number | string | null>;
 
@@ -85,6 +85,7 @@ function ModerationBody() {
   const [choice, setChoice] = useState("remove");
   const [reason, setReason] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
+  const [paneOpen, setPaneOpen] = useState(false);
   const act = useAction();
   const queue = TABS.find((t) => t.id === tab)?.queue ?? "REPORTED";
   const seq = useRef(0);
@@ -142,6 +143,7 @@ function ModerationBody() {
       return true;
     });
     if (!done) return;
+    setPaneOpen(false);
     // lead ruling WF, 6 Nov (C-M10): a decided appeal is not appealed again, so its banner never says "can appeal".
     setSaved(
       queue === "APPEAL"
@@ -203,14 +205,14 @@ function ModerationBody() {
       ) : items.length === 0 ? (
         <EmptyState icon="shield-check" title="Nothing is waiting here" body="New items land here as people report them." />
       ) : (
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
+        <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">
             {items.map((it) => {
               const tag = reasonTag(it);
               const accountItem = !it.postKind && it.targetType === "USER";
               const what = accountItem ? (it.queue === "APPEAL" ? "Appeal about an account" : "Report about an account") : it.postKind === "VOICE" ? "Voice answer" : it.postKind === "TEXT" ? "Text answer" : it.postKind === "REPLY_VOICE" ? "Voice reply to a voice" : it.postKind === "REPLY_TEXT" ? "Text reply" : null;
               return (
-                <button key={it.id} type="button" role="listitem" className={queueRow(selected === it.id)} onClick={() => setSelected(it.id)} aria-current={selected === it.id ? "true" : undefined}>
+                <button key={it.id} type="button" role="listitem" className={queueRow(selected === it.id)} onClick={() => { setSelected(it.id); setPaneOpen(true); }} aria-current={selected === it.id ? "true" : undefined}>
                   <span className="flex flex-wrap items-center gap-2 text-caption text-ink-2">
                     <span className={`rounded-s px-2 py-0.5 text-caption ${tag.cls}`}>{tag.text}</span>
                     {rowSummary(it, tag.text)}{it.listenCount > 0 ? ` · ${it.listenCount} ${it.listenCount === 1 ? "listen" : "listens"}` : ""}
@@ -230,7 +232,8 @@ function ModerationBody() {
             ) : null}
           </div>
 
-          <Card className="!p-6">
+          <DetailPane open={paneOpen} onClose={() => setPaneOpen(false)}>
+          <Card className="!p-4 dt:!p-6">
             {!selected ? (
               <p className="m-0 text-ink-2">Pick an item to read it.</p>
             ) : detailError ? (
@@ -254,6 +257,7 @@ function ModerationBody() {
               />
             )}
           </Card>
+          </DetailPane>
         </div>
       )}
     </div>
