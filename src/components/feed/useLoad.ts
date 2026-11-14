@@ -135,5 +135,5 @@ export function useStartWatch(at: number | null, refresh: () => Promise<unknown>
       window.removeEventListener("online", back);
       window.removeEventListener("pageshow", back);
     };
-  }, [at]);
+  }, [at, fetchedAt]);
 }
