@@ -35,5 +35,7 @@ export type { BannerProps, ToastProps, EmptyStateProps, SkeletonProps } from './
 export { Sheet, Dialog } from './overlays';
 export type { SheetProps, DialogProps } from './overlays';
 export { TextField, SearchField, Switch } from './inputs';
+export { PhoneField, CountryPicker } from './phone';
+export type { PhoneFieldProps, CountryPickerProps } from './phone';
 export type { TextFieldProps, SearchFieldProps, SwitchProps } from './inputs';
 export type { Person, NewsKind, Tone } from './helpers';

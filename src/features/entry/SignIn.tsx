@@ -2,16 +2,24 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banner, Button, TextField } from "@/components/vx";
+import { Banner, Button, PhoneField, TextField } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
-import { isAccountBlocked, isEmailNotVerified, isPhoneNotConfirmed, nationalPhone, register, signIn, startEmailVerification } from "@/lib/api/auth";
+import { isAccountBlocked, isEmailNotVerified, isPhoneNotConfirmed, register, signIn, startEmailVerification } from "@/lib/api/auth";
 import { getMe } from "@/lib/api/me";
+import { countryByCode, DEFAULT_COUNTRY } from "@/lib/phone/countries";
+import { countryForNumber, looksLikePhone, readPhone } from "@/lib/phone/phone";
 import { holdReturn, peekHeldPost, readDraft, saveDraft, takeReturn } from "@/lib/auth/entry-draft";
 import { AuthSheet } from "./AuthSheet";
 import { ErrorBanner, isOffline, useSkipIfSignedIn } from "./ui";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const DIAL = "+234";
+
+/** What sign in sends: an email as typed, a phone number in full international form (+<code><number>), anything unclear as typed. */
+function idAsSent(identifier: string, country: string): string {
+  if (!looksLikePhone(identifier)) return identifier;
+  const read = readPhone(identifier, country);
+  return read.ok ? read.e164 : identifier;
+}
 
 /** Where a person goes once they have a session: back to where they were, or on to the join steps if they have no profile yet. */
 export async function afterSession(go: (path: string) => void): Promise<void> {
@@ -32,6 +40,8 @@ export function SignIn() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneCountry, setPhoneCountry] = useState(DEFAULT_COUNTRY);
+  const [idCountry, setIdCountry] = useState(DEFAULT_COUNTRY);
   const [password, setPassword] = useState("");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -63,9 +73,8 @@ export function SignIn() {
     if (join) {
       if (fullName.trim().length < 2) bad.fullName = "Tell us your name.";
       if (!EMAIL_RE.test(email.trim())) bad.email = "Enter an email address like name@example.com.";
-      const national = nationalPhone(phone, DIAL);
-      if (national.length === 0) bad.phone = "Enter your phone number.";
-      else if (national.length < 7 || national.length > 11) bad.phone = "Enter your phone number without the +234.";
+      const read = readPhone(phone, phoneCountry);
+      if (!read.ok) bad.phone = read.reason === "empty" ? "Enter your phone number." : `Enter a valid number for ${countryByCode(phoneCountry).name}, or start with + and the country code.`;
       if (password.length < 8) bad.password = "Use at least 8 characters.";
       if (!consent) bad.consent = "Confirm you are 18 or older and accept the rules.";
     } else if (needEmail) {
@@ -80,7 +89,11 @@ export function SignIn() {
     try {
       if (join) {
         const d = readDraft();
-        await register({ fullName, email, phoneNational: nationalPhone(phone, DIAL), password, country: "Nigeria", dialCode: DIAL });
+        const read = readPhone(phone, phoneCountry);
+        if (!read.ok) { setBusy(false); return; }
+        // A number typed with its own + names its own country.
+        const from = countryForNumber(read.e164, phoneCountry);
+        await register({ fullName, email, phoneNational: read.e164.slice(1 + from.dial.length), password, country: from.name, dialCode: `+${from.dial}` });
         saveDraft({ email: email.trim().toLowerCase(), fullName: fullName.trim(), ageConfirmed: true, countryCode: d.countryCode, codeSentAt: undefined, codeLifeSec: undefined });
         try {
           const r = await startEmailVerification(email);
@@ -97,7 +110,7 @@ export function SignIn() {
         router.push("/join/verify");
         return;
       }
-      await signIn(identifier, password);
+      await signIn(idAsSent(identifier, idCountry), password);
       await afterSession((p) => router.replace(p));
     } catch (err) {
       if (!join && isEmailNotVerified(err)) {
@@ -142,11 +155,11 @@ export function SignIn() {
           <>
             <TextField label="Full name" value={fullName} onChange={setFullName} autoComplete="name" error={errs.fullName} />
             <TextField label="Email" type="email" inputMode="email" value={email} onChange={setEmail} autoComplete="email" error={errs.email} hint="We send a 6 digit code by email. One account per email." />
-            <TextField label="Phone number" prefix={DIAL} inputMode="tel" value={phone} onChange={setPhone} autoComplete="tel-national" placeholder="803 214 7720" error={errs.phone} hint="One account per number." />
+            <PhoneField label="Phone number" country={phoneCountry} onCountry={setPhoneCountry} value={phone} onChange={setPhone} error={errs.phone} hint="One account per number." />
           </>
         ) : (
           <>
-            <TextField label="Email or phone number" value={identifier} onChange={setIdentifier} autoComplete="username" error={errs.identifier} />
+            <PhoneField mixed showCountry={looksLikePhone(identifier)} label="Email or phone number" country={idCountry} onCountry={setIdCountry} value={identifier} onChange={setIdentifier} autoComplete="username" error={errs.identifier} />
             {needEmail ? <TextField label="Email on your account" type="email" inputMode="email" value={email} onChange={setEmail} autoComplete="email" error={errs.email} /> : null}
           </>
         )}

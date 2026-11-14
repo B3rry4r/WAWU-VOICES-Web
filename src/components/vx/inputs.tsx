@@ -1,6 +1,6 @@
 'use client';
 import { useId, useState } from 'react';
-import type { CSSProperties, ReactElement } from 'react';
+import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import { cx } from './helpers';
 import { Icon } from './Icon';
 
@@ -14,6 +14,8 @@ export interface TextFieldProps {
   error?: string;
   prefix?: string;
   prefixIcon?: string;
+  /** Your own control in the prefix place (the phone field's country button). Replaces `prefix`. */
+  prefixSlot?: ReactNode;
   type?: string;
   inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
   autoComplete?: string;
@@ -50,7 +52,9 @@ export function TextField(p: TextFieldProps): ReactElement {
     <div className={cx('vx-field', p.error && 'is-error', p.disabled && 'is-disabled', p.className)}>
       <label className="vx-field__label" htmlFor={id}>{p.label}</label>
       <div className="vx-field__box">
-        {p.prefix ? (
+        {p.prefixSlot ? (
+          <span className="vx-field__prefix vx-field__prefix--slot">{p.prefixSlot}</span>
+        ) : p.prefix ? (
           <span className="vx-field__prefix">
             {p.prefixIcon ? <span aria-hidden="true">{p.prefixIcon}</span> : null}
             {p.prefix}
