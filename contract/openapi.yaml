@@ -6478,6 +6478,552 @@ paths:
           $ref: '#/components/responses/E502'
         '503':
           $ref: '#/components/responses/E503'
+  /admin/surveys:
+    get:
+      operationId: adminListSurveys
+      tags:
+      - admin
+      summary: Sponsored surveys and the approval queue
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'V-SURVEYS: same roles as adverts (AD_MANAGER, ADMIN). A moderator is 403. Auth: signed in with role AD_MANAGER or ADMIN.'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Opaque cursor from nextCursor
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+        description: 1 to 50, default 20
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+        description: AdStatus
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSurveyPage'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '429':
+          $ref: '#/components/responses/E429'
+    post:
+      operationId: adminCreateSurvey
+      tags:
+      - admin
+      summary: Create a sponsored survey (a draft)
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: '1 to 5 questions: a single-choice poll (2 to 6 different choices), a short text answer or a short voice answer. priceKobo
+        falls back to the admin price list (surveys.price.flat_kobo), never a fixed number; it stays null when neither is set. Auth: signed in
+        with role AD_MANAGER or ADMIN.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertSurveyRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSurvey'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/surveys/{surveyId}:
+    get:
+      operationId: adminGetSurvey
+      tags:
+      - admin
+      summary: One sponsored survey
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'Auth: signed in with role AD_MANAGER or ADMIN.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSurvey'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+    patch:
+      operationId: adminUpdateSurvey
+      tags:
+      - admin
+      summary: Edit a sponsored survey
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'Any subset of the fields. 409 for an approved or rejected survey, and for new questions once anyone has answered. Changing
+        the words of a paused survey sends it back to the approval queue. Auth: signed in with role AD_MANAGER or ADMIN.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertSurveyRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSurvey'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/surveys/{surveyId}/submit:
+    post:
+      operationId: adminSubmitSurvey
+      tags:
+      - admin
+      summary: Send a draft for approval (email F01 to the brand contact)
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'Auth: signed in with role AD_MANAGER or ADMIN.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSurvey'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/surveys/{surveyId}/decision:
+    post:
+      operationId: adminSurveyDecision
+      tags:
+      - admin
+      summary: Approve, reject, ask for changes, pause, resume
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'APPROVE is 422 while a check fails (wording, kept-away categories, dates, price) and sends email F02. ASK_FOR_CHANGES needs
+        a reason and sends email F03. REJECT needs a reason. Every decision writes an audit row. Auth: signed in with role AD_MANAGER or ADMIN.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SurveyDecision'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSurvey'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/surveys/{surveyId}/report:
+    get:
+      operationId: adminSurveyReport
+      tags:
+      - admin
+      summary: The brand's results, combined and anonymous
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'No name, handle, photo or id is ever returned. Free answers and transcripts have emails, phone numbers, @handles and links
+        removed. State and age band appear only for people who agreed to share them. No group smaller than weekly.min_group_size is shown: while
+        fewer people than that have answered, belowMinimum is true and only the view, start and skip counts are returned. The web builds the CSV
+        from this body. Auth: signed in with role AD_MANAGER or ADMIN.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurveyReport'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/brands:
+    get:
+      operationId: adminListBrands
+      tags:
+      - admin
+      summary: Brands
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'Auth: signed in with role AD_MANAGER or ADMIN.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminBrandList'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '429':
+          $ref: '#/components/responses/E429'
+    post:
+      operationId: adminCreateBrand
+      tags:
+      - admin
+      summary: Set up a brand page
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'Auth: signed in with role AD_MANAGER or ADMIN.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminBrand'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /admin/brands/{brandId}:
+    patch:
+      operationId: adminUpdateBrand
+      tags:
+      - admin
+      summary: Edit a brand
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - AD_MANAGER
+      - ADMIN
+      description: 'Auth: signed in with role AD_MANAGER or ADMIN.'
+      parameters:
+      - name: brandId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminBrand'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /surveys/placement:
+    get:
+      operationId: getSurveyPlacement
+      tags:
+      - admin
+      summary: The sponsored survey for the feed slot, labelled
+      security:
+      - {}
+      - wawuId: []
+      description: 'V-SURVEYS: the slot where adverts go. { survey: null } for a guest and wherever a survey must not show: a sensitive question,
+        topic or category, outside the survey''s targeting or dates, past its frequency cap or response target, already answered, or skipped twice.
+        Auth: guest or signed in. Rate limit: 300 per minute per IP or account.'
+      parameters:
+      - name: questionId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurveyPlacementResponse'
+        '401':
+          $ref: '#/components/responses/E401'
+        '429':
+          $ref: '#/components/responses/E429'
+  /surveys/{surveyId}:
+    get:
+      operationId: getSurvey
+      tags:
+      - admin
+      summary: A sponsored survey to answer
+      security:
+      - wawuId: []
+      description: '404 unless the survey is live, in the person''s state and not skipped twice. myStatus ANSWERED returns no questions. Auth:
+        signed in with a finished profile.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Survey'
+        '401':
+          $ref: '#/components/responses/E401'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
+  /surveys/{surveyId}/events:
+    post:
+      operationId: recordSurveyEvent
+      tags:
+      - admin
+      summary: A survey card was seen, started or skipped
+      security:
+      - wawuId: []
+      description: 'Counts toward the frequency cap (VIEW) and the two-skip limit (SKIP). Ignored once the person has answered. Auth: signed in
+        with a finished profile.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SurveyEventRequest'
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: '#/components/responses/E401'
+        '404':
+          $ref: '#/components/responses/E404'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /surveys/{surveyId}/responses:
+    post:
+      operationId: answerSurvey
+      tags:
+      - admin
+      summary: Answer a sponsored survey
+      security:
+      - wawuId: []
+      description: 'One answer per person per survey (409 after). Free: it never touches tokens, free posts or the daily posting limit, and is
+        never a public post. A voice answer uses a clip made with POST /voice-clips purpose SURVEY_ANSWER and is at most surveys.voice_max_seconds.
+        anonymous: true keeps nothing about the person; state and age band are kept only with shareState and ageBand. Auth: signed in with a finished
+        profile.'
+      parameters:
+      - name: surveyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SurveyResponseRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurveyResponseResult'
+        '401':
+          $ref: '#/components/responses/E401'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
+  /brands/{slug}:
+    get:
+      operationId: getBrandPage
+      tags:
+      - admin
+      summary: A brand's public page
+      security: []
+      description: 'V-SURVEYS: name, logo, one line, its live Sponsored Surveys and live adverts, labelled as a brand. Never a contact address.
+        Auth: none (public).'
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandPage'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
 components:
   securitySchemes:
     wawuId:
@@ -12827,3 +13373,799 @@ components:
       additionalProperties: false
       required:
       - ad
+
+    SurveyQuestionInput:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+          - SINGLE_CHOICE
+          - TEXT
+          - VOICE
+        prompt:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - kind
+      - prompt
+    UpsertSurveyRequest:
+      type: object
+      properties:
+        brandName:
+          type: string
+        brandId:
+          type: string
+          format: uuid
+        contactEmail:
+          type: string
+        title:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyQuestionInput'
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        states:
+          type: array
+          items:
+            type: string
+        startsOn:
+          type: string
+          format: date
+        endsOn:
+          type: string
+          format: date
+        frequencyCapPerDay:
+          type: integer
+        priceKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        responseTarget:
+          type: integer
+      additionalProperties: false
+      required:
+      - brandName
+      - contactEmail
+      - title
+      - questions
+    SurveyDecision:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum:
+          - APPROVE
+          - REJECT
+          - ASK_FOR_CHANGES
+          - PAUSE
+          - RESUME
+        reason:
+          type: string
+      additionalProperties: false
+      required:
+      - decision
+    SurveyOptionView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+      additionalProperties: false
+      required:
+      - id
+      - label
+    SurveyQuestionView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        position:
+          type: integer
+        kind:
+          type: string
+          enum:
+          - SINGLE_CHOICE
+          - TEXT
+          - VOICE
+        prompt:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyOptionView'
+      additionalProperties: false
+      required:
+      - id
+      - position
+      - kind
+      - prompt
+      - options
+    AdminSurvey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        brandId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        brandName:
+          type: string
+        contactEmail:
+          type: string
+        title:
+          type: string
+        status:
+          $ref: '#/components/schemas/AdStatus'
+        label:
+          type: string
+        live:
+          type: boolean
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportCheck'
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyQuestionView'
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        states:
+          type: array
+          items:
+            type: string
+        startsOn:
+          type:
+          - string
+          - 'null'
+          format: date
+        endsOn:
+          type:
+          - string
+          - 'null'
+          format: date
+        frequencyCapPerDay:
+          type: integer
+        priceKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        responseTarget:
+          type:
+          - integer
+          - 'null'
+        views:
+          type: integer
+        starts:
+          type: integer
+        completes:
+          type: integer
+        skips:
+          type: integer
+        responses:
+          type: integer
+        rejectReason:
+          type:
+          - string
+          - 'null'
+        changeRequest:
+          type:
+          - string
+          - 'null'
+        submittedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        approvedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      additionalProperties: false
+      required:
+      - id
+      - brandId
+      - brandName
+      - contactEmail
+      - title
+      - status
+      - label
+      - live
+      - checks
+      - questions
+      - categoryIds
+      - states
+      - startsOn
+      - endsOn
+      - frequencyCapPerDay
+      - priceKobo
+      - responseTarget
+      - views
+      - starts
+      - completes
+      - skips
+      - responses
+      - rejectReason
+      - changeRequest
+      - submittedAt
+      - approvedAt
+    AdminSurveyPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSurvey'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+        awaitingApproval:
+          type: integer
+      additionalProperties: false
+      required:
+      - items
+      - nextCursor
+      - awaitingApproval
+    SurveyReportOption:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        count:
+          type:
+          - integer
+          - 'null'
+        share:
+          type:
+          - integer
+          - 'null'
+        hidden:
+          type: boolean
+      additionalProperties: false
+      required:
+      - id
+      - label
+      - count
+      - share
+      - hidden
+    SurveyReportVoice:
+      type: object
+      properties:
+        transcript:
+          type: string
+        seconds:
+          type: integer
+      additionalProperties: false
+      required:
+      - transcript
+      - seconds
+    SurveyReportQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        position:
+          type: integer
+        kind:
+          type: string
+          enum:
+          - SINGLE_CHOICE
+          - TEXT
+          - VOICE
+        prompt:
+          type: string
+        answered:
+          type:
+          - integer
+          - 'null'
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyReportOption'
+        texts:
+          type: array
+          items:
+            type: string
+        voices:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyReportVoice'
+      additionalProperties: false
+      required:
+      - id
+      - position
+      - kind
+      - prompt
+      - answered
+      - options
+      - texts
+      - voices
+    SurveyReportTotals:
+      type: object
+      properties:
+        views:
+          type: integer
+        starts:
+          type: integer
+        skips:
+          type: integer
+        responses:
+          type:
+          - integer
+          - 'null'
+        completionRate:
+          type:
+          - integer
+          - 'null'
+      additionalProperties: false
+      required:
+      - views
+      - starts
+      - skips
+      - responses
+      - completionRate
+    SurveyReportState:
+      type: object
+      properties:
+        state:
+          type: string
+        responses:
+          type: integer
+        share:
+          type: integer
+      additionalProperties: false
+      required:
+      - state
+      - responses
+      - share
+    SurveyReportAge:
+      type: object
+      properties:
+        ageBand:
+          type: string
+        responses:
+          type: integer
+        share:
+          type: integer
+      additionalProperties: false
+      required:
+      - ageBand
+      - responses
+      - share
+    SurveyReportHead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        brandName:
+          type: string
+        title:
+          type: string
+        status:
+          $ref: '#/components/schemas/AdStatus'
+        startsOn:
+          type:
+          - string
+          - 'null'
+          format: date
+        endsOn:
+          type:
+          - string
+          - 'null'
+          format: date
+        responseTarget:
+          type:
+          - integer
+          - 'null'
+      additionalProperties: false
+      required:
+      - id
+      - brandName
+      - title
+      - status
+      - startsOn
+      - endsOn
+      - responseTarget
+    SurveyReport:
+      type: object
+      properties:
+        survey:
+          $ref: '#/components/schemas/SurveyReportHead'
+        minGroupSize:
+          type: integer
+        belowMinimum:
+          type: boolean
+        totals:
+          $ref: '#/components/schemas/SurveyReportTotals'
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyReportQuestion'
+        byState:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyReportState'
+        byAgeBand:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyReportAge'
+        note:
+          type: string
+      additionalProperties: false
+      required:
+      - survey
+      - minGroupSize
+      - belowMinimum
+      - totals
+      - questions
+      - byState
+      - byAgeBand
+      - note
+    SurveyCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        brandName:
+          type: string
+        brandSlug:
+          type:
+          - string
+          - 'null'
+        brandWebsite:
+          type:
+          - string
+          - 'null'
+        title:
+          type: string
+        questionCount:
+          type: integer
+      additionalProperties: false
+      required:
+      - id
+      - label
+      - brandName
+      - brandSlug
+      - brandWebsite
+      - title
+      - questionCount
+    SurveyPlacementResponse:
+      type: object
+      properties:
+        survey:
+          oneOf:
+          - $ref: '#/components/schemas/SurveyCard'
+          - type: 'null'
+      additionalProperties: false
+      required:
+      - survey
+    Survey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        brandName:
+          type: string
+        brandSlug:
+          type:
+          - string
+          - 'null'
+        brandWebsite:
+          type:
+          - string
+          - 'null'
+        title:
+          type: string
+        questionCount:
+          type: integer
+        note:
+          type: string
+        myStatus:
+          type: string
+          enum:
+          - OPEN
+          - ANSWERED
+        voiceMaxSeconds:
+          type: integer
+        ageBands:
+          type: array
+          items:
+            type: string
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyQuestionView'
+      additionalProperties: false
+      required:
+      - id
+      - label
+      - brandName
+      - brandSlug
+      - brandWebsite
+      - title
+      - questionCount
+      - note
+      - myStatus
+      - voiceMaxSeconds
+      - ageBands
+      - questions
+    SurveyEventRequest:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+          - VIEW
+          - START
+          - SKIP
+      additionalProperties: false
+      required:
+      - kind
+    SurveyAnswerInput:
+      type: object
+      properties:
+        questionId:
+          type: string
+          format: uuid
+        optionId:
+          type: string
+          format: uuid
+        text:
+          type: string
+        clipId:
+          type: string
+          format: uuid
+      additionalProperties: false
+      required:
+      - questionId
+    SurveyResponseRequest:
+      type: object
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyAnswerInput'
+        anonymous:
+          type: boolean
+        shareState:
+          type: boolean
+        ageBand:
+          type: string
+          enum:
+          - 18-24
+          - 25-34
+          - 35-44
+          - 45-54
+          - 55+
+      additionalProperties: false
+      required:
+      - answers
+    SurveyResponseResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        note:
+          type: string
+      additionalProperties: false
+      required:
+      - ok
+      - note
+    BrandInput:
+      type: object
+      properties:
+        name:
+          type: string
+        tagline:
+          type: string
+        logoFileId:
+          type: string
+          format: uuid
+        website:
+          type: string
+        contactEmail:
+          type: string
+        active:
+          type: boolean
+      additionalProperties: false
+      required:
+      - name
+    AdminBrand:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        tagline:
+          type:
+          - string
+          - 'null'
+        website:
+          type:
+          - string
+          - 'null'
+        contactEmail:
+          type:
+          - string
+          - 'null'
+        active:
+          type: boolean
+        logoUrl:
+          type:
+          - string
+          - 'null'
+        label:
+          type: string
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - slug
+      - tagline
+      - website
+      - contactEmail
+      - active
+      - logoUrl
+      - label
+    AdminBrandList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminBrand'
+      additionalProperties: false
+      required:
+      - items
+    BrandHead:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        tagline:
+          type:
+          - string
+          - 'null'
+        website:
+          type:
+          - string
+          - 'null'
+        logoUrl:
+          type:
+          - string
+          - 'null'
+        label:
+          type: string
+      additionalProperties: false
+      required:
+      - name
+      - slug
+      - tagline
+      - website
+      - logoUrl
+      - label
+    BrandSurveyCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        label:
+          type: string
+        questionCount:
+          type: integer
+        endsOn:
+          type:
+          - string
+          - 'null'
+          format: date
+      additionalProperties: false
+      required:
+      - id
+      - title
+      - label
+      - questionCount
+      - endsOn
+    BrandAdCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/AdKind'
+        label:
+          type: string
+          enum:
+          - Ad
+          - Sponsored
+        headline:
+          type: string
+        body:
+          type:
+          - string
+          - 'null'
+        imageUrl:
+          type:
+          - string
+          - 'null'
+        linkUrl:
+          type:
+          - string
+          - 'null'
+        ctaLabel:
+          type:
+          - string
+          - 'null'
+      additionalProperties: false
+      required:
+      - id
+      - kind
+      - label
+      - headline
+      - body
+      - imageUrl
+      - linkUrl
+      - ctaLabel
+    BrandPage:
+      type: object
+      properties:
+        brand:
+          $ref: '#/components/schemas/BrandHead'
+        surveys:
+          type: array
+          items:
+            $ref: '#/components/schemas/BrandSurveyCard'
+        ads:
+          type: array
+          items:
+            $ref: '#/components/schemas/BrandAdCard'
+      additionalProperties: false
+      required:
+      - brand
+      - surveys
+      - ads
