@@ -106,12 +106,66 @@ export function holdReturn(path: string, kind: "page" | "post" = "page"): void {
   }
 }
 
-export function peekReturn(): string | null {
+/** True for an address inside the admin area. Only the admin form's own email-code detour may hold one (see holdAdminReturn). */
+export function isAdminPath(p: string): boolean {
+  return p === "/admin" || p.startsWith("/admin/") || p.startsWith("/admin?") || p.startsWith("/admin#");
+}
+
+function readHeld(): { path: string | null; kind: string | null } {
   try {
-    return safeReturn(store()?.getItem(RETURN_KEY));
+    return { path: safeReturn(store()?.getItem(RETURN_KEY)), kind: store()?.getItem(KIND_KEY) ?? null };
   } catch {
-    return null;
+    return { path: null, kind: null };
   }
+}
+
+function wipeHeld(): void {
+  try {
+    store()?.removeItem(RETURN_KEY);
+    store()?.removeItem(KIND_KEY);
+  } catch {
+    /* nothing to clear */
+  }
+}
+
+/**
+ * The ordinary return. A value inside /admin is never used here: only the admin form's own detour (kind "admin") may hold one,
+ * and only takeAdminReturn reads it. A stale /admin value (the live build left one behind) reads as nothing.
+ */
+export function peekReturn(): string | null {
+  const { path, kind } = readHeld();
+  return path && kind !== "admin" && !isAdminPath(path) ? path : null;
+}
+
+/** The admin form holds its return only for the unverified-email detour, the one time it is needed after leaving the form. */
+export function holdAdminReturn(path: string): void {
+  const p = safeReturn(path);
+  if (!p || !isAdminPath(p)) return;
+  try {
+    store()?.setItem(RETURN_KEY, p);
+    store()?.setItem(KIND_KEY, "admin");
+  } catch {
+    /* no storage: the admin signs in again after the code */
+  }
+}
+
+/** The admin address held by the detour, once. Anything else held (or any stale value) is left alone. */
+export function takeAdminReturn(): string | null {
+  const { path, kind } = readHeld();
+  if (kind !== "admin" || !path || !isAdminPath(path)) return null;
+  wipeHeld();
+  return path;
+}
+
+/** An ordinary sign-in or join starts here: whatever admin return is left behind is forgotten. */
+export function dropAdminReturn(): void {
+  const { path, kind } = readHeld();
+  if (path && (kind === "admin" || isAdminPath(path))) wipeHeld();
+}
+
+export function peekAdminReturn(): boolean {
+  const { path, kind } = readHeld();
+  return kind === "admin" && !!path && isAdminPath(path);
 }
 
 /** True only when the held return is for a post that is really waiting (a held recording or draft). */
@@ -130,12 +184,7 @@ export function withAutopost(path: string): string {
 
 export function takeReturn(): string | null {
   const p = peekReturn();
-  try {
-    store()?.removeItem(RETURN_KEY);
-    store()?.removeItem(KIND_KEY);
-  } catch {
-    /* nothing to clear */
-  }
+  wipeHeld();
   return p;
 }
 

@@ -8820,6 +8820,8 @@ components:
           type: string
           enum:
           - NGN
+        dmsLive:
+          type: boolean
         freePosts:
           type: integer
         unitBaseKobo:
@@ -14225,6 +14227,10 @@ components:
         handle:
           type: string
         displayName:
+          type:
+          - string
+          - 'null'
+        avatarUrl:
           type:
           - string
           - 'null'

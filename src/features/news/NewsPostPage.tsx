@@ -5,7 +5,7 @@ import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Rail } from "@/components/shell/ShellSlots";
-import { Avatar, Banner, Button, EmptyState, Icon, NewsTag, NotFoundState, Sheet, Skeleton } from "@/components/vx";
+import { AdminPill, Avatar, Banner, Button, EmptyState, Icon, NewsTag, NotFoundState, Sheet, Skeleton } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import { flagNewsTag, getNewsPost, listNews, listReplies } from "@/lib/api/news";
 import type { NewsAnswer, NewsReply } from "@/lib/api/news";
@@ -27,14 +27,15 @@ function chosenLine(p: NewsAnswer): string | null {
 
 function ReplyCard({ r }: { r: NewsReply }) {
   const transcript = r.clip?.transcript?.status === "READY" ? r.clip.transcript.text : null;
+  const au = r.author; // null: posted without a name, so nothing of the writer shows
   return (
-    <article className="vx-answer" aria-label={"Reply from " + (r.author ? r.author.handle : "an anonymous poster")}>
+    <article className="vx-answer" aria-label={"Reply from " + (au ? au.handle : "an anonymous poster")}>
       <div className="vx-answer__head">
-        <Avatar name={r.author ? r.author.displayName ?? r.author.handle : "Anonymous"} src={r.author?.avatarUrl ?? undefined} />
+        <Avatar name={au ? au.displayName ?? au.handle : "Anonymous"} src={au?.avatarUrl ?? undefined} />
         <div className="vx-answer__who">
-          <span className="vx-answer__name">{r.author ? "@" + r.author.handle : "Anonymous"}{r.author ? <VerifiedTick verified={r.author.verified} /> : null}</span>
-          {!r.author && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
-          <span className="vx-answer__time">{ago(r.createdAt) + (r.author?.state ? " · " + r.author.state : "")}</span>
+          <span className="vx-answer__name">{au ? <><span className="vx-answer__nm">{"@" + au.handle}</span><VerifiedTick verified={au.verified} /><AdminPill admin={(au as { admin?: boolean }).admin} /></> : "Anonymous"}</span>
+          {!au && r.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
+          <span className="vx-answer__time">{ago(r.createdAt) + (au?.state ? " · " + au.state : "")}</span>
         </div>
       </div>
       {r.clip && SERVED.clipPlay ? <ClipPlayer clipId={r.clip.id} durationMs={r.clip.durationMs} peaks={r.clip.peaks} /> : null}

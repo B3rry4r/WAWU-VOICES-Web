@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/vx";
 import { SignIn } from "@/features/entry/SignIn";
-import { safeReturn } from "@/lib/auth/entry-draft";
+import { isAdminPath, safeReturn } from "@/lib/auth/entry-draft";
 
 /** The admin's own plain page: no app tab bar, no Speak button. A centred column on a phone, a card from 1024 px. */
 export function AdminPlain({ children }: { children: ReactNode }) {
@@ -18,7 +18,7 @@ export function AdminPlain({ children }: { children: ReactNode }) {
 /** Where to land after signing in: the admin address that was asked for, and /admin when that is not an admin address. */
 export function adminReturnFor(path: string): string {
   const p = safeReturn(path);
-  return p && (p === "/admin" || p.startsWith("/admin/") || p.startsWith("/admin?")) ? p : "/admin";
+  return p && isAdminPath(p) ? p : "/admin";
 }
 
 /**
@@ -27,7 +27,10 @@ export function adminReturnFor(path: string): string {
  */
 export function AdminSignIn({ path, onSignedIn }: { path: string; onSignedIn: () => void }) {
   const router = useRouter();
-  const returnTo = adminReturnFor(path);
+  // The query string and hash of the address asked for come back too; adminReturnFor keeps them inside /admin on this site.
+  const [tail, setTail] = useState("");
+  useEffect(() => setTail(window.location.search + window.location.hash), [path]);
+  const returnTo = adminReturnFor(path + tail);
   return (
     <AdminPlain>
       <Logo variant="mark" height={44} alt="VOICES" />

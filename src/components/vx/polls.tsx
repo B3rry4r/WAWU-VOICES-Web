@@ -217,7 +217,7 @@ export function ResultComment(p: ResultCommentProps): ReactElement {
   return (
     <article className={cx('vx-result', ok && 'vx-result--verified', p.isNew && 'is-new', p.className)}>
       <div className="vx-answer__head">
-        <Avatar name={a.name || a.handle} size="s" />
+        <Avatar name={a.name || a.handle} src={a.avatar} size="s" />
         <div className="vx-answer__who">
           <span className="vx-answer__name">{a.handle || a.name}</span>
           <span className="vx-answer__time">{p.time}</span>
