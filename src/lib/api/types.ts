@@ -3303,7 +3303,7 @@ export interface paths {
         put?: never;
         /**
          * Adjust a wallet (a reason is required)
-         * @description Writes an ADJUSTMENT ledger transaction and an audit entry. Cannot take a balance below zero. Auth: signed in with role ADMIN.
+         * @description Writes an ADJUSTMENT ledger transaction and an audit entry. Cannot take a balance below zero. The answer carries `adjustment` with the audit id and the ledger transaction id. Auth: signed in with role ADMIN.
          */
         post: operations["adminAdjustWallet"];
         delete?: never;
@@ -3321,7 +3321,7 @@ export interface paths {
         };
         /**
          * Payments and their reconcile state
-         * @description Auth: signed in with role ADMIN.
+         * @description V-ADMIN-MONEY: newest first, each with the person and the payment's own price, VAT, charge and total. Auth: signed in with role ADMIN.
          */
         get: operations["adminListPayments"];
         put?: never;
@@ -3346,6 +3346,46 @@ export interface paths {
          * @description Auth: signed in with role ADMIN.
          */
         post: operations["adminReverifyPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/money/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Money received, payments and tokens for today, 7 and 30 days
+         * @description V-ADMIN-MONEY: received money split into token packs and subscriptions, with VAT and the payment charge apart from WAWU's own revenue (price), payment counts, new paying people, and tokens sold against spent. Days are Lagos days; the last 7 and 30 days include today. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminMoneyOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current and ended subscription plans
+         * @description V-ADMIN-MONEY: read only. Newest first, with the next credit day of a plan still running. Auth: signed in with role ADMIN.
+         */
+        get: operations["adminListSubscriptions"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3403,7 +3443,7 @@ export interface paths {
         put?: never;
         /**
          * Send a direct message (text or voice) to one member
-         * @description V-DM. Only a verified sender (for now: a member with a running subscription), else 403 verification_required. A person who blocked you (or whom you blocked), who turned messages off, or who is suspended, banned or leaving is one and the same 403 `dm_unavailable` ("This person is not taking messages."), so nobody can tell which; an unknown or deleted person is 404. The price comes from config (dm.text_price_milli per 150 characters in proportion, dm.voice_price_milli per voice message; both 0 by default, so messages are free); text is at most 5,000 characters and voice at most dm.voice_max_seconds (60). Free posts do not apply. A direct message has its own cap, dm.messages_per_day (100 by default, 429 DAILY_LIMIT_REACHED), and does not count toward the 20 posts a day. Charged only when the message is stored: a refused or failed send costs nothing, and a repeat with the same Idempotency-Key returns the first result and charges once. Auth: signed in with a finished profile. Rate limit: 20 posts per 10 minutes per account.
+         * @description V-DM. Only a verified sender (for now: a member with a running subscription), else 403 verification_required. A person who blocked you (or whom you blocked), who turned messages off, or who is suspended, banned or leaving is one and the same 403 `dm_unavailable` ("This person is not taking messages."), so nobody can tell which; an unknown or deleted person is 404. The price comes from config (dm.text_price_milli per 150 characters in proportion, dm.voice_price_milli per voice message; both 0 by default, so messages are free); text is at most 5,000 characters and voice at most dm.voice_max_seconds (60). Free posts do not apply. A direct message has its own cap, dm.messages_per_day (100 by default, 429 DAILY_LIMIT_REACHED), and does not count toward the 20 posts a day. Charged only when the message is stored: a refused or failed send costs nothing, and a repeat with the same Idempotency-Key returns the first result and charges once. Auth: signed in with a finished profile. Rate limit: 30 a minute per account (config ratelimit.dm_per_min).
          */
         post: operations["sendDm"];
         delete?: never;
@@ -3637,7 +3677,7 @@ export interface components {
         /** @enum {string} */
         ProposalStanceKind: "SUPPORT" | "CHALLENGE";
         /** @enum {string} */
-        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required" | "blocked" | "dm_closed" | "recipient_unavailable";
+        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required" | "dm_unavailable";
         /** @description The one error shape. Every non-2xx response is this. */
         Error: {
             error: components["schemas"]["ErrorBody"];
@@ -3807,6 +3847,7 @@ export interface components {
             quietHoursStart: number | null;
             quietHoursEnd: number | null;
             notifyDailyQuestion: boolean;
+            notifyWeeklyTopic: boolean;
             notifyReplies: boolean;
             notifyReactions: boolean;
             notifyPollResults: boolean;
@@ -3825,6 +3866,7 @@ export interface components {
             quietHoursStart?: number | null;
             quietHoursEnd?: number | null;
             notifyDailyQuestion?: boolean;
+            notifyWeeklyTopic?: boolean;
             notifyReplies?: boolean;
             notifyReactions?: boolean;
             notifyPollResults?: boolean;
@@ -5024,6 +5066,9 @@ export interface components {
             shares: number;
             openReports: number;
             oldestReportMinutes: number | null;
+            dailyQuestionMailsToday: number;
+            weeklyTopicMailsToday: number;
+            topicMailBudgetLeftToday: number;
         };
         ShareTargetCount: {
             target: components["schemas"]["ShareTarget"];
@@ -5534,17 +5579,176 @@ export interface components {
             deltaMilli: number;
             reason: string;
         };
+        PaymentPerson: {
+            /** Format: uuid */
+            id: string;
+            handle: string;
+        };
+        /** @description V-ADMIN-MONEY: a payment as the admin sees it: the person, the price, VAT, charge and total it was started with (null on a payment made before the customer paid charges), and what was paid over the total (V-23), to refund by hand. */
+        AdminPayment: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["PaymentKind"];
+            status: components["schemas"]["PaymentStatus"];
+            /** @description Naira in kobo (32-bit integer). */
+            amountKobo: number;
+            /** @description Naira in kobo (32-bit integer). */
+            vatKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            chargeKobo?: number | null;
+            /** @description Naira in kobo (32-bit integer). */
+            totalKobo?: number | null;
+            txRef: string;
+            reference?: string;
+            title: string;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            unitsMilli: number | null;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            bonusMilli: number | null;
+            method: string | null;
+            cardLast4: string | null;
+            receiptNo: string | null;
+            failureReason: string | null;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            verifiedAt: string | null;
+            token: components["schemas"]["ExtraVoiceToken"] | null;
+            plan?: components["schemas"]["PaymentPlan"] | null;
+            user: components["schemas"]["PaymentPerson"];
+            overpaidKobo: number;
+            refundNeeded: boolean;
+        };
+        /** @description What an adjust call did: the audit entry and the ledger transaction it wrote, and the balance after. */
+        WalletAdjustment: {
+            /** Format: uuid */
+            auditId: string;
+            /** Format: uuid */
+            txnId: string;
+            /** @description Admin adjustment in milli-units, at most 1,000 units either way per call. */
+            deltaMilli: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            balanceMilli: number;
+        };
         AdminWallet: {
             user: components["schemas"]["Profile"];
+            status: components["schemas"]["AccountStatus"];
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
             freePostsRemaining: number;
             ledger: components["schemas"]["LedgerItem"][];
-            payments: components["schemas"]["Payment"][];
+            payments: components["schemas"]["AdminPayment"][];
             nextCursor: string | null;
+            adjustment?: components["schemas"]["WalletAdjustment"];
         };
         AdminPaymentPage: {
-            items: components["schemas"]["Payment"][];
+            items: components["schemas"]["AdminPayment"][];
+            nextCursor: string | null;
+        };
+        /** @description Paid payments, summed by the database from the payment rows' own amounts. priceKobo is WAWU's own revenue; VAT and the payment charge are paid by the customer on top and shown apart; totalKobo is what the customer paid. */
+        MoneySlice: {
+            count: number;
+            priceKobo: number;
+            vatKobo: number;
+            chargeKobo: number;
+            totalKobo: number;
+        };
+        MoneyReceived: {
+            packs: components["schemas"]["MoneySlice"];
+            subscriptions: components["schemas"]["MoneySlice"];
+            other: components["schemas"]["MoneySlice"];
+            total: components["schemas"]["MoneySlice"];
+        };
+        /** @description paid: confirmed in the window. The others: started in the window and in that state now. pending is initiated plus pending. */
+        MoneyPaymentCounts: {
+            paid: number;
+            failed: number;
+            pending: number;
+            expired: number;
+            refunded: number;
+        };
+        /** @description Wallet movements in the window from the ledger entries: bought in packs, credited from plans, spent, spends reversed, admin adjustments up and down, anything else, spent net of reversals, and the net change of all wallets. */
+        MoneyTokens: {
+            soldMilli: number;
+            fromPlansMilli: number;
+            spentMilli: number;
+            reversedMilli: number;
+            adjustedInMilli: number;
+            adjustedOutMilli: number;
+            otherMilli: number;
+            netSpentMilli: number;
+            walletChangeMilli: number;
+        };
+        /** @description A window of whole Lagos days from fromDay's start to now. newPayers: people whose first confirmed payment ever is in the window. */
+        MoneyWindow: {
+            label: string;
+            /** Format: date */
+            fromDay: string;
+            /** Format: date */
+            toDay: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            received: components["schemas"]["MoneyReceived"];
+            overpaidKobo: number;
+            payments: components["schemas"]["MoneyPaymentCounts"];
+            newPayers: number;
+            tokens: components["schemas"]["MoneyTokens"];
+        };
+        MoneyWindows: {
+            today: components["schemas"]["MoneyWindow"];
+            last7: components["schemas"]["MoneyWindow"];
+            last30: components["schemas"]["MoneyWindow"];
+        };
+        /** @description V-ADMIN-MONEY: every figure comes from the payment and ledger tables; a screen adds nothing up. */
+        MoneyOverview: {
+            /** Format: date-time */
+            asOf: string;
+            /** Format: date */
+            lagosDay: string;
+            tokensHeldMilli: number;
+            windows: components["schemas"]["MoneyWindows"];
+        };
+        AdminSubscriptionPerson: {
+            /** Format: uuid */
+            id: string;
+            handle: string;
+            displayName: string | null;
+        };
+        AdminSubscriptionPlan: {
+            slug: string;
+            name: string;
+        };
+        AdminSubscription: {
+            /** Format: uuid */
+            id: string;
+            user: components["schemas"]["AdminSubscriptionPerson"];
+            plan: components["schemas"]["AdminSubscriptionPlan"];
+            status: components["schemas"]["SubscriptionStatus"];
+            /** Format: date */
+            startDay: string;
+            /** Format: date */
+            endDay: string;
+            months: number;
+            creditedMonths: number;
+            /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
+            monthlyMilli: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number;
+            /** Format: date */
+            nextCreditDay: string | null;
+            /** Format: uuid */
+            paymentId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description counts: the number of plans in each status, whatever the page or filter. */
+        AdminSubscriptionPage: {
+            items: components["schemas"]["AdminSubscription"][];
+            counts: unknown;
             nextCursor: string | null;
         };
         /** @description V-46. canUpload is true with a running subscription unless the person is verified or under review. documents says which of the two files are in the draft (the files themselves are never returned). */
@@ -11212,6 +11416,8 @@ export interface operations {
                 limit?: number;
                 /** @description PaymentStatus */
                 status?: string;
+                /** @description PaymentKind */
+                kind?: string;
             };
             header?: never;
             path?: never;
@@ -11253,13 +11459,66 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Payment"];
+                    "application/json": components["schemas"]["AdminPayment"];
                 };
             };
             401: components["responses"]["E401"];
             403: components["responses"]["E403"];
             404: components["responses"]["E404"];
             409: components["responses"]["E409"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminMoneyOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MoneyOverview"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListSubscriptions: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                /** @description SubscriptionStatus */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSubscriptionPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
             429: components["responses"]["E429"];
         };
     };
