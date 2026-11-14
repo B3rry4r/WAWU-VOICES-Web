@@ -47,3 +47,63 @@ Changed (small): `contract/openapi.yaml`, `types.ts`, `HomeScreen.tsx` (added li
 - Survey target in a "report this" flow; brand voice note; an audio player for the person's own answer on Done.
 - Sidebar count for surveys awaiting approval (needs a field on Today; I may not edit the frame).
 - Nothing was run against the real API.
+
+# Round 2
+
+Branch `v/surveys`. API stubbed everywhere; no live service called. Pictures: `docs/lead/surveys/shots-r2/` (public screens at 390 and 1440, admin at 1440). I opened Survey-390, BrandPage-1440, AdminResultsReview, AdminReleaseConfirm, SettingsSurveySwitch and AdminAdsBrandSelect and compared the first two with their boards. The rest were taken by the same run and asserted in it, but not opened one by one.
+
+## Items
+
+1. **Contract and types.** The survey and brand paths (release, free-answers, free-answers/{id}, report, brands 409, `/surveys/{id}`, `/brands/{slug}`) and schemas (Survey*, Brand*, AdminSurvey, AdminAd and UpsertAdRequest with `brandId`, HideFreeAnswer*, SurveyFreeAnswers/Item, SurveyReleaseResult) were set to the new reference in `contract/openapi.yaml`. Also `useMyStateForSurveys` in Settings, UpdateSettingsRequest and the `/me/settings` text. Nothing else from the reference (verification, money, subscriptions, `notifyWeeklyTopic`) was taken. `npm run api:types` run.
+2. **H1** VIEW on sight: `SurveyFeedCard.tsx` IntersectionObserver, at least half visible, once per card per page visit. Where the browser has no observer, nothing is counted. Home again (Back) is a new visit and counts one more VIEW; the server's daily cap decides.
+3. **H2** START once: `logic.ts` (`wasStarted`, `markStarted`, key `wawu.survey.<id>.started`, try/catch), used in `SurveyScreen.tsx`.
+4. **H3** `SurveyScreen.tsx`/`logic.ts`: draft per survey id in `sessionStorage` (position, answers with voice clip ids, sharing choices), validated against the survey on load, cleared on send, 409 and leave. Back with answers: an extra history entry is kept on top, a Back press lands on it and the page shows its own "Leave the survey?" box. Back without answers sends SKIP and goes back. `pagehide`, `visibilitychange` (hidden) and unmount send SKIP once through `recordSurveyEvent(..., {keepalive: true})` (fetch, since a beacon cannot carry the sign-in header). A finished person sends none.
+5. **MEDIUM and LOW:**
+   - M1: `showsPeople` (`survey-csv.ts`) hides choices, free answers and breakdowns when responses are under the floor whatever `belowMinimum` says, in the page and the CSV.
+   - M2: `scrub` (emails, links, @handles, long digit runs) is a second check on released free answers and transcripts, page and CSV. A name in plain words cannot be found; the review screen tells the reader to read each one.
+   - M3: phone "Why am I seeing this?" link opens a sheet. Its words are true of every survey (topic, sometimes state, state only if the Settings switch is on); the rail copy on desktop uses the same words.
+   - M4, M5: not built (see below).
+   - L1: `vx/sponsored.tsx` choices are one tab stop, arrows move and select (shared component, optional behaviour, no copy).
+   - L2: sidebar count not built (API must give it, below).
+   - L3: `vx.css` counter in the field hint no longer wraps.
+   - L4: skipping one question still sends nothing. The API report says only leaving counts, so this is kept.
+   - L5: `SurveysPage.tsx` pills: "Approved, starts 20 Nov", "Over, results to review", "Results released"; no Edit or Pause once results are fixed (server answers 409).
+   - L6: CSV writes `hidden` in Count for a hidden choice and a separate "Other" line.
+   - L7: advert link on the brand page: existing AdSlot, unchanged.
+   - Brand page: a lone advert now takes the full width; "Why this ad?" is drawn and opens a sheet with what is true (paid, approved by WAWU, no effect on rankings, brand never sees who you are).
+6. **Results page** `SurveyResultsPage.tsx`, `admin-surveys.ts` (free-answers, hide, release). Running or not live: only "N people have answered so far" and when the results are ready (end date and target as given). Review: every answer as the server gives it, Hide or Show (one PATCH each), "N of M hidden", "Release the results" with a Dialog that says the results are fixed and the "results ready" email goes to the brand's contact; refusals show the server's own words. Released: stored report, Other lines, state and age Other rows, released time, "not enough answers" as reported, "Save as CSV" from that response only.
+7. **Consent and brand select.** `SettingsPage.tsx` switch "Use my state to choose surveys for me" with one line (default off, PATCH `useMyStateForSurveys`). `AdsPage.tsx` "Brand page (optional)" select from the brands list; a new advert sends `brandId` only when chosen, an edit sends only a changed `brandId` (null clears).
+8. **Boards compared** at 390 and 1440 on the build. Closed: Why link, desktop rail copy, single-ad width, counter wrap. What remains differs only by the items below and by the shell (search bar, bell and the side-nav units chip above the Survey boards, bottom bar spacing).
+
+## Tests
+- Added: `tests/surveys-round2-public.test.tsx` (12), `tests/surveys-round2-admin.test.tsx` (18). E2E `e2e/surveys.e2e.mts` extended (H1, reload, Back asks, Back and tab close send one SKIP, admin stages, brand select, Settings switch); all OK against the build.
+- Changed (a rule changed):
+  - `surveys-public` feed card "counts one VIEW": was `rerender` then `["VIEW"]`; now no VIEW at mount, one after the observer reports at least 0.5, none without an observer.
+  - `surveys-public` afterEach: also waits for the page's unmount SKIP and clears `sessionStorage` (START flag and draft are per tab now).
+  - `surveys-logic` CSV: hidden choice line was `...,"A fan, ""battery""",,,` now `...,hidden,,`.
+  - Fixtures in `surveys-logic` and `surveys-admin` gained `stage: "RELEASED"`, `ready`, `released`, `releasedAt` and `other: null` (the new schema requires them). No other assertion was touched.
+- Checks: `npx tsc --noEmit` exit 0; `next lint` no warnings or errors; vitest 90 files, 909 tests, all pass (before the pictures commit, which touched no src); `next build` succeeded; the browser run was against that build.
+
+## Drawn on the boards, still not built, and what the API must give
+- **First question and choices on the feed card and brand page card**: placement and brand survey cards need the first question's `prompt`, `kind` and `options` (id, label).
+- **"Say why"**: an optional `clipId` beside `optionId` on a choice answer, same checks, transcript shown beside the choice in the report. Or the owner says a voice question stands in.
+- **Voice recap player on Done**: playback for the person's own `SURVEY_ANSWER` clip right after sending, with wave data. Done shows "Voice answer, 0:12" as text.
+- **Past answers on Done** (409, reload, later): `myAnswers` on `GET /surveys/{id}` for the person; owner to rule on the privacy promise.
+- **Brand voice note**: `voiceClip` (url, seconds, wave) on `GET /brands/{slug}` and the admin form.
+- **Verified tick**: `verified` on BrandPage and the brand form.
+- **More menu and "Report this ad"**: a report target for brand and survey (ReportTargetType has none) and reasons.
+- **Real "Why am I seeing this?" and "Why this ad?" copy**: a `why` line per placement or survey naming only what was used.
+- **"Rather not see ads?"**: the Ad-free pass is not in launch; the owner should take the card off the board.
+- **Brand badge word**: the board says "Sponsored"; the page shows the API's `label`. API to say which word.
+- **Sidebar count for surveys to approve**: a field on `AdminToday.needsAttention` (for example `surveys`).
+- **CSV after release for a brand**: no brand-facing route exists; admin only.
+
+## Choices
+- SKIP also goes on a reload (the page hides) and on a switch to another tab (`visibilitychange`), as asked. That counts toward the two-skip rule. If that is too eager, drop the `visibilitychange` listener.
+- A reload with answers brings the person back where they were; the sheet "Leave" box is not restored after a reload.
+- After Done the extra history entry is removed with one `history.back()`.
+- Release dialog button is "Release the results", cancel "Not yet".
+- Settings line: "Lets a survey aimed at your state reach you. It stays off until you turn it on."
+
+## Not done
+Everything in the list above; and the Home feed card still carries only the title.
