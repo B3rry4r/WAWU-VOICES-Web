@@ -5,6 +5,7 @@ import { AppShell } from "@/components/shell/AppShell";
 import { THEME_SCRIPT } from "@/components/shell/theme-script";
 import { InstallGate } from "@/features/install/InstallGate";
 import { INSTALL_SCRIPT } from "@/lib/install/boot-script";
+import { SITE_DESCRIPTION, SITE_IMAGE, SITE_TITLE, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 import "./type.css";
 import "../components/vx/vx.css";
@@ -29,8 +30,12 @@ const archivoViet = localFont({
 });
 
 export const metadata: Metadata = {
-  title: { default: "VOICES", template: "%s | VOICES" },
-  description: "Say your take. Listen to Africa.",
+  // SEO-APPS: metadataBase makes every relative share image and canonical absolute. Pages without their own write-up get this one.
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_TITLE, template: "%s | VOICES" },
+  description: SITE_DESCRIPTION,
+  openGraph: { type: "website", siteName: "VOICES", title: SITE_TITLE, description: SITE_DESCRIPTION, url: SITE_URL, locale: "en_NG", images: [SITE_IMAGE] },
+  twitter: { card: "summary", title: SITE_TITLE, description: SITE_DESCRIPTION, images: [SITE_IMAGE.url] },
   // V-41: the manifest comes from app/manifest.ts; these are the Apple home-screen tags (the touch icon is app/apple-icon.png).
   applicationName: "VOICES",
   appleWebApp: { capable: true, title: "VOICES", statusBarStyle: "default" },
