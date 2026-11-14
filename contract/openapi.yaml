@@ -6941,7 +6941,8 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     E409:
-      description: CONFLICT or a state error such as ALREADY_VOTED, QUESTION_CLOSED, POLL_CLOSED
+      description: CONFLICT or a state error such as ALREADY_VOTED, QUESTION_CLOSED, QUESTION_NOT_OPEN (a write on the question shown as coming
+        up), POLL_CLOSED
       content:
         application/json:
           schema:
@@ -7301,6 +7302,7 @@ components:
       - DAILY_LIMIT_REACHED
       - TEXT_FIX_FAILED
       - QUESTION_CLOSED
+      - QUESTION_NOT_OPEN
       - POLL_CLOSED
       - POLL_NOT_STARTED
       - ALREADY_VOTED
@@ -8068,7 +8070,9 @@ components:
       - status
       - sensitive
       - voiceCount
-      description: 'voicesCount (RW1) is the sum of its questions'' voicesCount: the number every "N voices so far" shows.'
+      description: 'voicesCount (RW1) is the sum of its questions'' voicesCount: the number every "N voices so far" shows. A week that has not
+        started (status SCHEDULED) sends its title and dates only: questionCount is 0 (the field is a required integer), weeklyPollId and reportId
+        are null, and the counts are 0.'
     CalendarWeek:
       type: object
       properties:
@@ -8267,6 +8271,7 @@ components:
       - trending
       - newConversations
       - greetingName
+      description: trending is the top voices of today's question only (empty until that question has opened); it is not a cross-question list.
     CategoryDetail:
       type: object
       properties:
