@@ -3,7 +3,7 @@
  * any button, so the song keeps playing while a person moves between pages and the control can live wherever it is needed.
  *
  * - It never starts before a gesture: browsers refuse sound without one. Two things call play(): toggle() (a click on the speaker) and
- *   armFirstTap() (V-SONG-FIRST-TAP, owner 14 Nov 2026): the visitor's first pointerdown, keydown or touchstart anywhere on a page that
+ *   armFirstTap() (V-SONG-FIRST-TAP, owner 14 Nov 2026): the visitor's first pointerdown, pointerup, keydown, touchstart, touchend or click anywhere on a page that
  *   shows the speaker button starts the song, once. It never starts by itself for a signed-in person, after the visitor turned the song
  *   off (remembered in localStorage, like the theme), or when the first interaction is on a voice player or recorder.
  * - The file is not fetched until then (preload none): many visitors are on mobile data.
@@ -76,6 +76,15 @@ export function songTurnedOff(): boolean {
   try { return window.localStorage.getItem(OFF_KEY) === "1"; } catch { return false; }
 }
 
+/**
+ * A voice is about to play or be recorded: the song steps aside. It does not write the person's "off" choice and does not come back by
+ * itself; the speaker button brings it back. It never creates the audio element.
+ */
+export function pauseSongForVoice() {
+  if (el && !el.paused) el.pause();
+  if (state.playing || state.loading) set({ playing: false, loading: false });
+}
+
 export function stopSong() {
   element()?.pause();
   remember(false);
@@ -99,7 +108,9 @@ export async function toggleSong(): Promise<void> {
   }
 }
 
-const TAP_EVENTS = ["pointerdown", "keydown", "touchstart"] as const;
+// A touch tap only counts as a user activation on pointerup, touchend and click (not on pointerdown or touchstart), so a phone needs
+// the later three; a mouse press and a key press count at once. The first one the browser accepts starts the song, once.
+const TAP_EVENTS = ["pointerdown", "pointerup", "keydown", "touchstart", "touchend", "click"] as const;
 let armed = 0;
 let trying = false;
 let listening = false;

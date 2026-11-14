@@ -1,3 +1,4 @@
+import { pauseSongForVoice } from "@/lib/theme-song";
 /* Playback helpers (local copy of the reference audio player: its sibling index does not build, see voiceCardRecorder.ts). */
 export function makePlayer(url: string): HTMLAudioElement {
   const a = new Audio();
@@ -11,6 +12,7 @@ export function makePlayer(url: string): HTMLAudioElement {
 
 /** Re-sign once when the URL lapses mid-session. */
 export async function playWithResign(a: HTMLAudioElement, resign: () => Promise<string>): Promise<void> {
+  pauseSongForVoice();
   try { await a.play(); } catch { a.src = await resign(); await a.play(); }
 }
 
