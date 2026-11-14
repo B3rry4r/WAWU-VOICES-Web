@@ -140,7 +140,7 @@ export function useStartWatch(at: number | null, refresh: () => Promise<unknown>
       stepped();
       const { early, late, split } = lead(spread);
       if (early > 0) {
-        timer = setTimeout(wake, Math.min(early, WAKE_MS));
+        timer = setTimeout(wake, Math.ceil(Math.min(early, WAKE_MS))); // whole ms, rounded UP: a wake never lands before its instant
         return;
       }
       if (!visible()) return; // asleep or in the background: the visibility event wakes us
@@ -160,7 +160,7 @@ export function useStartWatch(at: number | null, refresh: () => Promise<unknown>
         }
       }
       const wait = Math.max(250, Math.min(next - monotonicNow(), WAKE_MS));
-      timer = setTimeout(wake, light ? Math.min(wait, Math.max(250, late)) : wait);
+      timer = setTimeout(wake, Math.ceil(light ? Math.min(wait, Math.max(250, late)) : wait));
     };
     const back = (throttle: boolean) => () => {
       if (!visible()) return;
