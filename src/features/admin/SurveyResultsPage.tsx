@@ -78,9 +78,11 @@ function ResultsBody({ id }: { id: string }) {
       />
 
       {r.belowMinimum ? (
-        <Banner tone="info" title={`Fewer than ${r.minGroupSize} answers so far`} data-testid="below-minimum">
-          {`Nothing about the people who answered is shown until ${r.minGroupSize} have answered. Only the counts below are.`}
-        </Banner>
+        <div data-testid="below-minimum">
+          <Banner tone="info" title={`Fewer than ${r.minGroupSize} answers so far`}>
+            {`Nothing about the people who answered is shown until ${r.minGroupSize} have answered. Only the counts below are.`}
+          </Banner>
+        </div>
       ) : null}
 
       <div className={`grid gap-4 ${r.belowMinimum ? "grid-cols-3" : "grid-cols-5"}`}>
