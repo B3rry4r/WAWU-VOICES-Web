@@ -96,7 +96,7 @@ export function Outbox() {
     <div className="fixed inset-x-0 bottom-[96px] z-40 mx-auto grid max-w-[560px] gap-2 px-4 dt:bottom-4 dt:left-auto dt:right-4 dt:mx-0 dt:w-[560px]" data-testid="outbox">
       {view.kind === "offer" ? (
         <Banner tone="info" title="A recording is waiting" action={view.plan.label} onAction={() => void send(view.draft, view.plan)} onClose={() => void remove()}>
-          {`You recorded ${secondsText(view.seconds)} while you were offline. `}{busy ? "Sending it now." : "It goes out when you tap Send. The price is on the button."}
+          {busy ? "Sending it now." : `Saved while you were offline, ${secondsText(view.seconds)}.`}
         </Banner>
       ) : view.kind === "finish" ? (
         <Banner tone="info" title="A recording is waiting" onClose={() => void remove()}>

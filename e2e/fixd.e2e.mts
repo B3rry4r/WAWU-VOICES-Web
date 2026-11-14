@@ -151,8 +151,8 @@ try {
     assert.equal(find(calls, 'POST', '/questions/q1/answers').length, 1, 'a reload sent it again');
     await ctx.close();
   });
-  await t('offline, no free post left: the recording is offered with its price and goes only on the tap', async () => {
-    const { page, calls, ctx } = await open(1440, { free: 0 });
+  for (const w of [390, 1440]) await t(`${w}: offline, no free post left: the recording is offered with its price and goes only on the tap`, async () => {
+    const { page, calls, ctx } = await open(w, { free: 0 });
     await page.goto(`${ORIGIN}/speak`);
     await page.getByRole('button', { name: 'Start recording' }).click();
     await page.waitForTimeout(2200);
@@ -165,7 +165,7 @@ try {
     await page.goto(`${ORIGIN}/`);
     const offer = page.getByRole('button', { name: /^Send for .+ tokens$/ });
     await offer.waitFor();
-    await shot(page, 'offline-offer-1440');
+    await shot(page, `offline-offer-${w}`);
     await page.waitForTimeout(600);
     assert.equal(find(calls, 'POST', '/voice-clips').length, 0, 'sent before the tap');
     await offer.click();

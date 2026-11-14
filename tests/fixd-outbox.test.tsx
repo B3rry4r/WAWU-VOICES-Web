@@ -78,7 +78,7 @@ describe("V-FIX-D: recordings made offline send themselves, or ask first", () =>
     await saveDraft(draft({ seconds: 25 }));
     render(<Outbox />);
     const btn = await screen.findByRole("button", { name: /^Send for .+ tokens$/ });
-    expect(screen.getByText(/You recorded 25 seconds while you were offline/)).toBeTruthy();
+    expect(screen.getByText(/Saved while you were offline, 25 seconds/)).toBeTruthy();
     await new Promise((r) => setTimeout(r, 30));
     expect(speak.createVoiceClip).not.toHaveBeenCalled();
     expect(speak.createVoiceAnswer).not.toHaveBeenCalled();
