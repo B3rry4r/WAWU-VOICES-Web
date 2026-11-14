@@ -1,6 +1,6 @@
 import { tokensLabel } from "@/lib/shared/text-price";
 import type { Answer } from "@/lib/api/feed";
-import { countdown, dayKey, longDay } from "@/lib/format/date";
+import { countdown, longDay } from "@/lib/format/date";
 
 /** "9h", "2 days", "45 min": time left until an ISO instant (the shared countdown). */
 export function closesIn(endsAt: string | null | undefined, now = Date.now()): string | undefined {
@@ -37,29 +37,51 @@ export function isOpen(q: { status: string; startsAt: string | null; endsAt: str
   return true;
 }
 
-/** V-PRELAUNCH: scheduled and not yet inside its window. The API says SCHEDULED for such a question; the date decides the rest. */
-export function notOpenYet(q: { status: string; startsAt: string | null }, now = Date.now()): boolean {
-  return q.status === "SCHEDULED" && !!q.startsAt && Date.parse(q.startsAt) > now;
+/**
+ * V-PRELAUNCH: a question the API still calls SCHEDULED has not opened. Only the API's word decides, never this device's clock:
+ * at the instant the screen keeps the "Coming up" card until the API answers that it is open (no live buttons before the API agrees),
+ * and `useLoad` asks again by itself (see `pendingStart`).
+ */
+export function notOpenYet(q: { status: string; startsAt: string | null }): boolean {
+  return q.status === "SCHEDULED" && !!q.startsAt;
 }
 
-/** "Opens Sunday 15 November" (the Lagos day of `startsAt`). */
+/** "Opens Sunday 15 November" (the Lagos day of `startsAt`; with the year when it is not this year). */
 export function opensLabel(q: { startsAt: string | null }): string | undefined {
   return q.startsAt ? `Opens ${longDay(q.startsAt)}` : undefined;
 }
 
 /** The label to give a card for a question that has not opened (undefined once it has): the card then shows no counts and no actions. */
-export function comingUp(q: { status: string; startsAt: string | null }, now = Date.now()): string | undefined {
-  return notOpenYet(q, now) ? opensLabel(q) : undefined;
+export function comingUp(q: { status: string; startsAt: string | null }): string | undefined {
+  return notOpenYet(q) ? opensLabel(q) : undefined;
 }
 
-/** A topic whose week has not begun: the API says SCHEDULED, and its first day is after today (Lagos). */
-export function topicNotStarted(t: { status: string; startsOn: string }, now = Date.now()): boolean {
-  return t.status === "SCHEDULED" && t.startsOn > dayKey(now);
+/** A topic whose week has not begun: the API still says SCHEDULED (the API's word decides, not this device's clock). */
+export function topicNotStarted(t: { status: string; startsOn: string }): boolean {
+  return t.status === "SCHEDULED";
 }
 
 /** "Starts Monday 16 November": `startsOn` is a Lagos calendar day. */
 export function startsLabel(t: { startsOn: string }): string {
   return `Starts ${longDay(`${t.startsOn}T12:00:00+01:00`)}`;
+}
+
+/** Epoch ms at which a not-yet-open question is due to open, or null when it is open (or has no start). Feed it to `useLoad` as `pending`. */
+export function questionStart(q: { status: string; startsAt: string | null } | null | undefined): number | null {
+  return q && notOpenYet(q) ? Date.parse(q.startsAt as string) : null;
+}
+
+/** Epoch ms of the first moment (Lagos midnight) of a week that has not begun, if that is within three days; otherwise null (nothing to wait for yet). */
+export function topicStart(t: { status: string; startsOn: string } | null | undefined, now = Date.now()): number | null {
+  if (!t || !topicNotStarted(t)) return null;
+  const at = Date.parse(`${t.startsOn}T00:00:00+01:00`);
+  return Number.isFinite(at) && at - now < 3 * 86_400_000 ? at : null;
+}
+
+/** The earliest of several waiting instants (nulls ignored), or null. */
+export function soonest(...at: (number | null)[]): number | null {
+  const set = at.filter((x): x is number => x !== null);
+  return set.length ? Math.min(...set) : null;
 }
 
 /** "0.2 tokens", "1 token", "16.67 tokens": tokens from milli-tokens. */

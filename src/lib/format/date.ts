@@ -47,10 +47,11 @@ export function monthYear(w: When, style: "short" | "long" = "short"): string {
   return `${p.month} ${p.year}`;
 }
 
-/** "Sunday 15 November": the long weekday, the day and the long month (Lagos time). */
+/** "Sunday 15 November": the long weekday, the day and the long month (Lagos time). A day in another year carries it: "Monday 27 September 2027". */
 export function longDay(w: When): string {
-  const p = parts(w, { weekday: "long", day: "numeric", month: "long" });
-  return `${p.weekday} ${p.day} ${p.month}`;
+  const p = parts(w, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const thisYear = parts(Date.now(), { year: "numeric" }).year;
+  return `${p.weekday} ${p.day} ${p.month}${p.year === thisYear ? "" : ` ${p.year}`}`;
 }
 
 /** "Mon" or "Monday". */

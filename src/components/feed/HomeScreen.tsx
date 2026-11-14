@@ -7,11 +7,12 @@ import { getHome, getMe, getTrendingQuestions, type Home } from "@/lib/api/feed"
 import { listMyAnswers } from "@/lib/api/profile";
 import { getAdPlacement, getFlashPolls, type AdPlacement, type Poll } from "@/lib/api/polls";
 import { isSignedIn } from "@/lib/api/auth";
-import { closesIn, comingUp, shortCount, uniqueVoices, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, shortCount, soonest, topicStart, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
 import { FlashPoll } from "./FlashPoll";
 import { WeeklyReportLink } from "./LinkCards";
 import { Answers, Failed, Loading, NothingYet, Section, TextLink, Tiles, WeekCard } from "./parts";
+import { useShareSheet } from "@/features/talk/TalkCard";
 import { useFinishProfile } from "@/features/entry/ui";
 import { SuspendedBanner } from "@/features/profile/SuspendedBanner";
 import { trendItems } from "./trend";
@@ -34,6 +35,7 @@ export function HomeScreen() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => setSignedIn(isSignedIn()), []);
   useFinishProfile();
+  const [shareNode, share] = useShareSheet();
   const load = useLoad<Data>(async () => {
     const [home, flash, trending, ad, who] = await Promise.all([
       getHome(),
@@ -51,7 +53,7 @@ export function HomeScreen() {
     const today = home.dailyQuestion?.id;
     const answered = signedIn && today ? await listMyAnswers().then((p) => p.items.some((i) => i.answer?.questionId === today), () => false) : false;
     return { home, flash, trending, ad, firstName: who.firstName, suspended: who.suspended, answered };
-  }, [signedIn]);
+  }, [signedIn], (d) => soonest(questionStart(d.home.dailyQuestion), topicStart(d.home.topicOfWeek)));
   if (signedIn === null || load.state === "loading") return <Loading />;
   if (load.state === "error") return <Failed load={load} />;
   const { home: h, flash, trending, ad, firstName, suspended, answered } = load.data;
@@ -74,6 +76,7 @@ export function HomeScreen() {
               closesIn={closesIn(q.endsAt)}
               avatars={uniqueVoices(q.recentVoices).map((v) => v.handle)}
               opensLabel={comingUp(q)}
+              onShare={() => share("QUESTION", q.id, { notOpen: true })}
               speakLabel={answered ? "Listen to answers" : signedIn ? undefined : "Add your voice"}
               speakIcon={answered ? "headphones" : undefined}
               answered={answered}
@@ -90,7 +93,7 @@ export function HomeScreen() {
         ) : (
           <div className="order-2"><NothingYet title="No question yet" body="Today’s question shows up here as soon as it opens." /></div>
         )}
-        {signedIn ? null : (
+        {signedIn || (q && comingUp(q)) ? null : (
           <div className="order-3">
             <Banner tone="info" icon="headphones" title="Listening is free.">
               Read, listen, like and share without an account. We only ask for your number when you post, react or vote.
@@ -98,7 +101,7 @@ export function HomeScreen() {
           </div>
         )}
         <div className="order-4 dt:hidden"><WeekCard topic={h.topicOfWeek} questionId={q?.id} /></div>
-        <div className="order-4 dt:hidden"><WeeklyReportLink /></div>
+        <div className="order-4 dt:hidden"><WeeklyReportLink questionOpen={!(q && comingUp(q))} /></div>
 
         {flash ? (
           <Section className="order-5 dt:order-5" title={<>Flash poll <Badge tone="live" /></>}>
@@ -124,13 +127,17 @@ export function HomeScreen() {
         </Section>
         ) : null}
 
+        {/* V-PRELAUNCH round 2: no heading over nothing. */}
+        {h.newConversations.length ? (
         <Section className="order-7 dt:order-4 dt:[&>div:first-child]:hidden" title="New conversations">
-          {h.newConversations.length ? <Tiles items={h.newConversations.slice(0, 2)} /> : <NothingYet title="Nothing new yet" body="New conversations show up here as they open." />}
+          <Tiles items={h.newConversations.slice(0, 2)} />
         </Section>
+        ) : null}
 
         {signedIn ? <div className="order-8 dt:hidden"><AdCard ad={ad} /></div> : null}
       </div>
 
+      {shareNode}
       <Rail>
         <WeekCard topic={h.topicOfWeek} questionId={q?.id} variant="rail" />
         {trending.length ? <TrendingList items={trending} /> : null}

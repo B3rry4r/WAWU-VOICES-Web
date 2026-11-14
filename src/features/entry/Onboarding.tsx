@@ -7,7 +7,7 @@ import { useLoad } from "@/components/feed/useLoad";
 import { getPublicConfig, getTodaysQuestion } from "@/lib/api/feed";
 import { apiFetch } from "@/lib/api/client";
 import type { components } from "@/lib/api/types";
-import { closesIn, comingUp, voicesLabel, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, voicesLabel, voicesOf } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
 import { holdReturn } from "@/lib/auth/entry-draft";
 import { fromPrice, textPostNaira } from "./format";
@@ -39,7 +39,7 @@ export function Onboarding() {
       /* no address to read: they land on Home */
     }
   }, []);
-  const load = useLoad(() => Promise.all([getTodaysQuestion(), getPublicConfig(), getCurrentPoll()]), []);
+  const load = useLoad(() => Promise.all([getTodaysQuestion(), getPublicConfig(), getCurrentPoll()]), [], ([q]) => questionStart(q));
   if (skipping) return null;
   const logo = <Link href="/welcome" className="flex" aria-label="VOICES"><Logo height={34} alt="VOICES" /></Link>;
   const skip = <Link href="/join/country" className="-mr-2 inline-flex min-h-[44px] items-center px-2 text-label link-more">Skip</Link>;
@@ -72,14 +72,21 @@ export function Onboarding() {
           <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">{opens ? "Coming up" : "Today’s question"}</span>
           <p className="relative m-0 font-display text-display-l">{q.text}</p>
           {opens ? <span className="relative text-caption text-[var(--on-forest-2)]">{opens}</span> : null}
-          <Still><VoicePlayer duration={9} seed={4} tone="forest" progress={0.35} /></Still>
+          {opens ? null : <Still><VoicePlayer duration={9} seed={4} tone="forest" progress={0.35} /></Still>}
         </>
       ),
     },
     {
       title: "Hear the country",
       body: "Listen to real voices, react, and see where people lean in open polls. Listening is always free.",
-      art: (
+      art: opens ? (
+        // Nothing has been said yet, so no player, no reactions and no poll: the coming-up card stays.
+        <>
+          <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">Coming up</span>
+          <p className="relative m-0 font-display text-display-l">{q.text}</p>
+          <span className="relative text-caption text-[var(--on-forest-2)]">{opens}</span>
+        </>
+      ) : (
         <>
           <Still><VoicePlayer duration={9} seed={7} tone="forest" progress={0.6} playing /></Still>
           <div className="relative flex flex-wrap gap-2">
@@ -149,7 +156,7 @@ export function Onboarding() {
           <div className="relative flex flex-col justify-end gap-5 overflow-hidden bg-forest p-10 text-forest-on">
             <span className="inline-flex h-[30px] -rotate-2 items-center self-start rounded-[10px] bg-green px-3 text-eyebrow uppercase text-green-on">{opens ? "Coming up" : "Today’s question"}</span>
             <p className="relative m-0 font-display text-display-xl">{q.text}</p>
-            <Still><VoicePlayer duration={9} seed={4} tone="forest" progress={0.35} /></Still>
+            {opens ? null : <Still><VoicePlayer duration={9} seed={4} tone="forest" progress={0.35} /></Still>}
             <span className="relative text-caption text-[var(--on-forest-2)]">{opens ?? `${voicesLabel(voicesOf(q))} so far · Closes in ${closesIn(q.endsAt)}`}</span>
           </div>
           <div className="flex flex-col justify-center gap-5 p-10">

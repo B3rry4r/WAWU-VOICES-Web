@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useShareSheet } from "@/features/talk/TalkCard";
 import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { Avatar, Button, Icon, Logo, QuestionHero, Skeleton } from "@/components/vx";
@@ -9,7 +10,7 @@ import { getTodaysQuestion } from "@/lib/api/feed";
 import { isSignedIn } from "@/lib/api/auth";
 import { getInviter } from "@/lib/api/invite";
 import { keptInviteCode } from "@/lib/invite";
-import { closesIn, comingUp, voicesOf } from "@/lib/feed-format";
+import { closesIn, comingUp, questionStart, voicesOf } from "@/lib/feed-format";
 import { TONE, isMoodQuestion, pickHref, writePick } from "@/features/mood/mood";
 import type { Mood } from "@/lib/api/mood";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner } from "./ui";
@@ -25,7 +26,8 @@ import { LANDING_EYEBROW, LANDING_HEADLINE_EN, LANDING_HEADLINE_YO, LANDING_INTR
  */
 export function Go() {
   const router = useRouter();
-  const load = useLoad(() => getTodaysQuestion(), []);
+  const [shareNode, share] = useShareSheet();
+  const load = useLoad(() => getTodaysQuestion(), [], questionStart);
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => setSignedIn(isSignedIn()), []);
   const [inviter, setInviter] = useState<string | null>(null);
@@ -37,6 +39,8 @@ export function Go() {
     return () => { live = false; };
   }, []);
 
+  // V-PRELAUNCH round 2: until the question has opened nothing here says to listen or to add a voice; the way to join stays.
+  const before = load.state === "ready" && !!comingUp(load.data);
   const addHref = load.state === "ready" && isMoodQuestion(load.data) ? pickHref(load.data.id) : "/speak";
   const header = (
     <>
@@ -52,7 +56,7 @@ export function Go() {
         <Link href="/welcome" className="mr-auto flex" aria-label="VOICES home"><Logo height={40} alt="VOICES home" /></Link>
         <span className="flex gap-3">
           {signedIn ? <Button variant="secondary" href="/">Home</Button> : <Button variant="secondary" href="/sign-in">Sign in</Button>}
-          <Button icon="mic" href={addHref}>Add your voice</Button>
+          {load.state === "loading" ? null : before ? (signedIn ? null : <Button icon="mic" href="/join">Join VOICES</Button>) : <Button icon="mic" href={addHref}>Add your voice</Button>}
         </span>
       </header>
     </>
@@ -83,6 +87,7 @@ export function Go() {
             <span className="vx-eyebrow text-sun">{opens ? "Coming up" : "Today’s question"}</span>
             <h2 id="lq-h" className="m-0 font-display text-display-l">{q.text}</h2>
             {opens ? <p data-testid="go-opens" className="m-0 text-[17px] font-bold leading-6">{opens}</p> : null}
+            {opens ? <Button size="s" icon="share-2" onClick={() => share("QUESTION", q.id, { notOpen: true })}>Share</Button> : null}
             {opens ? null : <div role="group" aria-labelledby="lq-h" className="grid grid-cols-2 gap-2">
               {(q.moodOptions as Mood[]).map((m) => (
                 <button
@@ -103,6 +108,7 @@ export function Go() {
               voices={voicesOf(q)}
               closesIn={closesIn(q.endsAt)}
               opensLabel={comingUp(q)}
+              onShare={() => share("QUESTION", q.id, { notOpen: true })}
               speakLabel="Add your voice"
               onSpeak={() => router.push("/speak")}
               onListen={() => router.push(`/q/${q.id}`)}
@@ -111,7 +117,7 @@ export function Go() {
             />
           </section>
         )}
-        <Button size="l" variant="secondary" icon="headphones" block href={`/q/${q.id}`}>{signedIn ? "Listen to answers" : "Listen as a guest"}</Button>
+        {opens ? null : <Button size="l" variant="secondary" icon="headphones" block href={`/q/${q.id}`}>{signedIn ? "Listen to answers" : "Listen as a guest"}</Button>}
         <p className="m-0 flex items-center gap-2 text-[14px] font-medium leading-5 text-ink-2"><Icon name="lock" size={16} />Free to read, listen, like and share. Adults only (18+).</p>
       </div>
     );
@@ -121,15 +127,18 @@ export function Go() {
     <EntryFrame>
       {header}
       <EntryScroll>{body}</EntryScroll>
+      {shareNode}
+      {load.state === "loading" || (before && signedIn) ? null : (
       <div className="dt:hidden">
         <BottomBar>
           <div className={signedIn ? "grid grid-cols-1" : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-[10px]"}>
             {signedIn ? null : <Button size="l" variant="secondary" block href="/sign-in">Sign in</Button>}
-            <Button size="l" icon="mic" block href={addHref}>Add your voice</Button>
+            {before ? <Button size="l" icon="mic" block href="/join">Join VOICES</Button> : <Button size="l" icon="mic" block href={addHref}>Add your voice</Button>}
           </div>
           {signedIn ? null : <p className="m-0 mx-auto text-center text-caption text-ink-2">When you join you accept the <Link href="/settings/legal/rules" className="link">Community rules</Link>, <Link href="/settings/legal/terms" className="link">Terms</Link> and <Link href="/settings/legal/privacy" className="link">Privacy</Link>.</p>}
         </BottomBar>
       </div>
+      )}
     </EntryFrame>
   );
 }
