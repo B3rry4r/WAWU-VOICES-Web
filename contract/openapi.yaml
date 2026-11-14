@@ -3800,6 +3800,47 @@ paths:
           $ref: '#/components/responses/E401'
         '429':
           $ref: '#/components/responses/E429'
+  /subscription-plans:
+    get:
+      operationId: listSubscriptionPlans
+      tags:
+      - voice-units
+      summary: The subscription plans and what each gives
+      security:
+      - {}
+      - wawuId: []
+      description: 'V-45. Prices come from config. Auth: guest or signed in. Auth: guest or signed in.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlans'
+        '401':
+          $ref: '#/components/responses/E401'
+        '429':
+          $ref: '#/components/responses/E429'
+  /subscriptions/me:
+    get:
+      operationId: getMySubscriptions
+      tags:
+      - voice-units
+      summary: My plan, the one waiting to start and my finished plans
+      security:
+      - wawuId: []
+      description: 'Auth: signed in with a finished profile.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MySubscriptions'
+        '401':
+          $ref: '#/components/responses/E401'
+        '429':
+          $ref: '#/components/responses/E429'
   /wallet:
     get:
       operationId: getWallet
@@ -3882,7 +3923,7 @@ paths:
       operationId: initPayment
       tags:
       - voice-units
-      summary: Start a payment for a unit pack or an extra voice token
+      summary: Start a payment for a token pack or a subscription plan
       security:
       - wawuId: []
       description: 'The server fixes the amount from config and returns the Flutterwave checkout link. Nothing is credited until verification.
@@ -6697,6 +6738,7 @@ components:
       enum:
       - UNITS
       - EXTRA_VOICE
+      - SUBSCRIPTION
     PaymentStatus:
       type: string
       enum:
@@ -6826,6 +6868,14 @@ components:
       - REVERSAL
       - ADJUSTMENT
       - REFUND
+      - SUBSCRIPTION_CREDIT
+    SubscriptionStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - QUEUED
+      - ENDED
+      - CANCELLED_DELETED
     AccountStatus:
       type: string
       enum:
@@ -10014,6 +10064,37 @@ components:
       - description
       - imageUrl
       - url
+    Quote:
+      type: object
+      properties:
+        priceKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        vatKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        chargeKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        totalKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+      additionalProperties: false
+      required:
+      - priceKobo
+      - vatKobo
+      - chargeKobo
+      - totalKobo
+      description: 'What the customer pays: the price, VAT on it and the payment charge, each rounded up to the kobo. The tokens or plan value
+        are priced at priceKobo and never change; totalKobo is what is sent to Flutterwave and what verification requires.'
     UnitTier:
       type: object
       properties:
@@ -10043,6 +10124,8 @@ components:
           type: integer
         baseKoboPerUnit:
           type: integer
+        quote:
+          $ref: '#/components/schemas/Quote'
       additionalProperties: false
       required:
       - id
@@ -10058,6 +10141,8 @@ components:
     TiersResponse:
       type: object
       properties:
+        vatRateBps:
+          type: integer
         tiers:
           type: array
           items:
@@ -10246,6 +10331,9 @@ components:
         tierId:
           type: string
           format: uuid
+        planId:
+          type: string
+          format: uuid
         tokenKind:
           $ref: '#/components/schemas/ExtraVoiceTokenKind'
         returnPath:
@@ -10253,6 +10341,7 @@ components:
       additionalProperties: false
       required:
       - kind
+      description: For kind SUBSCRIPTION send planId. A second plan is refused (409 SUBSCRIPTION_ACTIVE) while one runs or waits.
     PaymentInit:
       type: object
       properties:
@@ -10265,6 +10354,27 @@ components:
           type: string
         amountKobo:
           type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        vatKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        chargeKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        totalKobo:
+          type:
+          - integer
+          - 'null'
           minimum: 0
           maximum: 2000000000
           description: Naira in kobo (32-bit integer).
@@ -10306,6 +10416,27 @@ components:
           $ref: '#/components/schemas/PaymentStatus'
         amountKobo:
           type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        vatKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        chargeKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        totalKobo:
+          type:
+          - integer
+          - 'null'
           minimum: 0
           maximum: 2000000000
           description: Naira in kobo (32-bit integer).
@@ -10364,6 +10495,10 @@ components:
           oneOf:
           - $ref: '#/components/schemas/ExtraVoiceToken'
           - type: 'null'
+        plan:
+          oneOf:
+          - $ref: '#/components/schemas/PaymentPlan'
+          - type: 'null'
       additionalProperties: false
       required:
       - id
@@ -10382,6 +10517,160 @@ components:
       - createdAt
       - verifiedAt
       - token
+      description: 'For a SUBSCRIPTION, unitsMilli is the total over all its months: nothing is credited at once beyond the first month.'
+    PaymentPlan:
+      type: object
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        months:
+          type: integer
+        monthlyMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+      additionalProperties: false
+      required:
+      - slug
+      - name
+      - months
+      - monthlyMilli
+    SubscriptionPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        months:
+          type: integer
+        priceKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        monthlyMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        totalMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        quote:
+          $ref: '#/components/schemas/Quote'
+      additionalProperties: false
+      required:
+      - id
+      - slug
+      - name
+      - months
+      - priceKobo
+      - monthlyMilli
+      - totalMilli
+    SubscriptionPlans:
+      type: object
+      properties:
+        vatRateBps:
+          type: integer
+        plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionPlan'
+      additionalProperties: false
+      required:
+      - plans
+      description: Prices and tokens come from config (docs/launch/PRICING.md). Paid once up front; tokens are credited month by month.
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        planSlug:
+          type: string
+        planName:
+          type: string
+        status:
+          $ref: '#/components/schemas/SubscriptionStatus'
+        months:
+          type: integer
+        monthlyMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        totalMilli:
+          type: integer
+          minimum: -2000000000
+          maximum: 2000000000
+          description: Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000.
+        priceKobo:
+          type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        creditedMonths:
+          type: integer
+        startDay:
+          type: string
+        endDay:
+          type: string
+        nextCreditDay:
+          type:
+          - string
+          - 'null'
+        paymentId:
+          type: string
+          format: uuid
+      additionalProperties: false
+      required:
+      - id
+      - planSlug
+      - planName
+      - status
+      - months
+      - monthlyMilli
+      - totalMilli
+      - priceKobo
+      - creditedMonths
+      - startDay
+      - endDay
+      - nextCreditDay
+      - paymentId
+      description: Days are Lagos calendar days, YYYY-MM-DD. Month n is credited on the same day of month n as the start day (the last day of
+        a shorter month).
+    MySubscriptions:
+      type: object
+      properties:
+        current:
+          oneOf:
+          - $ref: '#/components/schemas/Subscription'
+          - type: 'null'
+        queued:
+          oneOf:
+          - $ref: '#/components/schemas/Subscription'
+          - type: 'null'
+        past:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subscription'
+        canBuy:
+          type: boolean
+      additionalProperties: false
+      required:
+      - current
+      - queued
+      - past
+      - canBuy
     VerifyPaymentRequest:
       type: object
       properties:
@@ -10402,6 +10691,27 @@ components:
           type: string
         amountKobo:
           type: integer
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        vatKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        chargeKobo:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 2000000000
+          description: Naira in kobo (32-bit integer).
+        totalKobo:
+          type:
+          - integer
+          - 'null'
           minimum: 0
           maximum: 2000000000
           description: Naira in kobo (32-bit integer).
