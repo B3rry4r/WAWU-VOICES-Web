@@ -1,5 +1,5 @@
 import { apiBlob, apiFetch } from "./client";
-import type { components } from "./types-pending";
+import type { components } from "./types";
 
 type S = components["schemas"];
 

@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "shoot": "node scripts/shoot.mjs",
-    "api:types": "openapi-typescript contract/openapi.yaml -o src/lib/api/types.ts && openapi-typescript contract/pending-fix-bc.yaml -o src/lib/api/types-pending.ts",
+    "api:types": "openapi-typescript contract/openapi.yaml -o src/lib/api/types.ts",
     "sync:shared": "node scripts/sync-shared.mjs"
   },
   "dependencies": {

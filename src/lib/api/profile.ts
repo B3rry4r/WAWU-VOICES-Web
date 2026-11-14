@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { components } from "./types-pending";
+import type { components } from "./types";
 import { isSignedIn } from "./auth";
 
 /* me-profile group (A1), people, media presign, reports. Every call is a contract path under /api/v1 (API_BASE). */
