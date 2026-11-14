@@ -159,8 +159,33 @@ export async function loadDraft(owner: Owner): Promise<Draft | null> {
     try { await run("readwrite", (s) => s.put(claimed, ID)); } catch { /* memory copy serves */ }
     return claimed;
   }
-  if (me !== null) await wipeDraft(); // someone else's recording on this browser
+  if (me !== null) await wipeIfStill(d); // someone else's recording on this browser
   return null;
+}
+
+/** Removes the kept recording only if it is still the very one that was read: a recording kept by someone else a moment later is never swept away with it. */
+async function wipeIfStill(seen: Draft): Promise<void> {
+  if (memory && memory.key === seen.key && memory.owner === seen.owner) memory = null;
+  try {
+    const db = await open();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const g = tx.objectStore(STORE).get(ID);
+        g.onsuccess = () => {
+          const cur = g.result as Draft | undefined;
+          if (cur && cur.key === seen.key && (cur.owner ?? null) === (seen.owner ?? null)) tx.objectStore(STORE).delete(ID);
+        };
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error ?? new Error("indexedDB"));
+        tx.onabort = () => reject(tx.error ?? new Error("indexedDB"));
+      });
+    } finally {
+      db.close();
+    }
+  } catch {
+    /* nothing to clear */
+  }
 }
 
 export async function clearDraft(owner: Owner): Promise<void> {
