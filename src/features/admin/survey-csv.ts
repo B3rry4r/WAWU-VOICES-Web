@@ -55,7 +55,9 @@ export function reportToCsv(r: SurveyReport): string {
     row("Totals", "", "Answers", t.responses);
     row("Totals", "", "Completion rate (%)", t.completionRate);
     for (const q of r.questions ?? []) {
-      if (q.kind === "SINGLE_CHOICE") {
+      if (q.answered === null || q.answered === undefined) {
+        row("Note", q.prompt, "Too few answers to show");
+      } else if (q.kind === "SINGLE_CHOICE") {
         for (const o of q.options) row("Choice", q.prompt, o.label, o.hidden ? "hidden" : o.count, o.hidden ? null : o.share);
         if (q.other) row("Choice", q.prompt, q.other.label, q.other.count, q.other.share);
       } else if (q.kind === "TEXT") {

@@ -74,13 +74,17 @@ describe("answers survive a reload", () => {
     await u.click(screen.getByRole("button", { name: "Send answer" }));
     await screen.findByText("Question 3 of 3");
     // a voice answer is kept by its clip id: put one in the saved draft the way the page writes it
-    const raw = JSON.parse(window.sessionStorage.getItem("wawu.survey.s1.draft") as string);
+    const raw = JSON.parse(window.sessionStorage.getItem("wawu.survey.unknown.s1.draft") as string);
     expect(raw.idx).toBe(2);
     expect(raw.given.q1).toEqual({ kind: "choice", optionId: "o2", label: "Cold drinks" });
     raw.given.q3 = { kind: "voice", clipId: "clip-9", seconds: 7 };
-    window.sessionStorage.setItem("wawu.survey.s1.draft", JSON.stringify(raw));
+    window.sessionStorage.setItem("wawu.survey.unknown.s1.draft", JSON.stringify(raw));
+    // A reload keeps the tab's session store and sends nothing. Unmounting is a link away (round 3: it sends SKIP and removes the draft), so put back what a reload leaves.
+    const kept = window.sessionStorage.getItem("wawu.survey.unknown.s1.draft") as string;
     first.unmount();
     await tick();
+    window.sessionStorage.removeItem("wawu.survey.unknown.s1.skipped");
+    window.sessionStorage.setItem("wawu.survey.unknown.s1.draft", kept);
     render(<SurveyScreen id="s1" />);
     expect(await screen.findByText("Question 3 of 3")).toBeTruthy();
     // go back to question 1: the choice is still there
@@ -91,7 +95,7 @@ describe("answers survive a reload", () => {
   });
   it("drops what no longer fits the survey, and clears the draft after a send", async () => {
     expect(loadDraft("s1", survey().questions as never, [])).toBeNull();
-    window.sessionStorage.setItem("wawu.survey.s1.draft", JSON.stringify({ idx: 9, given: { q1: { kind: "choice", optionId: "gone", label: "x" }, q9: { kind: "text", text: "y" } }, anonymous: true, shareState: false, ageBand: "99" }));
+    window.sessionStorage.setItem("wawu.survey.unknown.s1.draft", JSON.stringify({ idx: 9, given: { q1: { kind: "choice", optionId: "gone", label: "x" }, q9: { kind: "text", text: "y" } }, anonymous: true, shareState: false, ageBand: "99" }));
     const d = loadDraft("s1", survey().questions as never, ["18-24"]);
     expect(d).toEqual({ idx: 2, given: {}, anonymous: true, shareState: false, ageBand: "" });
     window.sessionStorage.clear();
@@ -101,7 +105,7 @@ describe("answers survive a reload", () => {
     await u.click(await screen.findByRole("radio", { name: "Cold drinks" }));
     await u.click(screen.getByRole("button", { name: "Send answer" }));
     await screen.findByText("Thanks. Your answers are in.");
-    expect(window.sessionStorage.getItem("wawu.survey.s1.draft")).toBeNull();
+    expect(window.sessionStorage.getItem("wawu.survey.unknown.s1.draft")).toBeNull();
   });
 });
 
@@ -122,7 +126,7 @@ describe("leaving", () => {
     await u.click(screen.getByRole("button", { name: "Leave" }));
     await waitFor(() => expect(events()).toEqual(["START", "SKIP"]));
     expect(push).toHaveBeenCalledWith("/");
-    expect(window.sessionStorage.getItem("wawu.survey.s1.draft")).toBeNull();
+    expect(window.sessionStorage.getItem("wawu.survey.unknown.s1.draft")).toBeNull();
   });
   it("Back with no answers sends one SKIP and goes back", async () => {
     mockApi(table());
@@ -135,18 +139,16 @@ describe("leaving", () => {
     expect(screen.queryByText(/have not been sent/)).toBeNull();
     back.mockRestore();
   });
-  it("a closed tab or a hidden page sends one SKIP with keepalive, whichever comes first, and not after the answers are sent", async () => {
+  it("a closed tab, a hidden page, a reload and switching app send no SKIP (round 3: only a real choice to leave does)", async () => {
     mockApi(table());
     render(<SurveyScreen id="s1" />);
     await screen.findByText("Question 1 of 3");
     fireEvent(window, new Event("pagehide"));
     Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
     fireEvent(document, new Event("visibilitychange"));
-    await waitFor(() => expect(events()).toEqual(["START", "SKIP"]));
     await tick();
-    expect(events()).toEqual(["START", "SKIP"]);
-    const skip = (fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls.find((c) => c[0].endsWith("/surveys/s1/events") && String(c[1].body).includes("SKIP"));
-    expect(skip?.[1].keepalive).toBe(true);
+    await tick();
+    expect(events()).toEqual(["START"]);
     Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
   });
   it("a person who finished sends no SKIP when the page goes", async () => {

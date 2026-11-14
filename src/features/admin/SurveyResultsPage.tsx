@@ -70,6 +70,8 @@ function RunningStage({ r }: { r: SurveyReport }) {
 function ReviewStage({ id, r, onReleased }: { id: string; r: SurveyReport; onReleased: () => void }) {
   const [data, setData] = useState<SurveyFreeAnswers | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [moreBusy, setMoreBusy] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
@@ -86,6 +88,23 @@ function ReviewStage({ id, r, onReleased }: { id: string; r: SurveyReport; onRel
     void load();
   }, [load]);
 
+  // The next page of the list. The server counts the list as read only when its last page has been served, so the pages are walked in order.
+  async function more() {
+    const cursor = data?.nextCursor;
+    if (!cursor || moreBusy) return;
+    setMoreBusy(true);
+    setMoreError(null);
+    try {
+      const page = await getSurveyFreeAnswers(id, cursor);
+      setData((d) => (d ? { ...page, items: [...d.items, ...page.items], hiddenCount: Math.max(d.hiddenCount, page.hiddenCount) } : page));
+    } catch (e) {
+      setMoreError(refusalWords(e));
+    } finally {
+      setMoreBusy(false);
+    }
+  }
+  const allRead = !!data && !data.nextCursor;
+
   async function toggle(item: SurveyFreeItem) {
     if (busyId) return;
     setBusyId(item.id);
@@ -95,7 +114,8 @@ function ReviewStage({ id, r, onReleased }: { id: string; r: SurveyReport; onRel
       setData((d) => {
         if (!d) return d;
         const items = d.items.map((x) => (x.id === item.id ? { ...x, hidden: out.hidden } : x));
-        return { ...d, items, hiddenCount: items.filter((x) => x.hidden).length };
+        const was = d.items.find((x) => x.id === item.id)?.hidden ?? false;
+        return { ...d, items, hiddenCount: Math.max(0, d.hiddenCount + (out.hidden === was ? 0 : out.hidden ? 1 : -1)) };
       });
     } catch (e) {
       setRowError(refusalWords(e));
@@ -138,8 +158,9 @@ function ReviewStage({ id, r, onReleased }: { id: string; r: SurveyReport; onRel
         <>
           <div className="flex items-center justify-between gap-4">
             <p className="m-0 text-body-strong" data-testid="hidden-count">{`${data.hiddenCount} of ${data.total} hidden`}</p>
-            <Button icon="send" disabled={rel.busy} onClick={() => setConfirm(true)}>Release the results</Button>
+            <Button icon="send" disabled={rel.busy || !allRead} onClick={() => setConfirm(true)}>Release the results</Button>
           </div>
+          {!allRead ? <p className="m-0 text-caption text-ink-2" data-testid="read-first">Read the written answers before releasing the results.</p> : null}
           <ErrorLine>{rowError}</ErrorLine>
           <ErrorLine>{rel.error}</ErrorLine>
           {data.items.length === 0 ? (
@@ -166,6 +187,13 @@ function ReviewStage({ id, r, onReleased }: { id: string; r: SurveyReport; onRel
               </Card>
             ))
           )}
+          {data.nextCursor ? (
+            <div className="flex flex-col items-start gap-2">
+              <p className="m-0 text-caption text-ink-2" data-testid="loaded-count">{`${data.items.length} of ${data.total} shown`}</p>
+              <Button variant="secondary" loading={moreBusy} disabled={moreBusy} onClick={() => void more()}>Show more answers</Button>
+              <ErrorLine>{moreError}</ErrorLine>
+            </div>
+          ) : null}
         </>
       )}
 
@@ -188,6 +216,9 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
   const t = r.totals;
   const full = showsPeople(r);
   const floor = r.minGroupSize ?? 20;
+  // A breakdown the server left out whole is not drawn at all, not even an empty frame.
+  const hasState = (r.byState ?? []).length > 0 || !!r.byStateOther;
+  const hasAge = (r.byAgeBand ?? []).length > 0 || !!r.byAgeBandOther;
   return (
     <div className="flex flex-col gap-5" data-testid="stage-released">
       {r.releasedAt ? <p className="m-0 text-caption text-ink-2" data-testid="released-at">{`Released on ${slot(r.releasedAt)}. These results are fixed.`}</p> : null}
@@ -217,8 +248,8 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
             <Card key={q.id}>
               <Eyebrow>{`Question ${q.position} · ${KIND_WORDS[q.kind]}`}</Eyebrow>
               <CardTitle>{q.prompt}</CardTitle>
-              {q.answered !== null ? <p className="m-0 mb-3 text-caption text-ink-2">{`${num(q.answered)} answered this question`}</p> : null}
-              {q.kind === "SINGLE_CHOICE" ? (
+              {q.answered === null || q.answered === undefined ? <p className="m-0 text-body text-ink-2" data-testid="too-few">Too few answers to show</p> : <p className="m-0 mb-3 text-caption text-ink-2">{`${num(q.answered)} answered this question`}</p>}
+              {q.answered === null || q.answered === undefined ? null : q.kind === "SINGLE_CHOICE" ? (
                 <ul className="m-0 flex list-none flex-col gap-3 p-0">
                   {q.options.map((o) => (
                     <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3 gap-y-1">
@@ -263,7 +294,8 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
             </Card>
           ))}
 
-          <div className="grid grid-cols-2 gap-5">
+          {hasState || hasAge ? <div className={`grid gap-5 ${hasState && hasAge ? "grid-cols-2" : "grid-cols-1"}`}>
+            {hasState ? (
             <Card>
               <CardTitle>By state</CardTitle>
               <p className="m-0 mb-3 text-caption text-ink-2">Only people who chose to share their state.</p>
@@ -275,8 +307,10 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
                     {r.byStateOther ? <tr className="border-t border-line"><td className="py-2">Other</td><td className="py-2 text-right tabular-nums">{r.byStateOther.responses}</td><td className="py-2 text-right tabular-nums">{`${r.byStateOther.share}%`}</td></tr> : null}
                   </tbody>
                 </table>
-              ) : <p className="m-0 text-body text-ink-2">No state is shown yet.</p>}
+              ) : null}
             </Card>
+            ) : null}
+            {hasAge ? (
             <Card>
               <CardTitle>By age band</CardTitle>
               <p className="m-0 mb-3 text-caption text-ink-2">Only people who chose to share their age band.</p>
@@ -288,9 +322,10 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
                     {r.byAgeBandOther ? <tr className="border-t border-line"><td className="py-2">Other</td><td className="py-2 text-right tabular-nums">{r.byAgeBandOther.responses}</td><td className="py-2 text-right tabular-nums">{`${r.byAgeBandOther.share}%`}</td></tr> : null}
                   </tbody>
                 </table>
-              ) : <p className="m-0 text-body text-ink-2">No age band is shown yet.</p>}
+              ) : null}
             </Card>
-          </div>
+            ) : null}
+          </div> : null}
         </>
       ) : null}
     </div>

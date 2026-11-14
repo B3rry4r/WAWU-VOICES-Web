@@ -33,12 +33,12 @@ export const updateSurvey = (id: string, body: Partial<UpsertSurveyRequest>) => 
 export const submitSurvey = (id: string) => apiFetch<AdminSurvey>(`/admin/surveys/${enc(id)}/submit`, { ...A, method: "POST" });
 export const decideSurvey = (id: string, body: SurveyDecision) => apiFetch<AdminSurvey>(`/admin/surveys/${enc(id)}/decision`, { ...A, method: "POST", body });
 export const getSurveyReport = (id: string) => apiFetch<SurveyReport>(`/admin/surveys/${enc(id)}/report`, A);
-/** Over and not released: every free answer and transcript, scrubbed by the server, for staff to read. 409 while the survey runs. */
-export const getSurveyFreeAnswers = (id: string) => apiFetch<SurveyFreeAnswers>(`/admin/surveys/${enc(id)}/free-answers`, A);
-/** Hide one free answer from the brand, or show it again. One call each. */
-export const hideSurveyFreeAnswer = (id: string, answerId: string, hidden: boolean) =>
-  apiFetch<S["HideFreeAnswerResult"]>(`/admin/surveys/${enc(id)}/free-answers/${enc(answerId)}`, { ...A, method: "PATCH", body: { hidden } });
-/** Release the results to the brand. Once only. */
+/** Over and not released: free answers and transcripts, scrubbed by the server, a page at a time. 409 while the survey runs. `cursor` is the previous page's `nextCursor`; the pages must be walked in order. */
+export const getSurveyFreeAnswers = (id: string, cursor?: string | null) => apiFetch<SurveyFreeAnswers>(`/admin/surveys/${enc(id)}/free-answers${qs({ cursor: cursor ?? undefined })}`, A);
+/** Hide one free answer from the brand, or show it again. One call each. `handle` is the review handle the list gives, never an answer id. */
+export const hideSurveyFreeAnswer = (id: string, handle: string, hidden: boolean) =>
+  apiFetch<S["HideFreeAnswerResult"]>(`/admin/surveys/${enc(id)}/free-answers/${enc(handle)}`, { ...A, method: "PATCH", body: { hidden } });
+/** Release the results to the brand. Once only. 409 until the last page of the review list has been served. */
 export const releaseSurvey = (id: string) => apiFetch<SurveyReleaseResult>(`/admin/surveys/${enc(id)}/release`, { ...A, method: "POST" });
 
 // Brands
