@@ -57,11 +57,11 @@ export function StatusPill({ status }: { status: string }) {
 }
 
 export function Th({ children, right }: { children: ReactNode; right?: boolean }) {
-  return <th className={`vx-eyebrow whitespace-nowrap px-4 py-4 ${right ? "text-right" : ""}`}>{children}</th>;
+  return <th className={`vx-eyebrow px-3 py-4 align-bottom ${right ? "text-right" : ""}`}>{children}</th>;
 }
 
 export function Td({ children, right, className = "" }: { children: ReactNode; right?: boolean; className?: string }) {
-  return <td className={`px-4 py-3 align-top ${right ? "text-right tabular-nums" : ""} ${className}`}>{children}</td>;
+  return <td className={`px-3 py-3 align-top [overflow-wrap:anywhere] ${right ? "whitespace-nowrap text-right tabular-nums" : ""} ${className}`}>{children}</td>;
 }
 
 /** A framed, horizontally scrollable table. */

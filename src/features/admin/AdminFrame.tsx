@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Avatar, EmptyState, Icon } from "@/components/vx";
 import type { IconName } from "@/components/vx";
 import { getAdminToday } from "@/lib/api/admin";
@@ -129,6 +129,29 @@ function Sidebar() {
   const { roles, name, today } = useAdmin();
   const path = usePathname() ?? "/admin";
   const items = ADMIN_PAGES.filter((p) => canOpen(roles, p.id));
+  // The list scrolls inside the sidebar when the window is short. The fade at the cut edge shows there is more.
+  const navRef = useRef<HTMLElement>(null);
+  const [cut, setCut] = useState({ above: false, below: false });
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const measure = () => {
+      const above = el.scrollTop > 1;
+      const below = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+      setCut((c) => (c.above === above && c.below === below ? c : { above, below }));
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    ro?.observe(el);
+    if (el.firstElementChild) ro?.observe(el.firstElementChild);
+    window.addEventListener("resize", measure);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [items.length]);
   const initials = name
     .split(/\s+/)
     .map((w) => w[0])
@@ -142,7 +165,13 @@ function Sidebar() {
         <img src="/brand/logo-wordmark-white.png" alt="VOICES" className="h-9 w-auto" />
         <span className="rounded-xs bg-forest-2 px-2 py-1 text-eyebrow uppercase text-sun">Admin</span>
       </div>
-      <nav className="flex min-h-0 flex-col gap-0.5 overflow-y-auto" aria-label="Admin pages">
+      <nav
+        ref={navRef}
+        className="ad-nav flex min-h-0 flex-col overflow-y-auto"
+        data-more-above={cut.above ? "true" : undefined}
+        data-more-below={cut.below ? "true" : undefined}
+        aria-label="Admin pages"
+      >
         {items.map((p, i) => {
           // "/admin/money" is a page of its own and the parent of the other Money pages: it is current only on itself.
           const own = ADMIN_PAGES.some((o) => o.href.startsWith(p.href + "/"));
@@ -152,14 +181,14 @@ function Sidebar() {
           return (
             <div key={p.id} className="contents">
               {heading ? (
-                <div className="vx-eyebrow mt-4 px-3 pb-1 text-[var(--on-forest-2)]" role="presentation">
+                <div className="vx-eyebrow ad-nav-head px-3 text-[var(--on-forest-2)]" role="presentation">
                   {heading}
                 </div>
               ) : null}
             <Link
               href={p.href}
               aria-current={on ? "page" : undefined}
-              className={`flex min-h-[44px] items-center gap-3 rounded-m px-3 text-label text-forest-on no-underline a-plain ${on ? "bg-forest-2" : "hover:bg-forest-2"}`}
+              className={`ad-nav-item flex items-center gap-3 rounded-m px-3 text-label text-forest-on no-underline a-plain ${on ? "bg-forest-2" : "hover:bg-forest-2"}`}
             >
               <Icon name={p.icon as IconName} size={22} />
               <span className="min-w-0 flex-1">{p.label}</span>

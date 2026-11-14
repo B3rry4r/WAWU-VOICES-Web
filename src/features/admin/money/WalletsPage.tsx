@@ -5,8 +5,8 @@ import { Button, EmptyState, Tabs, TextField } from "@/components/vx";
 import { adjustWallet, findPeople, getAdminWallet } from "@/lib/api/admin";
 import type { AdminUserPage, AdminWallet } from "@/lib/api/admin";
 import { slot } from "../time";
-import { Card, CardTitle, ErrorLine, Eyebrow, Gated, ListSkeleton, LoadFailed, PageHead, SavedLine, useAction } from "../ui";
-import { kindWord, milliFromTokens, naira, signedTokens, tokens } from "./format";
+import { Card, CardTitle, ErrorLine, Eyebrow, Gated, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, useAction } from "../ui";
+import { kindWord, milliFromTokens, naira, signedTokens, statusWord, tokens } from "./format";
 import { ConfirmPanel, StatusPill, TableFrame, Td, Th } from "./parts";
 
 /** V-18: at most 1,000 tokens a call. The API checks it too. */
@@ -39,6 +39,7 @@ function AdjustForm({ wallet, onDone }: { wallet: AdminWallet; onDone: (w: Admin
   const delta = milli === null ? null : dir === "add" ? milli : -milli;
   const ready = delta !== null && milli! > 0 && !amountError && reason.trim().length >= 1;
   const handle = wallet.user.handle;
+  const status: string = wallet.status ?? "ACTIVE"; // an older answer has no status
 
   async function confirm() {
     if (delta === null) return;
@@ -53,7 +54,14 @@ function AdjustForm({ wallet, onDone }: { wallet: AdminWallet; onDone: (w: Admin
 
   return (
     <Card>
-      <CardTitle>Change their balance</CardTitle>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <CardTitle>Change their balance</CardTitle>
+        <div className="flex items-center gap-2" data-testid="wallet-account-status">
+          <span className="text-caption text-ink-2">Account</span>
+          <Pill tone={status === "ACTIVE" ? "green" : "sun"}>{statusWord(status)}</Pill>
+        </div>
+      </div>
+      {status !== "ACTIVE" ? <p className="m-0 mb-4 rounded-m bg-warning-bg px-4 py-3 text-caption text-warning">{`This account is ${statusWord(status).toLowerCase()}. You can still change their balance.`}</p> : null}
       <p className="m-0 mb-4 text-caption text-ink-2">{`For a goodwill credit or to fix a mistake. At most ${MAX_TOKENS.toLocaleString("en-NG")} tokens at a time, a reason is required, and you cannot change your own balance.`}</p>
       <div className="flex max-w-[520px] flex-col gap-4">
         <Tabs variant="segmented" block label="Direction" items={[{ id: "add", label: "Add tokens" }, { id: "take", label: "Take tokens away" }]} value={dir} onChange={(v) => { setDir(v as "add" | "take"); setReview(false); }} />

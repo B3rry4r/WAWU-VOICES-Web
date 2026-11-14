@@ -39,7 +39,18 @@ export const GROUPS: Group[] = [
       { key: "allowance.free_posts", label: "Free posts for each person", unit: "count", help: "Lifetime, text and voice together." },
       { key: "allowance.free_post_text_chars", label: "Longest text a free post covers", unit: "count", noun: "characters", help: "Longer text pays in full." },
       { key: "allowance.messages_per_day", label: "Messages a person can send in a day", unit: "count", help: "Answers and replies, text and voice together. Resets at midnight in Lagos." },
-      { key: "units.min_purchase_kobo", label: "Smallest purchase", unit: "kobo", help: "No pack can cost less than this." },
+      { key: "units.min_purchase_kobo", label: "Smallest purchase", unit: "kobo", help: "No pack can cost less than this, and it cannot be more than the cheapest pack." },
+    ],
+  },
+  {
+    id: "actions",
+    title: "What an action costs",
+    note: "Charged after the free ones are used up. 0 means free. Most is 1,000 tokens.",
+    defs: [
+      { key: "cost.reaction_milli", label: "A reaction", unit: "milli", help: "Charged for each reaction after the free reactions of the day." },
+      { key: "cost.vote_milli", label: "A vote", unit: "milli", help: "Charged for each vote after the free votes of the day." },
+      { key: "cost.proposal_milli", label: "A What Next? proposal", unit: "milli", help: "Free at launch." },
+      { key: "cost.explain_milli", label: "Explaining a vote", unit: "milli", help: "Free at launch." },
     ],
   },
   {

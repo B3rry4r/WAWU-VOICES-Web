@@ -5300,6 +5300,7 @@ export interface components {
         };
         AdminWallet: {
             user: components["schemas"]["Profile"];
+            status: components["schemas"]["AccountStatus"];
             /** @description Tokens as integer milli-tokens, 1 token = 1000 (32-bit). A balance is 0 to 2,000,000,000. */
             balanceMilli: number;
             freePostsRemaining: number;

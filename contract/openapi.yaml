@@ -12611,6 +12611,8 @@ components:
       properties:
         user:
           $ref: '#/components/schemas/Profile'
+        status:
+          $ref: '#/components/schemas/AccountStatus'
         balanceMilli:
           type: integer
           minimum: -2000000000
@@ -12635,6 +12637,7 @@ components:
       additionalProperties: false
       required:
       - user
+      - status
       - balanceMilli
       - freePostsRemaining
       - ledger

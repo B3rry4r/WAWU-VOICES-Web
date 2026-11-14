@@ -301,7 +301,10 @@ function PricesBody() {
       {entries[PACKS_KEY] ? (
         <Card>
           <div className="flex items-start justify-between gap-4">
-            <CardTitle>Token packs</CardTitle>
+            <div>
+              <CardTitle>Token packs</CardTitle>
+              <p className="m-0 mb-2 text-caption text-ink-2">A pack price is in whole naira, from the smallest purchase up to 1,000,000 naira.</p>
+            </div>
             <div className="flex items-center gap-3">
               <Button size="s" variant="secondary" icon="settings" onClick={() => open({ kind: "packs" })}>
                 Change

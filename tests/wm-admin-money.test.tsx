@@ -243,6 +243,24 @@ describe("a person's wallet", () => {
     return calls;
   }
 
+  it("shows the person's account status beside the adjust form, in words, and keeps the form usable", async () => {
+    stub((u) => {
+      if (u.includes("/admin/users")) return json(200, { items: [{ profile: { id: "u9", handle: "chika.o", displayName: "Chika" }, status: "SUSPENDED", roles: [], strikes: 0, createdAt: "2026-11-01T00:00:00Z" }], nextCursor: null });
+      if (u.includes("/admin/wallets/u9")) return json(200, wallet(50000, { status: "SUSPENDED" }));
+      return undefined;
+    });
+    render(<AdminFrame><AdminWalletsPage /></AdminFrame>);
+    await userEvent.type(await screen.findByLabelText("Handle"), "chika.o");
+    await userEvent.click(screen.getByRole("button", { name: "Find" }));
+    await screen.findByText("50 tokens");
+    const box = screen.getByTestId("wallet-account-status");
+    expect(within(box).getByText("Suspended")).toBeTruthy();
+    expect(screen.getByText("This account is suspended. You can still change their balance.")).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("Tokens"), "5");
+    await userEvent.type(screen.getByLabelText("Reason"), "Goodwill");
+    expect((screen.getByRole("button", { name: "Review the change" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("finds a person by handle and shows the balance and ledger", async () => {
     const calls = await openWallet();
     expect(calls.some((c) => c.url.includes("/admin/users?q=chika.o"))).toBe(true);
@@ -320,6 +338,10 @@ describe("prices and limits", () => {
       entry("allowance.free_post_text_chars", 500),
       entry("allowance.messages_per_day", 20),
       entry("units.min_purchase_kobo", 18300),
+      entry("cost.reaction_milli", 100),
+      entry("cost.vote_milli", 200),
+      entry("cost.proposal_milli", 0),
+      entry("cost.explain_milli", 0),
       entry("charges.vat_rate_bps", 750, { placeholder: true }),
       entry("charges.fee_rate_bps", 140, { placeholder: true }),
       entry("charges.fee_flat_kobo", 0, { placeholder: true }),
@@ -329,6 +351,19 @@ describe("prices and limits", () => {
     ],
   });
   const change = (over: Record<string, unknown> = {}) => ({ id: "c1", key: "allowance.messages_per_day", oldValue: 20, newValue: 30, reason: "Launch week", by: "bola.admin", createdAt: "2026-11-14T08:00:00Z", rollbackOfId: null, ...over });
+
+  it("shows the four action costs in their own group, editable, with Put back on a changed one", async () => {
+    stub((u) =>
+      u.includes("/admin/config/changes") ? json(200, { items: [change({ id: "c9", key: "cost.vote_milli", oldValue: 100, newValue: 200 })], nextCursor: null }) : u.includes("/admin/config") ? json(200, config()) : undefined,
+    );
+    render(<AdminFrame><AdminPricesPage /></AdminFrame>);
+    await screen.findByText("What an action costs");
+    for (const t of ["A reaction", "A vote", "A What Next? proposal", "Explaining a vote"]) expect(screen.getAllByText(t).length).toBeGreaterThan(0);
+    const row = screen.getAllByText("A vote").map((e) => e.closest("li")).find(Boolean) as HTMLElement;
+    expect(within(row).getByText("0.2 tokens")).toBeTruthy();
+    expect(within(row).getByRole("button", { name: /Change/ })).toBeTruthy();
+    expect(within(row).getByRole("button", { name: /Put back/ })).toBeTruthy();
+  });
 
   it("shows every setting in plain units, the placeholders flagged, and the change log", async () => {
     stub((u) => (u.includes("/admin/config/changes") ? json(200, { items: [change()], nextCursor: null }) : u.includes("/admin/config") ? json(200, config()) : undefined));

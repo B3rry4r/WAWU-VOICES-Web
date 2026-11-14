@@ -41,6 +41,9 @@ const STATUS_WORDS: Record<string, string> = {
   QUEUED: "Waiting to start",
   ENDED: "Ended",
   CANCELLED_DELETED: "Account deleted",
+  SUSPENDED: "Suspended",
+  BANNED: "Banned",
+  DELETION_PENDING: "Deletion pending",
 };
 export const statusWord = (s: string): string => STATUS_WORDS[s] ?? s;
 
