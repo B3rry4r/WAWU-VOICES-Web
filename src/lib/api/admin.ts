@@ -126,6 +126,8 @@ export type AdminWallet = S["AdminWallet"];
 export type AdminSubscription = S["AdminSubscription"];
 export type AdminSubscriptionPage = S["AdminSubscriptionPage"];
 export type AdminUserPage = S["AdminUserPage"];
+export type AdminUserRow = S["AdminUserRow"];
+export type AdminUserCounts = S["AdminUserCounts"];
 export type ConfigEntry = S["ConfigEntry"];
 export type ConfigChange = S["ConfigChange"];
 export type ConfigChangePage = S["ConfigChangePage"];
@@ -136,7 +138,10 @@ export const listAdminPayments = (o: { status?: string; kind?: string; cursor?: 
 /** Asks the provider again about one payment. The key is kept for the tap, so a retry of the same tap cannot double up. */
 export const reverifyPayment = (id: string, idempotencyKey: string) =>
   apiFetch<AdminPayment>(`/admin/payments/${enc(id)}/reverify`, { ...A, method: "POST", idempotencyKey });
-export const findPeople = (q: string) => apiFetch<AdminUserPage>(`/admin/users${qs({ q, limit: 10 })}`, A);
+export const findPeople = (q?: string) => apiFetch<AdminUserPage>(`/admin/users${qs({ q, limit: 10 })}`, A);
+/** The Users screen: everyone newest first, or the ones a search finds. Also carries total and counts. */
+export const listAdminUsers = (o: { q?: string; status?: string; cursor?: string | null; limit?: number } = {}) =>
+  apiFetch<AdminUserPage>(`/admin/users${qs({ q: o.q, status: o.status, cursor: o.cursor, limit: o.limit })}`, A);
 export const getAdminWallet = (userId: string, o: { cursor?: string | null; limit?: number } = {}) =>
   apiFetch<AdminWallet>(`/admin/wallets/${enc(userId)}${qs({ cursor: o.cursor, limit: o.limit })}`, A);
 export const adjustWallet = (userId: string, body: { deltaMilli: number; reason: string }, idempotencyKey: string) =>

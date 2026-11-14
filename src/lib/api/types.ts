@@ -2473,7 +2473,7 @@ export interface paths {
         };
         /**
          * Find people
-         * @description Auth: signed in with role ADMIN.
+         * @description Everyone who has registered, newest first, or the ones a search finds. Also returns total and counts. Auth: signed in with role ADMIN.
          */
         get: operations["adminListUsers"];
         put?: never;
@@ -5867,9 +5867,41 @@ export interface components {
             /** Format: date-time */
             verifiedUntil?: string;
         };
+        /** @description total is how many people match the current search and status, ignoring the cursor. counts is the whole user table, whatever the search. */
         AdminUserPage: {
-            items: components["schemas"]["AdminUser"][];
+            items: components["schemas"]["AdminUserRow"][];
             nextCursor: string | null;
+            total: number;
+            counts: components["schemas"]["AdminUserCounts"];
+        };
+        /** @description An AdminUser plus what the Users screen shows. mailTo is the notification address; only this list returns it, and only to an admin. postCount is answers plus replies not deleted. hasProfile is false while the person has no display name, bio or photo. There is no last-seen field: the User model has none. */
+        AdminUserRow: {
+            profile: components["schemas"]["Profile"];
+            status: components["schemas"]["AccountStatus"];
+            roles: components["schemas"]["Role"][];
+            strikes: number;
+            /** Format: date-time */
+            createdAt: string;
+            mailTo: string | null;
+            displayName: string | null;
+            state: string | null;
+            verified: boolean;
+            postCount: number;
+            hasProfile: boolean;
+        };
+        /** @description total is everyone registered. today is those who joined since midnight in Lagos. verified is those verified right now. */
+        AdminUserCounts: {
+            total: number;
+            today: number;
+            verified: number;
+            byStatus: components["schemas"]["AdminUserStatusCounts"];
+        };
+        AdminUserStatusCounts: {
+            ACTIVE: number;
+            SUSPENDED: number;
+            BANNED: number;
+            DELETION_PENDING: number;
+            DELETED: number;
         };
         AdminUser: {
             profile: components["schemas"]["Profile"];
@@ -9978,13 +10010,13 @@ export interface operations {
     };
     adminListUsers: {
         parameters: {
-            query: {
+            query?: {
                 /** @description Opaque cursor from nextCursor */
                 cursor?: string;
                 /** @description 1 to 50, default 20 */
                 limit?: number;
-                /** @description handle or phone hash */
-                q: string;
+                /** @description Optional. A part of a handle or display name, a phone number or phone hash, or one whole mail address. Leave it out to list everyone, newest first */
+                q?: string;
                 status?: string;
             };
             header?: never;

@@ -15,7 +15,8 @@ export type AdminPageId =
   | "money-wallets"
   | "money-subscriptions"
   | "money-prices"
-  | "verification";
+  | "verification"
+  | "users";
 
 /** Who may open each admin page: the roles the API's operations for that page accept (docs/contract/openapi.yaml, x-wawu-roles). */
 export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
@@ -30,6 +31,8 @@ export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
   ads: ["AD_MANAGER", "ADMIN"],
   // V-46: identity documents are for admins only (the API route is ADMIN only).
   verification: ["ADMIN"],
+  // The people list shows mail addresses, and the API route is ADMIN only.
+  users: ["ADMIN"],
   // V-ADMIN-MONEY: the API's money routes are ADMIN only, so the pages are too.
   money: ["ADMIN"],
   "money-payments": ["ADMIN"],
@@ -67,6 +70,7 @@ export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: 
   { id: "ads", label: "Adverts", href: "/admin/ads", icon: "megaphone" },
   { id: "weekly", label: "Weekly report", href: "/admin/weekly", icon: "chart-column" },
   { id: "moderation", label: "Moderation", href: "/admin/moderation", icon: "shield-alert" },
+  { id: "users", label: "Users", href: "/admin/users", icon: "user" },
   { id: "verification", label: "Verification", href: "/admin/verification", icon: "badge-check" },
   { id: "money", label: "Overview", href: "/admin/money", icon: "wallet", group: "Money" },
   { id: "money-payments", label: "Payments", href: "/admin/money/payments", icon: "coins", group: "Money" },
