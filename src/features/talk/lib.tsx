@@ -62,7 +62,7 @@ export function failText(e: unknown): string {
     case "ACCOUNT_SUSPENDED": return "Your account is suspended, so you cannot post right now.";
     case "BLOCKED_BY_USER": return "You cannot reply to this person.";
     case "CONTENT_REMOVED": return "This voice was removed.";
-    case "VALIDATION_FAILED": return "Check what you wrote and try again.";
+    case "VALIDATION_FAILED": return (e.details as { fields?: { message?: string }[] } | undefined)?.fields?.[0]?.message || (e.explained && e.message.trim() ? e.message : "Check what you wrote and try again.");
     case "FORBIDDEN": return "Finish setting up your profile first.";
     case "UNAUTHENTICATED": case "TOKEN_EXPIRED": return "Sign in to continue.";
     default: return "Something went wrong on our side. Try again in a moment.";

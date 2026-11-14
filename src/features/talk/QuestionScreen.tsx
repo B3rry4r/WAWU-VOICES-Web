@@ -11,6 +11,7 @@ import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
 import { LiveResultsLink } from "@/components/feed/LinkCards";
 import { AppBar, BarButton, Problem, failText, unitsText, useSignedIn } from "./lib";
+import { textLimit } from "./textLimit";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 import { TalkRail } from "./TalkRail";
 import { MoodChip } from "@/features/mood/MoodChip";
@@ -156,7 +157,7 @@ export function QuestionScreen({ id }: { id: string }) {
       {open && seconds && allow ? (
         <section aria-label="Add your voice" className="mt-4 hidden rounded-[var(--radius-l)] bg-[var(--surface)] p-5 shadow-[inset_0_0_0_1px_var(--line)] dt:block">
           <h2 className="m-0 text-title">Add your voice</h2>
-          <p className="m-0 mt-2 text-caption text-[var(--ink-2)]">{`Speak for up to ${seconds} seconds, or write up to ${allow.costs.textMaxChars} characters.`}</p>
+          <p className="m-0 mt-2 text-caption text-[var(--ink-2)]">{`Speak for up to ${seconds} seconds, or write up to ${textLimit(allow.costs).toLocaleString("en-NG")} characters.`}</p>
           <div className="mt-4 flex items-center gap-3">
             <Button size="l" icon="mic" href={speakHref}>Speak</Button>
             <Button size="l" variant="secondary" href={writeHref}>Write instead</Button>

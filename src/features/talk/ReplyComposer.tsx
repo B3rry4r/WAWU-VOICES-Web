@@ -6,6 +6,7 @@ import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { countChars } from "@/lib/shared/text-price";
 import { failText, isOutOfPosts, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
+import { textLimit } from "./textLimit";
 
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
@@ -55,7 +56,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
     <div className="grid gap-2">
       <Composer
         freeLeft={allow.freePostsRemaining}
-        maxChars={c.textMaxChars}
+        maxChars={textLimit(c)}
         countChars={countChars}
         value={text}
         onChange={(t) => { setText(t); saveTyped(slot, t); }}
