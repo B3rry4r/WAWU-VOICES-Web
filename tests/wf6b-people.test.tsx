@@ -273,7 +273,7 @@ describe("A-L6: Finish and post my voice posts in one tap", () => {
     expect(withAutopost("/speak")).toBe("/speak?autopost=1");
     expect(withAutopost("/speak?q=q1")).toBe("/speak?q=q1&autopost=1");
   });
-  it("the recorder sends a held voice by itself when it opens with autopost=1", async () => {
+  it("a held voice that opens with autopost=1 is NOT sent by itself: a post needs a tag the person chose (V-FIX-B, addendum 1)", async () => {
     search = "autopost=1";
     const question = { id: "q1", text: "Q?", hint: null, status: "LIVE", category: null, topicTitle: null, voiceCount: 0, answerCount: 0, voicesCount: 0, proposalCount: 0, recentVoices: [], iSaved: false, kind: "DAILY", scheduledFor: null, startsAt: null, endsAt: null, pinned: false, sensitive: false, hasOpenPoll: false, topicId: null, weekNumber: null };
     const costs = { freeVoiceSeconds: 10, voicePostMilli: 1000, textPostMilli: 500, baseKoboPerUnit: 1380 };
@@ -286,7 +286,11 @@ describe("A-L6: Finish and post my voice posts in one tap", () => {
     };
     await saveDraft({ questionId: "q1", blob: new Blob(["abc"], { type: "audio/webm" }), mime: "audio/webm", seconds: 4, peaks: [1, 2], key: "k1", savedAt: Date.now() });
     render(<SpeakScreen questionId="q1" />);
-    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/voice-clips"))).toBe(true));
+    const send = await screen.findByRole("button", { name: /^Send/ });
+    await new Promise((r) => setTimeout(r, 150));
+    expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/voice-clips"))).toBe(false);
+    expect((send as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryAllByRole("button", { pressed: true })).toHaveLength(0);
   });
   it("without autopost the held voice waits for the person's Send", async () => {
     const question = { id: "q1", text: "Q?", hint: null, status: "LIVE", category: null, topicTitle: null, voiceCount: 0, answerCount: 0, proposalCount: 0, recentVoices: [], iSaved: false, kind: "DAILY", scheduledFor: null, startsAt: null, endsAt: null, pinned: false, sensitive: false, hasOpenPoll: false, topicId: null, weekNumber: null };

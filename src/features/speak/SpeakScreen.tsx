@@ -19,6 +19,8 @@ import "./speak.css";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { voicesOf } from "@/lib/feed-format";
+import { TagPicker, useIsEditor } from "@/features/news/TagPicker";
+import { NO_TAG, tagFields, tagReady, type TagChoice } from "@/features/news/tag-choice";
 
 /** Where a guest goes to sign in. The recording waits in this browser (IndexedDB) until they are back (V-19). */
 export const JOIN_PATH = "/join";
@@ -54,6 +56,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const [take, setTake] = useState<Take | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [sending, setSending] = useState<Step | null>(null);
+  const [tag, setTag] = useState<TagChoice>(NO_TAG);
+  const editor = useIsEditor(!!signedIn);
 
   const rec = useRef<VoiceRecorder | null>(null);
   const levelsRef = useRef<number[]>([]);
@@ -130,14 +134,15 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     return () => { live = false; };
   }, [qid]);
 
-  // WF-6b (A-L6): "Finish and post my voice" returns here with autopost=1 and the held recording: send it once, without a second tap.
+  // WF-6b (A-L6): "Finish and post my voice" returns here with autopost=1 and the held recording. V-FIX-B (addendum 1, "a post cannot
+  // be published without a tag"): a held voice has no tag the person chose, so it is not sent by itself any more. The recording is
+  // shown ready to send, the person picks a tag and taps Send, and the address is cleaned.
   const autoPosted = useRef(false);
   useEffect(() => {
     if (autoPosted.current || params.get("autopost") !== "1") return;
     if (!signedIn || phase !== "preview" || !take || !info || !qid) return;
     autoPosted.current = true;
     window.history.replaceState(window.history.state, "", pathname + (qParam && !questionId ? `?q=${qParam}` : ""));
-    void send();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signedIn, phase, take, info, qid]);
 
@@ -321,6 +326,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   async function send() {
     if (!take || !qid || sending) return;
+    // V-FIX-B (addendum 1): a post cannot publish without a tag the person chose.
+    if (!tagReady(tag)) return;
     if (!signedIn) {
       await saveDraft({ ...take, questionId: qid, savedAt: Date.now() });
       window.location.assign(joinHref());
@@ -357,7 +364,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word);
+      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, tagFields(tag));
       await clearDraft();
       writePick(qid, null);
       sendState.current = null;
@@ -500,6 +507,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         <>
           <TakePlayer blob={take.blob} seconds={take.seconds} peaks={take.peaks} />
           <p className="vx-rec__hint">Listen back. Nothing posts until you tap Send.</p>
+          <TagPicker value={tag} onChange={setTag} editor={editor} className="sp-tags" />
           {signedIn === false ? <p className="sp-fine">You sign in to post. Your recording waits here in this browser.</p> : null}
           {sending ? (
             <div className="sp-progress" role="status" aria-live="polite">
@@ -510,7 +518,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           <div className="vx-rec__actions">
             <Button variant="onforest" icon="rotate-ccw" disabled={!!sending} onClick={() => dropTake(true)}>Re-record</Button>
             <Button variant="onforest" icon="trash-2" disabled={!!sending} onClick={() => dropTake(true)}>Delete</Button>
-            <Button size="l" icon="send" loading={!!sending} onClick={() => void send()}>{covered(take.seconds) ? "Send" : `Send for ${priceFor(take.seconds)}`}</Button>
+            <Button size="l" icon="send" loading={!!sending} disabled={!tagReady(tag)} onClick={() => void send()}>{covered(take.seconds) ? "Send" : `Send for ${priceFor(take.seconds)}`}</Button>
           </div>
         </>
       ) : null}

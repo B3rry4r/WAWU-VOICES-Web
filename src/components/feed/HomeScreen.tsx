@@ -9,6 +9,8 @@ import { getAdPlacement, getFlashPolls, type AdPlacement, type Poll } from "@/li
 import { isSignedIn } from "@/lib/api/auth";
 import { closesIn, shortCount, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { AdCard } from "./AdCard";
+import { AudioAdCard } from "./AudioAdCard";
+import { OverrideMessage } from "./OverrideMessage";
 import { FlashPoll } from "./FlashPoll";
 import { Answers, Failed, Loading, NothingYet, Section, TextLink, Tiles, WeekCard } from "./parts";
 import { useFinishProfile } from "@/features/entry/ui";
@@ -21,6 +23,8 @@ interface Data {
   flash: Poll | null;
   trending: ReturnType<typeof trendItems>;
   ad: AdPlacement | null;
+  /** V-FIX-B: the short audio advert, between the posts and the new conversations, for everyone. */
+  audioAd: AdPlacement | null;
   firstName: string | null;
   suspended: { status: string; until: string | null } | null;
   /** Signed in and already answered today's question (H6): the card offers listening, not Speak again. */
@@ -34,11 +38,12 @@ export function HomeScreen() {
   useEffect(() => setSignedIn(isSignedIn()), []);
   useFinishProfile();
   const load = useLoad<Data>(async () => {
-    const [home, flash, trending, ad, who] = await Promise.all([
+    const [home, flash, trending, ad, audioAd, who] = await Promise.all([
       getHome(),
       signedIn ? getFlashPolls().then((r) => r.items[0] ?? null, () => null) : Promise.resolve(null),
       getTrendingQuestions(3).then((r) => trendItems(r.items), () => []),
       getAdPlacement().catch(() => null),
+      getAdPlacement("AUDIO_SLOT").catch(() => null),
       signedIn
         ? getMe().then(
             // Me carries no suspendedUntil (checked against 6a): the banner reads the end day from the suspension notice.
@@ -49,11 +54,11 @@ export function HomeScreen() {
     ]);
     const today = home.dailyQuestion?.id;
     const answered = signedIn && today ? await listMyAnswers().then((p) => p.items.some((i) => i.answer?.questionId === today), () => false) : false;
-    return { home, flash, trending, ad, firstName: who.firstName, suspended: who.suspended, answered };
+    return { home, flash, trending, ad, audioAd, firstName: who.firstName, suspended: who.suspended, answered };
   }, [signedIn]);
   if (signedIn === null || load.state === "loading") return <Loading />;
   if (load.state === "error") return <Failed load={load} />;
-  const { home: h, flash, trending, ad, firstName, suspended, answered } = load.data;
+  const { home: h, flash, trending, ad, audioAd, firstName, suspended, answered } = load.data;
   const q = h.dailyQuestion;
   const go = (path: string) => () => router.push(path);
   const talk = q ? go(`/q/${q.id}`) : undefined;
@@ -80,10 +85,9 @@ export function HomeScreen() {
               onDiscuss={talk}
               onVote={talk}
             />
-            {/* lead ruling WF, 6 Nov (C-H5, then the LOW "as drawn"): a live override's message sits right under its headline, the question. */}
-            {q.override?.body?.trim() ? (
-              <p data-testid="override-message" className="m-0 mt-3 text-body-l text-ink-2">{q.override.body.trim()}</p>
-            ) : null}
+            {/* lead ruling WF, 6 Nov (C-H5, then the LOW "as drawn"): a live override's message sits right under its headline, the question.
+                V-FIX-B (addendum 4): and its picture, voice note and link button after it. */}
+            {q.override ? <OverrideMessage o={q.override} /> : null}
           </div>
         ) : (
           <div className="order-2"><NothingYet title="No question yet" body="Today’s question shows up here as soon as it opens." /></div>
@@ -117,6 +121,9 @@ export function HomeScreen() {
         >
           {h.trending.length ? <Answers items={h.trending.slice(0, 2)} /> : <NothingYet title="No voices yet" body="Be the first to answer today’s question." />}
         </Section>
+
+        {/* Addendum 3B: between posts, never inside one and never among the first three items. */}
+        {audioAd?.audioClipId ? <div className="order-6 dt:order-6"><AudioAdCard ad={audioAd} /></div> : null}
 
         <Section className="order-7 dt:order-4 dt:[&>div:first-child]:hidden" title="New conversations">
           {h.newConversations.length ? <Tiles items={h.newConversations.slice(0, 2)} /> : <NothingYet title="Nothing new yet" body="New conversations show up here as they open." />}

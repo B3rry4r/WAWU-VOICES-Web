@@ -9,7 +9,7 @@ import { trackListen } from "@/features/talk/listen-track";
 const seedOf = (id: string) => id.split("").reduce((s, c) => (s * 31 + c.charCodeAt(0)) % 997, 7);
 
 /** The design's voice player on a real clip: bars from the clip's peaks, progress from the audio element, a short-lived URL asked for on first play. */
-export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, tone, answerId }: {
+export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, tone, answerId, onFirstPlay }: {
   clipId: string;
   durationMs: number | null;
   peaks: number[] | null;
@@ -18,8 +18,11 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
   tone?: "mint" | "surface" | "forest";
   /** Set only when the clip is an ANSWER's: the player then counts a start and reports listen progress (LISTEN-1). */
   answerId?: string;
+  /** Called once, the first time this player starts to play (an advert counts a listen). */
+  onFirstPlay?: () => void;
 }) {
   const audio = useRef<HTMLAudioElement | null>(null);
+  const started = useRef(false);
   const untrack = useRef<(() => void) | null>(null);
   const speed = useRef(1);
   const [playing, setPlaying] = useState(false);
@@ -44,6 +47,7 @@ export function LivePlayer({ clipId, durationMs, peaks, getUrl, failMessage, ton
       audio.current.playbackRate = speed.current;
       setPlaying(true);
       await playWithResign(audio.current, () => getUrl(clipId));
+      if (!started.current) { started.current = true; onFirstPlay?.(); }
     } catch {
       untrack.current?.();
       untrack.current = null;

@@ -2540,6 +2540,48 @@ paths:
           $ref: '#/components/responses/E422'
         '429':
           $ref: '#/components/responses/E429'
+  /news/{answerId}/request-verified:
+    post:
+      operationId: requestVerifiedNews
+      tags:
+      - reports-blocks
+      summary: Ask the editors for Verified News on my post
+      security:
+      - wawuId: []
+      description: 'V-FIX-B (addendum 1). Only the poster, for a live post that is not already Verified News, one open request at a time (409
+        ALREADY_REQUESTED, ALREADY_VERIFIED). 422 SOURCE_REQUIRED without a source name. The request lands in the editors'' queue (GET /admin/news,
+        tab asking-verified) next to the flagged posts; only an editor''s decision (POST /admin/news/{answerId}/decision, APPROVE_VERIFIED) gives
+        the tag. A poster can also ask when posting (createAnswer requestVerified). Auth: signed in with a finished profile.'
+      parameters:
+      - name: answerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestVerifiedRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifiedRequestReceipt'
+        '401':
+          $ref: '#/components/responses/E401'
+        '404':
+          $ref: '#/components/responses/E404'
+        '409':
+          $ref: '#/components/responses/E409'
+        '422':
+          $ref: '#/components/responses/E422'
+        '429':
+          $ref: '#/components/responses/E429'
   /polls/current:
     get:
       operationId: getFlashPoll
@@ -4107,7 +4149,9 @@ paths:
       security:
       - {}
       - wawuId: []
-      description: 'Auth: guest or signed in. Rate limit: 300 per minute per IP or account.'
+      description: 'V-FIX-B: a LISTEN counts once per person per advert per day (a signed-in person, or a guest with X-Guest-Id); a second one
+        the same day answers 204 and adds nothing. A caller with neither is not counted. Auth: guest or signed in. Rate limit: 300 per minute
+        per IP or account.'
       parameters:
       - name: adId
         in: path
@@ -7751,6 +7795,15 @@ components:
           type:
           - string
           - 'null'
+        audioClipId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        audioDurationMs:
+          type:
+          - integer
+          - 'null'
         imageUrl:
           type:
           - string
@@ -7766,6 +7819,9 @@ components:
       required:
       - contentKind
       - endsAt
+      description: 'V-FIX-B: the message, picture, voice note and link an override carries. imageUrl is a public CDN link. The voice note is private
+        like every voice: audioUrl stays null and the page plays audioClipId through GET /voice-clips/{clipId}/play (a short-lived link) when
+        the person taps play. linkUrl opens from a button under the message.'
     QuestionPage:
       type: object
       properties:
@@ -8372,6 +8428,8 @@ components:
           type: string
         newsSourceUrl:
           type: string
+        requestVerified:
+          type: boolean
         anonymous:
           type: boolean
         mood:
@@ -8381,10 +8439,13 @@ components:
       additionalProperties: false
       required:
       - kind
-      description: Text answers carry body. Voice answers carry clipId of a READY clip. A clip over the free length also needs an extra voice
-        token. isNews requires newsTag; VERIFIED_NEWS needs an editor or admin role and a source. On a question with moodOptions every answer,
-        voice or text, carries one of them in mood (422 "Pick one word before you post." otherwise); on any other question mood is refused. showNameOnCard
-        (LCH-03) is off unless true and ignored on an anonymous answer.
+      description: 'Text answers carry body. Voice answers carry clipId of a READY clip. A clip over the free length also needs an extra voice
+        token. isNews requires newsTag (a post cannot be published without a tag the person chose: isNews false is 422 TAG_REQUIRED; the web composer
+        always sends one); VERIFIED_NEWS needs an editor or admin role and a source. requestVerified (V-FIX-B) asks the editors for Verified News:
+        it needs isNews, newsTag UNVERIFIED_NEWS and newsSourceName (the source the editors check, kept on the request, not shown on the post);
+        the post goes up as Unverified News and waits in the editors'' queue. On a question with moodOptions every answer, voice or text, carries
+        one of them in mood (422 "Pick one word before you post." otherwise); on any other question mood is refused. showNameOnCard (LCH-03) is
+        off unless true and ignored on an anonymous answer.'
     MoodCountItem:
       type: object
       properties:
@@ -9484,6 +9545,33 @@ components:
         note:
           type: string
       additionalProperties: false
+    RequestVerifiedRequest:
+      type: object
+      properties:
+        sourceName:
+          type: string
+        sourceUrl:
+          type: string
+      additionalProperties: false
+      required:
+      - sourceName
+      description: 'V-FIX-B: the source the editors will check. sourceName is 1 to 200 characters; sourceUrl, if sent, is a full http(s) link.'
+    VerifiedRequestReceipt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - OPEN
+          - APPROVED
+          - DECLINED
+      additionalProperties: false
+      required:
+      - id
+      - status
     TagInfo:
       type: object
       properties:
@@ -10469,6 +10557,10 @@ components:
           - string
           - 'null'
           format: uuid
+        audioDurationMs:
+          type:
+          - integer
+          - 'null'
         linkUrl:
           type:
           - string
@@ -10484,7 +10576,8 @@ components:
       - brand
       - label
       - headline
-      description: Always labelled. Audio plays only when tapped.
+      description: 'Always labelled. Audio plays only when tapped: the page asks GET /voice-clips/{audioClipId}/play for a short-lived link (V-FIX-B).
+        audioClipId is null on an audio advert whose recording is not ready.'
     AdEventRequest:
       type: object
       properties:
@@ -10975,6 +11068,11 @@ components:
           type:
           - string
           - 'null'
+        audioClipId:
+          type:
+          - string
+          - 'null'
+          format: uuid
         startsAt:
           type: string
           format: date-time

@@ -2,7 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Banner, Button, Composer, FreePosts, NotFoundState, Skeleton } from "@/components/vx";
-import type { ComposerTag, IntentKind } from "@/components/vx";
+import type { IntentKind } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
@@ -10,6 +10,8 @@ import { clearDraft, saveDraft } from "@/features/units/draft";
 import { StageNav } from "@/features/stage/StageNav";
 import { countChars } from "@/lib/shared/text-price";
 import { FixPanel } from "./FixPanel";
+import { TagPicker, useIsEditor } from "@/features/news/TagPicker";
+import { NO_TAG, tagFields, tagReady, type TagChoice } from "@/features/news/tag-choice";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { AppBar, Problem, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
@@ -32,7 +34,8 @@ export function WriteScreen({ qid }: { qid: string }) {
   const [sending, setSending] = useState(false);
   const busy = useRef(false);
   const [text, setText] = useState("");
-  const [tag, setTag] = useState<ComposerTag>("none");
+  const [tag, setTag] = useState<TagChoice>(NO_TAG);
+  const editor = useIsEditor(!!signedIn);
   const [intent, setIntent] = useState<IntentKind | null>(stanceQ ? INTENT_OF[stanceQ] ?? null : null);
   const key = useRef<{ text: string; k: string } | null>(null);
   const slot = replyTo ? `r:${replyTo}` : `q:${qid}`;
@@ -88,7 +91,9 @@ export function WriteScreen({ qid }: { qid: string }) {
         saveTyped(slot, "");
         router.push(`/q/${qid}/a/${replyTo}`);
       } else {
-        const r = await api.createAnswer(qid, body, { isNews: tag === "unverified" || tag === "gossip", newsTag: tag === "unverified" ? "UNVERIFIED_NEWS" : tag === "gossip" ? "GOSSIP" : undefined }, key.current.k, mood.word);
+        // V-FIX-B (addendum 1): a post carries a tag the person chose; the button waits for one.
+        if (!tagReady(tag)) { busy.current = false; setSending(false); setMsg("Choose a tag before you post."); return; }
+        const r = await api.createAnswer(qid, body, tagFields(tag), key.current.k, mood.word);
         saveTyped(slot, "");
         clearDraft(qid);
         writePick(qid, null);
@@ -136,13 +141,12 @@ export function WriteScreen({ qid }: { qid: string }) {
             intent={intent ?? undefined}
             onIntentChange={setIntent}
             showTags={!replyTo}
-            newsTag={tag}
-            onTagChange={setTag}
+            tagSlot={<TagPicker value={tag} onChange={setTag} editor={editor} />}
             cost={price?.text}
             costShort={price?.short}
             postLabel={price?.label}
             paid={price?.paid}
-            postDisabled={dayLeft === 0}
+            postDisabled={dayLeft === 0 || (!replyTo && !tagReady(tag))}
             extra={signedIn && c ? <FixPanel text={text} costMilli={c.textFixMilli ?? 5000} buyHref={buyHref} onUse={(fixed) => { setText(fixed); saveTyped(slot, fixed); }} /> : undefined}
             balance={allow ? unitsText(allow.balanceMilli) : undefined}
             onVoice={false}
