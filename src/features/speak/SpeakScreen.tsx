@@ -117,7 +117,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const tokens = allowance?.extraVoiceTokens ?? [];
   // V-36: anyone may record up to the longest voice message; the price follows the length when it is sent.
   const limit = allowance?.maxVoiceSeconds ?? allowance?.costs.voiceMaxSeconds ?? 60;
-  const freeTotal = config?.freePosts ?? 2;
+  const freeTotal = config?.freePosts ?? 5;
   const freeLeft = allowance?.freePostsRemaining ?? freeTotal;
   const offers = config?.extraVoice ?? [];
   const qid = question?.id;

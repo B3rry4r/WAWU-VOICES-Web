@@ -19,7 +19,7 @@ export interface paths {
         put?: never;
         /**
          * Create my VOICES profile after WAWU ID sign-in
-         * @description Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and 3 or more categories. Creates the tokens balance, free allowance (2 posts) and settings. Records the referral if a code is sent. Auth: WAWU ID token; works before the VOICES profile exists.
+         * @description Idempotent. The bearer token is a WAWU ID RS256 token. Needs 18+ confirmation, terms and rules acceptance, a free handle and 3 or more categories. Creates the tokens balance, free allowance (5 posts) and settings. Records the referral if a code is sent. Auth: WAWU ID token; works before the VOICES profile exists.
          */
         post: operations["createMe"];
         /**

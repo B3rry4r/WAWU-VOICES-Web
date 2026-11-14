@@ -30,12 +30,21 @@ export async function afterSession(go: (path: string) => void): Promise<void> {
   go(me.profileComplete ? (takeReturn() ?? "/") : "/join/topics");
 }
 
+/**
+ * The admin sign-in reuses this form as it is. `returnTo` is the admin address the person asked for; `onSignedIn` runs once they have a session.
+ * No VOICES profile is needed to get in (the admin area asks the API who they are), so the join steps are not offered and nothing checks the profile here.
+ */
+export interface AdminSignInMode {
+  returnTo: string;
+  onSignedIn: () => void;
+}
+
 /** /sign-in (sign in) and /sign-in?mode=join (create the WAWU ID account). The sheet is the SignIn board; words about email follow V-20. */
-export function SignIn() {
+export function SignIn({ admin }: { admin?: AdminSignInMode } = {}) {
   const router = useRouter();
   const params = useSearchParams();
-  const skipping = useSkipIfSignedIn();
-  const [join, setJoin] = useState(params.get("mode") === "join");
+  const skipping = useSkipIfSignedIn("/", !!admin);
+  const [join, setJoin] = useState(!admin && params.get("mode") === "join");
   const [hasReturn, setHasReturn] = useState(false);
   const [needEmail, setNeedEmail] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -52,13 +61,14 @@ export function SignIn() {
   const [failure, setFailure] = useState<unknown>(null);
 
   useEffect(() => {
-    const next = params.get("next");
-    if (next) holdReturn(next, params.get("held") === "1" ? "post" : "page");
+    // The admin form keeps its own return address (the email code detour reads it back); a ?next= on the page is not used there.
+    const next = admin ? admin.returnTo : params.get("next");
+    if (next) holdReturn(next, !admin && params.get("held") === "1" ? "post" : "page");
     setHasReturn(peekHeldPost());
     const d = readDraft();
     if (d.email) setEmail(d.email);
     if (d.fullName) setFullName(d.fullName);
-  }, [params]);
+  }, [params, admin]);
   if (skipping) return null;
 
   const switchTo = (j: boolean) => {
@@ -114,6 +124,11 @@ export function SignIn() {
         return;
       }
       await signIn(idAsSent(identifier, idCountry), password);
+      if (admin) {
+        takeReturn();
+        admin.onSignedIn();
+        return;
+      }
       await afterSession((p) => router.replace(p));
     } catch (err) {
       if (!join && isEmailNotVerified(err)) {
@@ -146,11 +161,7 @@ export function SignIn() {
     }
   };
 
-  return (
-    <AuthSheet
-      title={join ? "Join VOICES" : hasReturn ? "Sign in to post" : "Sign in"}
-      subtitle={hasReturn ? "Your voice is saved. It posts as soon as you are in." : undefined}
-    >
+  const form = (
       <form noValidate onSubmit={submit} className="flex flex-col gap-4">
         {blocked ? <Banner tone="danger" title="This account cannot sign in to VOICES right now." /> : null}
         {failure ? <ErrorBanner error={failure} onRetry={() => setFailure(null)} fallback="Something went wrong on our side. Try again in a moment." /> : null}
@@ -178,12 +189,24 @@ export function SignIn() {
         ) : null}
         {join || needEmail ? null : <Link href="/forgot-password" className="link -mt-2 inline-flex min-h-[44px] items-center self-start">Forgot password?</Link>}
         <Button size="l" block type="submit" loading={busy}>{join || needEmail ? "Send code" : "Sign in"}</Button>
-        <p className="m-0 mx-auto text-center text-body">
-          {join ? "Have an account? " : "New to VOICES? "}
-          <button type="button" className="inline-flex min-h-[44px] items-center border-0 bg-transparent p-0 link" onClick={() => switchTo(!join)}>{join ? "Sign in" : "Join VOICES"}</button>
-        </p>
-        <p className="vx-sheet__fine pb-3">Reading, listening, liking and sharing stay free without an account.</p>
+        {admin ? null : (
+          <>
+            <p className="m-0 mx-auto text-center text-body">
+              {join ? "Have an account? " : "New to VOICES? "}
+              <button type="button" className="inline-flex min-h-[44px] items-center border-0 bg-transparent p-0 link" onClick={() => switchTo(!join)}>{join ? "Sign in" : "Join VOICES"}</button>
+            </p>
+            <p className="vx-sheet__fine pb-3">Reading, listening, liking and sharing stay free without an account.</p>
+          </>
+        )}
       </form>
+  );
+  if (admin) return form;
+  return (
+    <AuthSheet
+      title={join ? "Join VOICES" : hasReturn ? "Sign in to post" : "Sign in"}
+      subtitle={hasReturn ? "Your voice is saved. It posts as soon as you are in." : undefined}
+    >
+      {form}
     </AuthSheet>
   );
 }
