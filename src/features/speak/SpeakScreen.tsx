@@ -13,6 +13,7 @@ import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { needsNewKey } from "@/lib/api/keys";
 import { InView } from "@/components/InView";
+import { closedFor, openedFor } from "./opened-for";
 import { clearDraft, draftIsStale, loadDraft, notePostedKey, saveDraft, saveDraftKeepingReply, STALE_NOTE, type Draft } from "./draft";
 import { claimSend, releaseSend } from "./outbox";
 import { freeCovers, peaksFromLevels, refusalText, tokenFor, uuidKey, voicePriceMilli } from "./logic";
@@ -80,7 +81,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   // Who the screen was opened for: a recording is only ever created, uploaded, completed or posted with this person's sign-in.
   const owner = useRef<string | null>(null);
-  useEffect(() => { owner.current = sessionSubject(); setSignedIn(isSignedIn()); }, []);
+  useEffect(() => { owner.current = openedFor(); setSignedIn(isSignedIn()); return closedFor; }, []);
   // The one rule for a kept recording: it belongs to the person this screen was opened for. Before any write, read or clear the signed-in person is
   // checked; when it is someone else nothing is written, read or cleared in any slot, and the recording stays on this screen.
   const sameOwner = () => sessionSubject() === owner.current;
@@ -230,6 +231,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       interrupted.current = false;
       pushNote({ tone: "info", text: "Your recording stopped when you left the page. Listen back, then send it or record again." });
     }
+    // keepDraft reads only refs and the live sign-in, so it is safe to leave out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qid, untrap, tag]);
 
   async function startRecording() {
