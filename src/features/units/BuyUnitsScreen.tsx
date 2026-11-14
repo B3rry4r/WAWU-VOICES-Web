@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Rail } from "@/components/shell/ShellSlots";
 import { Banner, Button, Icon, IconButton, PackPicker } from "@/components/vx";
-import { getTiers, getWallet, type TiersResponse, type Wallet } from "@/lib/api/units";
+import { getMySubscriptions, getPlans, getTiers, getWallet, type MySubscriptions, type SubscriptionPlans, type TiersResponse, type Wallet } from "@/lib/api/units";
 import { tokensLabel } from "@/lib/shared/text-price";
 import { safePath } from "./attempt";
 import { useCheckout } from "./checkout";
 import { awaitingDrafts, getDraft } from "./draft";
 import { naira, smallestPack, units, unitsLabel } from "./format";
 import { useLoad, useSignedIn } from "./hooks";
+import { Breakdown, MySubscriptionCard, PlansSection } from "./Plans";
 import { Card, ErrorBlock, Line, LoadingBlock, Note, SignInNeeded } from "./ui";
 
 function holdsDraftFor(q: string): boolean {
@@ -54,7 +55,7 @@ function CostList({ costs, className = "" }: { costs: TiersResponse["costs"]; cl
   );
 }
 
-function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
+function Buy({ wallet, tiers, plans, mine }: { wallet: Wallet; tiers: TiersResponse; plans: SubscriptionPlans | null; mine: MySubscriptions | null }) {
   const params = useSearchParams();
   const from = safePath(params.get("from"));
   const sorted = useMemo(() => [...tiers.tiers].sort((a, b) => a.priceKobo - b.priceKobo), [tiers.tiers]);
@@ -97,6 +98,7 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
           selected={tier.id}
           onSelect={setSel}
         />
+        {tier.quote ? <Breakdown quote={tier.quote} vatRateBps={tiers.vatRateBps} /> : null}
         {offer ? (
           <div className="vx-offer">
             <span>{offer.headline}</span>
@@ -114,9 +116,12 @@ function Buy({ wallet, tiers }: { wallet: Wallet; tiers: TiersResponse }) {
           disabled={checkout.busy !== null && checkout.busy !== "pay"}
           onClick={() => void checkout.start("pay", { kind: "UNITS", tierId: tier.id })}
         >
-          {`Pay ${naira(tier.priceKobo)} for ${unitsLabel(tier.unitsMilli)}`}
+          {`Pay ${naira(tier.quote?.totalKobo ?? tier.priceKobo)} for ${unitsLabel(tier.unitsMilli)}`}
         </Button>
       </div>
+
+      {mine && (mine.current || mine.queued) ? <MySubscriptionCard mine={mine} /> : null}
+      {plans ? <PlansSection plans={plans.plans} vatRateBps={plans.vatRateBps} mine={mine} busy={checkout.busy} onBuy={(p) => void checkout.start(`plan:${p.slug}`, { kind: "SUBSCRIPTION", planId: p.id })} /> : null}
 
       <CostList costs={tiers.costs} className="dt:hidden" />
       <Rail>
@@ -131,7 +136,17 @@ export function BuyUnitsScreen() {
   const router = useRouter();
   const params = useSearchParams();
   const back = safePath(params.get("from")) ?? "/units";
-  const { result, reload } = useLoad(() => Promise.all([getWallet(), getTiers()]), signedIn === true);
+  const { result, reload } = useLoad(
+    () =>
+      Promise.all([
+        getWallet(),
+        getTiers(),
+        // The plans are a bonus on this page: if they fail to load, the packs still work.
+        getPlans().catch(() => null),
+        getMySubscriptions().catch(() => null),
+      ]),
+    signedIn === true,
+  );
 
   return (
     <div className="flex flex-col gap-4 pb-6">
@@ -156,7 +171,7 @@ export function BuyUnitsScreen() {
           </Button>
         </div>
       </header>
-      {signedIn === null ? <LoadingBlock rows={2} /> : !signedIn ? <SignInNeeded /> : result.state === "loading" ? <LoadingBlock rows={3} /> : result.state === "error" ? <ErrorBlock error={result.error} onRetry={reload} /> : <Buy wallet={result.data[0]} tiers={result.data[1]} />}
+      {signedIn === null ? <LoadingBlock rows={2} /> : !signedIn ? <SignInNeeded /> : result.state === "loading" ? <LoadingBlock rows={3} /> : result.state === "error" ? <ErrorBlock error={result.error} onRetry={reload} /> : <Buy wallet={result.data[0]} tiers={result.data[1]} plans={result.data[2]} mine={result.data[3]} />}
     </div>
   );
 }

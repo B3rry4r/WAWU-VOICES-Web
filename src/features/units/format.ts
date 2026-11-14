@@ -93,6 +93,7 @@ export function methodLabel(p: Pick<Payment, "method" | "cardLast4">): string | 
 
 /** The pack line on a result: "Standard, 732 tokens". An extra voice token keeps its own title. */
 export function packLine(p: Payment): string {
+  if (p.kind === "SUBSCRIPTION" && p.plan) return `${p.plan.name}, ${monthsLabel(p.plan.months)}, ${unitsLabel(p.plan.monthlyMilli)} a month`;
   if (p.kind !== "UNITS" || p.unitsMilli === null) return p.title;
   const name = p.title.replace(/ pack$/i, "");
   const bonus = p.bonusMilli ? ` (${units(p.bonusMilli)} bonus)` : "";
@@ -128,4 +129,22 @@ export function costRows(c: ActionCosts): Array<{ label: string; value: string }
 /** "Extra voice, 30 seconds" / "Extra voice, 1 minute": the title a token purchase carries. */
 export function extraVoiceTitle(maxSeconds: number): string {
   return `Extra voice, ${maxSeconds >= 60 && maxSeconds % 60 === 0 ? `${maxSeconds / 60} ${maxSeconds === 60 ? "minute" : "minutes"}` : `${maxSeconds} seconds`}`;
+}
+
+/** "7.5%" from basis points: 750 -> "7.5%", 700 -> "7%". */
+export function percentLabel(bps: number): string {
+  return `${Number((bps / 100).toFixed(2))}%`;
+}
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** A Lagos calendar day "2027-02-14" as "14 Feb 2027". The API sends days, not instants, so no time zone moves it. */
+export function planDay(day: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!m) return day;
+  return `${Number(m[3])} ${MONTH_NAMES[Number(m[2]) - 1]} ${m[1]}`;
+}
+
+/** "3 months", "1 month". */
+export function monthsLabel(n: number): string {
+  return `${n} ${n === 1 ? "month" : "months"}`;
 }
