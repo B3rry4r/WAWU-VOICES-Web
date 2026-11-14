@@ -4632,7 +4632,8 @@ paths:
       - wawuId: []
       x-wawu-roles:
       - ADMIN
-      description: 'Auth: signed in with role ADMIN.'
+      description: 'Everyone who has registered, newest first, or the ones a search finds. Also returns total and counts. Auth: signed in with
+        role ADMIN.'
       parameters:
       - name: cursor
         in: query
@@ -4651,10 +4652,11 @@ paths:
         description: 1 to 50, default 20
       - name: q
         in: query
-        required: true
+        required: false
         schema:
           type: string
-        description: handle or phone hash
+        description: Optional. A part of a handle or display name, a phone number or phone hash, or one whole mail address. Leave it out to list
+          everyone, newest first
       - name: status
         in: query
         required: false
@@ -13902,15 +13904,111 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/AdminUser'
+            $ref: '#/components/schemas/AdminUserRow'
         nextCursor:
           type:
           - string
           - 'null'
+        total:
+          type: integer
+        counts:
+          $ref: '#/components/schemas/AdminUserCounts'
       additionalProperties: false
       required:
       - items
       - nextCursor
+      - total
+      - counts
+      description: total is how many people match the current search and status, ignoring the cursor. counts is the whole user table, whatever
+        the search.
+    AdminUserRow:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/Profile'
+        status:
+          $ref: '#/components/schemas/AccountStatus'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        strikes:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        mailTo:
+          type:
+          - string
+          - 'null'
+        displayName:
+          type:
+          - string
+          - 'null'
+        state:
+          type:
+          - string
+          - 'null'
+        verified:
+          type: boolean
+        postCount:
+          type: integer
+        hasProfile:
+          type: boolean
+      additionalProperties: false
+      required:
+      - profile
+      - status
+      - roles
+      - strikes
+      - createdAt
+      - mailTo
+      - displayName
+      - state
+      - verified
+      - postCount
+      - hasProfile
+      description: 'An AdminUser plus what the Users screen shows. mailTo is the notification address; only this list returns it, and only to
+        an admin. postCount is answers plus replies not deleted. hasProfile is false while the person has no display name, bio or photo. There
+        is no last-seen field: the User model has none.'
+    AdminUserCounts:
+      type: object
+      properties:
+        total:
+          type: integer
+        today:
+          type: integer
+        verified:
+          type: integer
+        byStatus:
+          $ref: '#/components/schemas/AdminUserStatusCounts'
+      additionalProperties: false
+      required:
+      - total
+      - today
+      - verified
+      - byStatus
+      description: total is everyone registered. today is those who joined since midnight in Lagos. verified is those verified right now.
+    AdminUserStatusCounts:
+      type: object
+      properties:
+        ACTIVE:
+          type: integer
+        SUSPENDED:
+          type: integer
+        BANNED:
+          type: integer
+        DELETION_PENDING:
+          type: integer
+        DELETED:
+          type: integer
+      additionalProperties: false
+      required:
+      - ACTIVE
+      - SUSPENDED
+      - BANNED
+      - DELETION_PENDING
+      - DELETED
     AdminUser:
       type: object
       properties:

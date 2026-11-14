@@ -8,6 +8,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: () => {} }),
   useSearchParams: () => new URLSearchParams(),
 }));
+// The switch is mocked ON here: this file keeps proving the messages icon works when the owner flips DMS_LIVE. The off state is in dm-off.test.tsx.
+vi.mock("@/features/dm/live", () => ({ DMS_LIVE: true }));
 const apiFetch = vi.fn();
 vi.mock("@/lib/api/client", () => ({ apiFetch: (...a: unknown[]) => apiFetch(...a) }));
 

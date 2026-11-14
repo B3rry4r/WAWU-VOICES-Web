@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { Bell } from "./Bell";
 import { MessagesIcon } from "./Messages";
+import { DMS_LIVE } from "@/features/dm/live";
 import { GuestEntry } from "./GuestEntry";
 
 function Field() {
@@ -35,7 +36,7 @@ export function DeskSearch() {
         <Field />
       </Suspense>
       <GuestEntry />
-      <MessagesIcon />
+      {DMS_LIVE ? <MessagesIcon /> : null}
       <Bell />
     </div>
   );
