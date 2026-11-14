@@ -1,6 +1,6 @@
 import { apiFetch } from "./client";
 import { API_BASE } from "./config";
-import type { components } from "./types";
+import type { components } from "./types-pending";
 
 export type WeeklyReport = components["schemas"]["WeeklyReport"];
 export type WeeklyReportCard = components["schemas"]["WeeklyReportCard"];

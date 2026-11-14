@@ -1452,26 +1452,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/news/{answerId}/request-verified": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Ask the editors for Verified News on my post
-         * @description V-FIX-B (addendum 1). Only the poster, for a live post that is not already Verified News, one open request at a time (409 ALREADY_REQUESTED, ALREADY_VERIFIED). 422 SOURCE_REQUIRED without a source name. The request lands in the editors' queue (GET /admin/news, tab asking-verified) next to the flagged posts; only an editor's decision (POST /admin/news/{answerId}/decision, APPROVE_VERIFIED) gives the tag. A poster can also ask when posting (createAnswer requestVerified). Auth: signed in with a finished profile.
-         */
-        post: operations["requestVerifiedNews"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/polls/current": {
         parameters: {
             query?: never;
@@ -2395,7 +2375,7 @@ export interface paths {
         put?: never;
         /**
          * Record a view, tap or listen
-         * @description V-FIX-B: a LISTEN counts once per person per advert per day (a signed-in person, or a guest with X-Guest-Id); a second one the same day answers 204 and adds nothing. A caller with neither is not counted. Auth: guest or signed in. Rate limit: 300 per minute per IP or account.
+         * @description Auth: guest or signed in. Rate limit: 300 per minute per IP or account.
          */
         post: operations["recordAdEvent"];
         delete?: never;
@@ -2763,76 +2743,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * The saved What Next? summary and whether AI drafting is on
-         * @description Auth: signed in with role EDITOR or ADMIN.
-         */
-        get: operations["adminGetSummary"];
+        get?: never;
         /**
          * Edit and approve the What Next? editorial summary
          * @description Auth: signed in with role EDITOR or ADMIN.
          */
         put: operations["adminSaveSummary"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/topics/{topicId}/summary/draft": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * A summary draft from the week's data, or from the AI when asked and a key is set
-         * @description Saves nothing. Without a GEMINI_API_KEY, ai true still answers with the data draft and an aiNote saying AI drafting is off. Auth: signed in with role EDITOR or ADMIN.
-         */
-        post: operations["adminDraftSummary"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/proposal-questions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Questions that have proposals, newest activity first (up to 30)
-         * @description Auth: signed in with role MODERATOR or ADMIN.
-         */
-        get: operations["adminListProposalQuestions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/proposals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * One question's proposals with its groups and suggested groups
-         * @description Auth: signed in with role MODERATOR or ADMIN.
-         */
-        get: operations["adminListProposals"];
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -2855,26 +2771,6 @@ export interface paths {
          */
         post: operations["adminConfirmGroup"];
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/proposal-groups/{groupId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Split a group: its proposals return to ungrouped
-         * @description The group is removed and one audit row (proposal_group.remove) records who and which proposals. Auth: signed in with role MODERATOR or ADMIN.
-         */
-        delete: operations["adminRemoveGroup"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3957,7 +3853,6 @@ export interface components {
             notifyPollResults: boolean;
             notifyFlashPolls: boolean;
             notifyCategoryAlerts: boolean;
-            notifyTagFollows: boolean;
             dailyQuestionMinute: number;
             shareMyWord: boolean;
             dmOpen: boolean;
@@ -3977,7 +3872,6 @@ export interface components {
             notifyPollResults?: boolean;
             notifyFlashPolls?: boolean;
             notifyCategoryAlerts?: boolean;
-            notifyTagFollows?: boolean;
             dailyQuestionMinute?: number;
             shareMyWord?: boolean;
             dmOpen?: boolean;
@@ -4085,14 +3979,10 @@ export interface components {
             proposalCount: number;
             override?: components["schemas"]["OverrideContent"] | null;
         };
-        /** @description V-FIX-B: the message, picture, voice note and link an override carries. imageUrl is a public CDN link. The voice note is private like every voice: audioUrl stays null and the page plays audioClipId through GET /voice-clips/{clipId}/play (a short-lived link) when the person taps play. linkUrl opens from a button under the message. */
         OverrideContent: {
             contentKind: components["schemas"]["OverrideContentKind"];
             body?: string | null;
             audioUrl?: string | null;
-            /** Format: uuid */
-            audioClipId?: string | null;
-            audioDurationMs?: number | null;
             imageUrl?: string | null;
             linkUrl?: string | null;
             /** Format: date-time */
@@ -4191,6 +4081,7 @@ export interface components {
         PublicConfig: {
             /** @enum {string} */
             currency: "NGN";
+            dmsLive?: boolean;
             freePosts: number;
             /** @description Naira in kobo (32-bit integer). */
             unitBaseKobo: number;
@@ -4252,18 +4143,11 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
-        /** @description One state in the weekly poll: how many votes came from it, the choice that led there and its whole percent. A state under the anonymity floor (config weekly.min_group_size) is never listed. */
-        RegionShare: {
-            state: string;
-            votes: number;
-            leading: string;
-            percent: number;
-        };
-        /** @description share is the percent of people who chose a mood (a mood under 5 people is folded into Other); change is the move in percentage points since last week, or null when last week had too few mood answers to compare. */
+        /** @description share is the percent of voices; change is the move in percentage points since last week. */
         Emotion: {
             name: string;
             share: number;
-            change: number | null;
+            change: number;
         };
         CategoryCounts: {
             open: number;
@@ -4297,7 +4181,7 @@ export interface components {
             answer?: components["schemas"]["Answer"];
             ad?: components["schemas"]["AdPlacement"];
         };
-        /** @description Text answers carry body. Voice answers carry clipId of a READY clip. A clip over the free length also needs an extra voice token. isNews requires newsTag VERIFIED_NEWS needs an editor or admin role and a source. requestVerified (V-FIX-B) asks the editors for Verified News: it needs isNews, newsTag UNVERIFIED_NEWS and newsSourceName (the source the editors check, kept on the request, not shown on the post); the post goes up as Unverified News and waits in the editors' queue. On a question with moodOptions every answer, voice or text, carries one of them in mood (422 "Pick one word before you post." otherwise); on any other question mood is refused. showNameOnCard (LCH-03) is off unless true and ignored on an anonymous answer. */
+        /** @description Text answers carry body. Voice answers carry clipId of a READY clip. A clip over the free length also needs an extra voice token. isNews requires newsTag; VERIFIED_NEWS needs an editor or admin role and a source. On a question with moodOptions every answer, voice or text, carries one of them in mood (422 "Pick one word before you post." otherwise); on any other question mood is refused. showNameOnCard (LCH-03) is off unless true and ignored on an anonymous answer. */
         CreateAnswerRequest: {
             kind: components["schemas"]["PostKind"];
             body?: string;
@@ -4309,7 +4193,6 @@ export interface components {
             newsTag?: components["schemas"]["NewsTag"];
             newsSourceName?: string;
             newsSourceUrl?: string;
-            requestVerified?: boolean;
             anonymous?: boolean;
             mood?: components["schemas"]["Mood"];
             showNameOnCard?: boolean;
@@ -4614,7 +4497,7 @@ export interface components {
             challengeCount: number;
             topProposal: components["schemas"]["Proposal"] | null;
         };
-        /** @description Shown only after an editor reviews it. aiDrafted is true when the wording came from the AI draft (the page then says AI-assisted). The two counts are voices an editor counted, never poll votes; approving needs both at least 1 and together no more than basedOnVoices. Wording is 'lean towards' or 'split', never 'everyone agrees'. */
+        /** @description Shown only after an editor reviews it. Wording is 'lean towards' or 'split', never 'everyone agrees'. */
         EditorialSummary: {
             /** Format: uuid */
             topicId: string;
@@ -4629,7 +4512,6 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             reviewedByEditor: boolean;
-            aiDrafted?: boolean;
         };
         WhatNext: {
             question: components["schemas"]["Question"];
@@ -4723,17 +4605,6 @@ export interface components {
         FlagRequest: {
             note?: string;
         };
-        /** @description V-FIX-B: the source the editors will check. sourceName is 1 to 200 characters; sourceUrl, if sent, is a full http(s) link. */
-        RequestVerifiedRequest: {
-            sourceName: string;
-            sourceUrl?: string;
-        };
-        VerifiedRequestReceipt: {
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            status: "OPEN" | "APPROVED" | "DECLINED";
-        };
         TagInfo: {
             count: number;
             newCount: number;
@@ -4764,7 +4635,6 @@ export interface components {
         };
         WeeklyReport: {
             emotions: components["schemas"]["Emotion"][];
-            regions?: components["schemas"]["RegionShare"][];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -5143,7 +5013,7 @@ export interface components {
             event: string;
             data: unknown;
         };
-        /** @description Always labelled. Audio plays only when tapped: the page asks GET /voice-clips/{audioClipId}/play for a short-lived link (V-FIX-B). audioClipId is null on an audio advert whose recording is not ready. */
+        /** @description Always labelled. Audio plays only when tapped. */
         AdPlacement: {
             /** Format: uuid */
             id: string;
@@ -5156,7 +5026,6 @@ export interface components {
             imageUrl?: string | null;
             /** Format: uuid */
             audioClipId?: string | null;
-            audioDurationMs?: number | null;
             linkUrl?: string | null;
             ctaLabel?: string | null;
         };
@@ -5347,8 +5216,6 @@ export interface components {
             linkUrl?: string | null;
             imageUrl?: string | null;
             audioUrl?: string | null;
-            /** Format: uuid */
-            audioClipId?: string | null;
             /** Format: date-time */
             startsAt: string;
             /** Format: date-time */
@@ -5561,7 +5428,6 @@ export interface components {
         };
         AdminWeeklyReport: {
             emotions: components["schemas"]["Emotion"][];
-            regions?: components["schemas"]["RegionShare"][];
             cardTitle: string | null;
             editorNote: string | null;
             /** Format: uuid */
@@ -6064,123 +5930,6 @@ export interface components {
             pollLine: string;
             nextStepsLine: string;
             approve: boolean;
-            aiDrafted?: boolean;
-        };
-        SavedSummary: {
-            /** Format: uuid */
-            topicId: string;
-            mainView: string;
-            mainViewVoices: number;
-            opposingView: string;
-            opposingViewVoices: number;
-            pollLine: string;
-            nextStepsLine: string;
-            basedOnVoices: number;
-            basedOnVotes: number;
-            /** Format: date-time */
-            updatedAt: string;
-            reviewedByEditor: boolean;
-            aiDrafted: boolean;
-        };
-        /** @description The saved summary (reviewed or not) and whether the AI draft is switched on here (a GEMINI_API_KEY is set). */
-        AdminSummary: {
-            aiAvailable: boolean;
-            summary: components["schemas"]["SavedSummary"] | null;
-        };
-        DraftSummaryRequest: {
-            ai?: boolean;
-        };
-        SummaryDraftFields: {
-            mainView: string;
-            mainViewVoices: number;
-            opposingView: string;
-            opposingViewVoices: number;
-            pollLine: string;
-            nextStepsLine: string;
-        };
-        SummaryDraftMood: {
-            mood: components["schemas"]["Mood"];
-            count: number;
-            percent: number;
-        };
-        SummaryDraftCategory: {
-            name: string;
-            voices: number;
-        };
-        SummaryDraftQuote: {
-            /** Format: uuid */
-            answerId: string;
-            kind: components["schemas"]["PostKind"];
-            reactions: number;
-            excerpt: string;
-        };
-        /** @description Nothing is saved. The data draft needs no AI: the weekly poll's two leading choices as the two positions, the poll line and the next-steps line counted from the poll and the proposals, plus mood counts, the busiest categories and the most-reacted voices as material. An empty mainView or opposingView means the data had nothing to put there and the editor writes it. */
-        SummaryDraft: {
-            /** Format: uuid */
-            topicId: string;
-            /** @enum {string} */
-            source: "DATA" | "AI";
-            aiAvailable: boolean;
-            aiNote: string | null;
-            draft: components["schemas"]["SummaryDraftFields"];
-            basedOnVoices: number;
-            basedOnVotes: number;
-            moods: components["schemas"]["SummaryDraftMood"][];
-            categories: components["schemas"]["SummaryDraftCategory"][];
-            quotes: components["schemas"]["SummaryDraftQuote"][];
-        };
-        AdminProposalQuestion: {
-            /** Format: uuid */
-            questionId: string;
-            text: string;
-            weekNumber: number | null;
-            proposalCount: number;
-            groupCount: number;
-            ungroupedCount: number;
-        };
-        AdminProposalQuestions: {
-            items: components["schemas"]["AdminProposalQuestion"][];
-        };
-        AdminProposalItem: {
-            /** Format: uuid */
-            id: string;
-            kind: components["schemas"]["PostKind"];
-            text: string;
-            supportCount: number;
-            challengeCount: number;
-            /** Format: uuid */
-            groupId: string | null;
-            groupTitle: string | null;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        AdminProposalGroup: {
-            /** Format: uuid */
-            id: string;
-            title: string;
-            confirmed: boolean;
-            proposalCount: number;
-        };
-        AdminGroupSuggestion: {
-            title: string;
-            proposalIds: string[];
-        };
-        AdminProposalQuestionRef: {
-            /** Format: uuid */
-            id: string;
-            text: string;
-        };
-        AdminGroupRemoved: {
-            /** Format: uuid */
-            id: string;
-            released: number;
-        };
-        /** @description A question's published proposals (up to 300, best supported first) with its groups. A suggestion is proposals with words in common; nothing is grouped until a moderator confirms it with POST /admin/proposal-groups. */
-        AdminProposals: {
-            question: components["schemas"]["AdminProposalQuestionRef"];
-            items: components["schemas"]["AdminProposalItem"][];
-            groups: components["schemas"]["AdminProposalGroup"][];
-            suggestions: components["schemas"]["AdminGroupSuggestion"][];
         };
         AuditPage: {
             items: components["schemas"]["AuditEntry"][];
@@ -6227,6 +5976,7 @@ export interface components {
             id: string;
             handle: string;
             displayName: string | null;
+            avatarUrl?: string | null;
             place: string | null;
             verified: boolean;
             deleted: boolean;
@@ -8813,37 +8563,6 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
-    requestVerifiedNews: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                answerId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RequestVerifiedRequest"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VerifiedRequestReceipt"];
-                };
-            };
-            401: components["responses"]["E401"];
-            404: components["responses"]["E404"];
-            409: components["responses"]["E409"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
     getFlashPoll: {
         parameters: {
             query?: never;
@@ -10770,32 +10489,6 @@ export interface operations {
             429: components["responses"]["E429"];
         };
     };
-    adminGetSummary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                topicId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminSummary"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            429: components["responses"]["E429"];
-        };
-    };
     adminSaveSummary: {
         parameters: {
             query?: never;
@@ -10818,88 +10511,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EditorialSummary"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminDraftSummary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                topicId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DraftSummaryRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SummaryDraft"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
-            422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminListProposalQuestions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminProposalQuestions"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminListProposals: {
-        parameters: {
-            query: {
-                /** @description The question */
-                questionId: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminProposals"];
                 };
             };
             401: components["responses"]["E401"];
@@ -10935,32 +10546,6 @@ export interface operations {
             403: components["responses"]["E403"];
             404: components["responses"]["E404"];
             422: components["responses"]["E422"];
-            429: components["responses"]["E429"];
-        };
-    };
-    adminRemoveGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                groupId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminGroupRemoved"];
-                };
-            };
-            401: components["responses"]["E401"];
-            403: components["responses"]["E403"];
-            404: components["responses"]["E404"];
             429: components["responses"]["E429"];
         };
     };

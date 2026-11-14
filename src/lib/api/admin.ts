@@ -1,5 +1,5 @@
 import { apiBlob, apiFetch } from "./client";
-import type { components } from "./types";
+import type { components } from "./types-pending";
 
 type S = components["schemas"];
 
@@ -44,7 +44,6 @@ export type AdminProposalQuestion = S["AdminProposalQuestion"];
 export type AdminProposals = S["AdminProposals"];
 export type AdminProposalItem = S["AdminProposalItem"];
 export type AdminUser = S["AdminUser"];
-export type AdminUserPage = S["AdminUserPage"];
 export type AdminRoleGrant = S["AdminRoleGrant"];
 export type AdminRoleGrantPage = S["AdminRoleGrantPage"];
 export type Emotion = S["Emotion"];
@@ -99,7 +98,6 @@ export const confirmGroup = (title: string, proposalIds: string[]) => apiFetch<S
 export const removeGroup = (groupId: string) => apiFetch<{ id: string; released: number }>(`/admin/proposal-groups/${enc(groupId)}`, { ...A, method: "DELETE" });
 
 // People and roles (V-FIX-C)
-export const findPeople = (q: string) => apiFetch<AdminUserPage>(`/admin/users${qs({ q: q.trim().replace(/^@/, ''), limit: 20 })}`, A);
 export const listStaff = (cursor?: string | null) => apiFetch<AdminRoleGrantPage>(`/admin/roles${qs({ cursor, limit: 50 })}`, A);
 export const setRoles = (userId: string, roles: Role[], reason: string) => apiFetch<AdminRoleGrant>(`/admin/users/${enc(userId)}/roles`, { ...A, method: "PUT", body: { roles, reason } });
 

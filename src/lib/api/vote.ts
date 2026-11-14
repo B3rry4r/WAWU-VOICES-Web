@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { components } from "./types";
+import type { components } from "./types-pending";
 
 type S = components["schemas"];
 export type Question = S["Question"];

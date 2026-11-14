@@ -12,7 +12,7 @@ export function useIsEditor(enabled = true): boolean {
     if (!enabled) return;
     let live = true;
     getMe().then(
-      (m) => { if (live) setYes(m.roles.includes("EDITOR") || m.roles.includes("ADMIN")); },
+      (m) => { if (live) setYes((m.roles ?? []).some((r) => r === "EDITOR" || r === "ADMIN")); },
       () => undefined,
     );
     return () => { live = false; };

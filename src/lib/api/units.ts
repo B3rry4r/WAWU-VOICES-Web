@@ -1,7 +1,7 @@
 import { apiFetch, ApiError, NetworkError } from "./client";
 import { API_BASE, REQUEST_TIMEOUT_MS } from "./config";
 import { sessionStorage } from "@/lib/auth/session-storage";
-import type { components } from "./types";
+import type { components } from "./types-pending";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 
 /* tokens routes (contract tag voice-units), plus the three neighbours the tokens screens read:
