@@ -64,7 +64,7 @@ export function OwnVoiceFlow({ answer, push, onClose, onSaved, onDeleted }: { an
           noun="voice"
           onClose={onClose}
           onConfirm={async () => {
-            try { await api.deleteAnswer(answer.id); } catch (e) { push(failText(e), "danger"); onClose(); return; }
+            try { await api.deleteAnswer(answer.id); } catch (e) { push(e instanceof ApiError && e.explained && e.message.trim() ? e.message : failText(e), "danger"); onClose(); return; }
             onClose();
             push("Your post is deleted.", "success");
             onDeleted(answer.id);

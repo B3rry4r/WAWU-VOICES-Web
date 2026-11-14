@@ -126,7 +126,7 @@ function CalendarBody() {
         <ListSkeleton />
       ) : (
         <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <div className="overflow-hidden rounded-xl border border-line bg-surface">
+          <div className="overflow-x-auto rounded-xl border border-line bg-surface">
             {weeks.length === 0 ? (
               <div className="p-6">
                 <EmptyState icon="search" title={q ? "Nothing matches that" : "No weeks here"} body={q ? "Try a week number, a topic word or part of a question." : "Add a week to start the calendar."} />
@@ -320,7 +320,7 @@ function QuestionRow({ q, days, week, onSaved }: { q: AdminQuestion; days: strin
             {q.status === "LIVE" ? <Pill tone="red" dot>Live</Pill> : null}
             {q.pinned ? <Pill tone="green">Pinned</Pill> : null}
             {movable ? (
-              <select aria-label={`Day for: ${q.text}`} className="rounded-s border border-line bg-surface px-2 py-1 text-caption text-ink" value={target ?? q.day ?? ""} disabled={mBusy} onChange={(e) => choose(e.target.value)}>
+              <select aria-label={`Day for: ${q.text}`} className="rounded-s border border-line bg-surface px-2 py-1 text-caption text-ink max-dt:min-h-[44px]" value={target ?? q.day ?? ""} disabled={mBusy} onChange={(e) => choose(e.target.value)}>
                 {days.map((d) => (
                   <option key={d} value={d}>{dayStringWeekday(d)}</option>
                 ))}

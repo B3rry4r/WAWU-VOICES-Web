@@ -56,7 +56,7 @@ function Doc({ requestId, kind, title, info }: { requestId: string; kind: "id" |
       )}
       {link ? (
         <p className="m-0 text-caption text-ink-2">This link stops working after 5 minutes.{" "}
-          <button type="button" className="link cursor-pointer border-0 bg-transparent p-0" onClick={() => void open()}>Get a new link</button>
+          <button type="button" className="link cursor-pointer border-0 bg-transparent p-0 max-dt:inline-flex max-dt:min-h-[44px] max-dt:items-center" onClick={() => void open()}>Get a new link</button>
         </p>
       ) : null}
       <ErrorLine>{err}</ErrorLine>
