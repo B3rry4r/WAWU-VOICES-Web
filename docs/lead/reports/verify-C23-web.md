@@ -1,6 +1,6 @@
 VERDICT: MERGE
 
-Head checked: origin/v/batch-1114c2 = fde1253 (as expected). Branch `verify/c23-web` made from it. No HIGH, no MEDIUM. Three LOW notes. Real Chromium (Playwright 1.63, `chromium.launch()`), `next start` on the build of fde1253 (port 4201), of 5ce7edb (4202) and of 19c7a7a (4203, second and third folder by `git worktree add`, removed after). API stubbed with `page.route`, and a small local node server for the share page's own server calls. Nothing live was called. My scripts are in the scratchpad, not in this commit.
+Head checked: origin/v/batch-1114c2 = fde1253 (as expected). Branch `verify/c23-web` made from it. No HIGH, no MEDIUM. Two LOW findings. Real Chromium (Playwright 1.63, `chromium.launch()`), `next start` on the build of fde1253 (port 4201), of 5ce7edb (4202) and of 19c7a7a (4203, second and third folder by `git worktree add`, removed after). API stubbed with `page.route`, and a small local node server for the share page's own server calls. Nothing live was called. My scripts are in the scratchpad, not in this commit.
 
 ## Findings (most severe first)
 
@@ -15,9 +15,6 @@ Head checked: origin/v/batch-1114c2 = fde1253 (as expected). Branch `verify/c23-
 - Steps: Home and Search, 1440, mouse: double click on a word in a text answer.
 - Happened: the first click of the double click opens `/q/q9` (selection is empty at that click), so the word is never selected. A drag that selects text does not open it (T1 passes).
 - Should: nothing in the brief asks for this; a person who double-clicks to pick a word loses the page they are on. File: `src/components/feed/parts.tsx` `OpenOnTap` onClick (about line 46).
-
-### 3. LOW (test-only note): the added start-watch tests can't see the case behind finding 1
-- Not a fault. I list it because `tests/c23-start-watch.test.tsx` uses an exact whole-second header; the 0.7 s over comes from the real floor. READ only, the test run itself is green (below).
 
 ## What the product must do: results
 
