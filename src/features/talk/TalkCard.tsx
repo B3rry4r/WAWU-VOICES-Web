@@ -45,10 +45,10 @@ export function useToast(): [ReactNode, PushToast] {
 }
 
 /** The share sheet from the reach screens (W8b), opened for a question or a voice. */
-export function useShareSheet(): [ReactNode, (type: "QUESTION" | "ANSWER", id: string) => void] {
-  const [t, setT] = useState<{ type: "QUESTION" | "ANSWER"; id: string } | null>(null);
-  const node = t ? <ShareSheet objectType={t.type} objectId={t.id} onClose={() => setT(null)} /> : null;
-  return [node, (type, id) => setT({ type, id })];
+export function useShareSheet(): [ReactNode, (type: "QUESTION" | "ANSWER", id: string, opts?: { notOpen?: boolean }) => void] {
+  const [t, setT] = useState<{ type: "QUESTION" | "ANSWER"; id: string; notOpen?: boolean } | null>(null);
+  const node = t ? <ShareSheet objectType={t.type} objectId={t.id} notOpen={t.notOpen} onClose={() => setT(null)} /> : null;
+  return [node, (type, id, opts) => setT({ type, id, notOpen: opts?.notOpen })];
 }
 
 interface Props {
