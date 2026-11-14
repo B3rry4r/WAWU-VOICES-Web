@@ -6,6 +6,8 @@ import { createAd, decideAd, listAds, updateAd } from "@/lib/api/admin";
 import type { AdminAd, UpsertAdRequest } from "@/lib/api/admin";
 import { getCategories } from "@/lib/api/feed";
 import { useAdmin } from "./AdminFrame";
+import { MediaPick, type Picked } from "./MediaPick";
+import { AD_AUDIO_MAX_SECONDS } from "@/lib/api/admin-media";
 import { dayMonth } from "./time";
 import { StackTable } from "./money/parts";
 import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, DetailPane, isSuspendedError, useAction, Gated } from "./ui";
@@ -270,6 +272,9 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
   const [kind, setKind] = useState<AdminAd["kind"]>(ad?.kind ?? "FEED_CARD");
   const [picked, setPicked] = useState<string[]>(ad?.categoryIds ?? []);
   const [states, setStates] = useState(ad?.states.join(", ") ?? "");
+  // V-FIX-B: a recording for the audio slot and a picture for any advert. Only a file chosen now is sent; an edit keeps what is set.
+  const [audio, setAudio] = useState<Picked | null>(null);
+  const [picture, setPicture] = useState<Picked | null>(null);
   const act = useAction();
   const set = (k: keyof typeof f) => (v: string) => setF((o) => ({ ...o, [k]: v }));
 
@@ -287,6 +292,8 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
       ...(f.endsOn ? { endsOn: f.endsOn } : {}),
       ...(f.cap ? { frequencyCapPerDay: Number(f.cap) } : {}),
       ...(f.price ? { priceKobo: Math.round(Number(f.price) * 100) } : {}),
+      ...(audio && kind === "AUDIO_SLOT" ? { audioClipId: audio.id } : {}),
+      ...(picture ? { imageFileId: picture.id } : {}),
     };
     // lead ruling WF, 6 Nov (C-M8): an edit sends ONLY what changed, because the API reads any content field it receives
     // as "the words changed" and sends a paused advert back to approval. Changing only the dates keeps it paused.
@@ -323,6 +330,14 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
         <TextField label="Ends" type="date" value={f.endsOn} onChange={set("endsOn")} />
         <TextField label="Most times a day per person" inputMode="numeric" value={f.cap} onChange={set("cap")} />
         <TextField label="Price in naira (flat fee)" inputMode="numeric" value={f.price} onChange={set("price")} hint="Leave empty to use the admin price list." />
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        {kind === "AUDIO_SLOT" ? (
+          <div data-testid="ad-audio-pick">
+            <MediaPick kind="audio" label="Audio advert" purpose="AD_AUDIO" maxSeconds={AD_AUDIO_MAX_SECONDS} value={audio} onChange={setAudio} required hint={`Up to ${AD_AUDIO_MAX_SECONDS} seconds. It plays only when a person taps it, and its words are checked before approval.${ad?.audioClipId && !audio ? " A recording is already set." : ""}`} />
+          </div>
+        ) : null}
+        <MediaPick kind="picture" label="Picture" fileKind="AD_CREATIVE" value={picture} onChange={setPicture} hint={`JPEG, PNG or WebP, under 5 MB.${ad?.imageUrl && !picture ? " A picture is already set." : ""}`} />
       </div>
       <div className="mt-4">
         <div className="mb-2 text-count">Topics it can show beside</div>

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ProfileHeader } from "@/components/vx";
 import { getPlayUrl, type Profile } from "@/lib/api/profile";
 import { isSignedIn } from "@/lib/api/auth";
-import { makePlayer, playWithResign } from "./playback";
+import { claimPlayback, makePlayer, playWithResign } from "./playback";
 import { joinedLabel, placeLabel, unitsFigure } from "./format";
 
 /** Plays the Voice Card clip (the person's 10 second bio) through the play route; the ProfileHeader shows it and asks. */
@@ -23,7 +23,7 @@ function useVoiceCard(clipId: string | undefined) {
         a.onplay = () => setPlaying(true);
         audio.current = a;
       }
-      if (audio.current.paused) await playWithResign(audio.current, resolve); else audio.current.pause();
+      if (audio.current.paused) { claimPlayback(audio.current, () => setPlaying(false)); await playWithResign(audio.current, resolve); } else audio.current.pause();
     } catch { setFailed(true); setPlaying(false); }
   }
   return { playing, failed, toggle };

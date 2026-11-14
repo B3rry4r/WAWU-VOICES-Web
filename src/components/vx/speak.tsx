@@ -53,6 +53,8 @@ export interface ComposerProps {
   replyTo?: string;
   intent?: IntentKind;
   showTags?: boolean;
+  /** V-FIX-B: the screen's own tag picker (Not news selected to begin with, Request Verified News, editors' Verified News) in place of the built-in chips. */
+  tagSlot?: ReactNode;
   newsTag?: ComposerTag;
   /** With these, `intent` and `newsTag` are the truth and the box asks to change them. */
   onIntentChange?: (intent: IntentKind | null) => void;
@@ -133,7 +135,8 @@ export function Composer(p: ComposerProps): ReactElement {
         <span id={countId} className={cx('vx-compose__count', n >= max ? 'is-over' : n >= max * 0.9 && 'is-near')}>{fmt(n) + ' / ' + fmt(max)}</span>
       </div>
       {p.extra}
-      {p.showTags ? (
+      {p.showTags && p.tagSlot ? p.tagSlot : null}
+      {p.showTags && !p.tagSlot ? (
         <div className="vx-tagpick" role="group" aria-label="Is this news?">
           <span className="vx-caption">Is this news? Pick a tag so readers know.</span>
           <div className="vx-tagpick__row">

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { AdSlot } from "@/components/vx";
+import { safeLink } from "./OverrideMessage";
 import { recordAdEvent, type AdPlacement } from "@/lib/api/polls";
 
 /**
@@ -23,8 +24,9 @@ export function AdCard({ ad, inRail }: { ad: AdPlacement | null | undefined; inR
       brand={ad.brand}
       headline={ad.headline}
       body={ad.body ?? undefined}
-      cta={ad.linkUrl ? (ad.ctaLabel ?? "Learn more") : false}
-      href={ad.linkUrl ?? undefined}
+      cta={safeLink(ad.linkUrl) ? (ad.ctaLabel ?? "Learn more") : false}
+      href={safeLink(ad.linkUrl) ?? undefined}
+      newTab
       onWhy={false}
       onOpen={() => { recordAdEvent(ad.id, "TAP").catch(() => undefined); }}
     />
