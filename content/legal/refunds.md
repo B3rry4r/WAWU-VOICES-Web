@@ -1,6 +1,6 @@
 ---
 title: Tokens, refunds and expiry
-updated: [OWNER: approval date]
+updated: 14 November 2026
 lead: How tokens are paid for, and what we do when a payment goes wrong.
 ---
 

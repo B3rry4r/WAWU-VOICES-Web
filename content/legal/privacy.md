@@ -1,6 +1,6 @@
 ---
 title: Privacy notice
-updated: [OWNER: approval date]
+updated: 14 November 2026
 lead: What VOICES collects, why, who helps us handle it, and what you can ask us to do.
 ---
 
@@ -45,7 +45,7 @@ A photo of a result sheet is never public. Only the WAWU team can see it, to che
 - Your account data and posts stay while your account is open. A post you delete disappears from the app, and its text is blanked when your account is deleted.
 - When you delete your account we keep it for 14 days. Then every post and reply is blanked, including ones you deleted yourself. Your profile details, likes, reactions, saves, the record of which voices you played, blocks, notifications, settings and invite links (the one you sent and the one that brought you) are deleted. Your link is removed from support messages and from share, advert and usage events. Transcripts are wiped. Unspent tokens are lost.
 - Recordings, profile photos, result sheet photos, data download files, share images and videos you asked us to make are deleted from storage by a regular clean-up. A video is deleted when its answer is deleted or removed, and when your account is deleted. Uploads that were never finished are deleted after 24 hours.
-- Some records stay without your name on them: votes, which keep the one-way code made from your phone number so that one phone votes once; result totals, which stay as a public record; payment records, so that our accounts add up; and moderation records. [OWNER: confirm how long payment records must be kept under Nigerian law.]
+- Some records stay without your name on them: votes, which keep the one-way code made from your phone number so that one phone votes once; result totals, which stay as a public record; payment records, so that our accounts add up; and moderation records. We keep payment records for seven years, as financial and tax rules require.
 - Nightly database copies are kept for 7 days.
 
 ## Cookies and local storage
@@ -69,4 +69,4 @@ Subject to the law, you can ask to see your information, correct it, delete it, 
 If we change this notice, the new text replaces this one on this page.
 
 ## Contact
-WAWUAfrica, support@wawuafrica.com. [OWNER: WAWU’s registered company name and address, and a data protection contact if you have one.]
+WAWU Technology Ltd, 5 Ikoyi Crescent, Lagos, Nigeria. For anything about your personal data and your rights, write to support@wawuafrica.com.
