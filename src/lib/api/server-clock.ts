@@ -45,6 +45,11 @@ export function serverNow(): number {
   return anchor.server + (monotonicNow() - anchor.mono);
 }
 
+/** True once a real reading of the server's time (a `Date` header or a drawn page) has been taken; before that the device clock stands in. */
+export function serverClockMeasured(): boolean {
+  return anchor !== null && anchor.measured;
+}
+
 /** For tests. */
 export function resetServerClock(): void {
   anchor = null;
