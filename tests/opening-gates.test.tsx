@@ -15,7 +15,8 @@ import { Go } from "@/features/entry/Go";
 import { Landing } from "@/features/entry/Landing";
 import { Onboarding } from "@/features/entry/Onboarding";
 import { OpenGate } from "@/features/talk/OpenGate";
-import { ShareOpening } from "@/features/share/ShareOpening";
+import { ShareGate } from "@/features/share/ShareGate";
+import { sharePageBody } from "./support/share-page";
 import { ShareSheet } from "@/features/share/ShareSheet";
 import { longDay } from "@/lib/format/date";
 
@@ -128,15 +129,17 @@ describe("the share page and the share sheet", () => {
   beforeEach(() => { vi.useFakeTimers({ now: OPENS - 60_000 }); refresh.mockClear(); });
   afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-  it("the server page is drawn again at the opening, and not before (once the API says the question is open)", async () => {
+  it("the page is drawn live from the browser at the opening, and not before (once the API says the question is open)", async () => {
     let answers = 0;
-    vi.stubGlobal("fetch", vi.fn(async () => { answers += 1; return json({ code: "c1", question: { ...launch(true) } }); }));
-    render(<ShareOpening code="c1" opensAt={OPENS} serverNow={Date.now()} />);
+    vi.stubGlobal("fetch", vi.fn(async () => { answers += 1; return json(sharePageBody(true)); }));
+    render(<ShareGate code="c1" opensAt={OPENS} serverNow={Date.now()}><p>COMING UP DRAWN BY THE SERVER</p></ShareGate>);
     await tick(59_000);
-    expect(refresh).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("COMING UP DRAWN BY THE SERVER");
     expect(answers).toBe(0);
     await tick(1_000 + 5_100);
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("share-page")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("COMING UP DRAWN BY THE SERVER");
+    expect(refresh).not.toHaveBeenCalled();
   });
   it("if the API will not make a link for a question that has not opened, the sheet says so and offers to copy the question's own address", async () => {
     vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q, addEventListener: () => undefined, removeEventListener: () => undefined }));

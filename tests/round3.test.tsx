@@ -9,7 +9,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(""),
 }));
 
-import { ShareOpening } from "@/features/share/ShareOpening";
+import { ShareGate } from "@/features/share/ShareGate";
+import { sharePageBody } from "./support/share-page";
 import { ShareSheet } from "@/features/share/ShareSheet";
 import { useStartWatch } from "@/components/feed/useLoad";
 import { noteServerDate, noteServerTime, resetServerClock, serverNow } from "@/lib/api/server-clock";
@@ -32,39 +33,41 @@ describe("H1: a waiting share page is never replaced while the API is failing", 
       if (mode === "hang") return new Promise((_r, rej) => init?.signal?.addEventListener("abort", () => rej(new Error("aborted"))));
       if (mode === "500" || mode === "502" || mode === "503") return Promise.resolve(json({ error: { code: "X", message: "no" } }, Number(mode)));
       if (mode === "404") return Promise.resolve(json({ error: { code: "NOT_FOUND", message: "no" } }, 404));
-      return Promise.resolve(json({ code: "c1", question: q(mode === "open") }));
+      return Promise.resolve(json(sharePageBody(mode === "open")));
     }));
   });
   afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
   for (const m of ["500", "502", "503", "hang", "offline", "scheduled"] as const) {
-    it(`${m}: no page refresh while it lasts, then the page is drawn again once the question is open`, async () => {
+    it(`${m}: no page refresh while it lasts, then the page is drawn live once the question is open`, async () => {
       mode = m;
-      render(<ShareOpening code="c1" opensAt={OPENS} serverNow={Date.now()} />);
+      render(<ShareGate code="c1" opensAt={OPENS} serverNow={Date.now()}><p>COMING UP</p></ShareGate>);
       await tick(29_000);
       expect(asks).toBe(0);
       await tick(40_000);
       expect(asks).toBeGreaterThan(1);
-      expect(refresh).not.toHaveBeenCalled();
+      expect(document.body.textContent).toContain("COMING UP");
+      expect(screen.queryByTestId("share-page")).toBeNull();
       mode = "open";
       await tick(61_000);
-      expect(refresh).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("share-page")).toBeTruthy();
+      expect(refresh).not.toHaveBeenCalled();
     });
   }
-  it("a link that is really gone (404) is handed to the server, which says so", async () => {
+  it("a link that is really gone (404) shows the not-found page", async () => {
     mode = "404";
-    render(<ShareOpening code="c1" opensAt={OPENS} serverNow={Date.now()} />);
+    render(<ShareGate code="c1" opensAt={OPENS} serverNow={Date.now()}><p>COMING UP</p></ShareGate>);
     await tick(40_000);
-    expect(refresh).toHaveBeenCalled();
+    expect(screen.getByTestId("share-not-found")).toBeTruthy();
   });
   it("offline at the instant: back online, the page is drawn again at once", async () => {
     mode = "offline";
-    render(<ShareOpening code="c1" opensAt={OPENS} serverNow={Date.now()} />);
+    render(<ShareGate code="c1" opensAt={OPENS} serverNow={Date.now()}><p>COMING UP</p></ShareGate>);
     await tick(40_000);
     mode = "open";
     act(() => { window.dispatchEvent(new Event("online")); });
     await tick(300);
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("share-page")).toBeTruthy();
   });
 });
 

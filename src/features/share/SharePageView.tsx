@@ -5,8 +5,7 @@ import { Avatar, Badge, Button, Logo, NewsTag, Poll } from "@/components/vx";
 import { fmt } from "@/components/vx/helpers";
 import type { SharePage } from "@/lib/api/reach";
 import { AddVoice, GuestOnly, LinkOpened, SignInOrOpen } from "./ShareActions";
-import { comingUp, questionStart } from "@/lib/feed-format";
-import { ShareOpening } from "./ShareOpening";
+import { comingUp } from "@/lib/feed-format";
 import { MoodChip } from "@/features/mood/MoodChip";
 import { ClipPlayer } from "./ClipPlayer";
 
@@ -58,7 +57,6 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
   const bar = (i: number) => ({ width: `${Math.max(4, Math.round((page.arguments[i].voices * 100) / maxArg))}%` });
   // V-PRELAUNCH: a link to a question that has not opened draws the coming-up state: its text and the day it opens, no counts, nothing to act on.
   const opens = page.question ? comingUp(page.question) : undefined;
-  const opensAt = page.question ? questionStart(page.question) : null;
   const stats = opens ?? (isPoll
     ? [page.poll ? `${countText(page.poll.totalVotes, "vote")} so far` : null]
     : isProfile
@@ -83,7 +81,6 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
   return (
     <div className="min-h-dvh bg-bg text-ink" data-testid="share-page">
       <LinkOpened code={page.code} />
-      {opensAt !== null ? <ShareOpening code={page.code} opensAt={opensAt} serverNow={now} /> : null}
       <header className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-3 dt:px-8 dt:py-5">
         <Logo height={36} />
         <span className="flex items-center gap-2">

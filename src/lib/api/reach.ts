@@ -98,6 +98,21 @@ export function probeSharePage(code: string): Promise<SharePage> {
   return apiFetch<SharePage>(`/share/${encodeURIComponent(code)}`, { cache: "no-store" });
 }
 
+/** What a share page needs beyond the page itself (the poll's own title, a person's voice count), asked from the browser. Each is null when it cannot be read; never throws. */
+export async function probeShareExtras(page: SharePage): Promise<{ pollTitle?: string | null; profileVoices?: number | null }> {
+  const extras: { pollTitle?: string | null; profileVoices?: number | null } = {};
+  if (page.poll && page.objectType !== "POLL_RESULT") {
+    extras.pollTitle = await apiFetch<{ title?: string }>(`/polls/${encodeURIComponent(page.poll.pollId)}`, { cache: "no-store" }).then((p) => p?.title?.trim() || null, () => null);
+  }
+  if (page.objectType === "PROFILE") {
+    const handle = /^@(\S+) on VOICES$/.exec(page.topicLine)?.[1];
+    extras.profileVoices = handle
+      ? await apiFetch<{ profile?: { voicesCount?: number } }>(`/people/by-handle/${encodeURIComponent(handle)}`, { cache: "no-store" }).then((p) => (typeof p?.profile?.voicesCount === "number" ? p.profile.voicesCount : null), () => null)
+      : null;
+  }
+  return extras;
+}
+
 // ---- notifications
 
 export function listNotifications(o: { filter?: NotificationFilter; cursor?: string | null; limit?: number } = {}): Promise<NotificationPage> {

@@ -14,7 +14,7 @@ import { AnonymousSwitch } from "./AnonymousSwitch";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
-import { AppBar, Problem, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
+import { AppBar, Problem, failText, needsNewKey, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -110,6 +110,11 @@ export function WriteScreen({ qid }: { qid: string }) {
         }
         router.push(outOfPostsHref(qid));
         return;
+      }
+      // The key was refused as spent: forget it, here and in the held draft, so the next tap goes out with a new one.
+      if (needsNewKey(e)) {
+        key.current = null;
+        if (!replyTo) clearDraft(qid);
       }
       setMsg(failText(e));
     }

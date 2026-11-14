@@ -52,8 +52,14 @@ export function offline(e: unknown): boolean {
 }
 
 /** Plain copy for a failed call, keyed on the code (the server's message is never shown raw). */
+/** The API says "start again with a new key" (a 409 CONFLICT, or IDEMPOTENCY_KEY_REUSED): the key it holds is spent, so the next tap must carry a new one. */
+export function needsNewKey(e: unknown): boolean {
+  return e instanceof ApiError && (e.code === "IDEMPOTENCY_KEY_REUSED" || (e.status === 409 && e.code === "CONFLICT" && /new key/i.test(e.message)));
+}
+
 export function failText(e: unknown): string {
   if (!(e instanceof ApiError)) return "Something went wrong. Try again in a moment.";
+  if (needsNewKey(e)) return "That did not post. Tap Post to try again.";
   if (e.status === 0) return "You are offline. Check your connection and try again.";
   switch (e.code) {
     case "DAILY_LIMIT_REACHED": return "You have sent the most messages one day allows. Come back after midnight.";
