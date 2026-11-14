@@ -5190,6 +5190,41 @@ paths:
           $ref: '#/components/responses/E422'
         '429':
           $ref: '#/components/responses/E429'
+  /admin/proposal-groups/{groupId}:
+    delete:
+      operationId: adminRemoveGroup
+      tags:
+      - admin
+      summary: 'Split a group: its proposals return to ungrouped'
+      security:
+      - wawuId: []
+      x-wawu-roles:
+      - MODERATOR
+      - ADMIN
+      description: 'The group is removed and one audit row (proposal_group.remove) records who and which proposals. Auth: signed in with role
+        MODERATOR or ADMIN.'
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminGroupRemoved'
+        '401':
+          $ref: '#/components/responses/E401'
+        '403':
+          $ref: '#/components/responses/E403'
+        '404':
+          $ref: '#/components/responses/E404'
+        '429':
+          $ref: '#/components/responses/E429'
   /admin/overrides:
     get:
       operationId: adminListOverrides
@@ -7570,6 +7605,8 @@ components:
           - 'null'
         notifyDailyQuestion:
           type: boolean
+        notifyWeeklyTopic:
+          type: boolean
         notifyReplies:
           type: boolean
         notifyReactions:
@@ -7593,6 +7630,7 @@ components:
       - quietHoursStart
       - quietHoursEnd
       - notifyDailyQuestion
+      - notifyWeeklyTopic
       - notifyReplies
       - notifyReactions
       - notifyPollResults
@@ -7624,6 +7662,8 @@ components:
           - integer
           - 'null'
         notifyDailyQuestion:
+          type: boolean
+        notifyWeeklyTopic:
           type: boolean
         notifyReplies:
           type: boolean
@@ -8464,13 +8504,16 @@ components:
         share:
           type: number
         change:
-          type: number
+          type:
+          - number
+          - 'null'
       additionalProperties: false
       required:
       - name
       - share
       - change
-      description: share is the percent of voices; change is the move in percentage points since last week.
+      description: share is the percent of people who chose a mood (a mood under 5 people is folded into Other); change is the move in percentage
+        points since last week, or null when last week had too few mood answers to compare.
     CategoryCounts:
       type: object
       properties:
@@ -9414,6 +9457,8 @@ components:
           format: date-time
         reviewedByEditor:
           type: boolean
+        aiDrafted:
+          type: boolean
       additionalProperties: false
       required:
       - topicId
@@ -9427,7 +9472,9 @@ components:
       - basedOnVotes
       - updatedAt
       - reviewedByEditor
-      description: Shown only after an editor reviews it. Wording is 'lean towards' or 'split', never 'everyone agrees'.
+      description: Shown only after an editor reviews it. aiDrafted is true when the wording came from the AI draft (the page then says AI-assisted).
+        The two counts are voices an editor counted, never poll votes; approving needs both at least 1 and together no more than basedOnVoices.
+        Wording is 'lean towards' or 'split', never 'everyone agrees'.
     WhatNext:
       type: object
       properties:
@@ -11076,6 +11123,12 @@ components:
           type:
           - integer
           - 'null'
+        dailyQuestionMailsToday:
+          type: integer
+        weeklyTopicMailsToday:
+          type: integer
+        topicMailBudgetLeftToday:
+          type: integer
       additionalProperties: false
       required:
       - sharesByTarget
@@ -11085,6 +11138,9 @@ components:
       - shares
       - openReports
       - oldestReportMinutes
+      - dailyQuestionMailsToday
+      - weeklyTopicMailsToday
+      - topicMailBudgetLeftToday
     ShareTargetCount:
       type: object
       properties:
@@ -12968,6 +13024,18 @@ components:
       required:
       - id
       - text
+    AdminGroupRemoved:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        released:
+          type: integer
+      additionalProperties: false
+      required:
+      - id
+      - released
     AdminProposals:
       type: object
       properties:

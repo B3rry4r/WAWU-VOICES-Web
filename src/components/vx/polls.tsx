@@ -364,9 +364,10 @@ export function WeeklyReportCard(p: WeeklyReportCardProps): ReactElement {
                   <span>{m.label}</span>
                   <span className="vx-mood__bar" aria-hidden="true"><i style={{ width: m.pct + '%' }} /></span>
                   <span className="vx-mood__pct">{m.pct + '%'}</span>
+                  {m.delta === undefined ? null : (
                   <span className="vx-mood__delta" aria-label={(d > 0 ? 'up ' : d < 0 ? 'down ' : 'no change ') + Math.abs(d) + ' points on last week'}>
                     {(d > 0 ? '↑' : d < 0 ? '↓' : '') + (d ? Math.abs(d) : '0')}
-                  </span>
+                  </span>)}
                 </li>
               );
             })}

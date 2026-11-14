@@ -96,8 +96,10 @@ export const listProposalQuestions = () => apiFetch<{ items: AdminProposalQuesti
 export const listProposals = (questionId: string) => apiFetch<AdminProposals>(`/admin/proposals${qs({ questionId })}`, A);
 export const confirmGroup = (title: string, proposalIds: string[]) => apiFetch<S["ProposalGroup"]>("/admin/proposal-groups", { ...A, method: "POST", body: { title, proposalIds } });
 
+export const removeGroup = (groupId: string) => apiFetch<{ id: string; released: number }>(`/admin/proposal-groups/${enc(groupId)}`, { ...A, method: "DELETE" });
+
 // People and roles (V-FIX-C)
-export const findPeople = (q: string) => apiFetch<AdminUserPage>(`/admin/users${qs({ q, limit: 20 })}`, A);
+export const findPeople = (q: string) => apiFetch<AdminUserPage>(`/admin/users${qs({ q: q.trim().replace(/^@/, ''), limit: 20 })}`, A);
 export const listStaff = (cursor?: string | null) => apiFetch<AdminRoleGrantPage>(`/admin/roles${qs({ cursor, limit: 50 })}`, A);
 export const setRoles = (userId: string, roles: Role[], reason: string) => apiFetch<AdminRoleGrant>(`/admin/users/${enc(userId)}/roles`, { ...A, method: "PUT", body: { roles, reason } });
 

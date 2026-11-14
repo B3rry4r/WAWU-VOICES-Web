@@ -33,7 +33,7 @@ async function open(roles: string[], width: number, route: (p: string, method: s
 const mkQ = (id: string, text: string, day: string, slot: number, status = 'SCHEDULED') => ({ id, kind: 'DAILY', slotIndex: slot, day, text, hint: null, status, pinned: false, isSpare: false, categoryId: null, voiceCount: 0 });
 const DRAFT = {
   topicId: 't1', source: 'DATA', aiAvailable: false, aiNote: null,
-  draft: { mainView: 'publish their assets and plans', mainViewVoices: 5400, opposingView: 'debate in public', opposingViewVoices: 2100, pollLine: '“Publish their assets and plans” leads with 44% of 9,680 votes. The poll is still open.', nextStepsLine: '214 proposals in 38 groups. Most supported so far: Put the salary date and a late-payment penalty in every offer letter' },
+  draft: { mainView: '', mainViewVoices: 0, opposingView: '', opposingViewVoices: 0, pollLine: '“Publish their assets and plans” leads with 44% of 9,680 votes. The poll is still open.', nextStepsLine: 'Most supported so far: Put the salary date and a late-payment penalty in every offer letter' },
   basedOnVoices: 12480, basedOnVotes: 9680,
   moods: [{ mood: 'ANGRY', count: 412, percent: 44 }, { mood: 'TIRED', count: 254, percent: 27 }, { mood: 'HOPEFUL', count: 160, percent: 17 }, { mood: 'PROUD', count: 113, percent: 12 }],
   categories: [{ name: 'Money', voices: 7200 }, { name: 'Work', voices: 3100 }],
@@ -45,7 +45,7 @@ try {
     await t(`calendar: summary screen, AI ${ai ? 'on' : 'off'}`, async () => {
       let saved: any = null;
       const { page, calls, ctx } = await open(['EDITOR'], 1440, async (p, m, body, ok) => {
-        if (p.startsWith('/admin/topics/t1/summary/draft')) return ok({ ...DRAFT, aiAvailable: ai, source: body.ai ? 'AI' : 'DATA', aiNote: body.ai ? 'Read 200 of 12,480 voices; the counts are scaled up from them. Check them.' : null, draft: body.ai ? { ...DRAFT.draft, mainView: 'getting paid on the day it was promised', mainViewVoices: 5100 } : DRAFT.draft }).then(() => true);
+        if (p.startsWith('/admin/topics/t1/summary/draft')) return ok({ ...DRAFT, aiAvailable: ai, source: body.ai ? 'AI' : 'DATA', aiNote: body.ai ? 'The AI wrote the two views only. Count the voices behind each one yourself.' : null, draft: body.ai ? { ...DRAFT.draft, mainView: 'getting paid on the day it was promised', opposingView: 'keeping pay private' } : DRAFT.draft }).then(() => true);
         if (p.startsWith('/admin/topics/t1/summary') && m === 'GET') return ok({ aiAvailable: ai, summary: saved }).then(() => true);
         if (p.startsWith('/admin/topics/t1/summary') && m === 'PUT') { saved = { topicId: 't1', ...body, basedOnVoices: 12480, basedOnVotes: 9680, updatedAt: new Date().toISOString(), reviewedByEditor: body.approve }; return ok(saved).then(() => true); }
         if (p.startsWith('/admin/topics/t1')) return ok({ topic: { id: 't1', weekNumber: 4, title: 'Salary, Bonuses and Year-End Money', blurb: null, countryCode: 'NG', startsOn: '2026-12-07', endsOn: '2026-12-13', status: 'LIVE', sensitive: false, whatNextPrompt: 'What is one practical change that would make pay fairer in your workplace?', questionCount: 7 }, questions: [mkQ('d1', 'When salary arrives, how long before it is gone?', '2026-12-07', 1, 'LIVE'), mkQ('d2', 'Have you ever been paid late?', '2026-12-08', 2)], spare: [], poll: { id: 'p1', title: 'What should be tackled first?', endsAt: '2026-12-13T22:59:00Z', options: [{ id: 'o1', label: 'Pay salaries on time' }, { id: 'o2', label: 'Publish pay bands' }] } }).then(() => true);
@@ -56,16 +56,23 @@ try {
       await page.screenshot({ path: `${SHOTS}/summary-1-empty-ai${ai ? 'on' : 'off'}-1440.png`, fullPage: true });
       await page.getByRole('button', { name: 'Write the summary' }).click();
       await page.getByLabel('Main view', { exact: true }).waitFor();
-      assert.equal(await page.getByLabel('Main view', { exact: true }).inputValue(), 'publish their assets and plans');
+      assert.equal(await page.getByLabel('Main view', { exact: true }).inputValue(), '');
       const aiBtn = page.getByRole('button', { name: 'Draft with AI' });
       assert.equal(await aiBtn.isDisabled(), !ai);
       const says = await page.getByRole('status').filter({ hasText: /AI/ }).first().innerText();
-      assert.ok(ai ? /reads this week/.test(says) : /AI drafting is off here\. The draft from the data still works\./.test(says), says);
+      assert.ok(ai ? /proposes the two views from this week/.test(says) : /AI drafting is off here\. The draft from the data still works\./.test(says), says);
       if (ai) {
         await aiBtn.click();
         await page.waitForFunction(() => (document.querySelector('input[value="getting paid on the day it was promised"]') != null));
-        assert.ok(await page.getByText(/Read 200 of 12,480 voices/).isVisible());
+        assert.ok(await page.getByText(/Count the voices behind each one yourself/).isVisible());
+      } else {
+        await page.getByLabel('Main view', { exact: true }).fill('getting paid on the day it was promised');
+        await page.getByLabel('Main opposing view').fill('keeping pay private');
       }
+      assert.ok(await page.getByRole('button', { name: 'Save and show on What Next' }).isDisabled(), 'approve off before counts');
+      assert.ok(await page.getByText(/count the voices behind each view/).isVisible());
+      await page.getByLabel('Voices behind the main view: count them from the voices').fill('5100');
+      await page.getByLabel('Voices behind the opposing view: count them from the voices').fill('2100');
       await page.screenshot({ path: `${SHOTS}/summary-2-editing-ai${ai ? 'on' : 'off'}-1440.png`, fullPage: true });
       await page.getByRole('button', { name: 'Save and show on What Next' }).click();
       await page.getByText('Shown on What Next', { exact: true }).waitFor();
@@ -89,6 +96,7 @@ try {
     const { page, calls, ctx } = await open(['MODERATOR'], 1440, async (p, m, body, ok) => {
       if (p.startsWith('/admin/proposal-questions')) return ok({ items: [{ questionId: 'q1', text: 'What is one practical change that would make pay fairer in your workplace?', weekNumber: 4, proposalCount: 5, groupCount: confirmed ? 1 : 0, ungroupedCount: confirmed ? 2 : 5 }, { questionId: 'q2', text: 'If a candidate knocked on your door, what would you ask first?', weekNumber: 3, proposalCount: 2, groupCount: 0, ungroupedCount: 2 }] }).then(() => true);
       if (p.startsWith('/admin/proposals?')) return ok({ question: { id: 'q1', text: 'What is one practical change that would make pay fairer in your workplace?' }, items: items(confirmed ? 'g1' : null).sort((a, b) => 0).map((x, i) => (confirmed ? x : x)), groups: confirmed ? [{ id: 'g1', title: 'Pay date in the offer letter', confirmed: true, proposalCount: 3 }] : [], suggestions: confirmed ? [] : [{ title: 'Put the salary date and a late-payment penalty in every offer letter', proposalIds: ['p1', 'p2', 'p3'] }] }).then(() => true);
+      if (p === '/admin/proposal-groups/g1' && m === 'DELETE') { confirmed = false; return ok({ id: 'g1', released: 3 }).then(() => true); }
       if (p === '/admin/proposal-groups' && m === 'POST') { confirmed = true; return ok({ id: 'g1', title: body.title, confirmed: true, proposalCount: 3, supportCount: 15, challengeCount: 1, topProposal: null }, 201).then(() => true); }
     });
     await page.goto(`${ORIGIN}/admin/ideas`);
@@ -102,6 +110,13 @@ try {
     const post = calls.find((c) => c.method === 'POST')!;
     assert.deepEqual(post.body, { title: 'Pay date in the offer letter', proposalIds: ['p1', 'p2', 'p3'] });
     await page.screenshot({ path: `${SHOTS}/ideas-2-confirmed-1440.png`, fullPage: true });
+    await page.getByRole('button', { name: 'Split this group' }).click();
+    await page.getByText(/Split “Pay date in the offer letter”\? Its 3 proposals go back/).waitFor();
+    await page.screenshot({ path: `${SHOTS}/ideas-3-split-ask-1440.png`, fullPage: true });
+    await page.getByRole('button', { name: 'Split the group' }).click();
+    await page.getByText(/Group split/).waitFor();
+    assert.ok(calls.some((c) => c.method === 'DELETE'));
+    await page.getByRole('region', { name: 'Suggested group 1' }).waitFor();
     await ctx.close();
   });
 
