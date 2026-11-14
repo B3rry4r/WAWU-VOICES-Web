@@ -8,7 +8,7 @@ import { Avatar } from './identity';
 import { clock, cx, fmt, short, waveBars } from './helpers';
 import type { NewsKind, Person } from './helpers';
 import { Icon } from './Icon';
-import { Badge, NewsTag } from './labels';
+import { AdminPill, Badge, NewsTag } from './labels';
 import { TopicChip } from './navigation';
 
 export interface VoicePlayerProps {
@@ -247,8 +247,9 @@ export function AnswerCard(p: AnswerCardProps): ReactElement {
         <Avatar name={a.name || a.handle} src={a.avatar} playing={playing} />
         <div className="vx-answer__who">
           <span className="vx-answer__name">
-            {a.handle || a.name}
+            <span className="vx-answer__nm">{a.handle || a.name}</span>
             {p.sponsor ? <Icon name="badge-check" size={16} label="Verified brand" /> : null}
+            {a.handle ? <AdminPill admin={a.admin} /> : null}
           </span>
           <span className="vx-answer__time">{p.time + (p.place ? ' · ' + p.place : '')}</span>
         </div>

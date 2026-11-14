@@ -78,6 +78,8 @@ export interface Person {
   handle?: string;
   name?: string;
   avatar?: string;
+  /** An account with the admin role: draws the "Admin" pill after the name. Read as `=== true`. */
+  admin?: boolean;
 }
 
 export type NewsKind = 'verified' | 'unverified' | 'gossip';

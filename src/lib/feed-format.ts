@@ -64,7 +64,7 @@ export function answerCardProps(a: Answer) {
   const seed = a.id.split("").reduce((s, c) => (s * 31 + c.charCodeAt(0)) % 997, 7);
   const label = a.labels.find((l) => l !== "TRENDING") ?? a.labels[0];
   return {
-    author: a.author ? { handle: `@${a.author.handle}`, name: a.author.displayName ?? a.author.handle, avatar: a.author.avatarUrl || undefined } : { name: "Anonymous" },
+    author: a.author ? { handle: `@${a.author.handle}`, name: a.author.displayName ?? a.author.handle, avatar: a.author.avatarUrl || undefined, admin: (a.author as { admin?: boolean }).admin === true } : { name: "Anonymous" },
     time: ago(a.createdAt),
     place: a.author?.state ?? undefined,
     text: a.kind === "TEXT" ? (a.body ?? undefined) : undefined,

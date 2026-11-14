@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { Button, IconButton } from './actions';
 import { Avatar } from './identity';
+import { AdminPill } from './labels';
 import { clock, cx, short, waveBars } from './helpers';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
@@ -45,6 +46,8 @@ export interface ProfileHeaderProps {
   name: string;
   handle: string;
   avatar?: string;
+  /** An account with the admin role: an "Admin" pill after the handle. */
+  admin?: boolean;
   place?: string;
   joined?: string;
   /** Seconds of the Voice Card. false leaves the card out (the person has none). */
@@ -94,7 +97,7 @@ export function ProfileHeader(p: ProfileHeaderProps): ReactElement {
         <div className="vx-prof__top">
           <Avatar name={p.name} src={p.avatar} size="l" playing={playing} />
           <div className="vx-prof__id">
-            <h2 className="vx-prof__handle">{p.handle}</h2>
+            <div className="vx-prof__who"><h2 className="vx-prof__handle">{p.handle}</h2><AdminPill admin={p.admin} /></div>
             <span className="vx-prof__meta">{[p.place, p.joined].filter(Boolean).join(' · ')}</span>
           </div>
         </div>

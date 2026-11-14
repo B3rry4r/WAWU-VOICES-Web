@@ -2,7 +2,7 @@
 import { countText } from "@/lib/format/plural";
 import Link from "next/link";
 import { useState } from "react";
-import { Avatar, Badge, Icon, NewsTag, REACTIONS } from "@/components/vx";
+import { AdminPill, Avatar, Badge, Icon, NewsTag, REACTIONS } from "@/components/vx";
 import type { Answer, Reply } from "@/lib/api/profile";
 import { MoodChip } from "@/features/mood/MoodChip";
 import { ClipPlayer } from "./ClipPlayer";
@@ -51,7 +51,7 @@ export function PostRow({ a }: { a: Answer }) {
         <div className="vx-answer__head">
           <Avatar name={who?.displayName || who?.handle} src={who?.avatarUrl ?? undefined} />
           <div className="vx-answer__who">
-            <span className="vx-answer__name">{who ? "@" + who.handle : "Anonymous"}</span>
+            <span className="vx-answer__name"><span className="vx-answer__nm">{who ? "@" + who.handle : "Anonymous"}</span>{who ? <AdminPill admin={(who as { admin?: boolean }).admin} /> : null}</span>
             {/* V-ANON: the API lists a person's anonymous posts on their own page only; the tag is theirs alone. */}
             {!who && a.isMine ? <span data-testid="anon-tag" className="text-caption text-[var(--ink-2)]">Posted without your name</span> : null}
             <span className="vx-answer__time">{ago(a.createdAt) + (place ? " · " + place : "")}</span>
@@ -87,7 +87,7 @@ export function ReplyRow({ r }: { r: Reply }) {
         <div className="vx-answer__head">
           <Avatar name={r.author.displayName || r.author.handle} src={r.author.avatarUrl ?? undefined} />
           <div className="vx-answer__who">
-            <span className="vx-answer__name">{"@" + r.author.handle}</span>
+            <span className="vx-answer__name"><span className="vx-answer__nm">{"@" + r.author.handle}</span><AdminPill admin={(r.author as { admin?: boolean }).admin} /></span>
             <span className="vx-answer__time">{ago(r.createdAt) + " · " + stance}</span>
           </div>
         </div>

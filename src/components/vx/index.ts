@@ -8,7 +8,7 @@ export { ASSETS, setVxAssetBase } from './assets';
 export type { VxAssets } from './assets';
 export { Button, IconButton } from './actions';
 export type { ButtonProps, IconButtonProps } from './actions';
-export { Badge, NewsTag, VerifyMark } from './labels';
+export { AdminPill, Badge, NewsTag, VerifyMark } from './labels';
 export type { BadgeProps, NewsTagProps, VerifyMarkProps } from './labels';
 export { Avatar, AvatarStack } from './identity';
 export type { AvatarProps } from './identity';

@@ -55,6 +55,7 @@ export function ProfileCard(p: {
       name={name}
       handle={"@" + profile.handle}
       avatar={profile.avatarUrl ?? undefined}
+      admin={(profile as { admin?: boolean }).admin === true}
       place={place ?? undefined}
       joined={joinedLabel(profile.joinedAt)}
       voiceCard={card ? Math.round((card.durationMs ?? 8000) / 1000) : false}

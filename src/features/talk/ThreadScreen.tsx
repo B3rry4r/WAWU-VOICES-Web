@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Avatar, Badge, Banner, Button, EmptyState, Icon, IconButton, Skeleton, TopicChip, VoicePlayer } from "@/components/vx";
+import { AdminPill, Avatar, Badge, Banner, Button, EmptyState, Icon, IconButton, Skeleton, TopicChip, VoicePlayer } from "@/components/vx";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Reply, ReplyStance } from "@/lib/api/talk";
 import { ago } from "@/lib/feed-format";
@@ -38,7 +38,7 @@ function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => Pro
       <div className="vx-answer__head">
         <Avatar name={r.author.displayName ?? r.author.handle} src={r.author.avatarUrl ?? undefined} size="s" />
         <div className="vx-answer__who">
-          <span className="vx-answer__name">{`@${r.author.handle}`}</span>
+          <span className="vx-answer__name"><span className="vx-answer__nm">{`@${r.author.handle}`}</span><AdminPill admin={(r.author as { admin?: boolean }).admin} /></span>
           <span className="vx-answer__time">{ago(r.createdAt) + (r.author.state ? ` · ${r.author.state}` : "")}</span>
         </div>
         <span className="dt:hidden"><Badge tone="proposed" icon={stanceIcon[r.stance]}>{st.label}</Badge></span>
