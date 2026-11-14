@@ -8,7 +8,7 @@ import { isAccountBlocked, isEmailNotVerified, isPhoneNotConfirmed, register, si
 import { getMe } from "@/lib/api/me";
 import { countryByCode, DEFAULT_COUNTRY } from "@/lib/phone/countries";
 import { countryForNumber, looksLikePhone, readPhone } from "@/lib/phone/phone";
-import { holdReturn, peekHeldPost, readDraft, saveDraft, takeReturn } from "@/lib/auth/entry-draft";
+import { dropAdminReturn, holdAdminReturn, holdReturn, peekHeldPost, readDraft, saveDraft, takeAdminReturn, takeReturn } from "@/lib/auth/entry-draft";
 import { AuthSheet } from "./AuthSheet";
 import { ErrorBanner, isOffline, useSkipIfSignedIn } from "./ui";
 
@@ -61,9 +61,12 @@ export function SignIn({ admin }: { admin?: AdminSignInMode } = {}) {
   const [failure, setFailure] = useState<unknown>(null);
 
   useEffect(() => {
-    // The admin form keeps its own return address (the email code detour reads it back); a ?next= on the page is not used there.
-    const next = admin ? admin.returnTo : params.get("next");
-    if (next) holdReturn(next, !admin && params.get("held") === "1" ? "post" : "page");
+    // The admin form leaves nothing behind (its return is held only for the email code detour). An ordinary form forgets any admin return left over.
+    if (!admin) {
+      dropAdminReturn();
+      const next = params.get("next");
+      if (next) holdReturn(next, params.get("held") === "1" ? "post" : "page");
+    }
     setHasReturn(peekHeldPost());
     const d = readDraft();
     if (d.email) setEmail(d.email);
@@ -118,6 +121,7 @@ export function SignIn({ admin }: { admin?: AdminSignInMode } = {}) {
         return;
       }
       if (needEmail) {
+        if (admin) holdAdminReturn(admin.returnTo);
         const r = await startEmailVerification(email);
         saveDraft({ email: email.trim().toLowerCase(), codeSentAt: Date.now(), codeLifeSec: r.expiresIn || 300 });
         router.push("/join/verify");
@@ -125,13 +129,14 @@ export function SignIn({ admin }: { admin?: AdminSignInMode } = {}) {
       }
       await signIn(idAsSent(identifier, idCountry), password);
       if (admin) {
-        takeReturn();
+        takeAdminReturn();
         admin.onSignedIn();
         return;
       }
       await afterSession((p) => router.replace(p));
     } catch (err) {
       if (!join && isEmailNotVerified(err)) {
+        if (admin) holdAdminReturn(admin.returnTo);
         if (!identifier.includes("@")) {
           // Signed in by phone: the code goes to the account's email, so ask for it.
           setNeedEmail(true);

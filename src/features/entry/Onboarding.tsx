@@ -9,7 +9,7 @@ import { apiFetch } from "@/lib/api/client";
 import type { components } from "@/lib/api/types";
 import { closesIn, comingUp, questionStart, voicesLabel, voicesOf } from "@/lib/feed-format";
 import { BottomBar, EntryFrame, EntryScroll, ErrorBanner, useSkipIfSignedIn } from "./ui";
-import { holdReturn } from "@/lib/auth/entry-draft";
+import { dropAdminReturn, holdReturn } from "@/lib/auth/entry-draft";
 import { fromPrice, textPostNaira } from "./format";
 import { LANDING_EYEBROW, LANDING_HEADLINE_EN, LANDING_HEADLINE_YO, LANDING_INTRO } from "./landing-words";
 
@@ -31,6 +31,7 @@ export function Onboarding() {
   const [i, setI] = useState(0);
   // lead ruling WF, 6 Nov (A-M4): /join?next=/speak (a held recording) keeps its way back through the join steps.
   useEffect(() => {
+    dropAdminReturn();
     try {
       const q = new URLSearchParams(window.location.search);
       const next = q.get("next");
