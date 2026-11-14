@@ -41,7 +41,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   /** Part of what the post says besides the recording (a reply's stance): a different one is a different request, so it gets a different Idempotency-Key. */
   keyPart?: string;
   /** Keeps the take on this device when Send is tapped offline, to be sent later. Without it, offline only says the take stays on this page. */
-  keep?: (t: KeepInput, replace: boolean) => Promise<KeepResult>;
+  keep?: (t: KeepInput, replace: boolean, owner: string | null) => Promise<KeepResult>;
   /** Called after `keep` saved the take, so the caller can close and say so. */
   onKept?: () => void;
   purpose: Purpose;
@@ -184,8 +184,10 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
 
   async function tryKeep(t: Take, replace: boolean): Promise<boolean> {
     if (!keep) return false;
+    // The recording is kept for the person this box opened for; someone else signed in means nothing is written or read.
+    if (!mayWrite()) { setSending(null); setNote(staleLine()); return true; }
     const anonNow = !!anonSlot && anonRef.current;
-    const r = await keep({ blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: keyNow(t, anonNow), anonymous: anonNow }, replace);
+    const r = await keep({ blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: keyNow(t, anonNow), anonymous: anonNow }, replace, owner);
     if (!alive.current) return true;
     setSending(null);
     if (r === "kept") {

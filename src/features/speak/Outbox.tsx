@@ -4,8 +4,9 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Banner, Button } from "@/components/vx";
 import { isSignedIn } from "@/lib/api/auth";
+import { sessionSubject } from "@/lib/api/client";
 import * as api from "@/lib/api/speak";
-import { clearDraft, draftIsStale, loadDraft, STALE_NOTE, type Draft } from "./draft";
+import { clearDraft, draftIsStale, loadDraft, notePostedKey, STALE_NOTE, sweepStaleDrafts, wasPostedKey, type Draft } from "./draft";
 import { isSending, planFor, sendKeptRecording, type SendPlan } from "./outbox";
 import { isMoodQuestion } from "@/features/mood/mood";
 import { publishedFromLink } from "@/features/share/share-visit";
@@ -34,12 +35,24 @@ export function Outbox() {
   const running = useRef(false);
   const onSpeak = /(^|\/)speak(\/|$)/.test(pathname);
 
+  // The person the banner was opened for: the recording on it belongs to them, whoever is signed in later.
+  const forWho = useRef<string | null>(null);
+
   const send = useCallback(async (d: Draft, plan: SendPlan) => {
+    const me = forWho.current;
+    // Someone else is signed in now: nothing is read, sent or cleared in any slot.
+    if (sessionSubject() !== me) {
+      setView({ kind: "offer", draft: d, plan, error: "You are signed in as someone else in another tab. Nothing was sent. Reload to carry on." });
+      return;
+    }
     setView({ kind: "sending", reply: !!d.reply });
-    const r = await sendKeptRecording(d, plan.tokenId, async () => (await loadDraft())?.key === d.key, async () => {
+    const stillMine = async () => sessionSubject() === me && (await loadDraft(me))?.key === d.key;
+    const r = await sendKeptRecording(d, plan.tokenId, stillMine, async () => {
       publishedFromLink(d.shareCode);
-      await clearDraft();
-    }, async () => (await loadDraft())?.key === d.key);
+      // Cleared for the person it was kept for, only while they are still the one signed in; otherwise it is remembered as posted and cleared when they are back.
+      if (sessionSubject() === me) await clearDraft(me);
+      else notePostedKey(d.key);
+    }, stillMine, me);
     if (r.ok && r.answerId === null) {
       setView(null); // another tab posted it: it says so, this one says nothing
     } else if (r.ok) {
@@ -56,20 +69,28 @@ export function Outbox() {
   }, []);
 
   const look = useCallback(async () => {
+    void sweepStaleDrafts(Date.now(), isSignedIn() ? sessionSubject() : undefined);
     if (running.current || onSpeak || !isSignedIn()) return;
     running.current = true;
     try {
-      const d = await loadDraft();
+      const me = sessionSubject();
+      forWho.current = me;
+      const d = await loadDraft(me);
       if (!d) return;
+      if (wasPostedKey(d.key)) { // it went out while someone else was signed in: it is sent, never sent again
+        await clearDraft(me);
+        return;
+      }
       if (draftIsStale(d)) {
-        await clearDraft();
+        await clearDraft(me);
         setView({ kind: "note", tone: "info", text: STALE_NOTE });
         return;
       }
       if (!d.queued || isSending(d.key) || (typeof navigator !== "undefined" && navigator.onLine === false)) return;
       const [question, config, allowance] = await Promise.all([api.getQuestion(d.questionId), api.getPublicConfig(), api.getAllowance()]);
+      if (sessionSubject() !== me) return;
       if (question.status !== "LIVE") {
-        await clearDraft();
+        await clearDraft(me);
         setView({ kind: "note", tone: "info", text: "The question for your saved recording has closed, so it was not sent and has been removed." });
         return;
       }
@@ -95,7 +116,9 @@ export function Outbox() {
   }, [look, pathname]);
 
   async function remove() {
-    await clearDraft();
+    // The X clears the slot of the person the banner was opened for, and only if they are still the one signed in.
+    const me = forWho.current;
+    if (sessionSubject() === me) await clearDraft(me);
     setView(null);
   }
 

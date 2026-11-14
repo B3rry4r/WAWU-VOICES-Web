@@ -27,7 +27,7 @@ import { Verify } from "@/features/entry/Verify";
 import { Topics } from "@/features/entry/Topics";
 import { ProfileSetup } from "@/features/entry/ProfileSetup";
 import { readPick } from "@/features/mood/mood";
-import { saveDraft as saveSpeakDraft, clearDraft as clearSpeakDraft } from "@/features/speak/draft";
+import { currentOwner, saveDraft as saveSpeakDraft, clearDraft as clearSpeakDraft } from "@/features/speak/draft";
 
 const idp = new WawuIdStandIn(14306);
 beforeAll(async () => { await idp.start(); });
@@ -71,7 +71,7 @@ beforeEach(() => {
     return json({ error: { code: "NOT_FOUND", message: "no" } }, 404);
   }));
 });
-afterEach(async () => { cleanup(); vi.unstubAllGlobals(); idp.users.clear(); idp.calls.length = 0; await clearSpeakDraft(); });
+afterEach(async () => { cleanup(); vi.unstubAllGlobals(); idp.users.clear(); idp.calls.length = 0; await clearSpeakDraft(currentOwner()); });
 
 const nextOf = (href: string) => new URL(href, "http://x").search.slice(1);
 async function pickAndTap(label: "Say it in 60 seconds" | "Type it instead") {
@@ -163,7 +163,7 @@ describe("a guest who came by a share link", () => {
   it("joins from Say it (a held recording): every step, then back on the recorder with the word and from, and the voice posts by itself", async () => {
     const blob = new Blob(["abc"], { type: "audio/webm" });
     await pickAndTap("Say it in 60 seconds");
-    await saveSpeakDraft({ questionId: "q1", blob, mime: "audio/webm", seconds: 5, peaks: [1, 2, 3], key: "k1", savedAt: Date.now() });
+    await saveSpeakDraft(currentOwner(), { questionId: "q1", blob, mime: "audio/webm", seconds: 5, peaks: [1, 2, 3], key: "k1", savedAt: Date.now() });
     // The recorder as a guest: send leaves for /join with the way back.
     const assign = vi.fn();
     const realLocation = window.location;

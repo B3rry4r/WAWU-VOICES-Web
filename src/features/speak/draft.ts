@@ -104,8 +104,7 @@ async function drop(slot: string): Promise<void> {
 }
 
 /** True when the recording is really kept on this device. False means only this page holds it (storage blocked or full). */
-export async function saveDraft(input: Draft): Promise<boolean> {
-  const owner = currentOwner();
+export async function saveDraft(owner: string | null, input: Draft): Promise<boolean> {
   return put(slotOf(owner), { ...input, owner });
 }
 
@@ -123,8 +122,7 @@ async function rawLoad(slot: string): Promise<Draft | null> {
  * The kept recording for this person. A guest's recording is handed to the first person who signs in, once. Another person's is never
  * shown and never sent, and it is not removed: it stays in its own slot for them until they send it, discard it, or it is 7 days old.
  */
-export async function loadDraft(): Promise<Draft | null> {
-  const me = currentOwner();
+export async function loadDraft(me: string | null): Promise<Draft | null> {
   const old = await rawLoad(GUEST);
   if (me === null) return old && (old.owner ?? null) === null ? old : null;
   const mine = await rawLoad(slotOf(me));
@@ -146,8 +144,8 @@ export async function loadDraft(): Promise<Draft | null> {
   return mine;
 }
 
-/** Removes this person's kept recording (the signed-in person by default; pass the person who made it when they have just signed out). Nobody else's is touched. */
-export async function clearDraft(owner: string | null = currentOwner()): Promise<void> {
+/** Removes the kept recording of the person given. Nobody else's is touched. The caller checks the signed-in person first. */
+export async function clearDraft(owner: string | null): Promise<void> {
   await drop(slotOf(owner));
   if (owner) {
     const old = await rawLoad(GUEST);
@@ -156,8 +154,59 @@ export async function clearDraft(owner: string | null = currentOwner()): Promise
 }
 
 /** A waiting voice reply is a promise made to the person: a plain take on the record screen never overwrites it. Returns false when it held back. */
-export async function saveDraftKeepingReply(input: Draft): Promise<boolean> {
-  const cur = await loadDraft();
+export async function saveDraftKeepingReply(owner: string | null, input: Draft): Promise<boolean> {
+  const cur = await loadDraft(owner);
   if (cur?.reply && cur.key !== input.key) return false;
-  return saveDraft(input);
+  return saveDraft(owner, input);
+}
+
+/**
+ * Removes every slot (anybody's) whose recording is past the age limit. It looks only at the date kept with each slot and never reads or
+ * plays the audio. Runs at app start and whenever the outbox runs, whoever is signed in. Returns how many were removed.
+ */
+export async function sweepStaleDrafts(now = Date.now(), except?: string | null): Promise<number> {
+  // `except` is the signed-in person: their own old recording is removed by the screen or banner that tells them so, with a plain note.
+  const keep = except === undefined ? null : slotOf(except);
+  let n = 0;
+  for (const [slot, d] of Array.from(memory.entries())) if (slot !== keep && draftIsStale(d, now)) { memory.delete(slot); n++; }
+  try {
+    const db = await open();
+    try {
+      n += await new Promise<number>((resolve, reject) => {
+        let gone = 0;
+        const tx = db.transaction(STORE, "readwrite");
+        const req = tx.objectStore(STORE).openCursor();
+        req.onsuccess = () => {
+          const c = req.result;
+          if (!c) return;
+          const v = c.value as Partial<Draft> | undefined;
+          const at = v ? (v.recordedAt ?? v.savedAt) : undefined;
+          if (c.key !== keep && typeof at === "number" && now - at > DRAFT_MAX_AGE_MS) { c.delete(); gone++; }
+          c.continue();
+        };
+        tx.oncomplete = () => resolve(gone);
+        tx.onerror = () => reject(tx.error ?? new Error("indexedDB"));
+        tx.onabort = () => reject(tx.error ?? new Error("indexedDB"));
+      });
+    } finally {
+      db.close();
+    }
+  } catch {
+    /* no storage: nothing to sweep */
+  }
+  return n;
+}
+
+const POSTED = "voices-posted-keys";
+/** Remembers that the recording with this key went out while its owner was not the one signed in, so it is cleared (never sent again) when they are. Holds only the random key. */
+export function notePostedKey(key: string, now = Date.now()): void {
+  try {
+    const m = JSON.parse(window.localStorage.getItem(POSTED) ?? "{}") as Record<string, number>;
+    for (const k of Object.keys(m)) if (now - m[k] > DRAFT_MAX_AGE_MS) delete m[k];
+    m[key] = now;
+    window.localStorage.setItem(POSTED, JSON.stringify(m));
+  } catch { /* no storage */ }
+}
+export function wasPostedKey(key: string): boolean {
+  try { return key in (JSON.parse(window.localStorage.getItem(POSTED) ?? "{}") as Record<string, number>); } catch { return false; }
 }

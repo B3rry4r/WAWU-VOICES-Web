@@ -15,7 +15,7 @@ import { WeeklyPage } from "@/features/reach/WeeklyPage";
 import { SpeakScreen } from "@/features/speak/SpeakScreen";
 import { SharePageView, updatedAgo } from "@/features/share/SharePageView";
 import { withAutopost } from "@/lib/auth/entry-draft";
-import { saveDraft } from "@/features/speak/draft";
+import { currentOwner, saveDraft } from "@/features/speak/draft";
 import { ApiError } from "@/lib/api/client";
 import { ProposalCard } from "@/components/vx";
 import type { SharePage } from "@/lib/api/reach";
@@ -284,7 +284,7 @@ describe("A-L6: Finish and post my voice posts in one tap", () => {
       if (m === "POST" && u.endsWith("/voice-clips")) return json(500, { error: { code: "INTERNAL", message: "stop here" } });
       return null;
     };
-    await saveDraft({ questionId: "q1", blob: new Blob(["abc"], { type: "audio/webm" }), mime: "audio/webm", seconds: 4, peaks: [1, 2], key: "k1", savedAt: Date.now() });
+    await saveDraft(currentOwner(), { questionId: "q1", blob: new Blob(["abc"], { type: "audio/webm" }), mime: "audio/webm", seconds: 4, peaks: [1, 2], key: "k1", savedAt: Date.now() });
     render(<SpeakScreen questionId="q1" />);
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/voice-clips"))).toBe(true));
   });
@@ -297,7 +297,7 @@ describe("A-L6: Finish and post my voice posts in one tap", () => {
       if (u.endsWith("/me/allowance")) return json(200, { freePostsRemaining: 10, balanceMilli: 0, maxVoiceSeconds: 10, freeReactionsLeftToday: 5, freeVotesLeftToday: 1, costs, extraVoiceTokens: [] });
       return null;
     };
-    await saveDraft({ questionId: "q1", blob: new Blob(["abc"], { type: "audio/webm" }), mime: "audio/webm", seconds: 4, peaks: [1, 2], key: "k2", savedAt: Date.now() });
+    await saveDraft(currentOwner(), { questionId: "q1", blob: new Blob(["abc"], { type: "audio/webm" }), mime: "audio/webm", seconds: 4, peaks: [1, 2], key: "k2", savedAt: Date.now() });
     render(<SpeakScreen questionId="q1" />);
     await screen.findByRole("button", { name: /^Send/ });
     await new Promise((r) => setTimeout(r, 150));

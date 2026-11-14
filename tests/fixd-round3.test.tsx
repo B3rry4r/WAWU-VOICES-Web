@@ -32,7 +32,7 @@ vi.mock("@/lib/api/speak", async (orig) => ({ ...(await orig<typeof import("@/li
 import { WriteScreen } from "@/features/talk/WriteScreen";
 import { VoiceReplySheet } from "@/features/talk/VoiceReply";
 import { Outbox } from "@/features/speak/Outbox";
-import { clearDraft, loadDraft, saveDraft, type Draft } from "@/features/speak/draft";
+import { currentOwner, clearDraft, loadDraft, saveDraft, type Draft } from "@/features/speak/draft";
 import { sendKeptRecording } from "@/features/speak/outbox";
 import { ApiError } from "@/lib/api/client";
 
@@ -70,7 +70,7 @@ beforeEach(async () => {
   signInAs("u1");
   setOnline(true);
   vi.stubGlobal("indexedDB", fakeIndexedDb());
-  await clearDraft();
+  await clearDraft(currentOwner());
   Object.values(speak).forEach((f) => f.mockReset());
   talk.createVoiceReply.mockReset().mockResolvedValue({ reply: { id: "r9" } });
   speak.getQuestion.mockResolvedValue({ id: "q1", status: "LIVE" });
@@ -174,10 +174,10 @@ describe("M2: two callers on one kept recording post it once", () => {
   it("the slower caller takes the lock after the first finished, looks again, finds nothing, and sends nothing", async () => {
     Object.defineProperty(navigator, "locks", { value: fakeLocks(), configurable: true });
     const d = draft();
-    await saveDraft(d);
+    await saveDraft(currentOwner(), d);
     // Both read the kept recording first (it was there), then race for the lock.
-    const stillKept = async () => (await loadDraft())?.key === d.key;
-    const onPosted = async () => { await clearDraft(); };
+    const stillKept = async () => (await loadDraft(currentOwner()))?.key === d.key;
+    const onPosted = async () => { await clearDraft(currentOwner()); };
     const [a, b] = await Promise.all([sendKeptRecording(d, undefined, stillKept, onPosted, stillKept), sendKeptRecording(d, undefined, stillKept, onPosted, stillKept)]);
     expect([a, b].filter((r) => r.ok && r.answerId === "ans1").length).toBe(1);
     expect([a, b].filter((r) => r.ok && r.answerId === null && "byOtherTab" in r).length).toBe(1);
@@ -197,10 +197,10 @@ describe("M2: two callers on one kept recording post it once", () => {
 
   it("the outbox shows nothing for the second caller", async () => {
     const d = draft();
-    await saveDraft(d);
-    // Another tab posts it and clears it just after this one read it: loadDraft() inside the lock then finds nothing.
+    await saveDraft(currentOwner(), d);
+    // Another tab posts it and clears it just after this one read it: loadDraft(currentOwner()) inside the lock then finds nothing.
     const real = speak.getAllowance.getMockImplementation();
-    speak.getAllowance.mockImplementation(async (...a: unknown[]) => { await clearDraft(); return real ? real(...a) : { freePostsRemaining: 5, costs: COSTS, extraVoiceTokens: [] }; });
+    speak.getAllowance.mockImplementation(async (...a: unknown[]) => { await clearDraft(currentOwner()); return real ? real(...a) : { freePostsRemaining: 5, costs: COSTS, extraVoiceTokens: [] }; });
     render(<Outbox />);
     await waitFor(() => expect(speak.getAllowance).toHaveBeenCalled());
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
@@ -229,14 +229,14 @@ describe("M3: a voice reply sent offline is really kept", () => {
     await sendOffline("I disagree", true);
     expect(speak.createVoiceClip).not.toHaveBeenCalled();
     expect(talk.createVoiceReply).not.toHaveBeenCalled();
-    const d = await loadDraft();
+    const d = await loadDraft(currentOwner());
     expect(d).toMatchObject({ queued: true, anonymous: true, questionId: "q1", reply: { answerId: "a1", stance: "DISAGREE" } });
     expect(d?.key).toMatch(/-DISAGREE-anon$/);
   });
 
   it("after the sheet is closed and the connection is back, the outbox posts one reply with the right parent, stance, switch and key", async () => {
     await sendOffline("I disagree", true);
-    const kept = await loadDraft();
+    const kept = await loadDraft(currentOwner());
     setOnline(true);
     render(<Outbox />);
     await screen.findByText(/Your saved voice reply was posted/);
@@ -244,7 +244,7 @@ describe("M3: a voice reply sent offline is really kept", () => {
     expect(talk.createVoiceReply.mock.calls[0]).toEqual(["a1", "DISAGREE", "clip1", kept!.key, undefined, true, "u1"]);
     expect(speak.createVoiceClip.mock.calls[0][0]).toMatchObject({ purpose: "REPLY" });
     expect(speak.createVoiceAnswer).not.toHaveBeenCalled();
-    expect(await loadDraft()).toBeNull();
+    expect(await loadDraft(currentOwner())).toBeNull();
   });
 
   it("it goes out on the online event, with no reload", async () => {
@@ -272,7 +272,7 @@ describe("M3: a voice reply sent offline is really kept", () => {
 
   it("a second waiting recording does not replace the first until the person says so", async () => {
     await sendOffline("I agree");
-    const first = await loadDraft();
+    const first = await loadDraft(currentOwner());
     setOnline(false);
     const onKept = vi.fn();
     render(<VoiceReplySheet aid="a2" qid="q1" who="@ada" allow={allow} onClose={() => undefined} onPosted={() => undefined} onBuy={() => undefined} onKept={onKept} />);
@@ -281,10 +281,10 @@ describe("M3: a voice reply sent offline is really kept", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Send/ }));
     await screen.findByText(/already waiting to be sent/);
     expect(onKept).not.toHaveBeenCalled();
-    expect((await loadDraft())?.reply?.answerId).toBe("a1");
-    expect((await loadDraft())?.key).toBe(first!.key);
+    expect((await loadDraft(currentOwner()))?.reply?.answerId).toBe("a1");
+    expect((await loadDraft(currentOwner()))?.key).toBe(first!.key);
     await userEvent.click(screen.getByRole("button", { name: "Replace it" }));
     await waitFor(() => expect(onKept).toHaveBeenCalledTimes(1));
-    expect((await loadDraft())?.reply).toEqual({ answerId: "a2", stance: "DISAGREE" });
+    expect((await loadDraft(currentOwner()))?.reply).toEqual({ answerId: "a2", stance: "DISAGREE" });
   });
 });

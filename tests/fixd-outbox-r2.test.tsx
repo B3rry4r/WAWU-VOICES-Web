@@ -15,7 +15,7 @@ const speak = vi.hoisted(() => ({
 vi.mock("@/lib/api/speak", () => ({ ...Object.fromEntries(Object.entries(speak).map(([k, f]) => [k, (...a: unknown[]) => (f as (...x: unknown[]) => unknown)(...a)])) }));
 
 import { Outbox } from "@/features/speak/Outbox";
-import { clearDraft, loadDraft, saveDraft, type Draft } from "@/features/speak/draft";
+import { currentOwner, clearDraft, loadDraft, saveDraft, type Draft } from "@/features/speak/draft";
 import { sendKeptRecording } from "@/features/speak/outbox";
 import { ApiError } from "@/lib/api/client";
 
@@ -24,7 +24,7 @@ const allowance = (freeLeft: number) => ({ freePostsRemaining: freeLeft, costs: 
 const draft = (over: Partial<Draft> = {}): Draft => ({ questionId: "q1", blob: new Blob(["x"], { type: "audio/webm" }), mime: "audio/webm", seconds: 8, peaks: [], key: "key-r2", savedAt: Date.now(), queued: true, ...over });
 
 beforeEach(async () => {
-  await clearDraft();
+  await clearDraft(currentOwner());
   recordShareEvent.mockClear();
   Object.values(speak).forEach((f) => f.mockReset());
   speak.getQuestion.mockResolvedValue({ id: "q1", status: "LIVE" });
@@ -42,7 +42,7 @@ describe("V-FIX-D round 2: the outbox says what it is doing and can be retried",
   it("while a free recording is sending the banner says Sending your saved voice", async () => {
     let done: (v: unknown) => void = () => undefined;
     speak.createVoiceAnswer.mockReturnValue(new Promise((r) => { done = r; }));
-    await saveDraft(draft());
+    await saveDraft(currentOwner(), draft());
     render(<Outbox />);
     await screen.findByText("Sending your saved voice");
     await act(async () => { done({ answer: { id: "ans1" } }); });
@@ -51,10 +51,10 @@ describe("V-FIX-D round 2: the outbox says what it is doing and can be retried",
 
   it("a free one that fails keeps a Try again button, which sends with the same key", async () => {
     speak.createVoiceAnswer.mockRejectedValueOnce(new ApiError(500, "INTERNAL", "x", false));
-    await saveDraft(draft());
+    await saveDraft(currentOwner(), draft());
     render(<Outbox />);
     const again = await screen.findByRole("button", { name: "Try again" });
-    expect(await loadDraft()).not.toBeNull();
+    expect(await loadDraft(currentOwner())).not.toBeNull();
     await userEvent.click(again);
     await screen.findByText(/Your saved voice was posted/);
     expect(speak.createVoiceAnswer.mock.calls.map((c) => c[2])).toEqual(["key-r2", "key-r2"]);
@@ -63,7 +63,7 @@ describe("V-FIX-D round 2: the outbox says what it is doing and can be retried",
   it("a priced one keeps its Send for N tokens button after a failure", async () => {
     speak.getAllowance.mockResolvedValue(allowance(0));
     speak.createVoiceAnswer.mockRejectedValueOnce(new ApiError(500, "INTERNAL", "x", false));
-    await saveDraft(draft({ seconds: 25 }));
+    await saveDraft(currentOwner(), draft({ seconds: 25 }));
     render(<Outbox />);
     await userEvent.click(await screen.findByRole("button", { name: /^Send for .+ tokens$/ }));
     await screen.findByText(/We could not send it/);
@@ -72,28 +72,28 @@ describe("V-FIX-D round 2: the outbox says what it is doing and can be retried",
   });
 
   it("a recording that came from a share link counts as published from it when the outbox posts it, in a later visit", async () => {
-    await saveDraft(draft({ shareCode: "abc1234" }));
+    await saveDraft(currentOwner(), draft({ shareCode: "abc1234" }));
     render(<Outbox />);
     await screen.findByText(/Your saved voice was posted/);
     expect(recordShareEvent.mock.calls).toEqual([["abc1234", "published_from_link"]]);
   });
 
   it("a recording with no share link counts nothing", async () => {
-    await saveDraft(draft());
+    await saveDraft(currentOwner(), draft());
     render(<Outbox />);
     await screen.findByText(/Your saved voice was posted/);
     expect(recordShareEvent).not.toHaveBeenCalled();
   });
 
   it("saveDraft says false when the device cannot keep the recording (no storage here), so no screen may call it saved", async () => {
-    expect(await saveDraft(draft())).toBe(false);
+    expect(await saveDraft(currentOwner(), draft())).toBe(false);
   });
 });
 
 describe("V-FIX-D: the offline sender drops its key only after success or when the server asks for a new one", () => {
   const keysAfter = async (err: ApiError) => {
     speak.createVoiceAnswer.mockRejectedValueOnce(err).mockResolvedValue({ answer: { id: "ans1" } });
-    await saveDraft(draft());
+    await saveDraft(currentOwner(), draft());
     render(<Outbox />);
     await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
     await screen.findByText(/Your saved voice was posted/);

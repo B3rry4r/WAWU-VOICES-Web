@@ -63,12 +63,14 @@ async function waitReady(clipId: string, subject?: string): Promise<void> {
 }
 
 /** Sends one kept recording as a voice answer: create the clip, upload, complete, wait until READY, post with the recording's own key. */
-async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
+async function sendHere(d: Draft, tokenId?: string, forOwner?: string | null): Promise<SendResult> {
+  // A recording is sent only for the person it was opened for: if someone else is signed in now, nothing goes and nothing is touched.
+  if (forOwner !== undefined && sessionSubject() !== forOwner) return { ok: false, reason: "failed", message: "You are signed in as someone else in another tab. Nothing was sent." };
   if (!claimSend(d.key)) return { ok: false, reason: "busy" };
   let clipId: string | undefined;
   let uploaded = false;
   // The recording goes out only as the person signed in when the send began.
-  const subject = sessionSubject() ?? undefined;
+  const subject = (forOwner !== undefined ? forOwner : sessionSubject()) ?? undefined;
   try {
     const up = await api.createVoiceClip({
       mime: baseMime(d.mime) as "audio/webm" | "audio/mp4" | "audio/ogg",
@@ -98,7 +100,7 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
     // network failure keeps it, so the retry is the same request and the server can hand the first post back.
     if (needsNewKey(e)) {
       const next: Draft = { ...d, key: freshKey() };
-      await saveDraft(next);
+      if (sessionSubject() === (subject ?? null)) await saveDraft(subject ?? null, next);
       return { ok: false, reason: "failed", message: e instanceof ApiError && e.explained && e.message.trim() ? e.message : undefined, draft: next };
     }
     if (e instanceof ApiError && e.status === 402) return { ok: false, reason: "needs_tokens", message: e.explained && e.message.trim() ? e.message : undefined };
@@ -126,11 +128,13 @@ export async function sendKeptRecording(
   onPosted: () => Promise<void> = async () => undefined,
   /** Asked once the lock is held, before anything is sent: is this same recording still the one waiting? When it was posted by another tab in the meantime, it is gone and nothing is sent. */
   stillWaiting: () => Promise<boolean> = async () => true,
+  /** The person this recording was kept for (the one signed in when the screen or banner opened). Left out: whoever is signed in when the send begins. */
+  forOwner?: string | null,
 ): Promise<SendResult> {
   const sendThenTidy = async (): Promise<SendResult> => {
     // A tab that waited for the lock reads the kept copy again: the first tab may have posted and cleared it already.
     if (!(await stillWaiting())) return { ok: true, answerId: null, questionId: d.questionId, byOtherTab: true };
-    const r = await sendHere(d, tokenId);
+    const r = await sendHere(d, tokenId, forOwner);
     if (r.ok) await onPosted();
     return r;
   };

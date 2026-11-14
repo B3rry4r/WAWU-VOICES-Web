@@ -62,12 +62,12 @@ export function VoiceReplySheet({ aid, qid, who, stance, allow, onClose, onPoste
           onCancel={onClose}
           keyPart={pick}
           onKept={() => { onKept?.(); onClose(); }}
-          keep={async (t, replace) => {
+          keep={async (t, replace, forWho) => {
             // Offline: the recording goes into the same on-device store a voice answer uses, with all it needs to be sent later as this same reply.
-            if (!pick || !currentOwner()) return "failed";
-            const cur = await loadDraft();
+            if (!pick || !forWho || currentOwner() !== forWho) return "failed";
+            const cur = await loadDraft(forWho);
             if (!replace && cur && cur.key !== t.key) return "exists";
-            const ok = await saveDraft({ blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: t.key, savedAt: Date.now(), questionId: qid, queued: true, anonymous: ownNameless ? true : t.anonymous, reply: { answerId: aid, stance: pick } });
+            const ok = await saveDraft(forWho, { blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: t.key, savedAt: Date.now(), questionId: qid, queued: true, anonymous: ownNameless ? true : t.anonymous, reply: { answerId: aid, stance: pick } });
             return ok ? "kept" : "failed";
           }}
           anonSlot={ownNameless ? undefined : replyAnonSlot(aid)}

@@ -22,7 +22,7 @@ vi.mock("@/lib/audio-ref/recorder", () => ({
 
 import { VoiceBox } from "@/features/speak/VoiceBox";
 import { SpeakScreen } from "@/features/speak/SpeakScreen";
-import { clearDraft } from "@/features/speak/draft";
+import { currentOwner, clearDraft } from "@/features/speak/draft";
 
 const KEY = "voices-web-session";
 const jwt = (sub: string, n: string) => `h.${btoa(JSON.stringify({ sub, n })).replace(/=+$/, "")}.s`;
@@ -69,7 +69,7 @@ beforeEach(() => {
     return json({}, 404);
   }));
 });
-afterEach(async () => { cleanup(); await clearDraft(); await clearDraft("userA"); await clearDraft("userB"); vi.unstubAllGlobals(); window.localStorage.clear(); });
+afterEach(async () => { cleanup(); await clearDraft(currentOwner()); await clearDraft("userA"); await clearDraft("userB"); vi.unstubAllGlobals(); window.localStorage.clear(); });
 
 const tick = (ms: number) => new Promise((r) => setTimeout(r, ms));
 function openGate() { let open!: () => void; refreshGate = new Promise<void>((r) => { open = r; }); return open; }
