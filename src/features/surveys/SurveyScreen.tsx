@@ -93,6 +93,7 @@ function Ask({ survey }: { survey: Survey }) {
   const hasAnswers = useRef(false);
   hasAnswers.current = Object.keys(given).length > 0;
   const q = qs[idx];
+  const qid = q.id;
   const last = idx === total - 1;
   const minutes = aboutMinutes(total);
 
@@ -269,6 +270,7 @@ function Ask({ survey }: { survey: Survey }) {
           busy={busy}
           onSend={send}
           onVoice={async (clip) => keep({ kind: "voice", clipId: clip.clipId, seconds: clip.seconds })}
+          onVoiceReady={(clip) => setGiven((g) => ({ ...g, [qid]: { kind: "voice" as const, clipId: clip.clipId, seconds: clip.seconds } }))}
           voice={given[q.id]?.kind === "voice" ? (given[q.id] as Extract<Given, { kind: "voice" }>) : null}
           onSendVoice={() => keep(given[q.id])}
           onRerecord={() => {
@@ -350,6 +352,8 @@ function QuestionCard(p: {
   busy: boolean;
   onSend: () => void;
   onVoice: (clip: { clipId: string; seconds: number }) => Promise<void>;
+  /** The recording is uploaded and READY: kept in the draft now, shown ready to send. */
+  onVoiceReady: (clip: { clipId: string; seconds: number }) => void;
   /** A recording already made and ready for this question (kept across a reload or a failed send). */
   voice: Extract<Given, { kind: "voice" }> | null;
   onSendVoice: () => void;
@@ -386,7 +390,7 @@ function QuestionCard(p: {
       <SponsoredSurveyCard survey={survey} question={q.prompt} hideActions total={total}>
         <section className="vx-rec flex flex-col gap-3" aria-label="Voice answer ready" data-testid="voice-ready">
           <p className="m-0 text-body-strong">{`Your voice answer is ready, ${clock(p.voice.seconds)}.`}</p>
-          <p className="m-0 text-caption text-ink-2">It is saved. Nothing is sent until you tap Send answer.</p>
+          <p className="vx-rec__hint m-0">It is saved. Nothing is sent until you tap Send answer.</p>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" icon="rotate-ccw" disabled={p.busy} onClick={p.onRerecord}>Record again</Button>
             <Button size="l" icon="send" loading={p.busy} disabled={p.busy} onClick={p.onSendVoice}>Send answer</Button>
@@ -406,6 +410,7 @@ function QuestionCard(p: {
         postingText="Saving"
         sendLabel={() => "Send answer"}
         onSend={(c) => p.onVoice({ clipId: c.clipId, seconds: c.seconds })}
+        onReady={(c) => p.onVoiceReady({ clipId: c.clipId, seconds: c.seconds })}
       />
     </SponsoredSurveyCard>
   );

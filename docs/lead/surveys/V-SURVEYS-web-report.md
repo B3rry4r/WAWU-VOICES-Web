@@ -107,3 +107,55 @@ Branch `v/surveys`. API stubbed everywhere; no live service called. Pictures: `d
 
 ## Not done
 Everything in the list above; and the Home feed card still carries only the title.
+
+# Round 3
+
+Branch `v/surveys`. API stubbed by a real local HTTP stub; no live service called. One `next build` (with `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_WAWU_ID_BASE` pointing at the stub, so sign-in and sign-out also hit the stub) served with `next start`; run script `e2e/surveys-r3.e2e.mts` (stub, request log, 20 runs, ALL OK at 390x844 and 1440x900; admin runs at 1440 only, the admin says "Open the admin on a computer." on a phone). Pictures in `docs/lead/surveys/shots-r3/` (scale 2), request log of every run in `docs/lead/surveys/shots-r3/request-logs.json`. I opened these pictures: N3-voice-ready-after-reload (390 and 1440), Closed-409-390, Review-page-1-of-3-1440, Report-answered-null-1440, Report-no-breakdown-1440, N2-person-B-question-1-390. The others (N1 two, N2 1440, Closed 1440, Review-last-page, Release-409, Report-with-breakdown, N3-middle) were taken by the same run and asserted in it, not opened one by one. The first look at the ready card showed a low-contrast line on the dark box; fixed (`SurveyScreen.tsx` `vx-rec__hint`), rebuilt, re-run, looked again.
+
+## Step 1: merge and contract
+`git merge origin/main`; conflicts in `roles.ts` (union of page ids, roles and nav rows: main's money and verification plus `surveys`, `brands`) and `VoiceBox.tsx` (main's `freeLeft` kept, this branch's `previewHint`, `postingText` kept). `contract/openapi.yaml` replaced by `openapi-api-round3.yaml`; `npm run api:types` run; `tsc` had nothing to refuse (the changed fields are `nextCursor`, `answered: number | null`, handle ids, which the code already typed as string, nullable and optional).
+
+## Findings and what closed each
+| # | Closed by |
+|---|---|
+| Handles | `src/lib/api/admin-surveys.ts` `hideSurveyFreeAnswer(id, handle, hidden)`; the page sends `item.id`, which is the handle. Run: PATCH path `/admin/surveys/s1/free-answers/0101...01` (32 hex), body `{hidden:true}`. |
+| Release 409 and paging | `admin-surveys.ts` `getSurveyFreeAnswers(id, cursor)`; `SurveyResultsPage.tsx` `more()` and `allRead`: "Show more answers" walks the pages in order; Release is off with "Read the written answers before releasing the results." until `nextCursor` is null; a 409 from release shows the server's words (alert). Run: three pages, off on pages 1 and 2, on at page 3; 409 shown in the server's words. |
+| `answered` null | `SurveyResultsPage.tsx` (question card): "Too few answers to show", no figure, no options; `survey-csv.ts` writes one Note row for it. Run: no "null", no "0 answered". |
+| Breakdown missing | `SurveyResultsPage.tsx` `hasState`/`hasAge`: a missing (or empty) breakdown draws no card, not even a frame; one card alone takes the full row. |
+| 409 "This survey has closed." | `SurveyScreen.tsx` `submit` (409 with "closed" in the server's words) shows the `Closed` screen with the server's words and "Back to where you were" (`router.back()` when the person came from inside the app, else Home). No SKIP, draft removed. Run: feed scrollY 700 before, same after. Any other 409 still shows Done (already answered). |
+| N1 | `SurveyScreen.tsx`: `pagehide` and `visibilitychange` listeners removed; `sendSkip` is called only by Skip (all skipped), Leave, Back with no answers, and the unmount of a link away. At most once per survey per person per tab: flag `wawu.survey.<person>.<id>.skipped` (`logic.ts` `wasSkipped`, `markSkipped`). Run: answer Q1, reload 5 times, hide, switch tab and back, then close the tab: log is `START` only, survey open at question 2. |
+| N2 | `logic.ts` `keyFor`: draft, started and skipped keys carry the token's subject (`currentOwner()`); `src/lib/auth/survey-keeps.ts` `clearSurveyKeeps` removes every `wawu.survey.*` key and `signOut()` (`src/lib/api/auth.ts`) calls it. Run (real sign-in form and Settings "Sign out"): A answers two, signs out, storage has 0 survey keys; B signs in, sees question 1 with nothing chosen, log `userA:START`, `userB:START`. |
+| N3 | `VoiceBox.tsx` new optional `onReady`: a survey take is sent up as soon as it stops and `onReady` gets the READY clip id; `SurveyScreen.tsx` puts it in `given` (draft effect saves it) and shows the "Your voice answer is ready" card with "Send answer" and "Record again" (deletes the clip). A failed send keeps the clip. Posting, replies and the record box do not pass `onReady`: unchanged. Run: last question, draft holds `q3.clipId` before anything is posted (0 responses in the log), reload shows it ready, Send answer posts that clip id. Middle question: same, reload and Back (desktop) shows it ready. |
+| N4 | `sendSkip` also calls `clearDraft`, so every route that sends a SKIP removes the draft (also when the SKIP flag is already set). Run: link away: `START, SKIP`, draft key gone, only `started` and `skipped` flags remain. |
+| N5 | Merge above. |
+| Lows | N6, N7, N8, N9: no code change. N6 (second sentence on the Settings line) left for the owner. N7 not a defect. N8 by design (one VIEW per visit, server cap). N9 was a stub artefact; the same `Cannot read properties of undefined (reading 'filter')` page error shows in my stub after sign-in on a page that my stub answers with a generic empty shape; no survey screen involved. |
+
+## Tests
+Added: `tests/surveys-round3-public.test.tsx` (11), `tests/surveys-round3-admin.test.tsx` (7). Changed (old, new):
+- `surveys-round2-public` draft key: `wawu.survey.s1.draft` is now `wawu.survey.unknown.s1.draft` (rule: keys carry the person; the test token has no subject, so `unknown`). Four assertions/setItems, same meaning.
+- `surveys-round2-public` "brings back the position...": it used `unmount()` to stand for a reload. Unmount is now a link away (SKIP and draft removed), so the test now puts back what a reload leaves (draft kept, skip flag removed) before the second render. Assertions unchanged.
+- `surveys-round2-public` "a closed tab or a hidden page sends one SKIP with keepalive...": old: pagehide plus hidden sends one SKIP with `keepalive`; new rule: they send nothing, `["START"]`. Renamed.
+Everything else untouched.
+
+## Checks
+`npm run lint`: no warnings or errors. `npm run typecheck` (`tsc --noEmit`): exit 0. `vitest run`: 96 files, 981 tests, 981 passed (was 90 and 909; plus the main merge's files). `npm run build`: succeeded (the build the browser runs used).
+
+## Runs (request log, `request-logs.json` has all of them)
+- N1 five reloads etc. (390): `1 userA START`.
+- N1 Leave sheet then Leave: `START, SKIP`; reopen and leave again by a router push: still `START, SKIP`.
+- N4 (390): `4 START, 5 SKIP`.
+- N2 (390): `11 login, 12 userA START, 13 logout, 14 login, 15 userB START`.
+- N3 last question (390): `21 START, 22 POST /voice-clips, 23 PUT, 24 complete, 25 POST responses [q1,q2,q3]` (after the reload).
+- Closed (390): `30 START, 31 voice-clips, 32 PUT, 33 complete, 34 POST responses` answered 409; no SKIP.
+- Admin review: `PATCH .../free-answers/<32 hex>` `{hidden:true}`; `POST release` 409 (forced) then 200.
+
+## Choices
+- The person's id is the token's `sub` (`currentOwner()`); with no `sub` the key uses `unknown`. Real WAWU ID tokens carry it.
+- "Kept the moment the recording is ready": a take cannot be kept before it is a clip, so a survey take is uploaded as soon as it stops (the preview shows the progress) rather than at Send; the words under the ready card say nothing is sent until Send answer. A recording not yet uploaded when the page reloads is lost (a blob cannot go in session storage).
+- The review list is read with "Show more answers" (default page size), not loaded all at once.
+- "Back to where you were" is a button on the closed screen (the words stay on screen), not a timed redirect.
+- A clip left in a draft when the person leaves is not deleted by the web; it is left to the server's cleaning of unused clips.
+- Phone has no Back button on the Survey board, so "go back to a voice question" is proved at 1440 only.
+
+## Not done
+Same as round 2's list (Say why, first question on the feed card, voice player on Done, past answers, brand voice note, verified tick, More menu, sidebar count). A real tab switch and a real phone app switch (headless Chromium has no real visibility change; those events were dispatched, and the code has no listener for them now). Nothing run against the real API.
