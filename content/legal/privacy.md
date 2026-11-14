@@ -22,7 +22,7 @@ lead: What VOICES collects, why, who helps us handle it, and what you can ask us
 - A guest id: if you have not signed in, your browser makes a random id so we can count a like or an advert once. It is kept in your browser.
 - Our servers see your network address when you connect. We use it to limit abuse.
 - A photo of a result sheet, if you add one to a result post.
-- Posts made without your name: we still keep who wrote them. They are hidden from other people. WAWU staff who handle reports can see who wrote one.
+- Posts made without your name: we still keep who wrote them. Other people cannot see who wrote them. WAWU staff who handle reports can see who wrote one.
 - Verification: if you ask to be verified, a photo or PDF of your government ID and of a utility bill. They are kept privately, are not shown to other people, and only a WAWU admin who checks them can open them, through a link that stops working after 5 minutes. Each time a document is opened, we record who opened it. We keep the decision (who decided, when, and the result). The files are deleted 90 days after the decision, or when your account is deleted, after the 14-day wait. If nobody decides, they are deleted 90 days after you send them. If we decline your request, the files stay until 90 days after the decision, then they are deleted. If you send new files after a decline, the old ones are deleted at once. Files you add but never send are deleted after 14 days. If your plan ends, your files are still deleted on the same dates. They are not kept so that you can be verified again: if you subscribe again within 90 days we restore your tick without them.
 
 ## Why we use it
