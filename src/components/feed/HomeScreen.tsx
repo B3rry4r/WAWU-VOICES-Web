@@ -123,7 +123,7 @@ export function HomeScreen() {
             ) : undefined
           }
         >
-          <Answers items={h.trending.slice(0, 2)} />
+          <Answers items={h.trending.slice(0, 2)} signedIn={signedIn} />
         </Section>
         ) : null}
 
