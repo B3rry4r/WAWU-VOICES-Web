@@ -1,4 +1,5 @@
 import "@/features/reach/reach.css";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { countText, leaderFirst } from "@/lib/format/plural";
 import { Avatar, Badge, Button, Logo, NewsTag, Poll } from "@/components/vx";
 import { fmt } from "@/components/vx/helpers";
@@ -116,7 +117,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
                 <div className="vx-answer__head">
                   <Avatar name={voice.author ? voice.author.displayName ?? voice.author.handle : "Anonymous"} src={voice.author?.avatarUrl ?? undefined} />
                   <div className="vx-answer__who">
-                    <span className="vx-answer__name">{voice.author ? "@" + voice.author.handle : "Anonymous"}</span>
+                    <span className="vx-answer__name">{voice.author ? "@" + voice.author.handle : "Anonymous"}{voice.author ? <VerifiedTick verified={voice.author.verified} /> : null}</span>
                     <span className="vx-answer__time">{agoShort(voice.createdAt, now) + (voice.author?.state ? " · " + voice.author.state : "")}</span>
                   </div>
                 </div>
@@ -140,7 +141,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
               <Eyebrow>{`What Next? · ${page.proposalCount} ${page.proposalCount === 1 ? "proposal" : "proposals"}`}</Eyebrow>
               <article className="flex flex-col gap-2 rounded-l border border-line bg-surface p-4 shadow-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-body-strong">{"@" + page.topProposal.author.handle}<span className="ml-2 text-caption text-ink-2">{agoShort(page.topProposal.createdAt, now)}</span></span>
+                  <span className="text-body-strong">{"@" + page.topProposal.author.handle}<VerifiedTick verified={page.topProposal.author.verified} /><span className="ml-2 text-caption text-ink-2">{agoShort(page.topProposal.createdAt, now)}</span></span>
                   <Badge tone="proposed" />
                 </div>
                 {page.topProposal.body ? <p className="m-0 text-title">{page.topProposal.body}</p> : null}
@@ -153,7 +154,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
         <aside className="hidden dt:block" aria-label="Add your voice">
           <div className="sticky top-6 flex flex-col gap-3 rounded-l bg-forest p-5 text-forest-on shadow-1">
             <h2 className="m-0 font-display text-display-m">What do you think?</h2>
-            <p className="m-0 text-body text-[color:var(--on-forest-2)]">Say it in 10 seconds, right here in your browser.<GuestOnly> You only sign in when you publish.</GuestOnly></p>
+            <p className="m-0 text-body text-[color:var(--on-forest-2)]">Say it in up to a minute, right here in your browser.<GuestOnly> You only sign in when you publish.</GuestOnly></p>
             <AddVoice code={page.code} label={page.ctaLabel} block />
           </div>
         </aside>

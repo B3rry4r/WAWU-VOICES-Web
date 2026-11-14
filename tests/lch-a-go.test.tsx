@@ -57,7 +57,7 @@ describe("LCH-01 landing words", () => {
   });
   it("the words are the ones in LAUNCH-SPEC section 1", () => {
     expect(LANDING_HEADLINE).toBe("\u1EB8 j\u1EB9\u0301 k\u00E1 s\u1ECD\u0300r\u1ECD\u0300! Let\u2019s talk.");
-    expect(LANDING_INTRO).toBe("One question a day about life in Nigeria. Say your answer in 10 seconds, or type it. Hear people who agree and people who don’t. Vote. Then back the ideas that could actually help.");
+    expect(LANDING_INTRO).toBe("One question a day about life in Nigeria. Say your answer in a minute or less, or type it. Hear people who agree and people who don’t. Vote. Then back the ideas that could actually help.");
   });
   it("the page title and share metadata use the new headline", () => {
     for (const m of [welcomeMeta, goMeta]) {

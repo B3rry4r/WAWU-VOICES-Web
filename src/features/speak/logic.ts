@@ -27,9 +27,13 @@ export function peaksFromLevels(levels: number[], bars = 48): number[] {
   return out.map((v) => Math.round(Math.min(1, v / top) * 255));
 }
 
-/** The smallest available token that covers this take, or undefined when the free seconds are enough. */
-export function tokenFor(tokens: ExtraVoiceToken[], seconds: number, freeSeconds: number): ExtraVoiceToken | undefined {
-  if (seconds <= freeSeconds + 0.5) return undefined; // the server allows half a second over
+/**
+ * The smallest available token that covers this take, or undefined when no token is needed. A person with a free post left
+ * and a take inside the free seconds uses the free post and keeps the token. With no free post left, a token they already
+ * paid for covers the message (V-46: the free seconds are now a minute, so a take is rarely longer than them).
+ */
+export function tokenFor(tokens: ExtraVoiceToken[], seconds: number, freeSeconds: number, freeLeft = 1): ExtraVoiceToken | undefined {
+  if (freeLeft > 0 && seconds <= freeSeconds + 0.5) return undefined; // the server allows half a second over
   return tokens
     .filter((t) => t.status === "AVAILABLE" && t.maxSeconds + 0.5 >= seconds)
     .sort((a, b) => a.maxSeconds - b.maxSeconds)[0];

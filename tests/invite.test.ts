@@ -38,7 +38,7 @@ describe("the share words (LCH-05)", () => {
   const link = "https://usevoices.com/go/ab12cd7";
   it("the message is exactly the spec", () => {
     expect(inviteMessage("HOPEFUL", link)).toBe(
-      "I just shared how I feel about Nigeria on VOICES.\n\nI feel HOPEFUL about Nigeria. What about you?\n\nAdd your voice in 10 seconds: https://usevoices.com/go/ab12cd7",
+      "I just shared how I feel about Nigeria on VOICES.\n\nI feel HOPEFUL about Nigeria. What about you?\n\nAdd your voice in a minute or less: https://usevoices.com/go/ab12cd7",
     );
   });
   it("sms: carries the encoded body, in the Android and iPhone forms", () => {

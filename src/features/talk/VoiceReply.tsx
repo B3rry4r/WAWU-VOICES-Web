@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button, Sheet, TopicChip } from "@/components/vx";
 import { VoiceBox } from "@/features/speak/VoiceBox";
-import { freeCovers, voicePriceMilli } from "@/features/speak/logic";
+import { freeCovers, tokenFor, voicePriceMilli } from "@/features/speak/logic";
 import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { tokensLabel } from "@/lib/shared/text-price";
@@ -23,7 +23,7 @@ export function VoiceReplySheet({ aid, who, stance, allow, onClose, onPosted, on
   const [short, setShort] = useState(false);
   const c = allow.costs;
   const limit = allow.maxVoiceSeconds ?? c.voiceMaxSeconds ?? 60;
-  const freeSeconds = c.freeVoiceSeconds ?? 10;
+  const freeSeconds = c.freeVoiceSeconds ?? 60;
   return (
     <Sheet title="Reply by voice" subtitle={`To ${who}`} onClose={onClose}>
       <div className="grid gap-3 pb-2">
@@ -34,10 +34,11 @@ export function VoiceReplySheet({ aid, who, stance, allow, onClose, onPosted, on
           purpose="REPLY"
           maxSeconds={limit}
           freeSeconds={freeSeconds}
+          freeLeft={allow.freePostsRemaining}
           tokens={allow.extraVoiceTokens}
           disabled={!pick || allow.messagesLeftToday === 0}
           hint={<p className="vx-rec__hint">{!pick ? <b>Pick how you are replying first.</b> : <>{"Tap to record. You have "}<b>{`${limit} seconds`}</b>{"."}</>}</p>}
-          sendLabel={(sec) => (allow.freePostsRemaining > 0 && freeCovers(sec, freeSeconds) ? "Send" : `Send for ${tokensLabel(voicePriceMilli(sec, c))} tokens`)}
+          sendLabel={(sec) => ((allow.freePostsRemaining > 0 && freeCovers(sec, freeSeconds)) || tokenFor(allow.extraVoiceTokens, sec, freeSeconds, allow.freePostsRemaining) ? "Send" : `Send for ${tokensLabel(voicePriceMilli(sec, c))} tokens`)}
           onSend={async (clip) => {
             if (!pick) return;
             setShort(false);

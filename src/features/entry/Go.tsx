@@ -92,7 +92,7 @@ export function Go() {
                 >{m}</button>
               ))}
             </div>
-            <p className="m-0 text-[15px] font-semibold leading-5 text-[var(--on-forest-2)]">{q.hint || "With everything going on, say it in your voice. 10 seconds."}</p>
+            <p className="m-0 text-[15px] font-semibold leading-5 text-[var(--on-forest-2)]">{q.hint || "With everything going on, say it in your voice."}</p>
           </section>
         ) : (
           <section aria-label="Today’s question">
