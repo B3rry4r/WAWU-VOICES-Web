@@ -197,6 +197,7 @@ function SettingsBody({ me }: { me: Me }) {
       <Section id="n-h" title="Notifications">
         <div className="pf-card">
           <Switch label="Today’s question" detail={`Every morning at ${minuteLabel(s.dailyQuestionMinute)}`} checked={s.notifyDailyQuestion} onChange={(v) => patch({ notifyDailyQuestion: v })} />
+          <Switch label="Topic of the week" detail="An email when a new topic starts" checked={s.notifyWeeklyTopic} onChange={(v) => patch({ notifyWeeklyTopic: v })} />
           <Switch label="Replies to you" checked={s.notifyReplies} onChange={(v) => patch({ notifyReplies: v })} />
           <Switch label="Reactions on your voices" detail="Grouped, never one by one" checked={s.notifyReactions} onChange={(v) => patch({ notifyReactions: v })} />
           <Switch label="Poll results" checked={s.notifyPollResults} onChange={(v) => patch({ notifyPollResults: v })} />

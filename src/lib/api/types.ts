@@ -3482,6 +3482,7 @@ export interface components {
             quietHoursStart: number | null;
             quietHoursEnd: number | null;
             notifyDailyQuestion: boolean;
+            notifyWeeklyTopic: boolean;
             notifyReplies: boolean;
             notifyReactions: boolean;
             notifyPollResults: boolean;
@@ -3499,6 +3500,7 @@ export interface components {
             quietHoursStart?: number | null;
             quietHoursEnd?: number | null;
             notifyDailyQuestion?: boolean;
+            notifyWeeklyTopic?: boolean;
             notifyReplies?: boolean;
             notifyReactions?: boolean;
             notifyPollResults?: boolean;
@@ -4695,6 +4697,9 @@ export interface components {
             shares: number;
             openReports: number;
             oldestReportMinutes: number | null;
+            dailyQuestionMailsToday: number;
+            weeklyTopicMailsToday: number;
+            topicMailBudgetLeftToday: number;
         };
         ShareTargetCount: {
             target: components["schemas"]["ShareTarget"];

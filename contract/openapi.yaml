@@ -7432,6 +7432,8 @@ components:
           - 'null'
         notifyDailyQuestion:
           type: boolean
+        notifyWeeklyTopic:
+          type: boolean
         notifyReplies:
           type: boolean
         notifyReactions:
@@ -7455,6 +7457,7 @@ components:
       - quietHoursStart
       - quietHoursEnd
       - notifyDailyQuestion
+      - notifyWeeklyTopic
       - notifyReplies
       - notifyReactions
       - notifyPollResults
@@ -7486,6 +7489,8 @@ components:
           - integer
           - 'null'
         notifyDailyQuestion:
+          type: boolean
+        notifyWeeklyTopic:
           type: boolean
         notifyReplies:
           type: boolean
@@ -10915,6 +10920,12 @@ components:
           type:
           - integer
           - 'null'
+        dailyQuestionMailsToday:
+          type: integer
+        weeklyTopicMailsToday:
+          type: integer
+        topicMailBudgetLeftToday:
+          type: integer
       additionalProperties: false
       required:
       - sharesByTarget
@@ -10924,6 +10935,9 @@ components:
       - shares
       - openReports
       - oldestReportMinutes
+      - dailyQuestionMailsToday
+      - weeklyTopicMailsToday
+      - topicMailBudgetLeftToday
     ShareTargetCount:
       type: object
       properties:

@@ -27,7 +27,7 @@ export function signIn(token = "tok") {
   window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: token, refreshToken: "r" }));
 }
 
-const settings = { language: "en", dataSaver: true, theme: "system", timezone: "Africa/Lagos", quietHoursStart: null, quietHoursEnd: null, notifyDailyQuestion: true, notifyReplies: true, notifyReactions: true, notifyPollResults: true, notifyFlashPolls: false, notifyCategoryAlerts: true, dailyQuestionMinute: 480 };
+const settings = { language: "en", dataSaver: true, theme: "system", timezone: "Africa/Lagos", quietHoursStart: null, quietHoursEnd: null, notifyDailyQuestion: true, notifyWeeklyTopic: true, notifyReplies: true, notifyReactions: true, notifyPollResults: true, notifyFlashPolls: false, notifyCategoryAlerts: true, dailyQuestionMinute: 480 };
 export const profile = { id: "u1", handle: "ada.okafor", displayName: "Ada Okafor", bio: null, avatarUrl: null, voiceCard: null, countryCode: "NG", state: "Enugu", city: null, languages: ["en"], joinedAt: "2026-11-02T10:00:00Z", voiceCount: 48, replyCount: 3, reactionsReceived: 1240 };
 export const me = {
   phoneMasked: "+234 803 *** 4412", id: "u1", wawuId: "w", handle: "ada.okafor", profileComplete: true, savedCount: 12, replyCount: 3, reactionsReceived: 1240, roles: [], profile,
