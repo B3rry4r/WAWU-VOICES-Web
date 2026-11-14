@@ -28,7 +28,7 @@ Heading, "Today's question", national-conversation line, question, small line, "
 - `npx tsc --noEmit`: clean. `npx next lint`: no warnings or errors.
 - `npx vitest run`: 88 files, 862 tests pass (was 85 / 831; +3 files, +31 tests). New files fail on the old code where they should (from lost at the buttons and at join).
 - `npx next build` (branch) 49 s, ok; a second build of origin/main (46 s, a worktree) for the picture comparison only.
-- `next start` on 3101 (branch), 3102 (main); stub API for the server on 4101; browser calls stubbed with `page.route`; Chromium from `/opt/pw-browsers/chromium` (the pinned playwright-core wants another build). 54 checks, all pass.
+- `next start` on 3101 (branch), 3102 (main); stub API for the server on 4101; browser calls stubbed with `page.route`; Chromium from `/opt/pw-browsers/chromium` (the pinned playwright-core wants another build). 36 checks, all pass.
 
 ## Browser results (390x844 and 1440x900)
 (a) crawler: 200, no Location, og/twitter title, description, image 1200x630, card type; CLOSED and ANSWER links keep the share page; unknown code 404. (b) guest lands on the pick screen with four words; no share-page or error page drawn on the way; Back leaves. (c) PROUD, Type it, Sign in: back on write with `mood=PROUD&from=`, word shown, can type; word still picked. (d) PROUD, Say it, record (fake mic), Send, join, code, topics, profile: back on the recorder `?from=&mood=PROUD&autopost=1`, PROUD shown. (e) Home `/go` to the pick screen: branch and origin/main screenshots byte-identical, both sizes.
