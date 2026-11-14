@@ -6,11 +6,12 @@ import * as api from "@/lib/api/talk";
 import { getPublicConfig } from "@/lib/api/feed";
 import { ApiError } from "@/lib/api/client";
 import type { Mood } from "@/lib/api/mood";
-import { AppBar, Problem, useSignedIn } from "@/features/talk/lib";
+import { AppBar, BarButton, Problem, useSignedIn } from "@/features/talk/lib";
 import { getSettings, updateSettings } from "@/lib/api/profile";
 import { MOODS, TONE, isMood, readPick, writePick } from "./mood";
 import { ShareWordSwitch } from "./ShareWordSwitch";
 import { cleanCode } from "@/features/share/speak-target";
+import { useShareSheet } from "@/features/talk/TalkCard";
 import { readPendingShareWord, writePendingShareWord } from "./share-word";
 
 /** MoodPick board: before Record or Write on a mood question, pick one word. It can be changed until the answer is posted. */
@@ -18,6 +19,7 @@ export function MoodPickScreen({ qid }: { qid: string }) {
   const router = useRouter();
   const sp = useSearchParams();
   const signedIn = useSignedIn();
+  const [shareNode, share] = useShareSheet();
   const [q, setQ] = useState<api.Question | null>(null);
   const [err, setErr] = useState<unknown>(null);
   const [tries, setTries] = useState(0);
@@ -71,7 +73,10 @@ export function MoodPickScreen({ qid }: { qid: string }) {
   };
   return (
     <>
-      {header}
+      <AppBar title="Speak" sub="Today’s question" close={close}>
+        <BarButton icon="share-2" label="Share this question" onClick={() => share("QUESTION", qid)} />
+      </AppBar>
+      {shareNode}
       <div className="mt-5 grid gap-5 dt:max-w-[640px]">
         <section className="flex flex-col gap-2">
           <span className="vx-eyebrow text-[var(--green-text)]">Nigeria’s national conversation</span>

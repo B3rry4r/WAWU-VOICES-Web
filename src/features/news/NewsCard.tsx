@@ -3,12 +3,13 @@
 import { countText } from "@/lib/format/plural";
 import Link from "next/link";
 import { useState } from "react";
-import { Avatar, Icon, NewsTag, ReactionTray, REACTIONS } from "@/components/vx";
+import { AdminPill, Avatar, Icon, NewsTag, ReactionTray, REACTIONS } from "@/components/vx";
 import { short, fmt } from "@/components/vx/helpers";
 import { likeAnswer, setReaction } from "@/lib/api/news";
 import type { NewsAnswer, ReactionKind } from "@/lib/api/news";
 import { ApiError } from "@/lib/api/client";
 import { ago } from "@/features/results/shared";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import { ClipPlayer } from "./ClipPlayer";
 import { ShareSheet } from "@/features/share";
 import { SERVED } from "./served";
@@ -73,7 +74,7 @@ export function NewsCard({ post, signedIn, repliesHref, open }: { post: NewsAnsw
         <div className="vx-answer__head">
           <Avatar name={a ? a.displayName ?? a.handle : "Anonymous"} src={a?.avatarUrl ?? undefined} />
           <div className="vx-answer__who">
-            <span className="vx-answer__name">{a ? "@" + a.handle : "Anonymous"}</span>
+            <span className="vx-answer__name">{a ? <><span className="vx-answer__nm">{"@" + a.handle}</span><VerifiedTick verified={a.verified} /><AdminPill admin={(a as { admin?: boolean }).admin} /></> : "Anonymous"}</span>
             <span className="vx-answer__time">{ago(post.createdAt) + (a?.state ? " · " + a.state : "")}</span>
           </div>
         </div>

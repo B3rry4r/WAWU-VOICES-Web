@@ -85,7 +85,7 @@ export function Landing() {
           voices={voicesOf(q)}
           closesIn={closesIn(q.endsAt)}
           opensLabel={comingUp(q)}
-          onShare={() => share("QUESTION", q.id, { notOpen: true })}
+          onShare={() => share("QUESTION", q.id, comingUp(q) ? { notOpen: true } : undefined)}
           speakLabel="Add your voice"
           onSpeak={() => router.push("/")}
           onListen={() => router.push(`/q/${q.id}`)}

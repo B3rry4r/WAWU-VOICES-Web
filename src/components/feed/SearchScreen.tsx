@@ -3,7 +3,7 @@ import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Avatar, Icon, Tabs, TrendingList } from "@/components/vx";
+import { AdminPill, Avatar, Icon, Tabs, TrendingList } from "@/components/vx";
 import { PhoneBar, Rail } from "@/components/shell/ShellSlots";
 import { getCurrentTopic, getTodaysQuestion, getTrendingQuestions, search, type Question } from "@/lib/api/feed";
 import { isOpen, voicesShort, voicesOf } from "@/lib/feed-format";
@@ -105,7 +105,7 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
                 <>
                   <Avatar name={p.displayName ?? p.handle} src={p.avatarUrl ?? undefined} />
                   <span className="flex flex-1 flex-col">
-                    <b className="text-title">{`@${p.handle}`}<VerifiedTick verified={p.verified} /></b>
+                    <b className="text-title">{`@${p.handle}`}<VerifiedTick verified={p.verified} /><AdminPill admin={(p as { admin?: boolean }).admin} /></b>
                     <span className="text-caption text-[var(--ink-2)]">{[p.state, voicesShort(voicesOf(p))].filter(Boolean).join(" · ")}</span>
                   </span>
                   <Icon name="chevron-right" size={20} />

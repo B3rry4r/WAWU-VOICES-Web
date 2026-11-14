@@ -160,7 +160,7 @@ function OverrideBody() {
           <Card>
             <CardTitle>What goes up instead</CardTitle>
             <div className="flex flex-col gap-4">
-              <Tabs variant="segmented" block label="Content type" items={[{ id: "TEXT", label: "Text", icon: "message-square" }, { id: "VOICE", label: "Voice", icon: "mic" }, { id: "IMAGE", label: "Image", icon: "plus" }, { id: "LINK", label: "Link", icon: "link" }]} value={kind} onChange={(v) => setKind(v as "TEXT" | "VOICE" | "IMAGE" | "LINK")} />
+              <div className="min-w-0 max-w-full overflow-x-auto"><Tabs variant="segmented" block label="Content type" items={[{ id: "TEXT", label: "Text", icon: "message-square" }, { id: "VOICE", label: "Voice", icon: "mic" }, { id: "IMAGE", label: "Image", icon: "plus" }, { id: "LINK", label: "Link", icon: "link" }]} value={kind} onChange={(v) => setKind(v as "TEXT" | "VOICE" | "IMAGE" | "LINK")} /></div>
               <TextField label="Headline (120 max)" value={headline} onChange={setHeadline} maxLength={HEADLINE_MAX} />
               <TextField label="Message" multiline value={body} onChange={setBody} hint="Shown under the headline on Home and on the share card." />
               <MediaPick kind="audio" label="Editor voice note" purpose="OVERRIDE_NOTE" maxSeconds={NOTE_MAX_SECONDS} value={voice} onChange={setVoice} required={kind === "VOICE"} hint="Plays on Home under the message. Up to 60 seconds." />

@@ -85,7 +85,7 @@ export function HomeScreen() {
               closesIn={closesIn(q.endsAt)}
               avatars={uniqueVoices(q.recentVoices).map((v) => v.handle)}
               opensLabel={comingUp(q)}
-              onShare={() => share("QUESTION", q.id, { notOpen: true })}
+              onShare={() => share("QUESTION", q.id, comingUp(q) ? { notOpen: true } : undefined)}
               speakLabel={answered ? "Listen to answers" : signedIn ? undefined : "Add your voice"}
               speakIcon={answered ? "headphones" : undefined}
               answered={answered}
@@ -131,7 +131,7 @@ export function HomeScreen() {
             ) : undefined
           }
         >
-          <Answers items={h.trending.slice(0, 2)} signedIn={signedIn} />
+          <Answers items={h.trending.slice(0, 5)} signedIn={signedIn} />
         </Section>
         ) : null}
 

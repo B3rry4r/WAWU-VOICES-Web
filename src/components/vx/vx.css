@@ -217,6 +217,7 @@ button.vx-reset, .vx-reset { appearance: none; background: none; border: 0; padd
 .vx-hero__cta { display: flex; flex-direction: column; gap: var(--space-3); }
 .vx-hero__speak { height: var(--control-h-l); }
 .vx-hero__quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+.vx-hero__quick--four { grid-template-columns: repeat(2, 1fr); }
 .vx-hero__quick .vx-btn { height: var(--touch-min); padding: 0 var(--space-2); background: transparent; color: var(--on-green); box-shadow: inset 0 0 0 1.5px var(--on-green); }
 .vx-hero__quick .vx-btn:hover { background: var(--green-hover); }
 .vx-hero__quick .vx-btn:focus-visible { box-shadow: var(--shadow-focus); }

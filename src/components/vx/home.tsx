@@ -21,7 +21,7 @@ export interface QuestionHeroProps {
   speakIcon?: IconName;
   /** V-PRELAUNCH: set while the question has not opened ("Opens Sunday 15 November"). The card says "Coming up", shows this in place of the counts and has no buttons. */
   opensLabel?: string;
-  /** The one thing a coming-up card can do: share the question. */
+  /** Share the question: the one thing a coming-up card can do, and the fourth quick button (beside Listen, Discuss and Vote) once it is open. */
   onShare?: () => void;
   /** True once the viewer has answered: the card says so and the quick Listen button (now the big one) is not repeated. */
   answered?: boolean;
@@ -33,6 +33,7 @@ export interface QuestionHeroProps {
 }
 
 export function QuestionHero(p: QuestionHeroProps): ReactElement {
+  const quick = (p.answered ? 0 : 1) + 2 + (p.onShare ? 1 : 0);
   return (
     <section className={cx('vx-hero', p.className)} aria-labelledby="vx-hero-q">
       <div className="vx-hero__card">
@@ -62,10 +63,11 @@ export function QuestionHero(p: QuestionHeroProps): ReactElement {
         {p.opensLabel ? null : (
         <div className="vx-hero__cta">
           <Button variant="dark" size="l" icon={p.speakIcon || 'mic'} className="vx-hero__speak" onClick={p.onSpeak}>{p.speakLabel || 'Speak'}</Button>
-          <div className="vx-hero__quick">
+          <div className={cx('vx-hero__quick', quick === 4 && 'vx-hero__quick--four')}>
             {p.answered ? null : <Button size="s" icon="headphones" onClick={p.onListen}>Listen</Button>}
             <Button size="s" icon="message-square" onClick={p.onDiscuss}>Discuss</Button>
             <Button size="s" icon="vote" onClick={p.onVote}>Vote</Button>
+            {p.onShare ? <Button size="s" icon="share-2" onClick={p.onShare}>Share</Button> : null}
           </div>
         </div>
         )}
