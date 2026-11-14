@@ -10,6 +10,8 @@ import { clearDraft, saveDraft } from "@/features/units/draft";
 import { StageNav } from "@/features/stage/StageNav";
 import { countChars } from "@/lib/shared/text-price";
 import { FixPanel } from "./FixPanel";
+import { AnonymousSwitch } from "./AnonymousSwitch";
+import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { AppBar, Problem, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
@@ -35,6 +37,8 @@ export function WriteScreen({ qid }: { qid: string }) {
   const [tag, setTag] = useState<ComposerTag>("none");
   const [intent, setIntent] = useState<IntentKind | null>(stanceQ ? INTENT_OF[stanceQ] ?? null : null);
   const key = useRef<{ text: string; k: string } | null>(null);
+  // V-ANON: "Post without my name" is for a new answer only (the API has no such field on a reply). Off until turned on.
+  const [anon, setAnon] = useState(() => (replyTo ? false : readAnonPref(qid)));
   const slot = replyTo ? `r:${replyTo}` : `q:${qid}`;
   const [initial, setInitial] = useState<string | null>(null);
   // LCH-02: a mood question needs its one word before anything is written; without one the person is sent to pick it.
@@ -88,7 +92,8 @@ export function WriteScreen({ qid }: { qid: string }) {
         saveTyped(slot, "");
         router.push(`/q/${qid}/a/${replyTo}`);
       } else {
-        const r = await api.createAnswer(qid, body, { isNews: tag === "unverified" || tag === "gossip", newsTag: tag === "unverified" ? "UNVERIFIED_NEWS" : tag === "gossip" ? "GOSSIP" : undefined }, key.current.k, mood.word);
+        const r = await api.createAnswer(qid, body, { isNews: tag === "unverified" || tag === "gossip", newsTag: tag === "unverified" ? "UNVERIFIED_NEWS" : tag === "gossip" ? "GOSSIP" : undefined }, key.current.k, mood.word, anon);
+        writeAnonPref(qid, false);
         saveTyped(slot, "");
         clearDraft(qid);
         writePick(qid, null);
@@ -149,6 +154,7 @@ export function WriteScreen({ qid }: { qid: string }) {
             onSubmit={() => void send()}
           />
         </div>
+        {replyTo ? null : <AnonymousSwitch on={anon} disabled={sending} onChange={(v) => { setAnon(v); writeAnonPref(qid, v); }} />}
         {dayLeft === 0 ? <Banner tone="info" title="You have reached the daily limit">{`You can send ${c?.messagesPerDay ?? 20} messages a day. Come back after midnight, Lagos time. Reading, listening, likes, shares and reactions never count.`}</Banner> : null}
         {sending ? <Banner tone="info">Posting your answer.</Banner> : null}
         {msg ? <Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner> : null}

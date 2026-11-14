@@ -7,6 +7,7 @@ import { Avatar, EmptyState, Icon } from "@/components/vx";
 import type { IconName } from "@/components/vx";
 import { getAdminToday } from "@/lib/api/admin";
 import type { AdminToday, Role } from "@/lib/api/admin";
+import { ApiError } from "@/lib/api/client";
 import { getMe } from "@/lib/api/feed";
 import { sessionStorage } from "@/lib/auth/session-storage";
 import "./admin.css";
@@ -30,7 +31,10 @@ export function useAdmin(): AdminCtx {
   return c;
 }
 
-type Gate = { s: "checking" } | { s: "no" } | { s: "yes"; roles: Role[]; name: string };
+/** Waits before the two automatic retries of a failed access check (5xx, network, timeout). */
+const RETRY_MS = [1000, 3000];
+
+type Gate = { s: "checking" } | { s: "no" } | { s: "failed" } | { s: "yes"; roles: Role[]; name: string };
 
 /** The admin area is only drawn for a signed-in person with an admin role. Everyone else gets the same "could not find that" any unknown address gets. */
 export function AdminFrame({ children }: { children: ReactNode }) {
@@ -40,24 +44,43 @@ export function AdminFrame({ children }: { children: ReactNode }) {
   const [n, setN] = useState(0);
   const reloadToday = useCallback(() => setN((x) => x + 1), []);
 
+  const [tries, setTries] = useState(0);
+  const tryAgain = useCallback(() => {
+    setGate({ s: "checking" });
+    setTries((x) => x + 1);
+  }, []);
+
   useEffect(() => {
     if (!sessionStorage.getToken()) {
       setGate({ s: "no" });
       return;
     }
     let live = true;
-    getMe().then(
-      (me) => {
-        if (!live) return;
-        const roles = me.roles ?? [];
-        setGate(isAdminPerson(roles) ? { s: "yes", roles, name: me.profile?.displayName || me.handle || "Admin" } : { s: "no" });
-      },
-      () => live && setGate({ s: "no" }),
-    );
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // getMe already refreshes an expired access token and retries once. A refusal that survives that (401 with the session
+    // cleared, or 403) means "not an admin": the deliberate "could not find that". Anything else is a failed check, not an answer.
+    const check = (attempt: number) => {
+      getMe().then(
+        (me) => {
+          if (!live) return;
+          const roles = me.roles ?? [];
+          setGate(isAdminPerson(roles) ? { s: "yes", roles, name: me.profile?.displayName || me.handle || "Admin" } : { s: "no" });
+        },
+        (e: unknown) => {
+          if (!live) return;
+          const refused = e instanceof ApiError && (e.status === 403 || (e.status === 401 && !sessionStorage.getToken()));
+          if (refused) return setGate({ s: "no" });
+          if (attempt < RETRY_MS.length) timer = setTimeout(() => check(attempt + 1), RETRY_MS[attempt]);
+          else setGate({ s: "failed" });
+        },
+      );
+    };
+    check(0);
     return () => {
       live = false;
+      if (timer) clearTimeout(timer);
     };
-  }, []);
+  }, [tries]);
 
   const yes = gate.s === "yes";
   useEffect(() => {
@@ -83,6 +106,13 @@ export function AdminFrame({ children }: { children: ReactNode }) {
   const value = useMemo<AdminCtx | null>(() => (gate.s === "yes" ? { roles: gate.roles, name: gate.name, today, todayError, reloadToday } : null), [gate, today, todayError, reloadToday]);
 
   if (gate.s === "checking") return <div className="min-h-[60vh]" aria-busy="true" aria-label="Loading" />;
+  if (gate.s === "failed") {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <EmptyState icon="compass" title="We could not check your access" body="Try again in a moment." action="Try again" onAction={tryAgain} />
+      </div>
+    );
+  }
   if (gate.s === "no" || !value) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
