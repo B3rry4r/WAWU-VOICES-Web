@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Banner, Button, Icon, NotFoundState, Skeleton, StageBar } from "@/components/vx";
 import { short } from "@/components/vx/helpers";
 import { isSignedIn } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, WrongPersonError, sessionSubject } from "@/lib/api/client";
 import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import * as api from "@/lib/api/speak";
 import { baseMime } from "@/lib/audio-ref/mime";
@@ -78,7 +78,9 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const ignorePop = useRef(false);
   const sendState = useRef<{ key: string; clipId?: string; putUrl?: string; tokenId?: string; uploaded?: boolean; completed?: boolean } | null>(null);
 
-  useEffect(() => setSignedIn(isSignedIn()), []);
+  // Who the screen was opened for: a recording is only ever created, uploaded, completed or posted with this person's sign-in.
+  const owner = useRef<string | null>(null);
+  useEffect(() => { owner.current = sessionSubject(); setSignedIn(isSignedIn()); }, []);
   // A share link's "Add your voice" opens /speak?from=<code>: the visit is remembered (the tap itself is counted on the share page).
   useEffect(() => { rememberShareVisit(params.get("from")); }, [params]);
 
@@ -322,7 +324,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   function dropTake(removeClip: boolean) {
     const st = sendState.current;
-    if (removeClip && st?.clipId && signedIn) void api.deleteVoiceClip(st.clipId).catch(() => undefined);
+    if (removeClip && st?.clipId && signedIn) void api.deleteVoiceClip(st.clipId, owner.current ?? undefined).catch(() => undefined);
     sendState.current = null;
     setTake(null);
     setPhase("idle");
@@ -368,7 +370,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   async function waitReady(clipId: string): Promise<void> {
     for (let i = 0; i < 90; i++) {
-      const c = await api.getVoiceClip(clipId);
+      const c = await api.getVoiceClip(clipId, owner.current ?? undefined);
       if (c.status === "READY") return;
       if (c.status === "FAILED" || c.status === "REMOVED") throw new Error("CLIP_FAILED");
       await new Promise((r) => setTimeout(r, 1000));
@@ -420,7 +422,10 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     let st = sendState.current;
     if (!st || st.key !== take.key) st = sendState.current = { key: take.key };
     let stage: "create" | "upload" | "later" = "create";
+    const subject = owner.current ?? undefined;
     try {
+      // Someone else signed in in another tab: nothing of this recording goes out as them. It stays here and in the saved draft.
+      if (subject !== undefined && sessionSubject() !== subject) throw new WrongPersonError();
       if (!st.clipId) {
         const tok = tokenFor(tokens, take.seconds, freeSeconds, freeLeft);
         const up = await api.createVoiceClip({
@@ -428,25 +433,26 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           sizeBytes: take.blob.size,
           durationMs: Math.round(take.seconds * 1000),
           extraVoiceTokenId: tok?.id,
-        });
+        }, subject);
         st.clipId = up.clip.id;
         st.putUrl = up.putUrl;
         st.tokenId = tok?.id;
       }
       stage = "upload";
       if (!st.uploaded) {
+        if (subject !== undefined && sessionSubject() !== subject) throw new WrongPersonError();
         await putWithRetry({ url: st.putUrl as string, key: "", headers: {} }, take.blob, (f) => setSending({ step: "upload", pct: Math.round(f * 100) }));
         st.uploaded = true;
       }
       stage = "later";
       if (!st.completed) {
-        await api.completeVoiceClip(st.clipId);
+        await api.completeVoiceClip(st.clipId, subject);
         st.completed = true;
       }
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current, tagFields(tag));
+      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current, tagFields(tag), subject);
       writeAnonPref(qid, false);
       notePublished();
       await clearDraft();
@@ -457,8 +463,12 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     } catch (e) {
       releaseSend(take.key);
       setSending(null);
+      if (e instanceof WrongPersonError) {
+        pushNote({ tone: "danger", text: sessionSubject() === null ? "You are signed out in another tab. Nothing was sent. Reload to carry on." : "You are signed in as someone else in another tab. Nothing was sent. Reload to carry on." });
+        return;
+      }
       if (stage === "upload" && st.clipId) {
-        void api.deleteVoiceClip(st.clipId).catch(() => undefined);
+        void api.deleteVoiceClip(st.clipId, owner.current ?? undefined).catch(() => undefined);
         sendState.current = null;
       }
       if (e instanceof Error && e.message === "CLIP_FAILED") {

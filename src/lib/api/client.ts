@@ -76,6 +76,11 @@ export function tokenSubject(token: string | null): string | null {
   }
 }
 
+/** Who is signed in right now in this browser (the stored token's subject), or null when nobody is. */
+export function sessionSubject(): string | null {
+  return tokenSubject(sessionStorage.getToken());
+}
+
 export interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   /** Attach the signed-in bearer token (or `token`). Guests call without it. */

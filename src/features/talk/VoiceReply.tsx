@@ -51,7 +51,7 @@ export function VoiceReplySheet({ aid, qid, who, stance, allow, onClose, onPoste
           onSend={async (clip) => {
             if (!pick) return;
             setShort(false);
-            await api.createVoiceReply(aid, pick, clip.clipId, clip.key, clip.tokenId, ownNameless ? true : clip.anonymous);
+            await api.createVoiceReply(aid, pick, clip.clipId, clip.key, clip.tokenId, ownNameless ? true : clip.anonymous, clip.subject);
             onPosted();
           }}
           errorText={(e) => {

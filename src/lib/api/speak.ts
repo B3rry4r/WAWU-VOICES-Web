@@ -24,17 +24,18 @@ export const getPublicConfig = () => apiFetch<PublicConfig>("/config/public");
 export const getAllowance = () => apiFetch<Allowances>("/me/allowance", { authed: true });
 export const getTiers = () => apiFetch<TiersResponse>("/units/tiers", { authed: true });
 
-export const createVoiceClip = (b: { mime: S["CreateVoiceClipRequest"]["mime"]; sizeBytes: number; durationMs: number; extraVoiceTokenId?: string; purpose?: S["CreateVoiceClipRequest"]["purpose"] | "SURVEY_ANSWER" }) =>
-  apiFetch<VoiceUpload>("/voice-clips", { method: "POST", authed: true, body: { purpose: "ANSWER", ...b } });
-export const completeVoiceClip = (id: string) => apiFetch<VoiceClip>(`/voice-clips/${id}/complete`, { method: "POST", authed: true });
-export const getVoiceClip = (id: string) => apiFetch<VoiceClip>(`/voice-clips/${id}`, { authed: true });
-export const deleteVoiceClip = (id: string) => apiFetch<void>(`/voice-clips/${id}`, { method: "DELETE", authed: true });
+export const createVoiceClip = (b: { mime: S["CreateVoiceClipRequest"]["mime"]; sizeBytes: number; durationMs: number; extraVoiceTokenId?: string; purpose?: S["CreateVoiceClipRequest"]["purpose"] | "SURVEY_ANSWER" }, expectSubject?: string) =>
+  apiFetch<VoiceUpload>("/voice-clips", { method: "POST", authed: true, expectSubject, body: { purpose: "ANSWER", ...b } });
+export const completeVoiceClip = (id: string, expectSubject?: string) => apiFetch<VoiceClip>(`/voice-clips/${id}/complete`, { method: "POST", authed: true, expectSubject });
+export const getVoiceClip = (id: string, expectSubject?: string) => apiFetch<VoiceClip>(`/voice-clips/${id}`, { authed: true, expectSubject });
+export const deleteVoiceClip = (id: string, expectSubject?: string) => apiFetch<void>(`/voice-clips/${id}`, { method: "DELETE", authed: true, expectSubject });
 
 /** `news` is the tag the person picked (nothing is sent for "Not news"). */
-export const createVoiceAnswer = (questionId: string, clipId: string, key: string, extraVoiceTokenId?: string, mood?: S["Mood"] | null, anonymous = false, news?: Partial<S["CreateAnswerRequest"]> | null) =>
+export const createVoiceAnswer = (questionId: string, clipId: string, key: string, extraVoiceTokenId?: string, mood?: S["Mood"] | null, anonymous = false, news?: Partial<S["CreateAnswerRequest"]> | null, expectSubject?: string) =>
   apiFetch<PostReceipt>(`/questions/${questionId}/answers`, {
     method: "POST",
     authed: true,
+    expectSubject,
     idempotencyKey: key,
     body: { kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}), ...(mood ? { mood } : {}), ...(anonymous ? { anonymous: true } : {}), ...(news ?? {}) },
   });

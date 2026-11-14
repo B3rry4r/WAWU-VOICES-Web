@@ -4,7 +4,7 @@ import { needsNewKey } from "@/lib/api/keys";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Banner, Button, Icon } from "@/components/vx";
 import * as api from "@/lib/api/speak";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, WrongPersonError, sessionSubject } from "@/lib/api/client";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
@@ -28,7 +28,9 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
 };
 
 /** `anonymous` is the "Post without my name" switch as it stood when Send was tapped (always false when the box has no switch). */
-export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number; anonymous: boolean }
+export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number; anonymous: boolean;
+  /** The person this box was opened for. A post that carries this clip should go out only as them (expectSubject). Left out for a guest. */
+  subject?: string }
 
 /** What a box hands to `keep` when the person sends while offline: the take, and the Idempotency-Key and name switch it would have been sent with. */
 export interface KeepInput { blob: Blob; mime: string; seconds: number; peaks: number[]; key: string; anonymous: boolean }
@@ -71,6 +73,13 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   /** Shows "Post without my name" under the take. The choice is kept under this slot (anon-pref) and is read when Send runs. */
   anonSlot?: string;
 }) {
+  // The person this box was opened for. Every call that carries their recording goes out only with their sign-in (expectSubject),
+  // and the bytes are not uploaded if someone else is signed in by then.
+  const [owner] = useState<string | null>(() => sessionSubject());
+  const subject = owner ?? undefined;
+  const staleLine = () => (sessionSubject() === null ? "You are signed out in another tab. Nothing was sent. Reload to carry on." : "You are signed in as someone else in another tab. Nothing was sent. Reload to carry on.");
+  /** True when the recording may go out now: the caller's own check, and the sign-in is still the one this box opened with. */
+  const mayWrite = () => (!canWrite || canWrite()) && (owner === null || sessionSubject() === owner);
   const anonRef = useRef(false);
   const [anon, setAnon] = useState(false);
   useEffect(() => {
@@ -153,7 +162,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
 
   function drop() {
     const st = state.current;
-    if (st?.clipId) void api.deleteVoiceClip(st.clipId).catch(() => undefined);
+    if (st?.clipId) void api.deleteVoiceClip(st.clipId, subject).catch(() => undefined);
     state.current = null;
     setTake(null);
     setNote(null);
@@ -162,7 +171,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
 
   async function waitReady(clipId: string) {
     for (let i = 0; i < 90; i++) {
-      const c = await api.getVoiceClip(clipId);
+      const c = await api.getVoiceClip(clipId, subject);
       if (c.status === "READY") return;
       if (c.status === "FAILED" || c.status === "REMOVED") throw new Error("CLIP_FAILED");
       await new Promise((r) => setTimeout(r, 1000));
@@ -195,7 +204,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   async function send(holdOnly = false) {
     if (!take || sending || disabled) return;
     if (take.seconds > maxSeconds + 0.5) return;
-    if (canWrite && !canWrite()) return;
+    if (!mayWrite()) { if (!canWrite) setNote(staleLine()); return; }
     setNote(null);
     setReplaceOk(false);
     if (keep && typeof navigator !== "undefined" && navigator.onLine === false) { setSending({ step: "post" }); await tryKeep(take, false); return; }
@@ -212,50 +221,57 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
           sizeBytes: take.blob.size,
           durationMs: Math.round(take.seconds * 1000),
           extraVoiceTokenId: tok?.id,
-        });
+        }, subject);
         st.clipId = up.clip.id;
         st.putUrl = up.putUrl;
         st.tokenId = tok?.id;
       }
       stage = "upload";
       if (!st.uploaded) {
+        // Asked again right before the bytes go up: a refresh or a slow create may have outlasted the person's sign-in.
+        if (!mayWrite()) throw new Error("STALE_TAB");
         await putWithRetry({ url: st.putUrl as string, key: "", headers: {} }, take.blob, (f) => setSending({ step: "upload", pct: Math.round(f * 100) }));
         st.uploaded = true;
       }
       stage = "later";
       if (!st.completed) {
-        if (canWrite && !canWrite()) throw new Error("STALE_TAB");
-        await api.completeVoiceClip(st.clipId);
+        if (!mayWrite()) throw new Error("STALE_TAB");
+        await api.completeVoiceClip(st.clipId, subject);
         st.completed = true;
       }
       setSending({ step: "process" });
-      if (canWrite && !canWrite()) throw new Error("STALE_TAB");
+      if (!mayWrite()) throw new Error("STALE_TAB");
       await waitReady(st.clipId);
       if (holdOnly && onReady) {
         // Ready, and kept by the caller, but not posted.
         state.current = null;
         if (alive.current) setSending(null);
-        if (alive.current) onReady({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds, anonymous: false });
+        if (alive.current) onReady({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds, anonymous: false, subject });
         return;
       }
-      if (canWrite && !canWrite()) throw new Error("STALE_TAB");
+      if (!mayWrite()) throw new Error("STALE_TAB");
       setSending({ step: "post" });
       // The key belongs to the exact body: the same recording sent unnamed is a different request from the named one.
       const anonNow = !!anonSlot && anonRef.current;
-      await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: keyNow(take, anonNow), seconds: take.seconds, anonymous: anonNow });
+      await onSend({ clipId: st.clipId, tokenId: st.tokenId, key: keyNow(take, anonNow), seconds: take.seconds, anonymous: anonNow, subject });
       if (anonSlot) { anonRef.current = false; writeAnonPref(anonSlot, false); }
       state.current = null;
       if (alive.current) { setSending(null); setTake(null); setPhase("idle"); }
     } catch (e) {
       if (!alive.current) return;
       if (keep && ((e instanceof ApiError && e.status === 0) || (!(e instanceof ApiError) && typeof navigator !== "undefined" && navigator.onLine === false))) {
-        if (stage === "upload" && st.clipId) void api.deleteVoiceClip(st.clipId).catch(() => undefined);
+        if (stage === "upload" && st.clipId) void api.deleteVoiceClip(st.clipId, subject).catch(() => undefined);
         await tryKeep(take, false);
         return;
       }
       setSending(null);
-      if (e instanceof Error && e.message === "STALE_TAB") return; // another person is signed in: the screen shows the notice, nothing more is sent
-      if (stage === "upload" && st.clipId) { void api.deleteVoiceClip(st.clipId).catch(() => undefined); state.current = null; }
+      if ((e instanceof Error && e.message === "STALE_TAB") || e instanceof WrongPersonError) {
+        // Another person is signed in: nothing more is sent. The survey screen shows its own notice; the other boxes say it here. The take stays on the screen.
+        if (canWrite) canWrite();
+        else setNote(staleLine());
+        return;
+      }
+      if (stage === "upload" && st.clipId) { void api.deleteVoiceClip(st.clipId, subject).catch(() => undefined); state.current = null; }
       if (e instanceof Error && e.message === "CLIP_FAILED") { state.current = null; setNote("We could not process that recording. Record it again and send it."); return; }
       if (needsNewKey(e)) {
         // The server refused the key as spent: the same recording goes out under a new key (and a new clip). The recording is kept.

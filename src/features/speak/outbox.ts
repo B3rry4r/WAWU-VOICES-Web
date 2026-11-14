@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/api/client";
+import { ApiError, WrongPersonError, sessionSubject } from "@/lib/api/client";
 import { freshKey, needsNewKey } from "@/lib/api/keys";
 import * as api from "@/lib/api/speak";
 import { createVoiceReply } from "@/lib/api/talk";
@@ -52,9 +52,9 @@ export type SendResult =
   | { ok: true; answerId: null; questionId: string; byOtherTab: true }
   | { ok: false; reason: "busy" | "offline" | "needs_tokens" | "failed"; message?: string; draft?: Draft };
 
-async function waitReady(clipId: string): Promise<void> {
+async function waitReady(clipId: string, subject?: string): Promise<void> {
   for (let i = 0; i < 90; i++) {
-    const c = await api.getVoiceClip(clipId);
+    const c = await api.getVoiceClip(clipId, subject);
     if (c.status === "READY") return;
     if (c.status === "FAILED" || c.status === "REMOVED") throw new Error("CLIP_FAILED");
     await new Promise((r) => setTimeout(r, 1000));
@@ -67,6 +67,8 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
   if (!claimSend(d.key)) return { ok: false, reason: "busy" };
   let clipId: string | undefined;
   let uploaded = false;
+  // The recording goes out only as the person signed in when the send began.
+  const subject = sessionSubject() ?? undefined;
   try {
     const up = await api.createVoiceClip({
       mime: baseMime(d.mime) as "audio/webm" | "audio/mp4" | "audio/ogg",
@@ -74,12 +76,15 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
       durationMs: Math.round(d.seconds * 1000),
       extraVoiceTokenId: tokenId,
       ...(d.reply ? { purpose: "REPLY" as const } : {}),
-    });
+    }, subject);
     clipId = up.clip.id;
+    if (subject !== undefined && sessionSubject() !== subject) throw new WrongPersonError();
     await putWithRetry({ url: up.putUrl, key: "", headers: {} }, d.blob, () => undefined);
     uploaded = true;
-    await api.completeVoiceClip(clipId);
-    await waitReady(clipId);
+    await api.completeVoiceClip(clipId, subject);
+    await waitReady(clipId, subject);
+    // Asked again right before the post: a slow step above may have outlasted the sign-in.
+    if (subject !== undefined && sessionSubject() !== subject) throw new WrongPersonError();
     if (d.reply) {
       // The same reply it was made as: the parent answer, the stance, the name switch and the Idempotency-Key it was kept with.
       const rr = await createVoiceReply(d.reply.answerId, d.reply.stance, clipId, d.key, tokenId, !!d.anonymous);
@@ -88,7 +93,7 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
     const r = await api.createVoiceAnswer(d.questionId, clipId, d.key, tokenId, (d.mood as Mood | null | undefined) ?? null, !!d.anonymous);
     return { ok: true, answerId: r.answer.id, questionId: d.questionId };
   } catch (e) {
-    if (clipId && !uploaded) void api.deleteVoiceClip(clipId).catch(() => undefined);
+    if (clipId && !uploaded) void api.deleteVoiceClip(clipId, subject).catch(() => undefined);
     // The recording's key is dropped only when the server says it is spent (a 409 asking for a new key). A 500, 502, 504, 429 or a
     // network failure keeps it, so the retry is the same request and the server can hand the first post back.
     if (needsNewKey(e)) {
