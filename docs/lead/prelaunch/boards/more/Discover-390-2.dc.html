@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Discover, phone (scrolled)</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+.c-scroll{scrollbar-width:none}.c-scroll::-webkit-scrollbar{display:none}.c-scroll>*,.c-scroll>.sc-host-x>*{flex-shrink:0}.c-hs{scrollbar-width:none}.c-hs::-webkit-scrollbar{display:none}
+.c-tabbar .vx-bottombar{margin:0;border-radius:0;box-shadow:none;background:none}
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-direction: column;">
+<header style="flex: none; display: flex; align-items: center; gap: 8px; box-sizing: border-box; height: 107px; padding: 47px 12px 0 16px; background: var(--bg); box-shadow: 0 1px 0 var(--line); position: relative; z-index: 2;">
+<h1 style="flex: 1; margin: 0; font: 400 30px/34px var(--font-display);">Discover</h1>
+<a class="vx-iconbtn" href="../talk/Messages-390.dc.html" aria-label="Messages"><x-import component-from-global-scope="Voices.Icon" name="message-circle"></x-import></a>
+<x-import component-from-global-scope="Voices.IconButton" icon="bell" label="Notifications" dot="{{yes}}"></x-import>
+</header>
+<main class="c-scroll" style="flex: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 4px 16px 40px; display: flex; flex-direction: column; gap: 20px;">
+<section aria-labelledby="flash-h" style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; gap: 8px;">
+<h2 id="flash-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">Flash poll</h2>
+<x-import component-from-global-scope="Voices.Badge" tone="live"></x-import>
+</div>
+<x-import component-from-global-scope="Voices.Poll" question="How many hours of light did you get today?" options="{{flash}}" closes-in="2h"></x-import>
+</section>
+<x-import component-from-global-scope="Voices.TrendingList" items="{{trend}}"></x-import>
+</main>
+<div class="c-tabbar" style="flex: none; position: relative; z-index: 5; background: var(--surface); box-shadow: 0 -1px 0 var(--line); padding-bottom: 20px;">
+<x-import component-from-global-scope="Voices.BottomNav" active="discover"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n18: 18, n24: 24, n61: 61, n133: 133,
+      flash: [
+        { id: 'none', label: 'None at all', votes: 1840 },
+        { id: 'low', label: '1 to 6 hours', votes: 2310 },
+        { id: 'mid', label: '7 to 12 hours', votes: 960 },
+        { id: 'high', label: 'More than 12 hours', votes: 410 }
+      ],
+      trend: [
+        { question: 'Should failed transfers be refunded within one hour by law?', voices: 8200, category: 'Money' },
+        { question: 'Is a tithe a rule or a choice?', voices: 6100, category: 'Faith' },
+        { question: 'Should the minimum wage rise automatically with inflation?', voices: 4900, category: 'Work and pay' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

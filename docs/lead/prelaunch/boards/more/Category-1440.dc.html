@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Category: Money, desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+.vx-sidenav{border-right:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="min-height: 1100px; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-wrap: wrap; align-items: stretch;">
+<div style="flex: 0 0 248px; box-sizing: border-box; border-right: 1px solid var(--line);">
+<x-import component-from-global-scope="Voices.SideNav" active="discover" units="12.5" free-left="{{n7}}" style="height: 900px;"></x-import>
+</div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 0 32px 48px; display: flex; flex-direction: column; align-items: center;">
+<div style="width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 76px;">
+<x-import component-from-global-scope="Voices.SearchField" placeholder="Search questions, voices and handles" label="Search VOICES" shortcut="/" style="width: 100%;"></x-import>
+<button type="button" class="vx-country" aria-label="Country: Nigeria. Change country"><x-import component-from-global-scope="Voices.Icon" name="globe" size="{{n18}}"></x-import>Nigeria<x-import component-from-global-scope="Voices.Icon" name="chevron-down" size="{{n16}}"></x-import></button>
+<a class="vx-iconbtn" href="../talk/Messages-1440.dc.html" aria-label="Messages"><x-import component-from-global-scope="Voices.Icon" name="message-circle"></x-import></a>
+<x-import component-from-global-scope="Voices.IconButton" icon="bell" label="Notifications" dot="{{yes}}"></x-import>
+</div>
+<a href="Discover-1440.dc.html" style="display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 44px; font: 600 15px/20px var(--font-body); color: var(--ink-2); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="arrow-left" size="{{n18}}"></x-import>Discover</a>
+<section style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; padding: 28px; border-radius: var(--radius-xl); background: var(--tile-sun); color: var(--on-tile-sun);">
+<span style="width: 64px; height: 64px; flex: none; border-radius: 50%; background: var(--forest); color: var(--sun); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="coins" size="{{n28}}"></x-import></span>
+<div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 8px;">
+<h1 style="margin: 0; font: 400 36px/40px var(--font-display); letter-spacing: -0.01em;">Money</h1>
+<p style="margin: 0; font: 500 16px/24px var(--font-body);">Salary, prices, banks, the naira and the hustle in between.</p>
+<p style="margin: 0; font: 700 13px/18px var(--font-body);">38 questions · 12.4K voices this week</p>
+</div>
+<div style="display: flex; gap: 8px;">
+<x-import component-from-global-scope="Voices.TopicChip" label="Alerts on" icon="bell" selected="{{yes}}"></x-import>
+<x-import component-from-global-scope="Voices.IconButton" icon="share-2" label="Share the Money category" variant="solid"></x-import>
+</div>
+</section>
+<x-import component-from-global-scope="Voices.Tabs" items="{{tabs}}" default-value="open" label="Questions in Money"></x-import>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 12px;">
+<x-import component-from-global-scope="Voices.TopicTile" tone="forest" category="Today's question" question="When salary arrives, how many hours pass before it disappears?" voices="{{n12480}}"></x-import>
+<x-import component-from-global-scope="Voices.TopicTile" tone="sun" category="Poll open" question="Should failed transfers be refunded within one hour by law?" voices="{{n8200}}"></x-import>
+<x-import component-from-global-scope="Voices.TopicTile" tone="sun" category="Closes in 3 days" question="Who is getting rich from this inflation while you count coins?" voices="{{n6100}}"></x-import>
+<x-import component-from-global-scope="Voices.TopicTile" tone="sun" category="Closes in 4 days" question="You were debited, the transfer failed and nobody can tell you where your money is. What do you do?" voices="{{n3400}}"></x-import>
+</div>
+<section aria-labelledby="top-h" style="display: flex; flex-direction: column; gap: 12px;">
+<h2 id="top-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">Top voices in Money this week</h2>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{tunde}}" time="2h" place="Ibadan" voice="{{v1}}" likes="{{n1284}}" replies="{{n86}}" reactions="{{r1}}" label="Most Relatable"></x-import>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{ada}}" time="3h" place="Lagos" text="Salary lands at 9am. By 11am rent contribution, my mother's upkeep and generator fuel have taken their share. What is left is for transport and prayer." likes="{{n642}}" replies="{{n41}}" reactions="{{r2}}" label="Most Debated"></x-import>
+</section>
+</div>
+</main>
+<aside aria-label="This week" style="flex: 1 1 340px; max-width: 340px; box-sizing: border-box; padding: 24px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 16px;">
+<x-import component-from-global-scope="Voices.TopicOfWeek" variant="rail" title="Are You Really Fine? You Dey Okay?" meta="Week 1 · 10 questions · Poll open"></x-import>
+<x-import component-from-global-scope="Voices.TrendingList" title="Trending in Money" items="{{trend}}"></x-import>
+<x-import component-from-global-scope="Voices.AdSlot" brand="Zobo Fresh" headline="Cold zobo, delivered in 30 minutes" body="Lagos Island and Lekki only." cta="Order now"></x-import>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1455}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n7: 7, n16: 16, n18: 18, n28: 28, n41: 41, n86: 86, n642: 642, n1284: 1284,
+      n12480: 12480, n8200: 8200, n6100: 6100, n3400: 3400,
+      tabs: [{ id: 'open', label: 'Open', count: 6 }, { id: 'closed', label: 'Closed', count: 32 }, { id: 'polls', label: 'Polls', count: 4 }],
+      tunde: { handle: '@tunde.a', name: 'Tunde Adewale' },
+      ada: { handle: '@funmi.o', name: 'Funmi Ogunleye' },
+      v1: { duration: 9, seed: 4, transcript: 'Two hours. I counted. Rent contribution, my mother, then the generator man is already at the gate.' },
+      r1: { top: ['💯', '😢', '🔥'], total: 2310 },
+      r2: { top: ['❤️', '😂'], total: 905 },
+      trend: [
+        { question: 'Should failed transfers be refunded within one hour by law?', voices: 8200 },
+        { question: 'Who is getting rich from this inflation while you count coins?', voices: 6100 },
+        { question: 'The naira falls and suddenly everything you own is worth less. How did you find out?', voices: 2900 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

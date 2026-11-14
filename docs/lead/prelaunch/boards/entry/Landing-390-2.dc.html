@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Landing, scrolled</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+.c-tabbar .vx-bottombar{margin:0;border-radius:0;box-shadow:none;background:none}
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); font-family: var(--font-body);">
+<header style="flex: none; box-sizing: border-box; height: 107px; padding: 47px 16px 0; display: flex; align-items: center; gap: 8px; background: var(--bg); position: relative; z-index: 50; box-shadow: 0 1px 0 var(--line);">
+<div style="margin-right: auto; display: flex;"><x-import component-from-global-scope="Voices.Logo" height="{{h34}}" alt="VOICES home"></x-import></div>
+<button type="button" class="vx-country" aria-label="Country: Nigeria. Change country"><x-import component-from-global-scope="Voices.Icon" name="globe" size="{{s18}}"></x-import>Nigeria<x-import component-from-global-scope="Voices.Icon" name="chevron-down" size="{{s16}}"></x-import></button>
+</header>
+<main style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain;">
+<div style="box-sizing: border-box; padding: 4px 16px 24px; display: flex; flex-direction: column; gap: 16px;">
+<div style="margin-top: -205px;"><x-import component-from-global-scope="Voices.AnswerCard" author="{{a1}}" time="2h" place="Ibadan" voice="{{v1}}" likes="{{n1284}}" replies="{{n86}}" reactions="{{r1}}" label="Most Relatable"></x-import></div>
+<section aria-labelledby="h-how" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+<h2 id="h-how" style="margin: 0; font: 400 24px/28px var(--font-display);">Every topic, four steps. Join at any one.</h2>
+<ol class="vx-notes" style="list-style: none; margin: 0; padding: 0;">
+<li class="vx-note" style="align-items: flex-start; cursor: default; padding: 14px 16px;"><span style="flex: none; width: 44px; height: 44px; border-radius: 14px; background: var(--green); color: var(--on-green); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="mic" size="{{s22}}"></x-import></span><span style="display: flex; flex-direction: column; gap: 2px;"><b style="font: 400 20px/24px var(--font-display);">Speak</b><span style="font: 400 15px/22px var(--font-body); color: var(--ink-2);">Record up to 10 seconds or write up to 500 characters.</span></span></li>
+<li class="vx-note" style="align-items: flex-start; cursor: default; padding: 14px 16px;"><span style="flex: none; width: 44px; height: 44px; border-radius: 14px; background: var(--mint); color: var(--green-text); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="messages-square" size="{{s22}}"></x-import></span><span style="display: flex; flex-direction: column; gap: 2px;"><b style="font: 400 20px/24px var(--font-display);">Discuss</b><span style="font: 400 15px/22px var(--font-body); color: var(--ink-2);">Reply, and say if you agree, disagree or have lived it too.</span></span></li>
+<li class="vx-note" style="align-items: flex-start; cursor: default; padding: 14px 16px;"><span style="flex: none; width: 44px; height: 44px; border-radius: 14px; background: var(--mint); color: var(--green-text); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="vote" size="{{s22}}"></x-import></span><span style="display: flex; flex-direction: column; gap: 2px;"><b style="font: 400 20px/24px var(--font-display);">Vote</b><span style="font: 400 15px/22px var(--font-body); color: var(--ink-2);">One vote per account. Nobody can buy extra votes.</span></span></li>
+<li class="vx-note" style="align-items: flex-start; cursor: default; padding: 14px 16px;"><span style="flex: none; width: 44px; height: 44px; border-radius: 14px; background: var(--mint); color: var(--green-text); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="lightbulb" size="{{s22}}"></x-import></span><span style="display: flex; flex-direction: column; gap: 2px;"><b style="font: 400 20px/24px var(--font-display);">What Next?</b><span style="font: 400 15px/22px var(--font-body); color: var(--ink-2);">Suggest what should change. Every idea is labelled Proposed.</span></span></li>
+</ol>
+</section>
+<section aria-labelledby="h-free" style="position: relative; overflow: hidden; border-radius: 28px; background: var(--forest); color: var(--on-forest); padding: 28px 24px; display: flex; flex-direction: column; gap: 14px;">
+<img src="/_blob/8e3517e5f4c802861cc828716d8df7c2" alt="" aria-hidden="true" style="position: absolute; right: -70px; bottom: -90px; width: 260px; opacity: 0.08; pointer-events: none;">
+<span class="vx-eyebrow" style="color: var(--sun); position: relative;">Fair from the first tap</span>
+<h2 id="h-free" style="margin: 0; font: 400 30px/34px var(--font-display); position: relative;">Your first 10 posts are free.</h2>
+<p style="margin: 0; font: 400 16px/24px var(--font-body); color: var(--on-forest-2); position: relative;">After that, posting uses Voice Units from ₦138. Every price shows before you tap. Ads are always labelled, and your raw audio is never downloadable.</p>
+</section>
+</div>
+</main>
+<div style="flex: none; box-sizing: border-box; padding: 12px 16px 24px; background: var(--surface); box-shadow: 0 -1px 0 var(--line); display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 50;">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 10px;">
+<x-import component-from-global-scope="Voices.Button" size="l" variant="secondary" block="{{yes}}" href="SignIn-390.dc.html">Sign in</x-import>
+<x-import component-from-global-scope="Voices.Button" size="l" icon="mic" block="{{yes}}" href="Onboarding-390.dc.html">Join VOICES</x-import>
+</div>
+<p style="margin: 0; text-align: center; font: 500 12px/16px var(--font-body); color: var(--ink-2);">When you join you accept the <a href="../more/Rules-390.dc.html">Community rules</a> and <a href="../more/Rules-390.dc.html">Terms</a>.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+yes: true, no: false, h28: 28, h30: 30, h34: 34, s14: 14, s16: 16, s18: 18, s20: 20, s22: 22, s24: 24, s28: 28,
+heroVoices: 12480,
+heroAvatars: ['Ada Okafor', 'Tunde Adewale', 'Kemi Bello'],
+a1: { handle: '@tunde.a', name: 'Tunde Adewale' },
+v1: { duration: 9, seed: 4, transcript: 'Two hours. I counted. Rent contribution first, then my mother, then the generator man is already at the gate.' },
+r1: { top: ['💯', '😢', '🔥'], total: 2310 },
+n1284: 1284, n86: 86
+};
+}
+}
+</script>
+</body>
+</html>

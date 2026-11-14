@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Welcome, desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="min-height: 1100px; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--font-body); padding: 24px 32px 64px; display: flex; flex-direction: column; align-items: center; gap: 48px;">
+<header style="width: 100%; max-width: 1120px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+<x-import component-from-global-scope="Voices.Logo" height="{{h44}}" alt="VOICES home"></x-import>
+<a href="Country-1440.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; font: 600 15px/20px var(--font-body); text-decoration: none;">Skip</a>
+</header>
+<section aria-labelledby="h-welcome" style="margin: auto 0; width: 100%; max-width: 1120px; box-sizing: border-box; border-radius: 28px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; display: flex; flex-wrap: wrap;">
+<div style="flex: 1 1 440px; position: relative; overflow: hidden; background: var(--forest); color: var(--on-forest); padding: 48px 44px; box-sizing: border-box; min-height: 560px; display: flex; flex-direction: column; justify-content: center; gap: 22px;">
+<img src="/_blob/8e3517e5f4c802861cc828716d8df7c2" alt="" aria-hidden="true" style="position: absolute; right: -100px; bottom: -130px; width: 420px; opacity: 0.08; pointer-events: none;">
+<span style="align-self: flex-start; display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 10px; background: var(--green); color: var(--on-green); transform: rotate(-2deg); font: 700 12px/16px var(--font-body); letter-spacing: 0.1em; text-transform: uppercase;">Today's question</span>
+<p style="margin: 0; font: 400 40px/44px var(--font-display); max-width: 15ch; position: relative;">When salary arrives, how many hours pass before it disappears?</p>
+<x-import component-from-global-scope="Voices.VoicePlayer" duration="{{d9}}" seed="{{seed4}}" tone="forest" progress="{{p35}}"></x-import>
+<span style="font: 600 14px/18px var(--font-body); color: var(--on-forest-2); position: relative;">12,480 voices so far · Closes in 9h</span>
+</div>
+<div style="flex: 1 1 440px; box-sizing: border-box; padding: 48px 44px; display: flex; flex-direction: column; gap: 28px;">
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<span class="vx-eyebrow" style="color: var(--green-text);">Welcome</span>
+<h1 id="h-welcome" style="margin: 0; font: 400 44px/48px var(--font-display);">Nigeria's national conversation</h1>
+</div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px;">
+<li style="display: flex; gap: 16px; align-items: flex-start;">
+<span style="flex: none; width: 48px; height: 48px; border-radius: 14px; background: var(--mint); color: var(--green-text); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="mic" size="{{s24}}"></x-import></span>
+<span style="display: flex; flex-direction: column; gap: 2px;"><b style="font: 700 18px/24px var(--font-body);">One question a day</b><span style="font: 400 16px/24px var(--font-body); color: var(--ink-2);">Speak for 10 seconds or write a few lines.</span></span>
+</li>
+<li style="display: flex; gap: 16px; align-items: flex-start;">
+<span style="flex: none; width: 48px; height: 48px; border-radius: 14px; background: var(--mint); color: var(--green-text); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="headphones" size="{{s24}}"></x-import></span>
+<span style="display: flex; flex-direction: column; gap: 2px;"><b style="font: 700 18px/24px var(--font-body);">Hear the country</b><span style="font: 400 16px/24px var(--font-body); color: var(--ink-2);">Listen, react and vote in open polls. Listening is always free.</span></span>
+</li>
+<li style="display: flex; gap: 16px; align-items: flex-start;">
+<span style="flex: none; width: 48px; height: 48px; border-radius: 14px; background: var(--mint); color: var(--green-text); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="coins" size="{{s24}}"></x-import></span>
+<span style="display: flex; flex-direction: column; gap: 2px;"><b style="font: 700 18px/24px var(--font-body);">10 free posts to start</b><span style="font: 400 16px/24px var(--font-body); color: var(--ink-2);">Then Voice Units from ₦138. Every price shows before you tap.</span></span>
+</li>
+</ul>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: auto;">
+<x-import component-from-global-scope="Voices.Button" size="l" icon="mic" href="Country-1440.dc.html">Get started</x-import>
+<x-import component-from-global-scope="Voices.Button" size="l" variant="secondary" href="SignIn-1440.dc.html">I have an account</x-import>
+</div>
+<p style="margin: 0; font: 500 13px/18px var(--font-body); color: var(--ink-2);">VOICES is for adults (18+). By continuing you accept the <a href="../more/Rules-1440.dc.html">Community rules</a>.</p>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() {
+return { h44: 44, s24: 24, d9: 9, seed4: 4, p35: 0.35 };
+}
+}
+</script>
+</body>
+</html>

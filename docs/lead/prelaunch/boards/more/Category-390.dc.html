@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Category: Money, phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+.c-scroll{scrollbar-width:none}.c-scroll::-webkit-scrollbar{display:none}.c-scroll>*,.c-scroll>.sc-host-x>*{flex-shrink:0}.c-hs{scrollbar-width:none}.c-hs::-webkit-scrollbar{display:none}
+.c-tabbar .vx-bottombar{margin:0;border-radius:0;box-shadow:none;background:none}
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-direction: column;">
+<header style="flex: none; display: flex; align-items: center; gap: 4px; box-sizing: border-box; height: 103px; padding: 47px 8px 0; background: var(--bg);">
+<x-import component-from-global-scope="Voices.IconButton" icon="arrow-left" label="Back to Discover"></x-import>
+<span style="flex: 1; font: 700 16px/20px var(--font-body); color: var(--ink-2);">Discover</span>
+<x-import component-from-global-scope="Voices.IconButton" icon="share-2" label="Share the Money category"></x-import>
+</header>
+<main class="c-scroll" style="flex: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 4px 16px 40px; display: flex; flex-direction: column; gap: 20px;">
+<section style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: var(--radius-xl); background: var(--tile-sun); color: var(--on-tile-sun);">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<span style="width: 48px; height: 48px; border-radius: 50%; background: var(--forest); color: var(--sun); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="coins"></x-import></span>
+<x-import component-from-global-scope="Voices.TopicChip" label="Alerts on" icon="bell" selected="{{yes}}"></x-import>
+</div>
+<h1 style="margin: 0; font: 400 28px/32px var(--font-display);">Money</h1>
+<p style="margin: 0; font: 500 16px/24px var(--font-body);">Salary, prices, banks, the naira and the hustle in between.</p>
+<p style="margin: 0; font: 700 13px/18px var(--font-body);">38 questions · 12.4K voices this week</p>
+</section>
+<x-import component-from-global-scope="Voices.Tabs" items="{{tabs}}" default-value="open" label="Questions in Money"></x-import>
+<section aria-label="Open questions in Money" style="display: flex; flex-direction: column; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden;">
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 16px; color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line);"><span style="flex: 1; display: flex; flex-direction: column; gap: 6px;"><span style="display: flex; gap: 6px; flex-wrap: wrap;"><x-import component-from-global-scope="Voices.Badge" tone="green" icon="mic">Today's question</x-import></span><span style="font: 400 18px/23px var(--font-display);">When salary arrives, how many hours pass before it disappears?</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">12.5K voices · Closes in 9h</span></span><x-import component-from-global-scope="Voices.Icon" name="chevron-right" size="{{n20}}"></x-import></a>
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 16px; color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line);"><span style="flex: 1; display: flex; flex-direction: column; gap: 6px;"><span style="font: 400 18px/23px var(--font-display);">Should failed transfers be refunded within one hour by law?</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">8,200 voices · Poll open · Closes in 2 days</span></span><x-import component-from-global-scope="Voices.Icon" name="chevron-right" size="{{n20}}"></x-import></a>
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 16px; color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line);"><span style="flex: 1; display: flex; flex-direction: column; gap: 6px;"><span style="font: 400 18px/23px var(--font-display);">Who is getting rich from this inflation while you count coins?</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">6,100 voices · Closes in 3 days</span></span><x-import component-from-global-scope="Voices.Icon" name="chevron-right" size="{{n20}}"></x-import></a>
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 16px; color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line);"><span style="flex: 1; display: flex; flex-direction: column; gap: 6px;"><span style="font: 400 18px/23px var(--font-display);">You were debited, the transfer failed and nobody can tell you where your money is. What do you do?</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">3,400 voices · Closes in 4 days</span></span><x-import component-from-global-scope="Voices.Icon" name="chevron-right" size="{{n20}}"></x-import></a>
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 16px; color: var(--ink); text-decoration: none;"><span style="flex: 1; display: flex; flex-direction: column; gap: 6px;"><span style="font: 400 18px/23px var(--font-display);">How many hustles are you running just to cover what one salary used to cover?</span><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">2,100 voices · Closes in 5 days</span></span><x-import component-from-global-scope="Voices.Icon" name="chevron-right" size="{{n20}}"></x-import></a>
+</section>
+<section aria-labelledby="top-h" style="display: flex; flex-direction: column; gap: 12px;">
+<h2 id="top-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">Top voice in Money this week</h2>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{tunde}}" time="2h" place="Ibadan" voice="{{v1}}" likes="{{n1284}}" replies="{{n86}}" reactions="{{r1}}" label="Most Relatable"></x-import>
+</section>
+</main>
+<div class="c-tabbar" style="flex: none; position: relative; z-index: 5; background: var(--surface); box-shadow: 0 -1px 0 var(--line); padding-bottom: 20px;">
+<x-import component-from-global-scope="Voices.BottomNav" active="discover"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n20: 20, n86: 86, n1284: 1284,
+      tabs: [{ id: 'open', label: 'Open', count: 6 }, { id: 'closed', label: 'Closed', count: 32 }, { id: 'polls', label: 'Polls', count: 4 }],
+      tunde: { handle: '@tunde.a', name: 'Tunde Adewale' },
+      v1: { duration: 9, seed: 4, transcript: 'Two hours. I counted. Rent contribution, my mother, then the generator man is already at the gate.' },
+      r1: { top: ['💯', '😢', '🔥'], total: 2310 }
+    };
+  }
+}
+</script>
+</body>
+</html>
