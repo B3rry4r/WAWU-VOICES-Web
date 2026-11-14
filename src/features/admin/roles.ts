@@ -1,6 +1,6 @@
 import type { Role } from "@/lib/api/admin";
 
-export type AdminPageId = "today" | "override" | "calendar" | "pool" | "news" | "results" | "ads" | "weekly" | "moderation";
+export type AdminPageId = "today" | "override" | "calendar" | "pool" | "news" | "results" | "ads" | "weekly" | "moderation" | "surveys" | "brands";
 
 /** Who may open each admin page: the roles the API's operations for that page accept (docs/contract/openapi.yaml, x-wawu-roles). */
 export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
@@ -13,6 +13,8 @@ export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
   weekly: ["EDITOR", "ADMIN"],
   moderation: ["MODERATOR", "ADMIN"],
   ads: ["AD_MANAGER", "ADMIN"],
+  surveys: ["AD_MANAGER", "ADMIN"],
+  brands: ["AD_MANAGER", "ADMIN"],
 };
 
 export function canOpen(roles: readonly Role[], page: AdminPageId): boolean {
@@ -42,6 +44,8 @@ export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: 
   { id: "news", label: "News tags", href: "/admin/news", icon: "shield-check" },
   { id: "results", label: "Posted results", href: "/admin/results", icon: "circle-check" },
   { id: "ads", label: "Adverts", href: "/admin/ads", icon: "megaphone" },
+  { id: "surveys", label: "Sponsored Surveys", href: "/admin/surveys", icon: "vote" },
+  { id: "brands", label: "Brands", href: "/admin/brands", icon: "badge-check" },
   { id: "weekly", label: "Weekly report", href: "/admin/weekly", icon: "chart-column" },
   { id: "moderation", label: "Moderation", href: "/admin/moderation", icon: "shield-alert" },
 ];
