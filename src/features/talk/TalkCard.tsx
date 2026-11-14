@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, ReactionKind } from "@/lib/api/talk";
 import { MoodChip } from "@/features/mood/MoodChip";
+import { DeleteDialog, EditSheet } from "./OwnPost";
 import { failText, isOutOfPosts, outOfPostsHref, unitsText, useClipPlayback, uuidKey } from "./lib";
 
 /** The 402 on a reaction: the price and balance come from the server's details, never from this file. */
@@ -63,6 +64,8 @@ interface Props {
   className?: string;
   /** Called after a change the parent may want (reaction or like totals). */
   onChange?: (a: Answer) => void;
+  /** Called after I delete my own voice, so the page can leave it. */
+  onDeleted?: (id: string) => void;
 }
 
 /** People blocked in this tab (WF-7b): their cards leave every list at once, and Undo brings them back. A reload reads the server's own list. */
@@ -85,10 +88,13 @@ function useBlockedHere(id: string | undefined): boolean {
 
 /** The design system card wired to the real API. The card is controlled (liked, likeCount, reaction, reactionCounts, trayOpen, playing):
  *  it shows what the server last said, a tap is sent through onLike / onReact / onReply / onShare / onMore, and a refusal puts the props back. */
-export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, className, onChange }: Props) {
+export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, threadHref, unfolded, compact, className, onChange, onDeleted }: Props) {
   const router = useRouter();
   const [a, setA] = useState(answer);
   const [more, setMore] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [gone, setGone] = useState(false);
   const [tray, setTray] = useState(false);
   // lead ruling WF, 6 Nov (held): Escape closes the reaction tray.
   useEffect(() => {
@@ -171,7 +177,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
   const counts: Record<string, number> = {};
   for (const r of a.reactionBreakdown) { const n = nameOf(r.kind); if (n) counts[n] = r.count; }
   const handle = a.author?.handle;
-  if (authorBlocked) return null;
+  if (authorBlocked || gone) return null;
   const cardEl = (
       <AnswerCard
         key={clip.rev}
@@ -205,10 +211,29 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
       {/* LCH-02: the word sits above the card, as the MoodAnswers board draws it. */}
       {a.mood ? <div className="grid gap-[6px]"><MoodChip mood={a.mood} />{cardEl}</div> : cardEl}
       {shareNode}
+      {editing ? <EditSheet answer={a} onClose={() => setEditing(false)} onSaved={(n) => { upd(n); setEditing(false); push("Your post is updated.", "success"); }} /> : null}
+      {deleting ? (
+        <DeleteDialog
+          noun="voice"
+          onClose={() => setDeleting(false)}
+          onConfirm={async () => {
+            try { await api.deleteAnswer(a.id); } catch (e) { push(failText(e), "danger"); setDeleting(false); return; }
+            setDeleting(false);
+            setGone(true);
+            push("Your post is deleted.", "success");
+            onDeleted?.(a.id);
+          }}
+        />
+      ) : null}
       {more ? (
         <Sheet title="This voice" onClose={() => setMore(false)}>
           <div className="grid gap-2 pb-2">
-            <Button variant="secondary" size="l" block icon="flag" href={`/report/ANSWER/${a.id}`}>Report this voice</Button>
+            {a.isMine ? (
+              <>
+                {a.kind === "TEXT" ? <Button variant="secondary" size="l" block icon="message-square" onClick={() => { setMore(false); setEditing(true); }}>Edit this post</Button> : null}
+                <Button variant="secondary" size="l" block icon="trash-2" onClick={() => { setMore(false); setDeleting(true); }}>Delete this post</Button>
+              </>
+            ) : <Button variant="secondary" size="l" block icon="flag" href={`/report/ANSWER/${a.id}`}>Report this voice</Button>}
             <Button variant="secondary" size="l" block icon="link" onClick={() => { setMore(false); share("ANSWER", a.id); }}>Copy link</Button>
             {handle && !a.isMine ? (
               <Button

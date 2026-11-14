@@ -96,5 +96,5 @@ export function FriendsScreen() {
 
 /** This screen does not know the person's own word, so its WhatsApp message is the plain invitation. */
 function inviteMessageNoWord(link: string): string {
-  return `How do you feel about Nigeria?\n\nAdd your voice in 10 seconds: ${link}`;
+  return `How do you feel about Nigeria?\n\nAdd your voice in a minute or less: ${link}`;
 }

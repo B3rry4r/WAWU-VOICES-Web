@@ -1,4 +1,5 @@
 "use client";
+import { VerifiedTick } from "@/features/verify/VerifiedTick";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -104,7 +105,7 @@ function Results({ q, tab, setTab, r }: { q: string; tab: Tab; setTab: (t: Tab) 
                 <>
                   <Avatar name={p.displayName ?? p.handle} />
                   <span className="flex flex-1 flex-col">
-                    <b className="text-title">{`@${p.handle}`}</b>
+                    <b className="text-title">{`@${p.handle}`}<VerifiedTick verified={p.verified} /></b>
                     <span className="text-caption text-[var(--ink-2)]">{[p.state, voicesShort(voicesOf(p))].filter(Boolean).join(" · ")}</span>
                   </span>
                   <Icon name="chevron-right" size={20} />

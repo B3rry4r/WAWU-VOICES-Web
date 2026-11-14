@@ -131,8 +131,8 @@ export function RecordingTimeCard({ freeLeft, total, freeSeconds, offers }: { fr
       <h2 className="sp-card__h">Your recording time</h2>
       <div className="sp-card__free"><FreePosts left={freeLeft} total={total} /></div>
       <dl className="sp-card__rows">
-        <div><dt>Free post</dt><dd>{freeSeconds} seconds</dd></div>
-        {[...offers].sort((a, b) => a.maxSeconds - b.maxSeconds).map((o) => (
+        <div><dt>Free post</dt><dd>{freeSeconds === 60 ? "Up to a minute" : `${freeSeconds} seconds`}</dd></div>
+        {freeLeft > 0 ? null : [...offers].sort((a, b) => a.maxSeconds - b.maxSeconds).map((o) => (
           <div key={o.kind}><dt>{`Voice, up to ${durationLabel(o.maxSeconds)}`}</dt><dd>{`${tokensLabel(o.priceKobo * 10)} tokens`}</dd></div>
         ))}
       </dl>

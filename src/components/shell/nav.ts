@@ -59,6 +59,7 @@ const ACTIVE_BY_PREFIX: [string, NavId][] = [
   ["/units", "profile"],
   ["/wallet", "profile"],
   ["/settings", "profile"],
+  ["/verify", "profile"],
   ["/news", "discover"],
   ["/weekly", "discover"],
   ["/search", "discover"],

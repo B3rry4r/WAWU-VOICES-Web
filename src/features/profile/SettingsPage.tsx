@@ -217,6 +217,12 @@ function SettingsBody({ me }: { me: Me }) {
         </div>
       </Section>
 
+      <Section id="v-h" title="Verification">
+        <div className="pf-card">
+          <Link href="/verify" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Get verified</b><span>Send your ID and a utility bill. A tick shows beside your name.</span></span><Icon name="chevron-right" size={20} /></Link>
+        </div>
+      </Section>
+
       <Section id="ad-h" title="Ads and privacy">
         <div className="pf-card">
           <Switch label="Let people message me" detail="Turn this off and nobody new can send you a message. Messages you already have stay." checked={s.dmOpen} onChange={(v) => patch({ dmOpen: v })} />
@@ -227,6 +233,7 @@ function SettingsBody({ me }: { me: Me }) {
 
       <Section id="l-h" title="Help and legal">
         <div className="pf-card">
+          <Link href="/settings/help" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Help and contact</b></span><Icon name="chevron-right" size={20} /></Link>
           <Link href="/settings/legal/rules" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Community rules</b></span><Icon name="chevron-right" size={20} /></Link>
           <Link href="/settings/legal/terms" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Terms of use</b></span><Icon name="chevron-right" size={20} /></Link>
           <Link href="/settings/legal/privacy" className="pf-row-item pf-row-item--btn"><span className="pf-row-item__txt"><b>Privacy notice</b></span><Icon name="chevron-right" size={20} /></Link>
