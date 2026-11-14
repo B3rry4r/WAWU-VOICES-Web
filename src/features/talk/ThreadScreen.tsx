@@ -84,7 +84,7 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
 
   const [voiceOpen, setVoiceOpen] = useState(false);
   async function del(r: Reply) {
-    try { await api.deleteReply(r.id); setItems((c) => c.filter((x) => x.id !== r.id)); push("Reply deleted.", "success"); void load(); } catch (e) { push(failText(e), "danger"); throw e; }
+    try { await api.deleteReply(r.id); setItems((c) => c.filter((x) => x.id !== r.id)); push("Reply deleted.", "success"); void load(); } catch (e) { push(failText(e), "danger"); }
   }
 
   if (a.state === "loading") return <><AppBar title="Replies" back={`/q/${qid}`} /><div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="answer" /><Skeleton variant="answer" /></div></>;

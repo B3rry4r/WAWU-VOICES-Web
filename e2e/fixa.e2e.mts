@@ -96,6 +96,10 @@ try {
       await page.getByRole('button', { name: 'Delete voice' }).click();
       await page.getByText('Your post is deleted.').waitFor();
       assert.equal(find(calls, 'DELETE', '/answers/a1').length, 1);
+      const body = await page.locator('main').innerText();
+      assert.ok(!/\b1 voices?\b/.test(body) && !/View 1 repl/.test(body), 'a count still includes the deleted post: ' + body.slice(0, 400));
+      assert.ok(/0 voices/.test(body), 'count should read 0 voices');
+      await shot(page, `after-delete-${w}`);
       await ctx.close();
     });
   }

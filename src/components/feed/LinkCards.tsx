@@ -37,7 +37,7 @@ export function LiveResultsLink({ className }: { className?: string }) {
       <Icon name="radio" size={24} />
       <span className="flex min-w-0 flex-1 flex-col gap-[2px]">
         <b className="font-display text-display-s">Live results</b>
-        <span className="truncate text-caption text-[var(--ink-2)]">{`${t.title}. See the numbers people post, or post yours.`}</span>
+        <span className="text-caption text-[var(--ink-2)]">{`${t.title}. See the numbers people post, or post yours.`}</span>
       </span>
       <Icon name="chevron-right" size={20} />
     </Link>
