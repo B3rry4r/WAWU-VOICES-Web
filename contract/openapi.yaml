@@ -6885,7 +6885,7 @@ paths:
         characters and voice at most dm.voice_max_seconds (60). Free posts do not apply. A direct message has its own cap, dm.messages_per_day
         (100 by default, 429 DAILY_LIMIT_REACHED), and does not count toward the 20 posts a day. Charged only when the message is stored: a refused
         or failed send costs nothing, and a repeat with the same Idempotency-Key returns the first result and charges once. Auth: signed in with
-        a finished profile. Rate limit: 20 posts per 10 minutes per account.'
+        a finished profile. Rate limit: 30 a minute per account (config ratelimit.dm_per_min).'
       parameters:
       - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -7602,9 +7602,7 @@ components:
       - INTERNAL
       - subscription_required
       - verification_required
-      - blocked
-      - dm_closed
-      - recipient_unavailable
+      - dm_unavailable
     Error:
       type: object
       properties:

@@ -136,7 +136,12 @@ function Composer({ costs, canType, onSend }: { costs: DmCosts | null; canType: 
     setBusy(true); setFail(null);
     const r = take ? await onSend({ kind: "VOICE", take }) : await onSend({ kind: "TEXT", body: text.trim() });
     setBusy(false);
-    if (r) { setFail(r); setTimeout(() => field.current?.focus(), 0); return; }
+    if (r) {
+      setFail(r);
+      // The banner grows the composer: keep the newest message in view above it.
+      setTimeout(() => { field.current?.focus(); document.querySelector(".dm-end")?.scrollIntoView?.({ block: "end" }); }, 0);
+      return;
+    }
     setText(""); setTake(null);
     setTimeout(() => field.current?.focus(), 0);
   }
@@ -146,7 +151,7 @@ function Composer({ costs, canType, onSend }: { costs: DmCosts | null; canType: 
   return (
     <div className="dm-compose">
       {fail ? (
-        <Banner tone="danger" title={fail.text} action="Retry" actionIcon="refresh-cw" onAction={() => void submit()}>
+        <Banner tone="danger" title={fail.text} action={fail.retry ? "Retry" : undefined} actionIcon="refresh-cw" onAction={fail.retry ? () => void submit() : undefined}>
           {fail.plans ? <Link href={PLANS_HREF} className="link">See how to get verified</Link> : null}
           {fail.buy ? <Link href={`${PLANS_HREF}?from=${encodeURIComponent("/messages")}`} className="link">Get tokens</Link> : null}
         </Banner>
@@ -205,6 +210,7 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
   const endRef = useRef<HTMLDivElement | null>(null);
   const moreBtn = useRef<HTMLButtonElement | null>(null);
   const menuEl = useRef<HTMLDivElement | null>(null);
+  const keep = useRef<{ h: number; y: number } | null>(null);
   const toEnd = useRef(true); // land on the newest message when the chat opens, and after my own send
 
   const pull = useCallback(async (id: string) => {
@@ -261,6 +267,12 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
   // The newest message is at the bottom. Open there, and go there after my own send; a message that arrives while I read
   // older ones does not pull the page away.
   useLayoutEffect(() => {
+    if (keep.current) {
+      const k = keep.current;
+      keep.current = null;
+      window.scrollTo?.(0, k.y + (document.documentElement.scrollHeight - k.h));
+      return;
+    }
     if (!ready || !toEnd.current) return;
     toEnd.current = false;
     endRef.current?.scrollIntoView?.({ block: "end" });
@@ -271,7 +283,16 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
     if (!menu) return;
     menuEl.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const close = () => { setMenu(false); moreBtn.current?.focus(); };
-    const key = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const items = Array.from(menuEl.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+        if (!items.length) return;
+        e.preventDefault();
+        const at = items.indexOf(document.activeElement as HTMLElement);
+        items[(at + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
+      }
+    };
     const away = (e: MouseEvent) => {
       const t = e.target as Node;
       if (menuEl.current?.contains(t) || moreBtn.current?.contains(t)) return;
@@ -286,6 +307,8 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
     if (!next || !convId) return;
     try {
       const p = await api.listMessages(convId, next);
+      // keep my place: the older page is added above, so the page is moved down by the height that was added
+      keep.current = { h: document.documentElement.scrollHeight, y: window.scrollY };
       setItems((cur) => [...cur, ...p.items]);
       setNext(p.nextCursor);
     } catch (e) { setError(e); }
@@ -312,8 +335,12 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
       if (!convId) { setConvId(r.message.conversationId); router.replace(`/messages/${r.message.conversationId}`); }
       return null;
     } catch (e) {
-      if (e instanceof ApiError && e.status > 0) key.current = { sig, k: uuidKey(), clipId: key.current?.clipId };
-      return dmFailure(e);
+      // Only an answer that proves nothing was stored (a 4xx refusal) makes the next try a new key. A 5xx, a timeout and a
+      // lost connection may have stored the message already, so the retry keeps the key and the server answers with that message.
+      const f = dmFailure(e);
+      if (e instanceof ApiError && e.status >= 400 && e.status < 500) key.current = { sig, k: uuidKey(), clipId: key.current?.clipId };
+      if (f.closed) setAccepts(false);
+      return f;
     }
   }
 
@@ -345,7 +372,7 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
         <div className="dm-head">
           {person ? <Avatar name={personName(person)} /> : null}
           <div className="dm-head__who">
-            <span className="dm-head__name">{person ? personName(person) : "Message"}<VerifiedTick verified={person?.verified} /></span>
+            <span className="dm-head__name"><span className="dm-head__nm">{person ? personName(person) : "Message"}</span><VerifiedTick verified={person?.verified} /></span>
             {person && !person.deleted ? <span className="dm-head__sub">{`${handle}${person.place ? ` · ${person.place}` : ""}`}</span> : null}
           </div>
         </div>
@@ -388,7 +415,7 @@ export function ConversationPage({ conversationId, userId }: { conversationId?: 
       )}
       <div ref={endRef} className="dm-end" aria-hidden="true" />
       {closed ? <p className="dm-closed" role="status">{CLOSED_TEXT}</p> : <Composer costs={costs} canType onSend={send} />}
-      {reporting && person ? <ReportSheet handle={handle} onClose={() => setReporting(false)} onSend={report} /> : null}
+      {reporting && person ? <ReportSheet handle={handle} onClose={() => { setReporting(false); setTimeout(() => moreBtn.current?.focus(), 0); }} onSend={report} /> : null}
       <DmRail />
     </div>
   );

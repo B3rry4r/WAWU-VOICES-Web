@@ -102,7 +102,7 @@ export function InboxPage() {
   const head = (
     <div className="dm-deskhead dm-only-desk">
       <h1>Messages</h1>
-      <Button variant="secondary" icon="plus" onClick={() => setCompose(true)}>New message</Button>
+      <Button variant="secondary" icon="plus" className="dm-newbtn" onClick={() => setCompose(true)}>New message</Button>
     </div>
   );
   if (signedIn === false) return <div className="dm-page">{bar}<SignInNote from="/messages">Sign in to read your messages.</SignInNote></div>;
@@ -156,7 +156,7 @@ export function InboxPage() {
       {next ? <Button variant="secondary" block loading={more} onClick={() => void older()}>Show older conversations</Button> : null}
       <DmRail />
       <p className="dm-foot">Messages are private between you and the other person. You can report or block from any chat.</p>
-      {compose ? <NewMessage onClose={() => setCompose(false)} /> : null}
+      {compose ? <NewMessage onClose={() => { setCompose(false); setTimeout(() => Array.from(document.querySelectorAll<HTMLElement>(".dm-newbtn, button[aria-label=\"New message\"]")).find((el) => el.offsetParent !== null)?.focus(), 0); }} /> : null}
     </div>
   );
 }

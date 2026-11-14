@@ -36,21 +36,22 @@ export function tokensText(milli: number): string {
 }
 
 /** What each refusal says on the screen. `plans` means the screen also shows the "See subscription plans" link. */
-export interface DmFailure { text: string; plans: boolean; buy: boolean }
+/** `retry` is false for a refusal that trying again cannot change (not verified, closed, suspended, too long). `closed` means the person can no longer be written to. */
+export interface DmFailure { text: string; plans: boolean; buy: boolean; retry: boolean; closed: boolean }
 
 export function dmFailure(e: unknown): DmFailure {
-  const f = (text: string, o: Partial<DmFailure> = {}): DmFailure => ({ text, plans: false, buy: false, ...o });
+  const f = (text: string, o: Partial<DmFailure> = {}): DmFailure => ({ text, plans: false, buy: false, retry: true, closed: false, ...o });
   if (!(e instanceof ApiError)) return f("Something went wrong. Try again in a moment.");
   if (e.status === 0) return f("You are offline. Check your connection and try again.");
   switch (e.code) {
-    case "verification_required": return f("Subscribe and get verified to send messages.", { plans: true });
-    case "dm_unavailable": return f(CLOSED_TEXT);
-    case "ACCOUNT_SUSPENDED": return f("Your account is suspended, so you cannot send messages right now.");
+    case "verification_required": return f("Subscribe and get verified to send messages.", { plans: true, retry: false });
+    case "dm_unavailable": return f(CLOSED_TEXT, { retry: false, closed: true });
+    case "ACCOUNT_SUSPENDED": return f("Your account is suspended, so you cannot send messages right now.", { retry: false });
     case "DAILY_LIMIT_REACHED": return f("You have sent the most messages one day allows. Come back after midnight.");
     case "RATE_LIMITED": return f("You are going fast. Wait a moment and try again.");
     case "INSUFFICIENT_UNITS":
     case "FREE_POSTS_EXHAUSTED": return f("You need more tokens to send this message.", { buy: true });
-    case "VOICE_TOO_LONG": return f(`That voice message is too long.`);
+    case "VOICE_TOO_LONG": return f("That voice message is too long.", { retry: false });
     case "VALIDATION_FAILED": return f("Check your message and try again.");
     case "UNAUTHENTICATED":
     case "TOKEN_EXPIRED": return f("Sign in to continue.");

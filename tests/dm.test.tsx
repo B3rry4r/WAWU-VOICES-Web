@@ -295,7 +295,7 @@ describe("conversation", () => {
     stub(routes(() => {
       n++;
       if (n === 1) throw new TypeError("network");
-      return err(403, "dm_unavailable", "This person is not taking messages.");
+      return err(429, "RATE_LIMITED", "x");
     }));
     render(<ConversationPage conversationId="c1" />);
     await screen.findByText("Hello there");
@@ -303,7 +303,7 @@ describe("conversation", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
     await screen.findByText(/offline/i);
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
-    await screen.findByText("This person is not taking messages.");
+    await screen.findByText("You are going fast. Wait a moment and try again.");
     await userEvent.click(screen.getByRole("button", { name: "Send message" }));
     await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/dm/messages")).length).toBe(3));
     const keys = calls.filter((c) => c.url.endsWith("/dm/messages")).map((c) => c.headers.get("Idempotency-Key"));
@@ -395,5 +395,65 @@ describe("conversation", () => {
     stub((c) => (c.url.includes("/dm/conversations/c1/messages") ? err(404, "NOT_FOUND", "We could not find that.") : routes()(c)));
     render(<ConversationPage conversationId="c1" />);
     expect(await screen.findByText(/could not find/i)).toBeTruthy();
+  });
+
+  it("a retry after a server error keeps the Idempotency-Key: the server stored the message and said 500, the retry is the same send", async () => {
+    const stored = new Map<string, string>();
+    stub(routes((c) => {
+      const k = c.headers.get("Idempotency-Key") as string;
+      const first = !stored.has(k);
+      stored.set(k, "m-" + k);
+      return first && stored.size === 1 ? err(500, "INTERNAL", "x") : json({ message: MSG({ id: stored.get(k), mine: true, senderId: "me", body: c.body?.body }), charge: { costMilli: 0, balanceMilli: 0 } }, 201);
+    }));
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    await userEvent.type(screen.getByLabelText("Your message"), "Hi Ada");
+    await userEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+    await screen.findAllByText("Hi Ada");
+    const posts = calls.filter((c) => c.url.endsWith("/dm/messages"));
+    expect(posts).toHaveLength(2);
+    expect(posts[0].headers.get("Idempotency-Key")).toBe(posts[1].headers.get("Idempotency-Key"));
+    expect(stored.size).toBe(1);
+  });
+
+  it("a refusal the server stood behind (4xx) starts a new key; the 'closed' refusal has no Retry and closes the chat", async () => {
+    stub(routes(() => err(403, "dm_unavailable", "This person is not taking messages.")));
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    await userEvent.type(screen.getByLabelText("Your message"), "Hi Ada");
+    await userEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() => expect(screen.queryByLabelText("Your message")).toBeNull());
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(screen.getAllByText("This person is not taking messages.").length).toBeGreaterThan(0);
+  });
+
+  it("Show older messages keeps your place: the page is moved down by the height that was added", async () => {
+    // the page is 1000 high with one message and 400 higher once the older page is in
+    Object.defineProperty(document.documentElement, "scrollHeight", { configurable: true, get: () => 1000 + (document.querySelectorAll(".dm-msg").length > 1 ? 400 : 0) });
+    const scrollTo = vi.fn();
+    window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
+    Object.defineProperty(window, "scrollY", { configurable: true, get: () => 0 });
+    stub((c) => {
+      if (c.url.includes("/dm/conversations/c1/messages") && c.url.includes("cursor=")) { return json({ person: PERSON, muted: false, acceptsMessages: true, nextCursor: null, items: [MSG({ id: "old", body: "an older one", createdAt: new Date(Date.now() - 86_400_000).toISOString() })] }); }
+      if (c.url.includes("/dm/conversations/c1/messages")) return json({ person: PERSON, muted: false, acceptsMessages: true, nextCursor: "next", items: [MSG()] });
+      return routes()(c);
+    });
+    render(<ConversationPage conversationId="c1" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Show older messages" }));
+    await screen.findByText("an older one");
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 400));
+  });
+
+  it("the More menu moves with the arrow keys", async () => {
+    stub(routes());
+    render(<ConversationPage conversationId="c1" />);
+    await screen.findByText("Hello there");
+    await userEvent.click(screen.getByRole("button", { name: "More: mute, report or block" }));
+    await waitFor(() => expect(document.activeElement?.textContent).toBe("Mute this chat"));
+    await userEvent.keyboard("{ArrowDown}");
+    expect(document.activeElement?.textContent).toBe("Report @ada");
+    await userEvent.keyboard("{ArrowUp}{ArrowUp}");
+    expect(document.activeElement?.textContent).toBe("Block @ada");
   });
 });
