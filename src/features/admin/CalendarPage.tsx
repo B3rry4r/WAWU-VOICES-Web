@@ -8,6 +8,7 @@ import { dayMonth, dayStringShort, dayStringWeekday, slot, weekRange } from "./t
 import { Card, ErrorLine, ListSkeleton, LoadFailed, PageHead, Pill, SavedLine, DetailPane, refusalWords, useAction, Gated } from "./ui";
 import { ApiError } from "@/lib/api/client";
 import { FLASH_HOURS, startFlashNow } from "./flash";
+import { SummaryPanel } from "./SummaryPanel";
 
 /** The 7 days of a week from its first day, as "2026-11-12" strings (Lagos calendar days). */
 function weekDays(startsOn: string): string[] {
@@ -205,6 +206,7 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
     return <WeekForm mode="edit" topic={d} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setN((x) => x + 1); onChanged("Week saved."); }} />;
 
   return (
+    <div>
     <Card>
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -243,6 +245,8 @@ function Panel({ topicId, onChanged }: { topicId: string; onChanged: (msg: strin
       ) : null}
       {t.whatNextPrompt ? <p className="m-0 mt-4 text-caption text-ink-2">{`What Next? prompt: ${t.whatNextPrompt}`}</p> : null}
     </Card>
+      <SummaryPanel topicId={t.id} />
+    </div>
   );
 }
 

@@ -36,6 +36,18 @@ export type AdminAdPage = S["AdminAdPage"];
 export type AdDecision = S["AdDecision"];
 export type UpsertAdRequest = S["UpsertAdRequest"];
 export type AuditLine = S["AuditLine"];
+export type AdminSummary = S["AdminSummary"];
+export type SavedSummary = S["SavedSummary"];
+export type SummaryDraft = S["SummaryDraft"];
+export type SummaryEditRequest = S["SummaryEditRequest"];
+export type AdminProposalQuestion = S["AdminProposalQuestion"];
+export type AdminProposals = S["AdminProposals"];
+export type AdminProposalItem = S["AdminProposalItem"];
+export type AdminUser = S["AdminUser"];
+export type AdminUserPage = S["AdminUserPage"];
+export type AdminRoleGrant = S["AdminRoleGrant"];
+export type AdminRoleGrantPage = S["AdminRoleGrantPage"];
+export type Emotion = S["Emotion"];
 
 const A = { authed: true } as const;
 const enc = encodeURIComponent;
@@ -73,6 +85,24 @@ export const addPoolQuestions = (body: { kind: "DAILY" | "FLASH"; categoryId?: s
 export const schedulePoolQuestion = (id: string, day: string, replace = false) =>
   apiFetch<MoveQuestionResult>(`/admin/questions/${enc(id)}/schedule`, { ...A, method: "POST", body: { day, ...(replace ? { replace: true } : {}) } });
 
+// What Next? summary (V-FIX-C)
+export const getSummary = (topicId: string) => apiFetch<AdminSummary>(`/admin/topics/${enc(topicId)}/summary`, A);
+/** A draft from the week's data; with ai true and a key set on the server, written by the AI. Nothing is saved. */
+export const draftSummary = (topicId: string, ai = false) => apiFetch<SummaryDraft>(`/admin/topics/${enc(topicId)}/summary/draft`, { ...A, method: "POST", body: { ai } });
+export const saveSummary = (topicId: string, body: SummaryEditRequest) => apiFetch<S["EditorialSummary"]>(`/admin/topics/${enc(topicId)}/summary`, { ...A, method: "PUT", body });
+
+// Grouping ideas on What Next? (V-FIX-C)
+export const listProposalQuestions = () => apiFetch<{ items: AdminProposalQuestion[] }>("/admin/proposal-questions", A);
+export const listProposals = (questionId: string) => apiFetch<AdminProposals>(`/admin/proposals${qs({ questionId })}`, A);
+export const confirmGroup = (title: string, proposalIds: string[]) => apiFetch<S["ProposalGroup"]>("/admin/proposal-groups", { ...A, method: "POST", body: { title, proposalIds } });
+
+export const removeGroup = (groupId: string) => apiFetch<{ id: string; released: number }>(`/admin/proposal-groups/${enc(groupId)}`, { ...A, method: "DELETE" });
+
+// People and roles (V-FIX-C)
+export const findPeople = (q: string) => apiFetch<AdminUserPage>(`/admin/users${qs({ q: q.trim().replace(/^@/, ''), limit: 20 })}`, A);
+export const listStaff = (cursor?: string | null) => apiFetch<AdminRoleGrantPage>(`/admin/roles${qs({ cursor, limit: 50 })}`, A);
+export const setRoles = (userId: string, roles: Role[], reason: string) => apiFetch<AdminRoleGrant>(`/admin/users/${enc(userId)}/roles`, { ...A, method: "PUT", body: { roles, reason } });
+
 // Override
 /** RW6: put a scheduled question on another day of its week. A taken day swaps the two (one transaction). */
 export const moveQuestion = (id: string, day: string) => apiFetch<S["MoveQuestionResult"]>(`/admin/questions/${enc(id)}/move`, { ...A, method: "POST", body: { day } });
@@ -103,7 +133,7 @@ export const decideResult = (postId: string, decision: "VERIFIED" | "NOT_VERIFIE
 // Weekly
 export const listWeekly = (status?: string) => apiFetch<AdminWeeklyReportPage>(`/admin/weekly-reports${qs({ status })}`, A);
 export const getWeekly = (id: string) => apiFetch<AdminWeeklyReport>(`/admin/weekly-reports/${enc(id)}`, A);
-export const editWeekly = (id: string, body: { cardTitle?: string; editorNote?: string; headline?: string; mood?: string; summary?: string }) =>
+export const editWeekly = (id: string, body: { cardTitle?: string; editorNote?: string; headline?: string; mood?: string; summary?: string; emotions?: Emotion[] }) =>
   apiFetch<AdminWeeklyReport>(`/admin/weekly-reports/${enc(id)}`, { ...A, method: "PATCH", body });
 export const approveWeekly = (id: string, publishAt: string) => apiFetch<AdminWeeklyReport>(`/admin/weekly-reports/${enc(id)}/approve`, { ...A, method: "POST", body: { publishAt } });
 /** LCH-13: the Instagram pictures of a published report (carousel and Story) as one zip. Nothing is posted. */
