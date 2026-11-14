@@ -5,7 +5,7 @@ import { AnswerCard, Banner, Button, EmptyState, Skeleton, TopicOfWeek, TopicTil
 import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import { categoryLook } from "@/lib/categories";
 import type { Answer, Question, Topic } from "@/lib/api/feed";
-import { answerCardProps, voicesLabel, weekMeta, voicesOf } from "@/lib/feed-format";
+import { answerCardProps, startsLabel, topicNotStarted, voicesLabel, weekMeta, voicesOf } from "@/lib/feed-format";
 import { MoodChip } from "@/features/mood/MoodChip";
 import type { Load } from "./useLoad";
 
@@ -59,9 +59,11 @@ export function WeekCard({ topic, questionId, variant }: { topic: Topic; questio
   const router = useRouter();
   if (!questionId) return null;
   const href = `/q/${questionId}`;
-  const meta = weekMeta(topic, !!topic.weeklyPollId);
+  // V-PRELAUNCH: a week that has not begun says when it starts, not "Poll open", and offers nothing to join.
+  const upcoming = topicNotStarted(topic);
+  const meta = upcoming ? startsLabel(topic) : weekMeta(topic, !!topic.weeklyPollId);
   return variant === "rail" ? (
-    <TopicOfWeek title={topic.title} meta={meta} variant="rail" onClick={() => router.push(href)} />
+    <TopicOfWeek title={topic.title} meta={meta} variant="rail" upcoming={upcoming} onClick={() => router.push(href)} />
   ) : (
     <div className="contents [&_a:focus-visible]:[box-shadow:var(--shadow-focus)]">
       <TopicOfWeek title={topic.title} meta={meta} href={href} />
