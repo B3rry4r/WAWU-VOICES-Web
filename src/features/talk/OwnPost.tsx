@@ -29,9 +29,11 @@ export function EditSheet({ answer, onClose, onSaved }: { answer: Answer; onClos
   const [msg, setMsg] = useState<string | null>(null);
   const limit = useTextLimit();
   const n = countChars(text);
+  const over = n > limit;
+  const overLine = `This post is longer than ${limit.toLocaleString("en-NG")} characters. Shorten it to save your changes.`;
   const same = text.trim() === (answer.body ?? "").trim();
   async function save() {
-    if (busy || same || !text.trim()) return;
+    if (busy || same || !text.trim() || over) return;
     setBusy(true);
     setMsg(null);
     try { onSaved(await api.editAnswer(answer.id, text.trim())); } catch (e) { setMsg(editFailText(e)); } finally { setBusy(false); }
@@ -41,12 +43,13 @@ export function EditSheet({ answer, onClose, onSaved }: { answer: Answer; onClos
       title="Edit your post"
       subtitle="You can edit a text post for a few minutes after you send it. Adding words can cost tokens."
       onClose={onClose}
-      footer={<div className="vx-dialog__btns"><Button size="l" block loading={busy} disabled={same || !text.trim()} onClick={() => void save()}>Save changes</Button></div>}
+      footer={<div className="vx-dialog__btns"><Button size="l" block loading={busy} disabled={same || !text.trim() || over} onClick={() => void save()}>Save changes</Button></div>}
     >
       <div className="grid gap-3 pb-2">
         {msg ? <Banner tone="danger" title="Not saved">{msg}</Banner> : null}
-        <TextField label="Your words" multiline value={text} onChange={(v) => setText(countChars(v) > limit ? [...v].slice(0, limit).join("") : v)} />
-        <p className={`m-0 text-caption ${n >= limit ? "text-[var(--danger)]" : "text-[var(--ink-2)]"}`} role={n >= limit ? "status" : undefined}>{n >= limit ? limitWords(limit) : `${n.toLocaleString("en-NG")} / ${limit.toLocaleString("en-NG")}`}</p>
+        <TextField label="Your words" multiline value={text} onChange={(v) => setText(countChars(v) > limit && !over ? [...v].slice(0, limit).join("") : v)} />
+        {over ? <p className="m-0 text-caption text-[var(--danger)]" role="status">{overLine}</p> : null}
+        <p className={`m-0 text-caption ${n >= limit ? "text-[var(--danger)]" : "text-[var(--ink-2)]"}`} role={n >= limit && !over ? "status" : undefined}>{over ? `${n.toLocaleString("en-NG")} / ${limit.toLocaleString("en-NG")}` : n >= limit ? limitWords(limit) : `${n.toLocaleString("en-NG")} / ${limit.toLocaleString("en-NG")}`}</p>
       </div>
     </Sheet>
   );
