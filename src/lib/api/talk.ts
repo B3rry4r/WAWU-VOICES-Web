@@ -73,6 +73,12 @@ export const createAnswer = (qid: string, body: string, news: NewsInput, key: st
   });
 export const createReply = (aid: string, stance: ReplyStance, body: string, key: string) =>
   apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "TEXT", body } });
+/** A voice reply: the clip is already uploaded and READY. Charged and limited like a voice answer (the server decides). */
+export const createVoiceReply = (aid: string, stance: ReplyStance, clipId: string, key: string, extraVoiceTokenId?: string) =>
+  apiFetch<ReplyReceipt>(`/answers/${id(aid)}/replies`, { method: "POST", authed: true, idempotencyKey: key, body: { stance, kind: "VOICE", clipId, ...(extraVoiceTokenId ? { extraVoiceTokenId } : {}) } });
+/** PATCH /answers/{id}: text answers only, inside the server's edit window. Returns the answer as it now reads. */
+export const editAnswer = (aid: string, body: string) => apiFetch<Answer>(`/answers/${id(aid)}`, { method: "PATCH", authed: true, body: { body } });
+export const deleteAnswer = (aid: string) => apiFetch<void>(`/answers/${id(aid)}`, { method: "DELETE", authed: true });
 export const deleteReply = (rid: string) => apiFetch<void>(`/replies/${id(rid)}`, { method: "DELETE", authed: true });
 export const markHelpful = (aid: string) => apiFetch<void>(`/answers/${id(aid)}/helpful`, { method: "PUT", authed: true });
 export const unmarkHelpful = (aid: string) => apiFetch<void>(`/answers/${id(aid)}/helpful`, { method: "DELETE", authed: true });

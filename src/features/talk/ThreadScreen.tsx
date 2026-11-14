@@ -9,9 +9,11 @@ import { ago } from "@/lib/feed-format";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
 import { AppBar, BarButton, Problem, failText, useClipPlayback, useSignedIn } from "./lib";
+import { DeleteDialog } from "./OwnPost";
 import { ReplyComposer } from "./ReplyComposer";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 import { TalkRail } from "./TalkRail";
+import { VoiceReplySheet } from "./VoiceReply";
 import "./talk.css";
 
 const STANCES: { id: ReplyStance; label: string }[] = [
@@ -26,8 +28,9 @@ function ClipPlayer({ clipId, ms, push }: { clipId: string; ms: number; push: (t
   return <VoicePlayer key={clip.rev} duration={Math.max(1, Math.round(ms / 1000))} seed={clipId.length * 7} onPlayingChange={(on) => void clip.toggle(on)} />;
 }
 
-function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => void; push: (t: string, tone?: "danger") => void }) {
+function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => Promise<void>; push: (t: string, tone?: "danger") => void }) {
   const st = STANCES.find((s) => s.id === r.stance)!;
+  const [confirm, setConfirm] = useState(false);
   return (
     <>
     <div className="mt-2 hidden items-center gap-2 text-eyebrow uppercase text-[var(--ink-2)] dt:flex"><Icon name={stanceIcon[r.stance]} size={14} />{st.label}</div>
@@ -39,12 +42,13 @@ function ReplyRow({ r, onDelete, push }: { r: Reply; onDelete: (r: Reply) => voi
           <span className="vx-answer__time">{ago(r.createdAt) + (r.author.state ? ` · ${r.author.state}` : "")}</span>
         </div>
         <span className="dt:hidden"><Badge tone="proposed" icon={stanceIcon[r.stance]}>{st.label}</Badge></span>
-        {r.isMine ? <IconButton icon="x" label="Delete my reply" variant="ghost" size="s" onClick={() => onDelete(r)} /> : null}
+        {r.isMine ? <IconButton icon="trash-2" label="Delete my reply" variant="ghost" size="s" onClick={() => setConfirm(true)} /> : null}
       </div>
       {r.kind === "VOICE" && r.clip ? <ClipPlayer clipId={r.clip.id} ms={r.clip.durationMs ?? 10000} push={push} /> : null}
       {r.body ? <p className="vx-answer__text">{r.body}</p> : null}
       {r.kind === "VOICE" && r.clip?.transcript?.status === "READY" && r.clip.transcript.text ? <p className="vx-answer__transcript"><b>Transcript</b>{r.clip.transcript.text}</p> : null}
     </article>
+    {confirm ? <DeleteDialog noun="reply" onConfirm={async () => { await onDelete(r); setConfirm(false); }} onClose={() => setConfirm(false)} /> : null}
     </>
   );
 }
@@ -78,8 +82,9 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
   }, [aid, filter]);
   useEffect(() => { void load(); }, [load, signedIn]);
 
+  const [voiceOpen, setVoiceOpen] = useState(false);
   async function del(r: Reply) {
-    try { await api.deleteReply(r.id); setItems((c) => c.filter((x) => x.id !== r.id)); push("Reply deleted.", "success"); void load(); } catch (e) { push(failText(e), "danger"); }
+    try { await api.deleteReply(r.id); setItems((c) => c.filter((x) => x.id !== r.id)); push("Reply deleted.", "success"); void load(); } catch (e) { push(failText(e), "danger"); throw e; }
   }
 
   if (a.state === "loading") return <><AppBar title="Replies" back={`/q/${qid}`} /><div className="mt-4 grid gap-3" aria-busy="true"><Skeleton variant="answer" /><Skeleton variant="answer" /></div></>;
@@ -107,12 +112,12 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
         <span className="mt-1 block font-display text-display-s text-[var(--ink)]">{question?.text || ans.questionText || ""}</span>
       </Link>
       <div className="mt-3">
-        <TalkCard answer={ans} signedIn={!!signedIn} push={push} unfolded className="tk-flat" threadHref={`/q/${qid}/a/${aid}`} />
+        <TalkCard answer={ans} signedIn={!!signedIn} push={push} unfolded className="tk-flat" threadHref={`/q/${qid}/a/${aid}`} onDeleted={() => router.replace(`/q/${qid}`)} />
       </div>
       {!open ? <div className="mt-3"><Banner tone="info" title="This question has closed.">You can still read and listen to every reply. New replies are closed.</Banner></div> : null}
       {open && signedIn && allow ? (
         <div className="mt-4 hidden dt:block">
-          <ReplyComposer aid={aid} qid={qid} who={who} allow={allow} stance={pick} onPosted={() => { push("Reply posted.", "success"); void load(); }} onBuy={(href) => router.push(href)} />
+          <ReplyComposer aid={aid} qid={qid} who={who} allow={allow} stance={pick} onVoice={() => setVoiceOpen(true)} onPosted={() => { push("Reply posted.", "success"); void load(); }} onBuy={(href) => router.push(href)} />
         </div>
       ) : null}
       <h2 className="m-0 mt-6 hidden font-display text-display-m dt:block">{`${total.toLocaleString("en-NG")} ${total === 1 ? "reply" : "replies"}`}</h2>
@@ -134,9 +139,23 @@ export function ThreadScreen({ qid, aid }: { qid: string; aid: string }) {
             {STANCES.map((s) => <TopicChip key={s.id} label={s.label} selected={pick === s.id} onClick={() => setPick(pick === s.id ? undefined : s.id)} />)}
           </div>
           {signedIn === false ? <Banner tone="info" title="Sign in to reply.">Reading and listening are free. We ask for your number when you post.</Banner> : (
-            <Link href={writeHref} className="flex min-h-12 items-center rounded-full bg-[var(--surface)] px-[18px] text-body text-[var(--ink-2)] no-underline shadow-[inset_0_0_0_1px_var(--line-strong)]">{`Reply to ${who} in words`}</Link>
+            <div className="flex items-center gap-2">
+              <Link href={writeHref} className="flex min-h-12 min-w-0 flex-1 items-center rounded-full bg-[var(--surface)] px-[18px] text-body text-[var(--ink-2)] no-underline shadow-[inset_0_0_0_1px_var(--line-strong)]">{`Reply to ${who} in words`}</Link>
+              {allow ? <IconButton icon="mic" label="Reply by voice" variant="ghost" iconSize={24} onClick={() => setVoiceOpen(true)} /> : null}
+            </div>
           )}
         </div>
+      ) : null}
+      {voiceOpen && allow ? (
+        <VoiceReplySheet
+          aid={aid}
+          who={who}
+          stance={pick}
+          allow={allow}
+          onClose={() => setVoiceOpen(false)}
+          onPosted={() => { setVoiceOpen(false); push("Reply posted.", "success"); void load(); void api.getAllowance().then(setAllow, () => undefined); }}
+          onBuy={() => router.push(`/units/buy?from=${encodeURIComponent(`/q/${qid}/a/${aid}`)}`)}
+        />
       ) : null}
       <TalkRail questionId={qid} />
       {toast}

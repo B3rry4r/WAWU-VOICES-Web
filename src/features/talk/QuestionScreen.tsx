@@ -9,6 +9,7 @@ import { closesIn, uniqueVoices, voicesOf } from "@/lib/feed-format";
 import { getPublicConfig } from "@/lib/api/feed";
 import { useLoad } from "@/components/feed/useLoad";
 import { StageNav } from "@/features/stage/StageNav";
+import { LiveResultsLink } from "@/components/feed/LinkCards";
 import { AppBar, BarButton, Problem, failText, unitsText, useSignedIn } from "./lib";
 import { TalkCard, useShareSheet, useToast } from "./TalkCard";
 import { TalkRail } from "./TalkRail";
@@ -110,6 +111,7 @@ export function QuestionScreen({ id }: { id: string }) {
         <BarButton icon="share-2" label="Share this question" onClick={() => share("QUESTION", id)} />
       </AppBar>
       <StageNav questionId={id} active="discuss" visited={["speak"]} counts={{ speak: short(voicesOf(question)), discuss: short(voicesOf(question)), next: short(question.proposalCount) }} />
+      <div className="mt-3 empty:hidden"><LiveResultsLink /></div>
 
       <section aria-label="The question" className="flex flex-col gap-3 pb-2 pt-5">
         <div className="flex flex-wrap items-center gap-2">
