@@ -6,7 +6,7 @@ import { decideResult, listResultPostsAdmin, listResultThreads } from "@/lib/api
 import type { AdminResultPost, ResultThread } from "@/lib/api/admin";
 import { useAdmin } from "./AdminFrame";
 import { clock } from "./time";
-import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, SavedLine, queueRow, useAction, Gated } from "./ui";
+import { Card, CardTitle, ErrorLine, ListSkeleton, LoadFailed, PageHead, SavedLine, DetailPane, queueRow, useAction, Gated } from "./ui";
 
 function Mark({ post }: { post: AdminResultPost["post"] }) {
   const ok = post.status === "VERIFIED";
@@ -35,6 +35,7 @@ function ResultsBody() {
   const [error, setError] = useState<Error | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [paneOpen, setPaneOpen] = useState(false);
   const seq = useRef(0);
 
   const loadThreads = useCallback(async () => {
@@ -84,6 +85,7 @@ function ResultsBody() {
   /** A saved row stays in the list with its new mark; the next unchecked row opens. */
   function saveDone(postId: string, row: AdminResultPost, word: string, gone: boolean) {
     setSaved(word);
+    setPaneOpen(false);
     setItems((x) => {
       const list = x ?? [];
       const at = list.findIndex((i) => i.post.id === postId);
@@ -126,12 +128,12 @@ function ResultsBody() {
           ) : items.length === 0 ? (
             <EmptyState icon="circle-check" title="Nothing to check in this thread" body="New results show up here as people post them." />
           ) : (
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-5">
+            <div className="grid grid-cols-1 items-start gap-5 dt:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <div className="overflow-hidden rounded-xl border border-line bg-surface" role="list" aria-label="Queue">
                 {items.map((i) => {
                   const p = i.post;
                   return (
-                    <button key={p.id} type="button" role="listitem" className={queueRow(selected === p.id)} onClick={() => setSelected(p.id)} aria-current={selected === p.id ? "true" : undefined}>
+                    <button key={p.id} type="button" role="listitem" className={queueRow(selected === p.id)} onClick={() => { setSelected(p.id); setPaneOpen(true); }} aria-current={selected === p.id ? "true" : undefined}>
                       <span className="flex items-center gap-3">
                         <Icon name="map-pin" size={22} />
                         <span className="min-w-0 flex-1">
@@ -149,7 +151,7 @@ function ResultsBody() {
                   </div>
                 ) : null}
               </div>
-              {it ? <Check key={it.post.id} row={it} onDone={(row, w, gone) => saveDone(it.post.id, row, w, gone)} /> : null}
+              <DetailPane open={paneOpen} onClose={() => setPaneOpen(false)}>{it ? <Check key={it.post.id} row={it} onDone={(row, w, gone) => saveDone(it.post.id, row, w, gone)} /> : null}</DetailPane>
             </div>
           )}
         </>
@@ -180,10 +182,10 @@ function Check({ row, onDone }: { row: AdminResultPost; onDone: (row: AdminResul
     <Card>
       <CardTitle>Check this result</CardTitle>
       <div className="rounded-l border border-line p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <Avatar name={p.author.displayName || p.author.handle} size="s" />
-            <div>
+            <div className="min-w-0 [overflow-wrap:anywhere]">
               <div className="text-body-strong">{`@${p.author.handle}`}</div>
               <div className="text-caption text-ink-2">{clock(p.createdAt)}</div>
             </div>
@@ -191,7 +193,7 @@ function Check({ row, onDone }: { row: AdminResultPost; onDone: (row: AdminResul
           <span className={`rounded-pill px-3 py-1 ${p.status === "VERIFIED" ? "bg-verified-bg" : "bg-unverified-bg"}`}><Mark post={p} /></span>
         </div>
         <div className="mt-3 flex items-center gap-2 text-body-strong"><Icon name="map-pin" size={20} />{unitLabel(p)}</div>
-        <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
             ["Accredited", p.accredited],
             ["Votes cast", p.votesCast],
