@@ -1,6 +1,6 @@
 # V-PEOPLE-ON-POSTS web report (14 Nov 2026)
 Branch v/people-on-posts. Commits: item 1 bf907ff, item 2 8f981f0, item 3 95980b2, layout fix and screenshots: see the last commit on the branch.
-API branch: NOT readable (git clone of v/people-on-posts on the API repo said "Remote branch not found", tried at start and at the end). So contract/openapi.yaml and src/lib/api/types.ts are unchanged; `admin` is read as `(author as {admin?: boolean}).admin === true`, and the limit from costs.textMaxChars with a fallback. Re-run `npm run api:types` once the branch exists.
+API branch: readable at the end (first try failed, the second worked). Copied its docs/contract/openapi.yaml and ran `npm run api:types` (large diff: the web contract was behind). Its spec has no `admin` field yet and still `textMaxChars` only, so `admin` stays read defensively as `author?.admin === true`; tsc and all tests pass on the new types.
 
 ## Item 1: picture wherever the name shows
 Fixed: answerCardProps (feed-format.ts, so Home, question list, thread parent, search voices, category, share via TalkCard), search People rows (SearchScreen), result comments (results/map.ts + ResultComment draws avatar), what-next proposals (ProposalCard new `avatarSrc`), admin results row, admin news row.
@@ -27,4 +27,4 @@ Browser: next build + next start, Playwright, API stubbed with page.route; Home,
 Speak screens: not touched; they use none of the shared pieces I changed (Avatar, Composer, AnswerCard); their tests pass. No before/after screenshots taken.
 
 ## Not done or unsure
-API contract not synced (branch missing). Upload not driven in a browser. The broken-picture case is covered by a unit test, and the stub routes it to a refused address in the shots.
+Contract synced late (see top); `admin` not in it yet. Upload not driven in a browser. The broken-picture case is covered by a unit test, and the stub routes it to a refused address in the shots.
