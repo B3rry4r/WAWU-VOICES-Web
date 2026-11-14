@@ -1,9 +1,10 @@
 name: CI
 
+# Tests run on a pull request that is ready for review, and nowhere else. Running them on every push to
+# every branch used up the account's Actions allowance on 14 Nov 2026, and GitHub then refused the deploys.
 on:
   pull_request:
-  push:
-    branches-ignore: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -12,6 +13,7 @@ concurrency:
 jobs:
   web:
     name: Web (lint, typecheck, tests, build)
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_API_BASE_URL: /api/v1
