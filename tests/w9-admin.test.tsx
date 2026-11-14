@@ -9,7 +9,7 @@ import { fromLocalInput, toLocalInput } from "@/features/admin/time";
 import { AdminFrame } from "@/features/admin/AdminFrame";
 import { AdminWeeklyPage } from "@/features/admin/WeeklyPage";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/admin/weekly" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/admin/weekly", useRouter: () => ({ replace: () => undefined, push: () => undefined, back: () => undefined }), useSearchParams: () => new URLSearchParams("") }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...r }: { href: string; children: React.ReactNode }) => <a href={href} {...r}>{children}</a> }));
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -42,18 +42,18 @@ describe("roles", () => {
 });
 
 describe("AdminFrame gate", () => {
-  it("a person with no admin role gets the not-found page and no admin chrome", async () => {
+  it("a person with no admin role gets the not an admin page and no admin chrome", async () => {
     vi.stubGlobal("fetch", vi.fn(async (u: string) => (u.endsWith("/me") ? json(200, me([])) : json(403, { error: { code: "FORBIDDEN", message: "no" } }))));
     render(<AdminFrame><div>secret admin page</div></AdminFrame>);
-    await waitFor(() => expect(screen.getByText("We could not find that")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("This account is not an admin")).toBeTruthy());
     expect(screen.queryByText("secret admin page")).toBeNull();
   });
-  it("a guest gets the same page and makes no API call", async () => {
+  it("a guest gets the admin sign-in page and makes no API call", async () => {
     window.localStorage.clear();
     const f = vi.fn();
     vi.stubGlobal("fetch", f);
     render(<AdminFrame><div>secret admin page</div></AdminFrame>);
-    await waitFor(() => expect(screen.getByText("We could not find that")).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "VOICES admin" })).toBeTruthy());
     expect(f).not.toHaveBeenCalled();
   });
   it("a moderator sees Today and Moderation in the nav and nothing else", async () => {

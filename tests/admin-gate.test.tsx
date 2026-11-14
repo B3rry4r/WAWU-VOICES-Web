@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { AdminFrame } from "@/features/admin/AdminFrame";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/admin" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/admin", useRouter: () => ({ replace: () => undefined, push: () => undefined, back: () => undefined }), useSearchParams: () => new URLSearchParams("") }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...r }: { href: string; children: React.ReactNode }) => <a href={href} {...r}>{children}</a> }));
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -20,21 +20,21 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); window.l
 const settle = (ms = 0) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 
 describe("admin gate", () => {
-  it("403 shows could not find that, with no retry", async () => {
+  it("403 shows the not an admin page, with no retry", async () => {
     const f = vi.fn(async () => json(403, { error: { code: "FORBIDDEN", message: "no" } }));
     vi.stubGlobal("fetch", f);
     render(<AdminFrame><p>secret</p></AdminFrame>);
     await settle(5000);
-    expect(screen.getByText("We could not find that")).toBeTruthy();
+    expect(screen.getByText("This account is not an admin")).toBeTruthy();
     expect(meCalls(f)).toBe(1);
   });
-  it("401 that a refresh cannot fix shows could not find that", async () => {
+  it("401 that a refresh cannot fix shows the admin sign-in page", async () => {
     // /me answers 401, the refresh is refused: the session is cleared.
     const f = vi.fn(async (u: string) => (String(u).endsWith("/me") ? json(401, { error: { code: "UNAUTHORIZED", message: "no" } }) : json(401, { error: { code: "INVALID", message: "no" } })));
     vi.stubGlobal("fetch", f);
     render(<AdminFrame><p>secret</p></AdminFrame>);
     await settle(5000);
-    expect(screen.getByText("We could not find that")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "VOICES admin" })).toBeTruthy();
     expect(meCalls(f)).toBe(1);
   });
   it("503 then success on the retry opens the admin", async () => {
