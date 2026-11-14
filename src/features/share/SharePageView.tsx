@@ -147,7 +147,7 @@ export function SharePageView({ page, now, extras }: { page: SharePage; now: num
                   <span className="text-body-strong">{"@" + page.topProposal.author.handle}<VerifiedTick verified={page.topProposal.author.verified} /><span className="ml-2 text-caption text-ink-2">{agoShort(page.topProposal.createdAt, now)}</span></span>
                   <Badge tone="proposed" />
                 </div>
-                {page.topProposal.body ? <p className="m-0 text-title">{page.topProposal.body}</p> : null}
+                {page.topProposal.body ? <p className="m-0 whitespace-pre-wrap break-words text-title">{page.topProposal.body}</p> : null}
                 <p className="m-0 text-caption text-ink-2">{`${fmt(page.topProposal.supportCount)} support · ${fmt(page.topProposal.challengeCount)} challenge`}</p>
               </article>
             </section>
