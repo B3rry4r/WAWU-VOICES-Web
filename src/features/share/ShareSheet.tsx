@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Icon, Sheet } from "@/components/vx";
+import { Button, Icon, Sheet } from "@/components/vx";
 import type { IconName } from "@/components/vx";
 import { apiFetch } from "@/lib/api/client";
 import { API_BASE } from "@/lib/api/config";
@@ -73,6 +73,27 @@ export async function cardIsReady(code: string): Promise<boolean> {
   }
 }
 
+/** The API will not make a share link for a question that has not opened: say so, and offer the question's own address on this site (never the page the sheet was opened from). */
+function QuestionAddress({ questionId }: { questionId: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    const url = `${window.location.origin}/q/${encodeURIComponent(questionId)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy this address", url);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-3" role="alert">
+      <p className="m-0 rounded-m bg-surface-2 p-3 text-caption text-ink-2">We cannot make a share link for this question yet. You can copy the address of the question and send that.</p>
+      <Button variant="secondary" icon={copied ? "check" : "link"} onClick={() => void copy()}>{copied ? "Copied" : "Copy the question’s address"}</Button>
+    </div>
+  );
+}
+
 function Round({ children, label, onClick, href, tone, disabled }: { children: ReactNode; label: string; onClick?: () => void; href?: string; tone?: "mint"; disabled?: boolean }) {
   const body = (
     <>
@@ -98,7 +119,7 @@ export function textWithoutLink(previewText: string, url: string): string {
   return previewText.split("\n").filter((l) => !l.includes(url)).join("\n").trim();
 }
 
-export function ShareSheet({ objectType, objectId, onClose }: { objectType: ShareObjectType; objectId: string; onClose: () => void }) {
+export function ShareSheet({ objectType, objectId, notOpen, onClose }: { objectType: ShareObjectType; objectId: string; /** The question has not opened: if the API will not make a link for it, say so and offer this page's address. */ notOpen?: boolean; onClose: () => void }) {
   const desktop = useDesktop();
   const [link, setLink] = useState<ShareLink | null>(null);
   const [card, setCard] = useState<Card>({ state: "making" });
@@ -164,6 +185,15 @@ export function ShareSheet({ objectType, objectId, onClose }: { objectType: Shar
     } catch {
       /* the person closed the phone's share sheet */
     }
+  }
+
+  // Refused for a question that has not opened (or the server failed): only the plain message and the one button. No promise of a card, no greyed buttons.
+  if (failed && notOpen && objectType === "QUESTION") {
+    return (
+      <Sheet title={copy.title} variant={desktop ? "dialog" : "sheet"} onClose={onClose}>
+        <QuestionAddress questionId={objectId} />
+      </Sheet>
+    );
   }
 
   return (

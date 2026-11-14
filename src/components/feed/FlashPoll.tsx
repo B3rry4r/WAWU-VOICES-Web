@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Banner, Poll } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { castVote, getPoll, getVoteAllowance, type Allowances, type Poll as PollData } from "@/lib/api/polls";
 import { closesIn, unitsLabel } from "@/lib/feed-format";
 
@@ -86,7 +87,8 @@ export function FlashPoll({ poll, signedIn }: { poll: PollData; signedIn: boolea
           setError(message(err));
         }
       } else {
-        setError(message(err));
+        if (needsNewKey(err)) key.current = null; // the key is spent: the next tap carries a new one
+        setError(needsNewKey(err) ? newKeyLine("Confirm vote", "count") : message(err));
       }
       throw err;
     } finally {

@@ -6,7 +6,8 @@ import type { ComposerTag, IntentKind } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
 import * as api from "@/lib/api/talk";
 import type { Allowances, Answer, Question, ReplyStance } from "@/lib/api/talk";
-import { clearDraft, saveDraft } from "@/features/units/draft";
+import { InView } from "@/components/InView";
+import { clearDraft, renewDraftKey, saveDraft } from "@/features/units/draft";
 import { StageNav } from "@/features/stage/StageNav";
 import { countChars } from "@/lib/shared/text-price";
 import { FixPanel } from "./FixPanel";
@@ -14,7 +15,7 @@ import { AnonymousSwitch } from "./AnonymousSwitch";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
 import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
-import { AppBar, Problem, failText, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
+import { AppBar, Problem, failText, needsNewKey, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -111,6 +112,11 @@ export function WriteScreen({ qid }: { qid: string }) {
         router.push(outOfPostsHref(qid));
         return;
       }
+      // The key was refused as spent: forget it, here and in the held draft, so the next tap goes out with a new one.
+      if (needsNewKey(e)) {
+        key.current = null;
+        if (!replyTo) renewDraftKey(qid);
+      }
       setMsg(failText(e));
     }
   }
@@ -157,7 +163,7 @@ export function WriteScreen({ qid }: { qid: string }) {
         {replyTo ? null : <AnonymousSwitch on={anon} disabled={sending} onChange={(v) => { setAnon(v); writeAnonPref(qid, v); }} />}
         {dayLeft === 0 ? <Banner tone="info" title="You have reached the daily limit">{`You can send ${c?.messagesPerDay ?? 20} messages a day. Come back after midnight, Lagos time. Reading, listening, likes, shares and reactions never count.`}</Banner> : null}
         {sending ? <Banner tone="info">Posting your answer.</Banner> : null}
-        {msg ? <Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner> : null}
+        {msg ? <InView key={msg}><Banner tone="danger" title="This did not post" onClose={() => setMsg(null)}>{msg}</Banner></InView> : null}
         {left === 1 && c ? (
           <Banner tone="warning" title="Last free post">{`This post is free if it is up to ${c.freePostTextChars ?? 500} characters. After it, text costs ${unitsText(c.textPostMilli)} for every ${c.textPriceChars ?? 150} characters and a voice message up to ${c.voiceTier1Seconds ?? 30} seconds costs ${voice30} (${voiceNaira}).`}</Banner>
         ) : null}

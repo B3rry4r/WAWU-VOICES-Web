@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { Banner, Poll } from "@/components/vx";
 import { ApiError } from "@/lib/api/client";
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { castVote, getPoll, newKey } from "@/lib/api/vote";
 import type { Allowances, Poll as PollT, PublicConfig, VoteReceipt } from "@/lib/api/vote";
 import { closesIn } from "@/lib/feed-format";
@@ -116,6 +117,8 @@ export function PollCard({
             : { tone: "info", title: "This poll has closed", text: "Votes are no longer counted. The final results are below." },
         );
         onChanged?.();
+      } else if (needsNewKey(e)) {
+        setNote({ tone: "danger", title: "Your vote did not count", text: `${newKeyLine("Confirm vote", "count")} Nothing was charged.` });
       } else if (e instanceof ApiError && e.status === 429) {
         setNote({ tone: "warning", title: "Slow down a moment", text: "Too many votes in a short time. Try again in a minute. Nothing was charged." });
       } else if (e instanceof ApiError && e.status > 0) {

@@ -1,5 +1,6 @@
 import type { ExtraVoiceToken } from "@/lib/api/speak";
 import { ApiError } from "@/lib/api/client";
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { voiceCostMilli, voiceFreeCovers } from "@/lib/shared/text-price";
 
 /** lead ruling LF, 9 Nov: the price on the Send button is the shared function the server charges with, on the recording length in ms. */
@@ -47,6 +48,7 @@ export function durationLabel(seconds: number): string {
 /** The words shown for a failed call. The server's own words are shown whenever it explained itself. */
 export function refusalText(e: unknown): string {
   if (!(e instanceof ApiError)) return "Something went wrong. Try again in a moment.";
+  if (needsNewKey(e)) return newKeyLine("Send") + " Your recording is kept.";
   if (e.status === 0) return "You are offline. Your recording is kept. Check your connection and try again.";
   if (e.explained && e.message.trim()) return e.message;
   return "Something went wrong on our side. Try again in a moment.";

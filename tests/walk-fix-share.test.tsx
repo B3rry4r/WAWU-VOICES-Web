@@ -13,13 +13,13 @@ vi.mock("@/lib/api/reach", async (orig) => ({ ...(await orig<object>()), getShar
 afterEach(cleanup);
 
 describe("the share page when the API cannot be reached (G1)", () => {
-  it("says the busy words for a lost connection, a 502 and a 504, not 'We could not open that link'", async () => {
+  it("draws the waiting state for a lost connection, a 502 and a 504, not 'We could not open that link' (round 4 ruling)", async () => {
     const { default: Page } = await import("@/app/s/[code]/page");
     for (const e of [new NetworkError("offline"), new ApiError(502, "HTTP_502", "Request failed (502)", false), new ApiError(504, "HTTP_504", "x", false)]) {
       getSharePage.mockRejectedValueOnce(e);
       const { unmount } = render(await Page({ params: { code: "abc1234" } }));
-      expect(screen.getByRole("heading", { name: "We are busy." })).toBeTruthy();
-      expect(screen.getByText("Try again in a minute.")).toBeTruthy();
+      expect(screen.getByRole("heading", { name: "Opening." })).toBeTruthy();
+      expect(screen.getByText("One moment.")).toBeTruthy();
       expect(screen.queryByText("We could not open that link")).toBeNull();
       unmount();
     }

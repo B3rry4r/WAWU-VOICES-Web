@@ -1,6 +1,7 @@
 import { ApiError, NetworkError } from "@/lib/api/client";
+import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { postHeldAnswer } from "@/lib/api/units";
-import { AUTO_POST_MAX_AGE_MS, findPostedFor, getRecord, markPosted, setAwaiting } from "./draft";
+import { AUTO_POST_MAX_AGE_MS, findPostedFor, getRecord, markPosted, renewDraftKey, setAwaiting } from "./draft";
 
 export type DraftOutcome =
   | { status: "none" }
@@ -36,6 +37,11 @@ export async function postDraftForPurchase(
   } catch (e) {
     if (e instanceof NetworkError || (e instanceof ApiError && (e.status >= 500 || e.status === 429))) return { status: "retry", questionId };
     setAwaiting(d.questionId, false);
+    if (needsNewKey(e)) {
+      // The key is spent: the same words get a new one now, so the next Post tap on the write screen goes out with it and posts.
+      renewDraftKey(d.questionId);
+      return { status: "kept", questionId, message: newKeyLine("Post") };
+    }
     const message = e instanceof ApiError && e.explained && e.message ? e.message : "It could not be posted.";
     return { status: "kept", questionId, message };
   }

@@ -155,7 +155,7 @@ describe("T7 /s/<code> when the API cannot be reached", () => {
     const mod = await import("@/app/s/[code]/page");
     const el = await mod.default({ params: { code: "abc" } });
     const { container } = render(el as React.ReactElement);
-    expect(container.querySelector('[data-testid="share-unavailable"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="share-waiting"]')).toBeTruthy();
     const meta = await mod.generateMetadata({ params: { code: "abc" } });
     expect((meta.robots as { index: boolean }).index).toBe(false);
   });
@@ -163,7 +163,7 @@ describe("T7 /s/<code> when the API cannot be reached", () => {
     vi.stubGlobal("fetch", vi.fn(async () => json({ error: { code: "INTERNAL", message: "x", requestId: "r" } }, 500)));
     const mod = await import("@/app/s/[code]/page");
     const el = await mod.default({ params: { code: "abc" } });
-    expect(render(el as React.ReactElement).container.querySelector('[data-testid="share-unavailable"]')).toBeTruthy();
+    expect(render(el as React.ReactElement).container.querySelector('[data-testid="share-waiting"]')).toBeTruthy();
     vi.stubGlobal("fetch", vi.fn(async () => json({ error: { code: "NOT_FOUND", message: "x", requestId: "r" } }, 404)));
     await expect(mod.default({ params: { code: "abc" } })).rejects.toThrow();
   });

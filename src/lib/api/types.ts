@@ -3513,7 +3513,7 @@ export interface components {
         /** @enum {string} */
         ProposalStanceKind: "SUPPORT" | "CHALLENGE";
         /** @enum {string} */
-        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required";
+        ErrorCode: "BAD_REQUEST" | "MIN_TOPICS" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "TOKEN_EXPIRED" | "FORBIDDEN" | "ROLE_REQUIRED" | "ACCOUNT_SUSPENDED" | "NOT_FOUND" | "CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_REUSED" | "REQUEST_IN_PROGRESS" | "INSUFFICIENT_UNITS" | "FREE_POSTS_EXHAUSTED" | "VOICE_TOO_LONG" | "EXTRA_VOICE_REQUIRED" | "DAILY_LIMIT_REACHED" | "TEXT_FIX_FAILED" | "QUESTION_CLOSED" | "QUESTION_NOT_OPEN" | "POLL_CLOSED" | "POLL_NOT_STARTED" | "ALREADY_VOTED" | "EDIT_WINDOW_PASSED" | "HANDLE_TAKEN" | "AGE_CONFIRMATION_REQUIRED" | "TAG_REQUIRED" | "VERIFIED_NEWS_FORBIDDEN" | "SOURCE_REQUIRED" | "CLIP_NOT_READY" | "CLIP_NOT_FOUND" | "UPLOAD_NOT_RECEIVED" | "PAYMENT_NOT_VERIFIED" | "PAYMENT_AMOUNT_MISMATCH" | "PAYMENT_EXPIRED" | "CONTENT_REMOVED" | "BLOCKED_BY_USER" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "UNAVAILABLE" | "INTERNAL" | "subscription_required" | "verification_required";
         /** @description The one error shape. Every non-2xx response is this. */
         Error: {
             error: components["schemas"]["ErrorBody"];
@@ -3750,7 +3750,7 @@ export interface components {
             voicesThisWeek: number;
             questionCount: number;
         };
-        /** @description voicesCount (RW1) is the sum of its questions' voicesCount: the number every "N voices so far" shows. */
+        /** @description voicesCount (RW1) is the sum of its questions' voicesCount: the number every "N voices so far" shows. A week that has not started (status SCHEDULED) sends its title and dates only: questionCount is 0 (the field is a required integer), weeklyPollId and reportId are null, and the counts are 0. */
         Topic: {
             questionCount: number;
             /** Format: uuid */
@@ -3826,6 +3826,7 @@ export interface components {
             items: components["schemas"]["Question"][];
             nextCursor: string | null;
         };
+        /** @description trending is the top voices of today's question only (empty until that question has opened); it is not a cross-question list. */
         Home: {
             topicOfWeek: components["schemas"]["Topic"];
             dailyQuestion: components["schemas"]["Question"] | null;
@@ -5887,7 +5888,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description CONFLICT or a state error such as ALREADY_VOTED, QUESTION_CLOSED, POLL_CLOSED */
+        /** @description CONFLICT or a state error such as ALREADY_VOTED, QUESTION_CLOSED, QUESTION_NOT_OPEN (a write on the question shown as coming up), POLL_CLOSED */
         E409: {
             headers: {
                 [name: string]: unknown;
@@ -5943,7 +5944,7 @@ export interface components {
         };
     };
     parameters: {
-        /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+        /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
         IdempotencyKey: string;
         /** @description Random id a browser keeps in a first-party cookie. A visitor who is not signed in sends it with listen reports; the server stores only a keyed hash of it (never the id, never an IP). */
         VisitorId: string;
@@ -7249,7 +7250,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -7941,7 +7942,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -8077,7 +8078,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -8323,7 +8324,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -8409,7 +8410,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -8538,7 +8539,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -8741,7 +8742,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -9369,7 +9370,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path?: never;
@@ -9426,7 +9427,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -11101,7 +11102,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -11168,7 +11169,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
@@ -11282,7 +11283,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. */
+                /** @description Client-made unique key (a UUID). Same key and same body inside 24 hours (8 days on posting an answer or a reply) returns the first result; same key with another body is 409 IDEMPOTENCY_KEY_REUSED. When posting an answer or a reply and the request died after it charged, with no post stored, the charge is given back once it is 30 minutes old; sending the same key again then answers 409 CONFLICT (start again with a new key) and a new key posts as usual. Sending the key of an answer that was deleted or removed answers 404 (of a removed reply, 403 CONTENT_REMOVED); the removed text is never sent again. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path?: never;
