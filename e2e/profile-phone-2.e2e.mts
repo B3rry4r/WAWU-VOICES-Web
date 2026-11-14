@@ -1,0 +1,73 @@
+// V-ADMIN-PHONE-2 Profile cases in a real browser (API stubbed). ORIGIN=... OUT=docs/lead/admin-phone-2 node --experimental-strip-types e2e/profile-phone-2.e2e.mts
+import { createRequire } from "node:module";
+import { mkdirSync } from "node:fs";
+const { chromium } = createRequire(import.meta.url)("playwright");
+const ORIGIN = process.env.ORIGIN ?? "http://127.0.0.1:3100";
+const OUT = process.env.OUT ?? "docs/lead/admin-phone-2";
+mkdirSync(OUT, { recursive: true });
+const UID = "00000000-0000-4000-8000-000000000001";
+const profile = { id: UID, handle: "ada.okafor", displayName: "Ada Okafor", bio: null, avatarUrl: null, voiceCard: null, countryCode: "NG", state: "Enugu", city: null, languages: ["en"], joinedAt: "2026-11-02T10:00:00Z", voiceCount: 3, replyCount: 0, reactionsReceived: 0 };
+const settings = { language: "en", dataSaver: true, theme: "system", timezone: "Africa/Lagos", quietHoursStart: null, quietHoursEnd: null, notifyDailyQuestion: true, notifyWeeklyTopic: true, notifyReplies: true, notifyReactions: true, notifyPollResults: true, notifyFlashPolls: false, notifyCategoryAlerts: true, dailyQuestionMinute: 480 };
+const me = { phoneMasked: "+234 803 *** 4412", id: UID, wawuId: "w", handle: "ada.okafor", profileComplete: true, savedCount: 0, replyCount: 0, reactionsReceived: 0, roles: [], profile, allowances: { freePostsRemaining: 7, balanceMilli: 12500, maxVoiceSeconds: 10, freeReactionsLeftToday: 20, freeVotesLeftToday: 1, costs: {}, extraVoiceTokens: [] }, unreadNotifications: 0, settings, referralCode: "ADA-7K2Q", status: "ACTIVE" };
+const ans = (id: string, body: string) => ({ id, questionId: "q1", author: { id: UID, handle: "ada.okafor", displayName: "Ada", state: null, avatarUrl: null }, kind: "TEXT", body, clip: null, createdAt: new Date().toISOString(), editedAt: null, status: "PUBLISHED", news: null, likeCount: 0, replyCount: 0, agreeCount: 0, disagreeCount: 0, reactionCount: 0, reactionBreakdown: [], myReaction: null, iLiked: false, iSaved: false, isMine: true, labels: [] });
+let posts = ["a1", "a2", "a3"].map((id, i) => ans(id, ["First post about the road", "Second post about power", "Third post about food"][i]));
+let refuse: { status: number; body: unknown } | null = null;
+const json = (route: any, status: number, body: unknown) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+let bad = 0;
+const check = (ok: boolean, what: string) => { console.log((ok ? "ok   " : "FAIL ") + what); if (!ok) bad++; };
+const browser = await chromium.launch();
+for (const w of [320, 390, 768, 1440]) {
+  posts = ["a1", "a2", "a3"].map((id, i) => ans(id, ["First post about the road", "Second post about power", "Third post about food"][i]));
+  const ctx = await browser.newContext({ viewport: { width: w, height: w < 700 ? 844 : 900 }, isMobile: w < 700, hasTouch: w < 700 });
+  await ctx.addInitScript(() => localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: "t", refreshToken: "r" })));
+  await ctx.route("**/api/v1/**", async (route) => {
+    const u = new URL(route.request().url()); const path = u.pathname.replace(/^\/api\/v1/, ""); const m = route.request().method();
+    if (path === "/me") return json(route, 200, me);
+    if (path === "/me/answers") return json(route, 200, { items: posts.map((answer) => ({ type: "answer", answer })), nextCursor: null });
+    if (path === "/me/saved") return json(route, 200, { items: [], nextCursor: null });
+    if (path === "/people/" + UID) return json(route, 200, { profile, isBlockedByMe: false, recentAnswers: posts, nextCursor: null });
+    const del = path.match(/^\/answers\/(.+)$/);
+    if (del && m === "DELETE") { if (refuse) return json(route, refuse.status, refuse.body); posts = posts.filter((p) => p.id !== del[1]); return route.fulfill({ status: 204 }); }
+    return json(route, 404, { error: { code: "NOT_FOUND", message: "no" } });
+  });
+  const page = await ctx.newPage();
+  const errs: string[] = []; page.on("pageerror", (e) => errs.push(String(e)));
+  const dots = () => page.getByRole("button", { name: /^More: edit, delete, copy link/ });
+  const confirm = async (n: number) => { await dots().nth(n).click(); await page.getByRole("button", { name: "Delete this post" }).click(); await page.getByRole("button", { name: "Delete voice" }).click(); await page.waitForTimeout(500); };
+  await page.goto(ORIGIN + "/profile", { waitUntil: "networkidle" });
+  await page.waitForTimeout(400);
+  const names = await dots().evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
+  check(names.length === 3 && new Set(names).size === 3 && names.every((n) => n!.startsWith("More: edit, delete, copy link")), `${w}: three-dot names differ: ${JSON.stringify(names)}`);
+  const sizes = await dots().evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return `${Math.round(r.width)}x${Math.round(r.height)}`; }));
+  console.log(`     ${w}: three-dot sizes ${sizes.join(" ")}`);
+  refuse = { status: 409, body: { error: { code: "CONFLICT", message: "This post is part of an open report, so it cannot be deleted yet." } } };
+  await confirm(0);
+  check(await page.getByText("This post is part of an open report, so it cannot be deleted yet.").count() > 0 && (await dots().count()) === 3, `${w}: 409 shows the server's words, row stays`);
+  await page.screenshot({ path: `${OUT}/profile-refused-${w}.png` });
+  refuse = { status: 500, body: { error: { code: "INTERNAL", message: "" } } };
+  await page.waitForTimeout(4500);
+  await confirm(0);
+  check(await page.getByText("Something went wrong on our side. Try again in a moment.").count() > 0 && (await dots().count()) === 3, `${w}: 500 with no words shows the plain line, row stays`);
+  refuse = null;
+  await page.waitForTimeout(4500);
+  await confirm(0);
+  check((await dots().count()) === 2, `${w}: delete removes the row`);
+  const f1 = await page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+  check(!!f1 && f1.includes("Second post about power"), `${w}: focus on next row's three dots (${f1})`);
+  await confirm(1);
+  const f2 = await page.evaluate(() => document.activeElement?.tagName + ":" + document.activeElement?.textContent);
+  check((await dots().count()) === 1 && f2.startsWith("H2"), `${w}: after deleting the last-listed row focus is on the list heading (${f2})`);
+  await confirm(0);
+  const f3 = await page.evaluate(() => document.activeElement?.tagName + ":" + document.activeElement?.textContent);
+  check(f3.startsWith("H2"), `${w}: after the only row, focus is on the list heading (${f3})`);
+  check((await page.evaluate(() => document.documentElement.scrollWidth)) === w, `${w}: no sideways scroll on /profile`);
+  // my own page by link
+  await page.goto(ORIGIN + "/p/" + UID, { waitUntil: "networkidle" });
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: `${OUT}/profile-own-link-${w}.png` });
+  check((await page.getByRole("button", { name: /More: report or block/ }).count()) === 0 && (await page.getByText(/^Report /).count()) === 0 && (await page.getByText(/^Block /).count()) === 0, `${w}: /p/<my id> has no Report or Block`);
+  check(errs.length === 0, `${w}: no page errors ${errs[0] ?? ""}`);
+  await ctx.close();
+}
+await browser.close();
+console.log(bad ? `PROBLEMS: ${bad}` : "ALL OK");
