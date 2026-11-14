@@ -142,21 +142,30 @@ function Sidebar() {
         <img src="/brand/logo-wordmark-white.png" alt="VOICES" className="h-9 w-auto" />
         <span className="rounded-xs bg-forest-2 px-2 py-1 text-eyebrow uppercase text-sun">Admin</span>
       </div>
-      <nav className="flex flex-col gap-1" aria-label="Admin pages">
-        {items.map((p) => {
-          const on = p.href === "/admin" ? path === "/admin" : path === p.href || path.startsWith(p.href + "/");
+      <nav className="flex min-h-0 flex-col gap-0.5 overflow-y-auto" aria-label="Admin pages">
+        {items.map((p, i) => {
+          // "/admin/money" is a page of its own and the parent of the other Money pages: it is current only on itself.
+          const own = ADMIN_PAGES.some((o) => o.href.startsWith(p.href + "/"));
+          const on = p.href === "/admin" || own ? path === p.href : path === p.href || path.startsWith(p.href + "/");
           const c = countFor(p.id, today);
+          const heading = p.group && p.group !== items[i - 1]?.group ? p.group : null;
           return (
+            <div key={p.id} className="contents">
+              {heading ? (
+                <div className="vx-eyebrow mt-4 px-3 pb-1 text-[var(--on-forest-2)]" role="presentation">
+                  {heading}
+                </div>
+              ) : null}
             <Link
-              key={p.id}
               href={p.href}
               aria-current={on ? "page" : undefined}
-              className={`flex min-h-[48px] items-center gap-3 rounded-m px-3 text-label text-forest-on no-underline a-plain ${on ? "bg-forest-2" : "hover:bg-forest-2"}`}
+              className={`flex min-h-[44px] items-center gap-3 rounded-m px-3 text-label text-forest-on no-underline a-plain ${on ? "bg-forest-2" : "hover:bg-forest-2"}`}
             >
               <Icon name={p.icon as IconName} size={22} />
               <span className="min-w-0 flex-1">{p.label}</span>
               {c ? <span className="rounded-pill bg-green px-2 py-0.5 text-count text-green-on">{c}</span> : null}
             </Link>
+            </div>
           );
         })}
       </nav>
