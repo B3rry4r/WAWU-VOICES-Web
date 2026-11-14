@@ -7,6 +7,7 @@ import { Button } from "@/components/vx";
 import { isSignedIn } from "@/lib/api/auth";
 import { recordShareEvent } from "@/lib/api/reach";
 import { signInHref } from "@/lib/auth/entry-draft";
+import { rememberShareVisit } from "./share-visit";
 
 /** null until the browser has said; the page is server rendered for no account, so the first paint is the guest one. */
 function useSignedInHere(): boolean | null {
@@ -30,6 +31,7 @@ export function GuestOnly({ children }: { children: ReactNode }) {
 /** Counts one open of the link (once per browser tab). Renders nothing. */
 export function LinkOpened({ code }: { code: string }) {
   useEffect(() => {
+    rememberShareVisit(code);
     const key = "voices-share-open-" + code;
     try {
       if (window.sessionStorage.getItem(key)) return;
@@ -47,7 +49,7 @@ export function AddVoice({ code, label, block }: { code: string; label: string; 
   return (
     <Link
       href={`/speak?from=${encodeURIComponent(code)}`}
-      onClick={() => void recordShareEvent(code, "add_voice_tap")}
+      onClick={() => { rememberShareVisit(code); void recordShareEvent(code, "add_voice_tap"); }}
       className={"vx-btn vx-btn--primary vx-btn--l no-underline" + (block ? " vx-btn--block" : "")}
     >
       <Icon name="mic" size={22} />

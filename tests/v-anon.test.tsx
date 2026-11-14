@@ -16,7 +16,7 @@ import { WriteScreen } from "@/features/talk/WriteScreen";
 import { PostedScreen } from "@/features/talk/PostedScreen";
 import { ANON_NOTE } from "@/features/talk/AnonymousSwitch";
 import { PostRow } from "@/features/profile/PostRow";
-import { createAnswer } from "@/lib/api/talk";
+import { createAnswer, createReply, createVoiceReply } from "@/lib/api/talk";
 import { createVoiceAnswer } from "@/lib/api/speak";
 import { postHeldAnswer } from "@/lib/api/units";
 import { readAnonPref, writeAnonPref } from "@/lib/anon-pref";
@@ -34,6 +34,7 @@ function stub() {
     calls.push(c);
     const u = c.url;
     if (c.method === "POST" && u.endsWith("/questions/q1/answers")) return json({ answer: { ...base, id: "new1" } }, 201);
+    if (c.method === "POST" && u.endsWith("/answers/a1/replies")) return json({ reply: { id: "r1" } }, 201);
     if (u.endsWith("/answers/a1")) return json(posted);
     if (u.endsWith("/where-you-sit")) return json(sit);
     if (u.includes("/me/allowance")) return json({ freePostsRemaining: 5, balanceMilli: 0, costs: { textPostMilli: 1000, textMaxChars: 1000 } });
@@ -80,13 +81,14 @@ describe("Post without my name on the write screen", () => {
     expect(readAnonPref("q1")).toBe(false);
   });
 
-  it("is not offered on a reply, which the API cannot post anonymously", async () => {
+  it("is offered on a reply too, off until turned on (V-FIX-D: the API now takes anonymous on a reply)", async () => {
     search = "reply=r1&stance=AGREE";
     stub();
     vi.stubGlobal("fetch", vi.fn(async (url: string) => (String(url).endsWith("/answers/r1") ? json({ ...base, id: "r1" }) : String(url).endsWith("/questions/q1") ? json({ id: "q1", status: "LIVE", text: "Today?", hint: null, moodOptions: [] }) : String(url).includes("/me/allowance") ? json({ freePostsRemaining: 5, balanceMilli: 0, costs: { textPostMilli: 1000 } }) : new Response("{}", { status: 404 }))));
     render(<WriteScreen qid="q1" />);
     await screen.findByRole("textbox");
-    expect(screen.queryByRole("switch", { name: "Post without my name" })).toBeNull();
+    const sw = screen.getByRole("switch", { name: "Post without my name" }) as HTMLInputElement;
+    expect(sw.checked).toBe(false);
   });
 });
 
@@ -102,6 +104,18 @@ describe("the payloads", () => {
     expect(bodies[2]).not.toHaveProperty("anonymous");
     expect(bodies[3]).toMatchObject({ kind: "VOICE", clipId: "c1", anonymous: true });
     for (const b of bodies) expect(b).not.toHaveProperty("showNameOnCard");
+  });
+
+  it("V-FIX-D: createReply and createVoiceReply add anonymous true only when asked", async () => {
+    await createReply("a1", "AGREE", "yes", "k1");
+    await createReply("a1", "AGREE", "yes", "k2", true);
+    await createVoiceReply("a1", "AGREE", "c1", "k3");
+    await createVoiceReply("a1", "AGREE", "c1", "k4", "t1", true);
+    const bodies = calls.filter((c) => c.method === "POST").map((c) => c.body!);
+    expect(bodies[0]).toEqual({ stance: "AGREE", kind: "TEXT", body: "yes" });
+    expect(bodies[1]).toEqual({ stance: "AGREE", kind: "TEXT", body: "yes", anonymous: true });
+    expect(bodies[2]).toEqual({ stance: "AGREE", kind: "VOICE", clipId: "c1" });
+    expect(bodies[3]).toEqual({ stance: "AGREE", kind: "VOICE", clipId: "c1", extraVoiceTokenId: "t1", anonymous: true });
   });
 
   it("a held draft posted after buying tokens keeps the choice, and only then", async () => {

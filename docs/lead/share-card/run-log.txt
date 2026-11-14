@@ -1,0 +1,36 @@
+PASS crawler: GET /s/QCODE answers 200 (no redirect, location=null)
+PASS og:title = How do you feel about Nigeria right now?
+PASS twitter:title = How do you feel about Nigeria right now?
+PASS descriptions = Pick one word: Angry, Tired, Proud, Hopeful. Say it in your voice.
+PASS og:image = http://127.0.0.1:4101/api/v1/share/QCODE/card
+PASS og:image:width/height = 1200 x 630
+PASS twitter:card = summary_large_image
+PASS crawler: /s/CLOSED keeps the share page body (200)
+PASS crawler: /s/ANSWER keeps the share page body (200)
+PASS /s/NOPE answers 404
+PASS 390 (b) guest on the pick screen with four words, url /q/q9/mood?from=QCODE
+PASS 390 (b) no share page, 404 or error page drawn while it moved ([])
+PASS 390 (b) Back does not return to the link or loop (about:blank)
+PASS 390 (c) tapped Type it instead as a guest: /q/q9/write?mood=PROUD&from=QCODE
+PASS 390 (c) signed in, back at /q/q9/write?mood=PROUD&from=QCODE
+PASS 390 (c) the word PROUD is shown on the write screen
+PASS 390 (c) PROUD still picked on the pick screen
+PASS 390 (d) tapped Say it as a guest: /q/q9/speak?mood=PROUD&from=QCODE
+PASS 390 (d) /join carries the way back: /q/q9/speak?from=QCODE&mood=PROUD
+PASS 390 (d) account made, back at /q/q9/speak?from=QCODE&mood=PROUD&autopost=1
+PASS 390 (d) the word PROUD is on the screen
+PASS 390 (d) PROUD still picked on the pick screen
+PASS 390 (e) normal way: branch and origin/main screenshots identical (134923 bytes vs 134923), url /q/q9/mood?mood=PROUD
+PASS 1440 (b) guest on the pick screen with four words, url /q/q9/mood?from=QCODE
+PASS 1440 (b) no share page, 404 or error page drawn while it moved ([])
+PASS 1440 (b) Back does not return to the link or loop (about:blank)
+PASS 1440 (c) tapped Type it instead as a guest: /q/q9/write?mood=PROUD&from=QCODE
+PASS 1440 (c) signed in, back at /q/q9/write?mood=PROUD&from=QCODE
+PASS 1440 (c) the word PROUD is shown on the write screen
+PASS 1440 (c) PROUD still picked on the pick screen
+PASS 1440 (d) tapped Say it as a guest: /q/q9/speak?mood=PROUD&from=QCODE
+PASS 1440 (d) /join carries the way back: /q/q9/speak?from=QCODE&mood=PROUD
+PASS 1440 (d) account made, back at /q/q9/speak?from=QCODE&mood=PROUD&autopost=1
+PASS 1440 (d) the word PROUD is on the screen
+PASS 1440 (d) PROUD still picked on the pick screen
+PASS 1440 (e) normal way: branch and origin/main screenshots identical (219452 bytes vs 219452), url /q/q9/mood?mood=PROUD
