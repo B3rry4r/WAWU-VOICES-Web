@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shared link, scrolled</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+.c-tabbar .vx-bottombar{margin:0;border-radius:0;box-shadow:none;background:none}
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); font-family: var(--font-body);">
+<header style="flex: none; box-sizing: border-box; height: 107px; padding: 47px 16px 0; display: flex; align-items: center; gap: 8px; background: var(--bg); position: relative; z-index: 50; box-shadow: 0 1px 0 var(--line);">
+<div style="margin-right: auto; display: flex;"><x-import component-from-global-scope="Voices.Logo" height="{{h30}}" alt="VOICES"></x-import></div>
+<x-import component-from-global-scope="Voices.Button" variant="secondary" size="s" href="HomeGuest-390.dc.html">Open in app</x-import>
+</header>
+<main style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain;">
+<div style="box-sizing: border-box; padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 18px;">
+<div style="margin-top: -378px;"><section aria-labelledby="h-poll" style="display: flex; flex-direction: column; gap: 10px;">
+<h2 id="h-poll" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">The poll so far</h2>
+<x-import component-from-global-scope="Voices.Poll" question="What would make you feel truly fine again?" options="{{pollOpts}}" closes-in="2 days" state="results" on-explain="{{no}}"></x-import>
+</section></div>
+<section aria-labelledby="h-next" style="display: flex; flex-direction: column; gap: 10px;">
+<h2 id="h-next" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">What Next? · 14 proposals</h2>
+<x-import component-from-global-scope="Voices.ProposalCard" author="@ngozi.e" time="1d" text="Publish a weekly power schedule for every street, so people can plan work and school." supports="{{n312}}" challenges="{{n41}}" grouped="{{n6}}"></x-import>
+</section>
+</div>
+</main>
+<div style="flex: none; box-sizing: border-box; padding: 12px 16px 24px; background: var(--surface); box-shadow: 0 -1px 0 var(--line); display: flex; flex-direction: column; gap: 6px; position: relative; z-index: 50;">
+<x-import component-from-global-scope="Voices.Button" size="l" block="{{yes}}" icon="mic" href="../talk/Record-ready-390.dc.html">Add your voice</x-import>
+<span style="text-align: center; font: 500 13px/18px var(--font-body); color: var(--ink-2);">Record here in your browser. Sign in only when you publish.</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+yes: true, no: false, h28: 28, h30: 30, h34: 34, s14: 14, s16: 16, s18: 18, s20: 20, s22: 22, s24: 24, s28: 28,
+a1: { handle: '@halima.y', name: 'Halima Yusuf' },
+v1: { duration: 10, seed: 9, transcript: 'I say I am fine because if I start talking, who will listen? Everybody is carrying something. So we smile and we keep moving.' },
+r1: { top: ['❤️', '🤔', '😢'], total: 1880 },
+pollOpts: [
+{ id: 'a', label: 'Stable power and affordable food', votes: 5118 },
+{ id: 'b', label: 'A job that pays properly', votes: 3370 },
+{ id: 'c', label: 'Safety and justice', votes: 2630 },
+{ id: 'd', label: 'Someone to talk to without judgment', votes: 1362 }
+],
+n2104: 2104, n133: 133, n312: 312, n41: 41, n6: 6
+};
+}
+}
+</script>
+</body>
+</html>

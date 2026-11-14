@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Share card, single voice</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1200px; height: 630px; overflow: hidden; background: var(--forest); font-family: var(--font-body);">
+<x-import component-from-global-scope="Voices.ShareCard" kind="voice" topic="Money" question="Who is getting rich from this inflation while you count coins?" quote="They said fuel would come down after the new refinery. My transport money is still double what it was in January." tag="unverified" summary="A voice from @musa.d" voices="{{voices}}" updated="1h ago" scale="{{one}}"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":630}}'>
+class Component extends DCLogic {
+renderVals() {
+return { one: 1, voices: 2400 };
+}
+}
+</script>
+</body>
+</html>

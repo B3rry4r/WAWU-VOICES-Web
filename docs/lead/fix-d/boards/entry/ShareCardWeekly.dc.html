@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Share card, weekly summary</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1200px; height: 630px; overflow: hidden; background: var(--forest); font-family: var(--font-body);">
+<x-import component-from-global-scope="Voices.ShareCard" kind="weekly" topic="Week 1 report · AI-assisted · Human-reviewed" question="How Nigerians felt in Week 1" poll="{{mood}}" summary="Most voices say they are coping, not fine." voices="{{voices}}" updated="Monday 9:00" scale="{{one}}"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":630}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+one: 1, voices: 9100,
+mood: [
+{ label: 'Tired', pct: 38 },
+{ label: 'Anxious', pct: 27 },
+{ label: 'Hopeful', pct: 21 }
+]
+};
+}
+}
+</script>
+</body>
+</html>

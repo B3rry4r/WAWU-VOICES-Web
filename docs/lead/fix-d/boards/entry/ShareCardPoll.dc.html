@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Share card, poll</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1200px; height: 630px; overflow: hidden; background: var(--forest); font-family: var(--font-body);">
+<x-import component-from-global-scope="Voices.ShareCard" kind="poll" topic="Week 1 poll" question="What would make you feel truly fine again?" poll="{{poll}}" open="{{yes}}" summary="People are split so far." voices="{{voices}}" updated="20 min ago" scale="{{one}}"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":630}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+yes: true, one: 1, voices: 12480,
+poll: [
+{ label: 'Stable power and affordable food', pct: 41 },
+{ label: 'A job that pays properly', pct: 27 },
+{ label: 'Safety and justice', pct: 21 }
+]
+};
+}
+}
+</script>
+</body>
+</html>

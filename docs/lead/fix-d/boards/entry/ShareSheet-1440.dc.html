@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Share dialog, desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="position: relative; max-width: 1440px; margin: 0 auto; min-height: 1100px; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--font-body);">
+<div aria-hidden="true" style="min-height: 1100px; display: flex; flex-wrap: wrap; align-items: stretch;">
+<div style="flex: 0 0 248px; display: flex;">
+<x-import component-from-global-scope="Voices.SideNav" active="discover" units="12.5" free-left="{{free}}"></x-import>
+</div>
+<div style="flex: 999 1 640px; min-width: 0; display: flex; flex-wrap: wrap; align-items: stretch;">
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 0 32px 48px;">
+<div style="max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 76px;">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="Voices.SearchField" placeholder="Search questions, voices and handles"></x-import></div>
+<span class="vx-iconbtn"><x-import component-from-global-scope="Voices.Icon" name="message-circle" size="{{s22}}"></x-import></span>
+<span class="vx-iconbtn"><x-import component-from-global-scope="Voices.Icon" name="bell" size="{{s22}}"></x-import></span>
+</div>
+<span class="vx-eyebrow" style="color: var(--ink-2);">Money</span>
+<p style="margin: 0; font: 400 36px/40px var(--font-display);">Who is getting rich from this inflation while you count coins?</p>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{a1}}" time="1h" place="Abuja" voice="{{v1}}" likes="{{n230}}" replies="{{n19}}" tag="unverified"></x-import>
+<x-import component-from-global-scope="Voices.AnswerCard" author="{{a2}}" time="2h" place="Port Harcourt" text="Landlords. Rent went up twice this year and nothing in the house changed." likes="{{n512}}" replies="{{n40}}"></x-import>
+</div>
+</main>
+<aside style="flex: 0 0 340px; box-sizing: border-box; border-left: 1px solid var(--line); padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+<x-import component-from-global-scope="Voices.TopicOfWeek" variant="rail" title="Are You Really Fine? You Dey Okay?" meta="Week 1 · 10 questions · Poll open"></x-import>
+</aside>
+</div>
+</div>
+<x-import component-from-global-scope="Voices.Sheet" variant="dialog" inline="{{yes}}" title="Share this voice" subtitle="A card and a link go out. The audio file never does.">
+<div style="display: flex; flex-direction: column; gap: 18px;">
+<x-import component-from-global-scope="Voices.ShareCard" kind="voice" topic="Money" question="Who is getting rich from this inflation while you count coins?" quote="They said fuel would come down after the new refinery. My transport money is still double what it was in January." tag="unverified" summary="A voice from @musa.d" voices="{{n2400}}" updated="1h ago"></x-import>
+<ul aria-label="Share to" style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px 8px;">
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center; font: 800 15px/1 var(--font-body);">WA</span>WhatsApp</button></li>
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center; font: 800 15px/1 var(--font-body);">WS</span>Status</button></li>
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center; font: 800 15px/1 var(--font-body);">IG</span>Stories</button></li>
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center; font: 800 15px/1 var(--font-body);">FB</span>Facebook</button></li>
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center; font: 800 15px/1 var(--font-body);">X</span>X</button></li>
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center; font: 800 15px/1 var(--font-body);">TT</span>TikTok</button></li>
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center; font: 800 15px/1 var(--font-body);">TG</span>Telegram</button></li>
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="message-square" size="{{s22}}"></x-import></span>SMS</button></li>
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--mint); color: var(--green-text); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="link" size="{{s22}}"></x-import></span>Copy link</button></li>
+<li><button type="button" style="width: 100%; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 600 12px/16px var(--font-body); color: var(--ink);"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="ellipsis" size="{{s22}}"></x-import></span>More</button></li>
+</ul>
+<p class="vx-sheet__fine">Sharing is free. Your link carries your referral code.</p>
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+yes: true, free: 7, s22: 22,
+a1: { handle: '@musa.d', name: 'Musa Danjuma' },
+v1: { duration: 24, seed: 11, transcript: 'They said fuel would come down after the new refinery. My transport money is still double what it was in January.' },
+a2: { handle: '@chioma.n', name: 'Chioma Nwosu' },
+n230: 230, n19: 19, n512: 512, n40: 40, n2400: 2400
+};
+}
+}
+</script>
+</body>
+</html>
