@@ -1,9 +1,8 @@
 VERDICT: FIX
-INTERIM
 
 # Check of "Sign out warns first" (branch v/signout-warn, head bfe4953)
 
-Interim, written 15 Nov 2026. Gates and the record-screen suites are still running. This is what is proven so far.
+Final, 15 Nov 2026.
 Built app (`next build` + `next start`), Chromium, fake microphone, API and sign-in stubbed, 390x844 and 1440x900.
 `origin/main` is inside the branch (merge-base check says so). No product code or existing test was changed.
 
@@ -44,9 +43,18 @@ no busy mark). The person will tap again. Double taps are safe (see below), but 
 - 10 fast taps: one dialog, one sign-out request (also with no recording). Three taps on "Sign out anyway": one request.
 - Session ends while the dialog is open: dialog stays; Go back leaves a normal page.
 
-## Not yet run (interim)
-Lint, build gate counts, vitest x3, draft-owner / surveys-r9 / signout-warn e2e suites, voice and typed send 5x at each width,
-kinds of recording (offline-queued, reply, mid-send), dark mode, Deletion pending screen, 360x740, comparison build of main.
+## What I ran (totals)
+- `npm ci` ok. `npx tsc --noEmit`: 0 errors. `npx next lint`: no warnings or errors. `npx next build`: ok.
+- `npx vitest run` exit 0 three times: 154 files, 1572 tests each time.
+- Main's tests untouched: `git diff origin/main --stat -- tests` shows only `tests/signout-warn.test.tsx` (new). `origin/main` is inside the branch.
+- `e2e/draft-owner.e2e.mts` (unchanged, both widths): 38 ok, 0 FAIL (the two known timing misses did not occur). `e2e/surveys-r9.e2e.mts`: ALL PASSED 6. `e2e/signout-warn.e2e.mts`: all 2 ok.
+- My own attack run (not committed): voice x5 and typed x5 with the word screen at 390 and 1440, each exactly 1 clip (voice) and 1 post: ok. Question, "Pick one word", ANGRY TIRED PROUD HOPEFUL, "Say it in N seconds", "Type it instead", "Share my word" all present.
+- Kept recording kinds: a plain take, one waiting to be sent (queued), a voice reply (queued): the warning shows in each.
+- Dialog at 360x740, light and dark: inside the screen, no sideways scroll.
 
-## Could not prove
-Finding 3 in a browser. Whether real browsers ever leave IndexedDB `open` hanging (finding 1 uses a stub that never answers).
+## Not proven
+- Finding 3 in a browser; whether real browsers ever leave IndexedDB `open` hanging (finding 1 uses a stub that never answers).
+- "Tap Sign out during a send, then Go back": the record screen has no link to Settings, so I could not move there without a reload. Not tested.
+- "Sign out anyway" was not diffed against a build of main (same landing page `/`, token removed, one sign-out request are seen; storage and request were not compared side by side).
+- Deletion pending screen in a browser (the code change mirrors Settings; the builder's unit test covers it). Dark mode only at 360 and by the builder's screenshots.
+- Two tabs of the same person, and a sign-out done in another tab: not covered (the order says that cannot be warned about).
