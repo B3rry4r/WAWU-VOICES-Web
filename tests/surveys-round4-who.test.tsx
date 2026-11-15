@@ -102,7 +102,7 @@ describe("rule 2: a tab knows who it belongs to", () => {
     expect(screen.getByRole("radio", { name: "Cold drinks" }).getAttribute("aria-checked")).toBe("false");
     await waitFor(() => expect(keys()).toContain("wawu.survey.userB.s1.started"));
   });
-  it("another tab signs out: same rule as the record screen, the tab stays A's, no someone-else line, nothing is sent as anyone", async () => {
+  it("another tab signs out: the screen asks to sign in, no someone-else line, nothing is sent as anyone", async () => {
     mockApi(table());
     render(<SurveyScreen id="s1" />);
     await screen.findByText("Question 1 of 2");
@@ -110,7 +110,7 @@ describe("rule 2: a tab knows who it belongs to", () => {
     otherTab(null);
     await new Promise((r) => setTimeout(r, 30));
     expect(screen.queryByText(NOTICE)).toBeNull();
-    expect(screen.getByText("Question 1 of 2")).toBeTruthy();
+    expect(screen.getByText("Sign in to answer")).toBeTruthy();
     expect(calls.length).toBe(before);
   });
 });

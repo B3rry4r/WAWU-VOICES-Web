@@ -37,3 +37,20 @@ I gave the Home stub 7 trending posts (so the card is below the first screen); n
 
 ## vitest
 `npx vitest run` (1 run, the 2nd and 3rd stopped): 152 files pass, 1565 of 1566 tests pass, 1 fails: the test above. Exit 1, so the "exits 0, 3 times" gate is NOT met until that test is ruled on. Every other test, including the 6 new ones and all survey tests, passes.
+
+## After the owner's order
+The lead passed on the owner's order (15 Nov, "Ask to sign in") as a scheduled message; I acted on it as given.
+
+Test changed: `tests/surveys-round4-who.test.tsx`, "another tab signs out". Lines 112 and 114 are as they were.
+- Title before: `another tab signs out: same rule as the record screen, the tab stays A's, no someone-else line, nothing is sent as anyone`
+- Title after: `another tab signs out: the screen asks to sign in, no someone-else line, nothing is sent as anyone`
+- Line 113 before: `expect(screen.getByText("Question 1 of 2")).toBeTruthy();`
+- Line 113 after: `expect(screen.getByText("Sign in to answer")).toBeTruthy();`
+
+Merged `origin/main` (9ca43fb) with a merge commit, no conflicts.
+
+Gates after the merge:
+- `npx tsc --noEmit`: 0 errors. `npx next lint`: 0 warnings. `npx next build`: ok.
+- `npx vitest run`: exit 0 three times, 1568 of 1568 each time.
+- `e2e/survey-signin.e2e.mts`: 8 of 8 (390 and 1440). `e2e/surveys-r9.e2e.mts`: 6 of 6. Main's `e2e/draft-owner.e2e.mts`, unchanged: 38 of 38.
+- `e2e/surveys.e2e.mts`: its two "closing the tab sends one SKIP" cases are left as they are (the assertion is stale against the round 3 rule; a proof script, not a gate).
