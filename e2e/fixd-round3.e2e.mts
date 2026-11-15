@@ -81,7 +81,7 @@ const draftSeed = async (page: Page) => page.evaluate(async () => {
 });
 const draftRead = async (page: Page) => page.evaluate(async () => {
   const db: IDBDatabase = await new Promise((res, rej) => { const r = indexedDB.open('voices-speak', 1); r.onupgradeneeded = () => r.result.createObjectStore('drafts'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-  const d = await new Promise<any>((res) => { const rq = db.transaction('drafts').objectStore('drafts').get('current'); rq.onsuccess = () => res(rq.result ?? null); });
+  const d = await new Promise<any>((res) => { const rq = db.transaction('drafts').objectStore('drafts').getAll(); rq.onsuccess = () => res(rq.result.find((y: any) => y && y.blob) ?? null); });
   db.close();
   return d ? { key: d.key, queued: d.queued, anonymous: d.anonymous, questionId: d.questionId, reply: d.reply, owner: d.owner } : null;
 });

@@ -102,41 +102,41 @@ describe("draft ownership", () => {
   const tokenFor = (sub: string) => "x." + btoa(JSON.stringify({ sub })).replace(/=+$/, "") + ".y";
   const as = (sub: string | null) => { window.localStorage.clear(); if (sub) window.localStorage.setItem("voices-web-session", JSON.stringify({ accessToken: tokenFor(sub), refreshToken: "r" })); };
   const d = { questionId: "q", blob: new Blob(["a"]), mime: "audio/webm", seconds: 3, peaks: [1], key: "k", savedAt: 1 };
-  beforeEach(async () => { as(null); await clearDraft(); });
+  beforeEach(async () => { as(null); await clearDraft(currentOwner()); });
   afterEach(() => { window.localStorage.clear(); });
 
   it("reads the owner from the token", () => { as("u-1"); expect(currentOwner()).toBe("u-1"); as(null); expect(currentOwner()).toBeNull(); });
   it("a guest's recording goes to the first person who signs in, once", async () => {
-    await saveDraft(d);
+    await saveDraft(d, currentOwner());
     as("u-1");
-    expect((await loadDraft())?.owner).toBe("u-1");
+    expect((await loadDraft(currentOwner()))?.owner).toBe("u-1");
     as("u-2");
-    expect(await loadDraft()).toBeNull();
-    expect(await loadDraft()).toBeNull();
+    expect(await loadDraft(currentOwner())).toBeNull();
+    expect(await loadDraft(currentOwner())).toBeNull();
   });
   it("another account never sees a signed-in person's recording, and it is removed when they sign in", async () => {
     as("u-1");
-    await saveDraft(d);
+    await saveDraft(d, currentOwner());
     as("u-2");
-    expect(await loadDraft()).toBeNull();
+    expect(await loadDraft(currentOwner())).toBeNull();
     as("u-1");
-    expect(await loadDraft()).toBeNull();
+    expect(await loadDraft(currentOwner())).toBeNull();
   });
   it("a guest does not see a signed-in person's recording", async () => {
     as("u-1");
-    await saveDraft(d);
+    await saveDraft(d, currentOwner());
     as(null);
-    expect(await loadDraft()).toBeNull();
+    expect(await loadDraft(currentOwner())).toBeNull();
     as("u-1");
-    expect((await loadDraft())?.owner).toBe("u-1");
+    expect((await loadDraft(currentOwner()))?.owner).toBe("u-1");
   });
   it("sign-out clears it", async () => {
     as("u-1");
-    await saveDraft(d);
+    await saveDraft(d, currentOwner());
     const { signOut } = await import("@/lib/api/auth");
     signOut();
     await new Promise((r) => setTimeout(r, 20));
     as("u-1");
-    expect(await loadDraft()).toBeNull();
+    expect(await loadDraft(currentOwner())).toBeNull();
   });
 });

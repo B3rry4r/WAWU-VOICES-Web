@@ -21,6 +21,7 @@ import { MoodWordNote } from "@/features/mood/MoodChip";
 import { pickHref, useMoodWord, writePick } from "@/features/mood/mood";
 import { AppBar, Problem, failText, needsNewKey, isOutOfPosts, nairaOfMilli, outOfPostsHref, postPrice, saveTyped, typedDraft, unitsText, useSignedIn, uuidKey, SignInNote } from "./lib";
 import { textLimit } from "./textLimit";
+import { openedFor, OTHER_TAB_NOTE, signedInAsSomeoneElse } from "@/features/speak/draft";
 
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
@@ -37,6 +38,7 @@ export function WriteScreen({ qid }: { qid: string }) {
   const [loadErr, setLoadErr] = useState<unknown>(null);
   const [tries, setTries] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
+  const [keepFail, setKeepFail] = useState(false); // this device could not keep what was typed (storage blocked or full)
   const [sending, setSending] = useState(false);
   const busy = useRef(false);
   const [text, setText] = useState("");
@@ -58,7 +60,7 @@ export function WriteScreen({ qid }: { qid: string }) {
     const jobs: Promise<unknown>[] = [api.getQuestion(qid).then(setQ)];
     if (replyTo) jobs.push(api.getAnswer(replyTo).then(setParent));
     if (signedIn) jobs.push(api.getAllowance().then(setAllow));
-    Promise.all(jobs).then(() => { const d = typedDraft(slot); setText(d); setInitial(d); }, setLoadErr);
+    Promise.all(jobs).then(() => { const d = typedDraft(slot, openedFor()); setText(d); setInitial(d); }, setLoadErr);
   }, [qid, replyTo, signedIn, slot, tries]);
 
   const close = replyTo ? `/q/${qid}/a/${replyTo}` : `/q/${qid}`;
@@ -89,9 +91,10 @@ export function WriteScreen({ qid }: { qid: string }) {
     const stance = intent ? STANCE_OF[intent] : null;
     const body = text.trim();
     if (!body) return;
+    if (signedInAsSomeoneElse(openedFor())) { setMsg(OTHER_TAB_NOTE); return; } // someone else is signed in on another tab: nothing is sent under their name
     if (replyTo && !stance) { setMsg("Pick how you are replying: I agree, I disagree or My experience."); return; }
     // The held draft carries the post's Idempotency-Key (same text, same key), so a post after a purchase is the same post.
-    const held = replyTo ? undefined : saveDraft(qid, body);
+    const held = replyTo ? undefined : saveDraft(qid, body, undefined, openedFor());
     // The key belongs to the exact body: the words, the reply switch and the stance. Changing any of them makes a new request.
     const anonNow = replyTo ? (ownNameless || replyAnon.ref.current) : anon;
     if (!key.current || key.current.text !== body || key.current.anon !== anonNow || key.current.st !== (replyTo ? stance : null)) key.current = { text: body, anon: anonNow, st: replyTo ? stance : null, k: held ? held.key : uuidKey() };
@@ -101,15 +104,15 @@ export function WriteScreen({ qid }: { qid: string }) {
     try {
       if (replyTo) {
         await api.createReply(replyTo, stance!, body, key.current.k, anonNow);
-        saveTyped(slot, "");
+        saveTyped(slot, "", openedFor());
         replyAnon.clear();
         router.push(`/q/${qid}/a/${replyTo}`);
       } else {
         const r = await api.createAnswer(qid, body, tagFields(tag) ?? { isNews: false }, key.current.k, mood.word, anon);
         writeAnonPref(qid, false);
         notePublished();
-        saveTyped(slot, "");
-        clearDraft(qid);
+        saveTyped(slot, "", openedFor());
+        clearDraft(qid, openedFor());
         writePick(qid, null);
         router.push(`/q/${qid}/posted?a=${r.answer.id}`);
       }
@@ -117,7 +120,7 @@ export function WriteScreen({ qid }: { qid: string }) {
       busy.current = false;
       setSending(false);
       if (isOutOfPosts(e)) {
-        saveTyped(slot, body);
+        saveTyped(slot, body, openedFor());
         if (replyTo) {
           router.push(`/units/buy?from=${encodeURIComponent(close)}`);
           return;
@@ -128,7 +131,7 @@ export function WriteScreen({ qid }: { qid: string }) {
       // The key was refused as spent: forget it, here and in the held draft, so the next tap goes out with a new one.
       if (needsNewKey(e)) {
         key.current = null;
-        if (!replyTo) renewDraftKey(qid);
+        if (!replyTo) renewDraftKey(qid, openedFor());
       }
       setMsg(failText(e));
     }
@@ -149,13 +152,14 @@ export function WriteScreen({ qid }: { qid: string }) {
             {mood.word ? <div className="mt-3"><MoodWordNote mood={mood.word} changeHref={pickHref(qid)} /></div> : null}
           </div>
         )}
+        {keepFail ? <div className="mb-3"><Banner tone="info">This device could not keep what you typed. Stay on this page until you post it.</Banner></div> : null}
         <div>
           <Composer
             freeLeft={left}
             maxChars={textLimit(c)}
             countChars={countChars}
             value={text}
-            onChange={(t) => { setText(t); saveTyped(slot, t); }}
+            onChange={(t) => { setText(t); if (!saveTyped(slot, t, openedFor()) && t && !signedInAsSomeoneElse(openedFor())) setKeepFail(true); }}
             replyTo={replyTo ? whoLabel : undefined}
             intent={intent ?? undefined}
             onIntentChange={setIntent}
@@ -166,7 +170,7 @@ export function WriteScreen({ qid }: { qid: string }) {
             postLabel={price?.label}
             paid={price?.paid}
             postDisabled={dayLeft === 0 || (!replyTo && !tagReady(tag))}
-            extra={signedIn && c ? <FixPanel text={text} costMilli={c.textFixMilli ?? 5000} buyHref={buyHref} onUse={(fixed) => { setText(fixed); saveTyped(slot, fixed); }} /> : undefined}
+            extra={signedIn && c ? <FixPanel text={text} costMilli={c.textFixMilli ?? 5000} buyHref={buyHref} onUse={(fixed) => { setText(fixed); saveTyped(slot, fixed, openedFor()); }} /> : undefined}
             balance={allow ? unitsText(allow.balanceMilli) : undefined}
             onVoice={false}
             onSubmit={() => void send()}

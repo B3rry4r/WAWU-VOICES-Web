@@ -13,9 +13,10 @@ import { naira, smallestPack, units, unitsLabel } from "./format";
 import { useLoad, useSignedIn } from "./hooks";
 import { Breakdown, MySubscriptionCard, PlansSection } from "./Plans";
 import { Card, ErrorBlock, Line, LoadingBlock, Note, SignInNeeded } from "./ui";
+import { openedFor } from "@/features/speak/draft";
 
 function holdsDraftFor(q: string): boolean {
-  return !!getDraft(q)?.awaitingUnits;
+  return !!getDraft(q, openedFor())?.awaitingUnits;
 }
 
 /** What things cost, as the Get tokens board draws it: text by length, then the two voice prices. */
@@ -62,7 +63,7 @@ function Buy({ wallet, tiers, plans, mine }: { wallet: Wallet; tiers: TiersRespo
   const wanted = params.get("pack");
   const [sel, setSel] = useState<string>(() => (sorted.find((t) => t.slug === wanted || t.name.toLowerCase() === wanted) ?? sorted.find((t) => t.slug === "standard") ?? sorted[0])?.id ?? "");
   const [holdsDraft, setHoldsDraft] = useState(false);
-  useEffect(() => setHoldsDraft(awaitingDrafts().length > 0), []);
+  useEffect(() => setHoldsDraft(awaitingDrafts(openedFor()).length > 0), []);
   const qFrom = /^\/q\/([^/?]+)/.exec(from ?? "")?.[1];
   const draftQ = qFrom && holdsDraftFor(qFrom) ? qFrom : undefined;
   const checkout = useCheckout(from, draftQ);

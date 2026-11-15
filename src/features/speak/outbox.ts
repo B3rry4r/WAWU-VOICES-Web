@@ -7,7 +7,7 @@ import { baseMime } from "@/lib/audio-ref/mime";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { tokensLabel } from "@/lib/shared/text-price";
 import { freeCovers, tokenFor, voicePriceMilli } from "./logic";
-import { saveDraft, type Draft } from "./draft";
+import { saveDraft, signedInAsSomeoneElse, type Draft } from "./draft";
 
 /**
  * Recordings made offline (addendum 7.7). A recording whose Send could not go is kept on the device with `queued` set. When the
@@ -64,6 +64,8 @@ async function waitReady(clipId: string): Promise<void> {
 
 /** Sends one kept recording as a voice answer: create the clip, upload, complete, wait until READY, post with the recording's own key. */
 async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
+  // A kept recording is its owner's: it is never sent while someone else is signed in (it would post under their name).
+  if (d.owner !== undefined && signedInAsSomeoneElse(d.owner)) return { ok: false, reason: "failed" };
   if (!claimSend(d.key)) return { ok: false, reason: "busy" };
   let clipId: string | undefined;
   let uploaded = false;
@@ -93,7 +95,7 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
     // network failure keeps it, so the retry is the same request and the server can hand the first post back.
     if (needsNewKey(e)) {
       const next: Draft = { ...d, key: freshKey() };
-      await saveDraft(next);
+      await saveDraft(next, d.owner ?? null);
       return { ok: false, reason: "failed", message: e instanceof ApiError && e.explained && e.message.trim() ? e.message : undefined, draft: next };
     }
     if (e instanceof ApiError && e.status === 402) return { ok: false, reason: "needs_tokens", message: e.explained && e.message.trim() ? e.message : undefined };

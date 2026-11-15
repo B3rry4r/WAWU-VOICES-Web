@@ -7,6 +7,7 @@ import { getDraft, setAwaiting } from "./draft";
 import { naira, nairaOfUnits, smallestPack, units, unitsLabel } from "./format";
 import { useDesktop, useLoad, useSignedIn } from "./hooks";
 import { ErrorBlock, LoadingBlock, SignInNeeded } from "./ui";
+import { openedFor } from "@/features/speak/draft";
 
 /** "Out of free posts" (V-19). The Write screen opens this on a 402 FREE_POSTS_EXHAUSTED or INSUFFICIENT_UNITS, after saving the
  *  draft with saveDraft(). The draft stays in this browser and posts after a purchase; "Get tokens" marks it as waiting. */
@@ -24,7 +25,7 @@ export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { quest
   const variant = forced ?? (desktop ? "dialog" : "sheet");
   const { result, reload } = useLoad(() => Promise.all([getWallet(), getTiers()]), signedIn === true);
   const [draft, setDraft] = useState<string | null>(null);
-  useEffect(() => setDraft(getDraft(questionId)?.body ?? null), [questionId]);
+  useEffect(() => setDraft(getDraft(questionId, openedFor())?.body ?? null), [questionId]);
 
   if (signedIn === false) {
     return <Sheet title="Tokens" className={rest} variant={variant} onClose={onKeep}><SignInNeeded /></Sheet>;
@@ -58,7 +59,7 @@ export function OutOfPostsSheet({ questionId, onKeep, variant: forced }: { quest
       onClose={onKeep}
       footer={
         <div className="vx-sheet__foot">
-          <Button size="l" block icon="coins" href={href} onClick={() => setAwaiting(questionId, true)}>
+          <Button size="l" block icon="coins" href={href} onClick={() => setAwaiting(questionId, true, openedFor())}>
             {min ? `Get tokens from ${naira(min.priceKobo)}` : "Get tokens"}
           </Button>
           <Button size="l" block variant="secondary" onClick={onKeep}>
