@@ -7,6 +7,7 @@ import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { tokensLabel } from "@/lib/shared/text-price";
 import { currentOwner, loadDraft, openedFor, OTHER_TAB_NOTE, saveDraft, signedInAsSomeoneElse } from "@/features/speak/draft";
+import { WrongPersonError } from "@/lib/api/client";
 import { isOutOfPosts } from "./lib";
 import { OWN_NAMELESS_NOTE, replyAnonSlot } from "./reply-anon";
 
@@ -54,11 +55,11 @@ export function VoiceReplySheet({ aid, qid, who, stance, allow, onClose, onPoste
             if (!pick) return;
             if (signedInAsSomeoneElse(openedFor())) throw new OtherTabError(); // sends nothing
             setShort(false);
-            await api.createVoiceReply(aid, pick, clip.clipId, clip.key, clip.tokenId, ownNameless ? true : clip.anonymous);
+            await api.createVoiceReply(aid, pick, clip.clipId, clip.key, clip.tokenId, ownNameless ? true : clip.anonymous, clip.subject);
             onPosted();
           }}
           errorText={(e) => {
-            if (e instanceof OtherTabError) return OTHER_TAB_NOTE;
+            if (e instanceof OtherTabError || e instanceof WrongPersonError) return OTHER_TAB_NOTE;
             if (isOutOfPosts(e)) { setShort(true); return "You have no free posts left and not enough tokens for this voice reply."; }
             return null;
           }}

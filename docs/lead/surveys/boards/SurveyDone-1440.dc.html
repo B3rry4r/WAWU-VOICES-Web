@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Survey sent, desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+.vx-sidenav{border-right:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="min-height: 1100px; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-wrap: wrap; align-items: stretch;">
+<div style="flex: 0 0 248px; box-sizing: border-box; border-right: 1px solid var(--line);">
+<x-import component-from-global-scope="Voices.SideNav" active="home" units="12.5" free-left="{{n7}}" style="height: 900px;"></x-import>
+</div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 76px 32px 48px; display: flex; flex-direction: column; align-items: center;">
+<div style="width: 100%; max-width: 560px; box-sizing: border-box; padding: 40px; border-radius: var(--radius-xl); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; justify-content: center;"><x-import component-from-global-scope="Voices.Badge" tone="sponsored" icon="clipboard-list">Sponsored Survey</x-import></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;">
+<span style="position: relative; width: 112px; height: 112px; border-radius: 50%; background: var(--mint); color: var(--green-text); display: flex; align-items: center; justify-content: center;"><x-import component-from-global-scope="Voices.Icon" name="circle-check" size="{{n56}}"></x-import><span aria-hidden="true" style="position: absolute; top: 6px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--sun);"></span><span aria-hidden="true" style="position: absolute; bottom: 10px; left: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--green);"></span></span>
+<h1 style="margin: 8px 0 0; font: 400 36px/40px var(--font-display); letter-spacing: -0.01em;">Thanks. Your answers are in.</h1>
+<p style="margin: 0; font: 400 16px/24px var(--font-body); color: var(--ink-2);">Zobo Fresh sees the totals only, never your name, handle or number.</p>
+</div>
+<section aria-label="Your answers" style="display: flex; flex-direction: column; padding: 4px 16px; border-radius: var(--radius-l); background: var(--surface-2);">
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 12px 0; border-bottom: 1px solid var(--line);"><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">How many hours of light did you get yesterday?</span><span style="font: 700 15px/21px var(--font-body);">1 to 6 hours</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 12px 0; border-bottom: 1px solid var(--line);"><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">How do you keep cool when there is no light?</span><span style="font: 700 15px/21px var(--font-body);">Cold drinks</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0;"><span style="font: 500 13px/18px var(--font-body); color: var(--ink-2);">Anything else you want them to hear?</span><x-import component-from-global-scope="Voices.VoicePlayer" duration="{{n12}}" seed="{{n33}}" tone="surface"></x-import></div>
+</section>
+<div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center;">
+<x-import component-from-global-scope="Voices.Button" size="l" icon="mic">Back to today's question</x-import>
+<a href="BrandPage-1440.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; font: 600 15px/20px var(--font-body); color: var(--green-text); text-decoration: none;">Visit Zobo Fresh</a>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { yes: true, n7: 7, n12: 12, n33: 33, n56: 56 };
+  }
+}
+</script>
+</body>
+</html>

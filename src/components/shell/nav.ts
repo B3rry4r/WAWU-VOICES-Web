@@ -68,6 +68,8 @@ const ACTIVE_BY_PREFIX: [string, NavId][] = [
   ["/notifications", "home"],
   ["/q", "home"],
   ["/p", "home"],
+  ["/surveys", "home"],
+  ["/brands", "home"],
 ];
 
 export function activeNav(pathname: string): NavId | null {

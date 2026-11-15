@@ -764,6 +764,7 @@ textarea.vx-field__input { min-height: 112px; resize: vertical; }
 .vx-dial__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vx-dial__code { color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .vx-dial__none { padding: var(--space-4); color: var(--ink-2); font-family: var(--font-body); font-size: var(--t-body-size); }
+.vx-field__hint .vx-num { flex: none; white-space: nowrap; }
 
 /* V-FIX-B round 2: an advert's words and button wrap, they never push the page sideways. */
 .vx-ad { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }

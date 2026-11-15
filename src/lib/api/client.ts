@@ -56,6 +56,37 @@ export class NetworkError extends ApiError {
   }
 }
 
+/** A call that must go out only as one named person found that a DIFFERENT person is signed in now. Nothing was sent. Nobody signed in is not a refusal. */
+export class WrongPersonError extends Error {
+  constructor() {
+    super("The sign-in changed in another tab. Nothing was sent.");
+    this.name = "WrongPersonError";
+  }
+}
+
+/** The subject of a token ("unknown" when it has none), the same word the survey screen keeps for "who". */
+export function tokenSubject(token: string | null): string | null {
+  if (!token) return null;
+  try {
+    const b = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const sub = (JSON.parse(atob(b + "=".repeat((4 - (b.length % 4)) % 4))) as { sub?: unknown }).sub;
+    return typeof sub === "string" ? sub : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+/** True only when a DIFFERENT person is signed in: the token has a subject (a string) and it is not `expect`. No token, or a token without a subject, is not someone else (main's rule). */
+export function isOtherPerson(token: string | null | undefined, expect: string): boolean {
+  const s = tokenSubject(token ?? null);
+  return s !== null && s !== "unknown" && s !== expect;
+}
+
+/** Who is signed in right now in this browser (the stored token's subject), or null when nobody is. */
+export function sessionSubject(): string | null {
+  return tokenSubject(sessionStorage.getToken());
+}
+
 export interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   /** Attach the signed-in bearer token (or `token`). Guests call without it. */
@@ -65,6 +96,13 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   baseUrl?: string;
   /** Sent as the Idempotency-Key header (required on every money POST). */
   idempotencyKey?: string;
+  /**
+   * Opt in: never send with the sign-in of a DIFFERENT person (a token subject). Checked right before the first send and again before any
+   * retry after a refresh; when another person is signed in nothing is sent and WrongPersonError is thrown. Nobody signed in is not a
+   * refusal: the call goes out as it does without this option (no bearer, the 401, the refresh attempt). A refresh never
+   * overwrites or clears a sign-in that belongs to someone else (for every call, see doRefresh). Only meaningful with `authed`.
+   */
+  expectSubject?: string;
 }
 
 async function readError(res: Response): Promise<ApiError> {
@@ -102,11 +140,20 @@ async function rotatedElsewhere(before: string): Promise<boolean> {
   return false;
 }
 
+/**
+ * One refresh, as compare and set. It remembers the refresh token it started from (`current`) and writes the answer
+ * only if storage still holds that same token. If someone else changed storage meanwhile (another tab of the same person
+ * refreshed first, or another person signed in), the answer is dropped and `true` is returned: the caller then retries
+ * with whatever is in storage now, and a call tied to one person (expectSubject) checks that no different person is signed in.
+ * A refused refresh clears the shared session only if storage still holds the token it started from.
+ */
 async function doRefresh(before: string, retried = false): Promise<boolean | null> {
   const current = sessionStorage.getRefreshToken();
   if (!current) return false;
   // Another tab won while we waited for the lock: its tokens are already in storage.
   if (current !== before) return true;
+  // Storage moved on (or was emptied) while we were away: drop our answer. true means "use what is in storage now".
+  const moved = (): boolean | null => (sessionStorage.getRefreshToken() === current ? null : sessionStorage.getRefreshToken() ? true : false);
   try {
     const res = await fetch(`${WAWU_ID_BASE}/auth/refresh`, {
       method: "POST",
@@ -128,12 +175,19 @@ async function doRefresh(before: string, retried = false): Promise<boolean | nul
     }
     if (!res.ok) {
       if (res.status >= 500) return null;
-      // Refused: if another tab rotated meanwhile, use its tokens; sign out only when nothing changed.
-      return (await rotatedElsewhere(current)) ? true : false;
+      // Refused: if another tab rotated meanwhile, use its tokens; sign out only when storage still holds the token we started from.
+      if (await rotatedElsewhere(current)) return true;
+      const m = moved();
+      if (m !== null) return m;
+      sessionStorage.clear();
+      return false;
     }
     const raw = (await res.json()) as { data?: { accessToken?: string; refreshToken?: string }; accessToken?: string; refreshToken?: string };
     const d = raw.data ?? raw;
     if (!d.accessToken || !d.refreshToken) return false;
+    // Compare and set: if storage no longer holds the refresh token we started from, our answer belongs to a sign-in that is gone. Drop it.
+    const m = moved();
+    if (m !== null) return m;
     // A token refreshed into a suspended state is not kept.
     if (isBlockedStatus(d.accessToken)) {
       sessionStorage.clear();
@@ -147,7 +201,7 @@ async function doRefresh(before: string, retried = false): Promise<boolean | nul
   }
 }
 
-/** One refresh at a time across tabs (Web Locks), and one per tab. true: new tokens in storage. false: refused. null: could not ask. */
+/** One refresh at a time across tabs (Web Locks), and one per tab. true: use the tokens in storage now. false: refused. null: could not ask. */
 async function refreshSession(): Promise<boolean | null> {
   const before = sessionStorage.getRefreshToken();
   if (!before) return false;
@@ -156,7 +210,7 @@ async function refreshSession(): Promise<boolean | null> {
 }
 
 async function raw(path: string, opts: RequestOptions, isRetry = false): Promise<Response> {
-  const { body, authed, token, baseUrl, idempotencyKey, ...rest } = opts;
+  const { body, authed, token, baseUrl, idempotencyKey, expectSubject, ...rest } = opts;
   const headers = new Headers(rest.headers);
   headers.set("Accept", "application/json");
   const isRaw = typeof Blob !== "undefined" && body instanceof Blob; // a file sent as the body itself (V-46: ID and utility bill)
@@ -165,6 +219,8 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
   if (authed || token) {
     const t = token ?? sessionStorage.getToken();
+    // Tied to one person: the token that goes out is the one checked, read once in the same step.
+    if (expectSubject !== undefined && !token && isOtherPerson(t, expectSubject)) throw new WrongPersonError();
     if (t) headers.set("Authorization", `Bearer ${t}`);
   }
   const controller = new AbortController();
@@ -185,10 +241,12 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   // The server's clock, from the answer the app already has (the browser only: the server render has no device clock to correct).
   if (typeof window !== "undefined" && !baseUrl) noteServerDate(res.headers?.get?.("date"), res.headers?.get?.("age"));
   if (res.status === 401 && authed && !token && !isRetry) {
+    // Tied to one person: if the stored sign-in is no longer theirs, do not refresh with it, and leave it alone.
+    if (expectSubject !== undefined && isOtherPerson(sessionStorage.getToken(), expectSubject)) throw new WrongPersonError();
     if (!refreshing) refreshing = refreshSession().finally(() => { refreshing = null; });
     const ok = await refreshing;
     if (ok) return raw(path, opts, true);
-    if (ok === false) sessionStorage.clear();
+    // A refused refresh has already cleared the shared session, and only if it was still the one that refused (see doRefresh).
   }
   if (!res.ok) {
     const err = await readError(res);
@@ -210,7 +268,20 @@ export async function apiBlob(path: string, opts: RequestOptions = {}): Promise<
 }
 
 /** The only place raw fetch lives. Components call domain modules in src/lib/api, never fetch. */
+let pendingSubject: string | undefined;
+/** Runs one API call tied to one person without a new argument on it: the call must reach `apiFetch` in the same step (no await before it). */
+export function asPerson<T>(subject: string | undefined, call: () => T): T {
+  pendingSubject = subject;
+  try {
+    return call();
+  } finally {
+    pendingSubject = undefined;
+  }
+}
+
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
+  if (opts.expectSubject === undefined && pendingSubject !== undefined) opts = { ...opts, expectSubject: pendingSubject };
+  pendingSubject = undefined;
   const res = await raw(path, opts);
   if (res.status === 204) return undefined as T;
   // Any success with an empty body (a 202 with no content, or a zero length) is "no data", never a parse error.

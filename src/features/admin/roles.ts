@@ -16,6 +16,8 @@ export type AdminPageId =
   | "money-subscriptions"
   | "money-prices"
   | "verification"
+  | "surveys"
+  | "brands"
   | "users"
   | "ideas"
   | "people";
@@ -33,6 +35,8 @@ export const PAGE_ROLES: Record<AdminPageId, Role[]> = {
   ideas: ["MODERATOR", "ADMIN"],
   people: ["ADMIN"],
   ads: ["AD_MANAGER", "ADMIN"],
+  surveys: ["AD_MANAGER", "ADMIN"],
+  brands: ["AD_MANAGER", "ADMIN"],
   // V-46: identity documents are for admins only (the API route is ADMIN only).
   verification: ["ADMIN"],
   // The people list shows mail addresses, and the API route is ADMIN only.
@@ -72,6 +76,8 @@ export const ADMIN_PAGES: { id: AdminPageId; label: string; href: string; icon: 
   { id: "news", label: "News tags", href: "/admin/news", icon: "shield-check" },
   { id: "results", label: "Posted results", href: "/admin/results", icon: "circle-check" },
   { id: "ads", label: "Adverts", href: "/admin/ads", icon: "megaphone" },
+  { id: "surveys", label: "Sponsored Surveys", href: "/admin/surveys", icon: "vote" },
+  { id: "brands", label: "Brand pages", href: "/admin/brands", icon: "badge-check" },
   { id: "weekly", label: "Weekly report", href: "/admin/weekly", icon: "chart-column" },
   { id: "moderation", label: "Moderation", href: "/admin/moderation", icon: "shield-alert" },
   { id: "users", label: "Users", href: "/admin/users", icon: "user" },

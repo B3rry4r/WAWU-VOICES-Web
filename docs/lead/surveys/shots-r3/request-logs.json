@@ -1,0 +1,495 @@
+{
+ "N1 390: five reloads, a hidden tab, a tab switch and a closed tab send no SKIP": [
+  {
+   "n": 1,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  }
+ ],
+ "N1 390: a real choice to leave sends one SKIP, once per survey per person per tab": [
+  {
+   "n": 2,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 3,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "SKIP"
+   }
+  }
+ ],
+ "N4 390: a link away inside the app sends a SKIP and removes the draft; Back with no answers too": [
+  {
+   "n": 4,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 5,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "SKIP"
+   }
+  }
+ ],
+ "N1 1440: five reloads, a hidden tab, a tab switch and a closed tab send no SKIP": [
+  {
+   "n": 6,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  }
+ ],
+ "N1 1440: a real choice to leave sends one SKIP, once per survey per person per tab": [
+  {
+   "n": 7,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 8,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "SKIP"
+   }
+  }
+ ],
+ "N4 1440: a link away inside the app sends a SKIP and removes the draft; Back with no answers too": [
+  {
+   "n": 9,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 10,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "SKIP"
+   }
+  }
+ ],
+ "N2 390: person A answers two questions and signs out; person B signs in on the same tab and finds question 1": [
+  {
+   "n": 11,
+   "user": "nobody",
+   "call": "POST /id/auth/login",
+   "body": {
+    "identifier": "a@example.test",
+    "password": "a-long-password",
+    "app": "voices"
+   }
+  },
+  {
+   "n": 12,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 13,
+   "user": "nobody",
+   "call": "POST /id/auth/logout",
+   "body": {
+    "refreshToken": "r",
+    "app": "voices"
+   }
+  },
+  {
+   "n": 14,
+   "user": "nobody",
+   "call": "POST /id/auth/login",
+   "body": {
+    "identifier": "b@example.test",
+    "password": "a-long-password",
+    "app": "voices"
+   }
+  },
+  {
+   "n": 15,
+   "user": "userB",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  }
+ ],
+ "N2 1440: person A answers two questions and signs out; person B signs in on the same tab and finds question 1": [
+  {
+   "n": 16,
+   "user": "nobody",
+   "call": "POST /id/auth/login",
+   "body": {
+    "identifier": "a@example.test",
+    "password": "a-long-password",
+    "app": "voices"
+   }
+  },
+  {
+   "n": 17,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 18,
+   "user": "nobody",
+   "call": "POST /id/auth/logout",
+   "body": {
+    "refreshToken": "r",
+    "app": "voices"
+   }
+  },
+  {
+   "n": 19,
+   "user": "nobody",
+   "call": "POST /id/auth/login",
+   "body": {
+    "identifier": "b@example.test",
+    "password": "a-long-password",
+    "app": "voices"
+   }
+  },
+  {
+   "n": 20,
+   "user": "userB",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  }
+ ],
+ "N3 390: a recording is kept the moment it is ready (last question), a reload shows it ready, and it sends": [
+  {
+   "n": 21,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 22,
+   "user": "userA",
+   "call": "POST /voice-clips",
+   "body": {
+    "purpose": "SURVEY_ANSWER",
+    "mime": "audio/webm",
+    "sizeBytes": 4952,
+    "durationMs": 1642
+   }
+  },
+  {
+   "n": 23,
+   "user": "nobody",
+   "call": "PUT /__put",
+   "body": null
+  },
+  {
+   "n": 24,
+   "user": "userA",
+   "call": "POST /voice-clips/c22/complete",
+   "body": null
+  },
+  {
+   "n": 25,
+   "user": "userA",
+   "call": "POST /surveys/s1/responses",
+   "body": {
+    "answers": [
+     {
+      "questionId": "q1",
+      "optionId": "h1"
+     },
+     {
+      "questionId": "q2",
+      "optionId": "o2"
+     },
+     {
+      "questionId": "q3",
+      "clipId": "c22"
+     }
+    ]
+   }
+  }
+ ],
+ "N3 390: a voice answer on a middle question is kept too (reload, go back to it)": [
+  {
+   "n": 26,
+   "user": "userA",
+   "call": "POST /surveys/s2/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 27,
+   "user": "userA",
+   "call": "POST /voice-clips",
+   "body": {
+    "purpose": "SURVEY_ANSWER",
+    "mime": "audio/webm",
+    "sizeBytes": 4952,
+    "durationMs": 1647
+   }
+  },
+  {
+   "n": 28,
+   "user": "nobody",
+   "call": "PUT /__put",
+   "body": null
+  },
+  {
+   "n": 29,
+   "user": "userA",
+   "call": "POST /voice-clips/c27/complete",
+   "body": null
+  }
+ ],
+ "closed 390: an answer after the survey closed shows the server's words and goes back with the feed place kept": [
+  {
+   "n": 30,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 31,
+   "user": "userA",
+   "call": "POST /voice-clips",
+   "body": {
+    "purpose": "SURVEY_ANSWER",
+    "mime": "audio/webm",
+    "sizeBytes": 4225,
+    "durationMs": 1646
+   }
+  },
+  {
+   "n": 32,
+   "user": "nobody",
+   "call": "PUT /__put",
+   "body": null
+  },
+  {
+   "n": 33,
+   "user": "userA",
+   "call": "POST /voice-clips/c31/complete",
+   "body": null
+  },
+  {
+   "n": 34,
+   "user": "userA",
+   "call": "POST /surveys/s1/responses",
+   "body": {
+    "answers": [
+     {
+      "questionId": "q1",
+      "optionId": "h1"
+     },
+     {
+      "questionId": "q2",
+      "optionId": "o2"
+     },
+     {
+      "questionId": "q3",
+      "clipId": "c31"
+     }
+    ]
+   }
+  }
+ ],
+ "N3 1440: a recording is kept the moment it is ready (last question), a reload shows it ready, and it sends": [
+  {
+   "n": 35,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 36,
+   "user": "userA",
+   "call": "POST /voice-clips",
+   "body": {
+    "purpose": "SURVEY_ANSWER",
+    "mime": "audio/webm",
+    "sizeBytes": 4225,
+    "durationMs": 1646
+   }
+  },
+  {
+   "n": 37,
+   "user": "nobody",
+   "call": "PUT /__put",
+   "body": null
+  },
+  {
+   "n": 38,
+   "user": "userA",
+   "call": "POST /voice-clips/c36/complete",
+   "body": null
+  },
+  {
+   "n": 39,
+   "user": "userA",
+   "call": "POST /surveys/s1/responses",
+   "body": {
+    "answers": [
+     {
+      "questionId": "q1",
+      "optionId": "h1"
+     },
+     {
+      "questionId": "q2",
+      "optionId": "o2"
+     },
+     {
+      "questionId": "q3",
+      "clipId": "c36"
+     }
+    ]
+   }
+  }
+ ],
+ "N3 1440: a voice answer on a middle question is kept too (reload, go back to it)": [
+  {
+   "n": 40,
+   "user": "userA",
+   "call": "POST /surveys/s2/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 41,
+   "user": "userA",
+   "call": "POST /voice-clips",
+   "body": {
+    "purpose": "SURVEY_ANSWER",
+    "mime": "audio/webm",
+    "sizeBytes": 4952,
+    "durationMs": 1646
+   }
+  },
+  {
+   "n": 42,
+   "user": "nobody",
+   "call": "PUT /__put",
+   "body": null
+  },
+  {
+   "n": 43,
+   "user": "userA",
+   "call": "POST /voice-clips/c41/complete",
+   "body": null
+  }
+ ],
+ "closed 1440: an answer after the survey closed shows the server's words and goes back with the feed place kept": [
+  {
+   "n": 44,
+   "user": "userA",
+   "call": "POST /surveys/s1/events",
+   "body": {
+    "kind": "START"
+   }
+  },
+  {
+   "n": 45,
+   "user": "userA",
+   "call": "POST /voice-clips",
+   "body": {
+    "purpose": "SURVEY_ANSWER",
+    "mime": "audio/webm",
+    "sizeBytes": 4225,
+    "durationMs": 1646
+   }
+  },
+  {
+   "n": 46,
+   "user": "nobody",
+   "call": "PUT /__put",
+   "body": null
+  },
+  {
+   "n": 47,
+   "user": "userA",
+   "call": "POST /voice-clips/c45/complete",
+   "body": null
+  },
+  {
+   "n": 48,
+   "user": "userA",
+   "call": "POST /surveys/s1/responses",
+   "body": {
+    "answers": [
+     {
+      "questionId": "q1",
+      "optionId": "h1"
+     },
+     {
+      "questionId": "q2",
+      "optionId": "o2"
+     },
+     {
+      "questionId": "q3",
+      "clipId": "c45"
+     }
+    ]
+   }
+  }
+ ],
+ "admin 1440: three-page review list, Release off until the last page, handles sent, 409 in the server's words": [
+  {
+   "n": 49,
+   "user": "admin",
+   "call": "PATCH /admin/surveys/s1/free-answers/01010101010101010101010101010101",
+   "body": {
+    "hidden": true
+   }
+  },
+  {
+   "n": 50,
+   "user": "admin",
+   "call": "POST /admin/surveys/s1/release",
+   "body": null
+  },
+  {
+   "n": 51,
+   "user": "admin",
+   "call": "POST /admin/surveys/s1/release",
+   "body": null
+  }
+ ],
+ "admin 1440: release before the last page is read answers 409 from the server (page button stays off)": [],
+ "admin 1440: a question with answered null shows no figure": [],
+ "admin 1440: a report with a breakdown missing draws nothing for it": []
+}

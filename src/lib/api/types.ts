@@ -111,7 +111,7 @@ export interface paths {
         head?: never;
         /**
          * Change my settings
-         * @description Auth: signed in with a finished profile.
+         * @description useMyStateForSurveys (default false): allow Sponsored Surveys aimed at states to be shown to me when my state is one of them. Auth: signed in with a finished profile.
          */
         patch: operations["updateSettings"];
         trace?: never;
@@ -3296,6 +3296,318 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/surveys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sponsored surveys and the approval queue
+         * @description V-SURVEYS: same roles as adverts (AD_MANAGER, ADMIN). A moderator is 403. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        get: operations["adminListSurveys"];
+        put?: never;
+        /**
+         * Create a sponsored survey (a draft)
+         * @description 1 to 5 questions: a single-choice poll (2 to 6 different choices), a short text answer or a short voice answer. priceKobo falls back to the admin price list (surveys.price.flat_kobo), never a fixed number; it stays null when neither is set. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        post: operations["adminCreateSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One sponsored survey
+         * @description Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        get: operations["adminGetSurvey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a sponsored survey
+         * @description Any subset of the fields. 409 for an approved or rejected survey, for a survey whose results are fixed, and for new questions once anyone has answered. Changing the words of a paused survey sends it back to the approval queue. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        patch: operations["adminUpdateSurvey"];
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a draft for approval (email F01 to the brand contact)
+         * @description Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        post: operations["adminSubmitSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve, reject, ask for changes, pause, resume
+         * @description APPROVE is 422 while a check fails (wording, kept-away categories, dates, price) and sends email F02. ASK_FOR_CHANGES needs a reason and sends email F03. REJECT needs a reason. Every decision writes an audit row. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        post: operations["adminSurveyDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The brand's results, combined and anonymous (once released)
+         * @description Nothing is worked out while the survey runs: stage RUNNING (or NOT_LIVE), ready false, only answeredSoFar. When the survey is over (end date passed or response target reached) its results are fixed once and no answer is accepted after that; until staff release them the report is stage REVIEW, ready true, released false, answeredSoFar only. After POST /admin/surveys/{surveyId}/release it is stage RELEASED, released true, and every read returns the same stored report. No name, handle, photo or id is ever returned. Free answers and transcripts are scrubbed and any staff hid are left out. State and age band appear only for people who agreed to share them. No group smaller than weekly.min_group_size is shown, and no hidden group can be worked out by subtraction: a hidden total that is under TWICE the minimum pulls the next smallest group in (repeating), and hidden groups are shown together as other only when their sum is at least the minimum. The answered of a question is null (and its options, other, texts and voices are left out) when the number of responses without an answer to it is above 0 and under the minimum, because that small difference could be worked out from it. For a written or voice question answered is the number of items in the list the brand gets (hidden, empty and scrubbed-to-nothing answers are in neither), and the list is left out when it is under the minimum or that difference is small. A breakdown (byState, byAgeBand) is shown only when its shared total equals, or differs by at least the minimum from, the total and every other shown breakdown; otherwise it is left out whole. Every read writes an audit row (who, when, which survey). The web builds the CSV from a released body only. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        get: operations["adminSurveyReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}/free-answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every free answer and transcript, for staff to read before release, a page at a time
+         * @description 409 while the survey is still running. Scrubbed (NFKC first; emails also spelt chidi(at)gmail(dot)com, 'chidi @ gmail . com', 'chidi at gmail.com'; links with any scheme, www, label.label/path, a list of endings, 'word dot ending', IPv4; phone numbers of 10 or more digits with any non-letter separators, mixed with number words, O and I between digits; @handles and handles after a platform word with ':' or '@' or a token holding a digit, '_' or '.'). A name or address typed in plain words is not found by pattern: read each one. Listed alphabetically inside a question, never in the order people answered. Each item's id is a review handle (an HMAC of the answer id), never the answer's own id and not ordered by time. When the LAST page is served (nextCursor null) reviewedAt and reviewedById are stored; POST release needs them when the survey has any written or voice answer. Audited. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        get: operations["adminSurveyFreeAnswers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}/free-answers/{handle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Hide one free answer from the brand (or show it again)
+         * @description One call per answer. {handle} is the item's id from the review list (32 hex characters), not an answer id: anything else is 404. 409 before the survey is over and after release. Hiding or showing clears nothing, including the read that release needs. Audited (the handle, never its words). Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        patch: operations["adminHideSurveyFreeAnswer"];
+        trace?: never;
+    };
+    "/admin/surveys/{surveyId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff have read the free answers: release the results to the brand
+         * @description 409 'Read the written answers before releasing the results.' while the survey has written or voice answers and the whole review list (every page of GET free-answers) has not been served since the results were fixed; a survey with none releases as before. Once only (409 after). Builds and stores the brand's report from the fixed results and the free answers left in, writes an audit row (who, when, how many hidden), then sends email F04 to the brand contact. mailed is false when the mail could not go yet: it is tried again every ten minutes and never sent twice. F04 is never sent before release. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        post: operations["adminReleaseSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Brands
+         * @description Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        get: operations["adminListBrands"];
+        put?: never;
+        /**
+         * Set up a brand page
+         * @description 409 when another brand has the same name ignoring case and spaces. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        post: operations["adminCreateBrand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/brands/{brandId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a brand
+         * @description 409 when the new name matches another brand ignoring case and spaces. Auth: signed in with role AD_MANAGER or ADMIN.
+         */
+        patch: operations["adminUpdateBrand"];
+        trace?: never;
+    };
+    "/surveys/placement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The sponsored survey for the feed slot, labelled
+         * @description V-SURVEYS: the slot where adverts go. { survey: null } for a guest and wherever a survey must not show: a sensitive question, topic or category, outside the survey's targeting or dates, past its frequency cap or response target, already answered, or skipped twice. Auth: guest or signed in. Rate limit: 300 per minute per IP or account.
+         */
+        get: operations["getSurveyPlacement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/surveys/{surveyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A sponsored survey to answer
+         * @description 404 unless the survey is live, not skipped twice, and, when it is aimed at states, the person turned on useMyStateForSurveys (PATCH /me/settings) and their state is one of them. myStatus ANSWERED returns no questions. Auth: signed in with a finished profile.
+         */
+        get: operations["getSurvey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/surveys/{surveyId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A survey card was seen, started or skipped
+         * @description Counts toward the frequency cap (VIEW). A SKIP is stored once per person per survey per Lagos day however often it is sent, and never closes the survey to the person. Ignored once the person has answered. Auth: signed in with a finished profile.
+         */
+        post: operations["recordSurveyEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/surveys/{surveyId}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a sponsored survey
+         * @description One answer per person per survey (409 after). Free: it never touches tokens, free posts or the daily posting limit, and is never a public post. A voice answer uses a clip made with POST /voice-clips purpose SURVEY_ANSWER and is at most surveys.voice_max_seconds. anonymous: true keeps nothing about the person; state and age band are kept only with shareState and ageBand. 409 'This survey has closed.' when the survey ended or reached its target (404 when it is not live for this person). One recording answers one question: using it twice in one request is 422. A control character (NUL and the like) in a written answer is 422. Auth: signed in with a finished profile.
+         */
+        post: operations["answerSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brands/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A brand's public page
+         * @description V-SURVEYS: name, logo, one line, its live Sponsored Surveys and the live adverts the ad manager tied to this brand (Ad.brandId; a matching name alone adds nothing), labelled as a brand. Never a contact address. A slug that is not 1 to 60 of a-z, 0-9 and - answers 404. Auth: none (public).
+         */
+        get: operations["getBrandPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/config": {
         parameters: {
             query?: never;
@@ -3767,7 +4079,7 @@ export interface components {
         /** @enum {string} */
         ResultThreadStatus: "SCHEDULED" | "OPEN" | "CLOSED";
         /** @enum {string} */
-        VoiceClipPurpose: "ANSWER" | "REPLY" | "PROPOSAL" | "VOTE_EXPLANATION" | "VOICE_CARD" | "OVERRIDE_NOTE" | "AD_AUDIO" | "DM";
+        VoiceClipPurpose: "ANSWER" | "REPLY" | "PROPOSAL" | "VOTE_EXPLANATION" | "VOICE_CARD" | "OVERRIDE_NOTE" | "AD_AUDIO" | "SURVEY_ANSWER" | "DM";
         /** @enum {string} */
         VoiceClipStatus: "PENDING_UPLOAD" | "UPLOADED" | "PROCESSING" | "READY" | "FAILED" | "REMOVED";
         /** @enum {string} */
@@ -3961,6 +4273,7 @@ export interface components {
             notifyTagFollows: boolean;
             dailyQuestionMinute: number;
             shareMyWord: boolean;
+            useMyStateForSurveys: boolean;
             dmOpen: boolean;
         };
         UpdateSettingsRequest: {
@@ -3981,6 +4294,7 @@ export interface components {
             notifyTagFollows?: boolean;
             dailyQuestionMinute?: number;
             shareMyWord?: boolean;
+            useMyStateForSurveys?: boolean;
             dmOpen?: boolean;
         };
         CategoryFollow: {
@@ -5627,6 +5941,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             brand: string;
+            /** Format: uuid */
+            brandId: string | null;
             kind: components["schemas"]["AdKind"];
             status: components["schemas"]["AdStatus"];
             headline: string;
@@ -5659,6 +5975,8 @@ export interface components {
         UpsertAdRequest: {
             ageBands?: string[];
             brand: string;
+            /** Format: uuid */
+            brandId?: string | null;
             kind: components["schemas"]["AdKind"];
             headline: string;
             body?: string;
@@ -5682,6 +6000,321 @@ export interface components {
             /** @enum {string} */
             decision: "APPROVE" | "REJECT" | "ASK_FOR_CHANGES" | "PAUSE" | "RESUME";
             reason?: string;
+        };
+        SurveyQuestionInput: {
+            /** @enum {string} */
+            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
+            prompt: string;
+            options?: string[];
+        };
+        UpsertSurveyRequest: {
+            brandName: string;
+            /** Format: uuid */
+            brandId?: string;
+            contactEmail: string;
+            title: string;
+            questions: components["schemas"]["SurveyQuestionInput"][];
+            categoryIds?: string[];
+            states?: string[];
+            /** Format: date */
+            startsOn?: string;
+            /** Format: date */
+            endsOn?: string;
+            frequencyCapPerDay?: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo?: number;
+            responseTarget?: number;
+        };
+        SurveyDecision: {
+            /** @enum {string} */
+            decision: "APPROVE" | "REJECT" | "ASK_FOR_CHANGES" | "PAUSE" | "RESUME";
+            reason?: string;
+        };
+        SurveyOptionView: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+        };
+        SurveyQuestionView: {
+            /** Format: uuid */
+            id: string;
+            position: number;
+            /** @enum {string} */
+            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
+            prompt: string;
+            options: components["schemas"]["SurveyOptionView"][];
+        };
+        AdminSurvey: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            brandId: string | null;
+            brandName: string;
+            contactEmail: string;
+            title: string;
+            status: components["schemas"]["AdStatus"];
+            label: string;
+            live: boolean;
+            checks: components["schemas"]["ReportCheck"][];
+            questions: components["schemas"]["SurveyQuestionView"][];
+            categoryIds: string[];
+            states: string[];
+            /** Format: date */
+            startsOn: string | null;
+            /** Format: date */
+            endsOn: string | null;
+            frequencyCapPerDay: number;
+            /** @description Naira in kobo (32-bit integer). */
+            priceKobo: number | null;
+            responseTarget: number | null;
+            views: number;
+            starts: number;
+            completes: number;
+            skips: number;
+            responses: number;
+            rejectReason: string | null;
+            changeRequest: string | null;
+            /** Format: date-time */
+            submittedAt: string | null;
+            /** Format: date-time */
+            approvedAt: string | null;
+            /** Format: date-time */
+            snapshotAt: string | null;
+            /** Format: date-time */
+            releasedAt: string | null;
+        };
+        AdminSurveyPage: {
+            items: components["schemas"]["AdminSurvey"][];
+            nextCursor: string | null;
+            awaitingApproval: number;
+        };
+        SurveyReportOption: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            count: number | null;
+            share: number | null;
+            hidden: boolean;
+        };
+        /** @description The choices that are hidden, together. Present only when their sum is at least weekly.min_group_size. Every choice under twice that size is folded into this line, and only when no folded choice can be worked out; otherwise the question has no breakdown at all and answered is null. */
+        SurveyReportOther: {
+            label: string;
+            count: number;
+            share: number;
+        };
+        SurveyBreakdownOther: {
+            responses: number;
+            share: number;
+        };
+        SurveyReportVoice: {
+            transcript: string;
+            seconds: number;
+        };
+        SurveyReportQuestion: {
+            /** Format: uuid */
+            id: string;
+            position: number;
+            /** @enum {string} */
+            kind: "SINGLE_CHOICE" | "TEXT" | "VOICE";
+            prompt: string;
+            answered: number | null;
+            options: components["schemas"]["SurveyReportOption"][];
+            other: components["schemas"]["SurveyReportOther"] | null;
+            texts: string[];
+            voices: components["schemas"]["SurveyReportVoice"][];
+        };
+        /** @description Each count about people is null while it is under weekly.min_group_size (not enough yet). starts, and so completionRate, is also null when starts and responses differ by a number under that size. */
+        SurveyReportTotals: {
+            views: number | null;
+            starts: number | null;
+            skips: number | null;
+            responses: number | null;
+            completionRate: number | null;
+        };
+        SurveyReportState: {
+            state: string;
+            responses: number;
+            share: number;
+        };
+        SurveyReportAge: {
+            ageBand: string;
+            responses: number;
+            share: number;
+        };
+        SurveyReportHead: {
+            /** Format: uuid */
+            id: string;
+            brandName: string;
+            title: string;
+            status: components["schemas"]["AdStatus"];
+            /** Format: date */
+            startsOn: string | null;
+            /** Format: date */
+            endsOn: string | null;
+            responseTarget: number | null;
+        };
+        /** @description While the survey runs (and until staff release it) only stage, ready, released, answeredSoFar and note are present. The counts, shares, free answers and breakdowns exist only when released is true, and are then the stored report, never recomputed. */
+        SurveyReport: {
+            survey: components["schemas"]["SurveyReportHead"];
+            /** @enum {string} */
+            stage: "NOT_LIVE" | "RUNNING" | "REVIEW" | "RELEASED";
+            ready: boolean;
+            released: boolean;
+            answeredSoFar?: number;
+            /** Format: date-time */
+            releasedAt?: string;
+            minGroupSize?: number;
+            belowMinimum?: boolean;
+            totals?: components["schemas"]["SurveyReportTotals"];
+            questions?: components["schemas"]["SurveyReportQuestion"][];
+            byState?: components["schemas"]["SurveyReportState"][];
+            byStateOther?: components["schemas"]["SurveyBreakdownOther"] | null;
+            byAgeBand?: components["schemas"]["SurveyReportAge"][];
+            byAgeBandOther?: components["schemas"]["SurveyBreakdownOther"] | null;
+            note: string;
+        };
+        SurveyFreeItem: {
+            id: string;
+            /** Format: uuid */
+            questionId: string;
+            prompt: string;
+            /** @enum {string} */
+            kind: "TEXT" | "VOICE";
+            text: string;
+            seconds: number | null;
+            hidden: boolean;
+        };
+        SurveyFreeAnswers: {
+            released: boolean;
+            items: components["schemas"]["SurveyFreeItem"][];
+            total: number;
+            hiddenCount: number;
+            nextCursor: string | null;
+        };
+        HideFreeAnswerRequest: {
+            hidden: boolean;
+        };
+        HideFreeAnswerResult: {
+            id: string;
+            hidden: boolean;
+        };
+        SurveyReleaseResult: {
+            released: boolean;
+            /** Format: date-time */
+            releasedAt: string;
+            hiddenCount: number;
+            mailed: boolean;
+        };
+        SurveyCard: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            brandName: string;
+            brandSlug: string | null;
+            brandWebsite: string | null;
+            title: string;
+            questionCount: number;
+        };
+        SurveyPlacementResponse: {
+            survey: components["schemas"]["SurveyCard"] | null;
+        };
+        Survey: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            brandName: string;
+            brandSlug: string | null;
+            brandWebsite: string | null;
+            title: string;
+            questionCount: number;
+            note: string;
+            /** @enum {string} */
+            myStatus: "OPEN" | "ANSWERED";
+            voiceMaxSeconds: number;
+            ageBands: string[];
+            questions: components["schemas"]["SurveyQuestionView"][];
+        };
+        SurveyEventRequest: {
+            /** @enum {string} */
+            kind: "VIEW" | "START" | "SKIP";
+        };
+        SurveyAnswerInput: {
+            /** Format: uuid */
+            questionId: string;
+            /** Format: uuid */
+            optionId?: string;
+            text?: string;
+            /** Format: uuid */
+            clipId?: string;
+        };
+        SurveyResponseRequest: {
+            answers: components["schemas"]["SurveyAnswerInput"][];
+            anonymous?: boolean;
+            shareState?: boolean;
+            /** @enum {string} */
+            ageBand?: "18-24" | "25-34" | "35-44" | "45-54" | "55+";
+        };
+        SurveyResponseResult: {
+            ok: boolean;
+            note: string;
+        };
+        BrandInput: {
+            name: string;
+            tagline?: string;
+            /** Format: uuid */
+            logoFileId?: string;
+            website?: string;
+            contactEmail?: string;
+            active?: boolean;
+        };
+        AdminBrand: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            tagline: string | null;
+            website: string | null;
+            contactEmail: string | null;
+            active: boolean;
+            logoUrl: string | null;
+            label: string;
+        };
+        AdminBrandList: {
+            items: components["schemas"]["AdminBrand"][];
+        };
+        BrandHead: {
+            name: string;
+            slug: string;
+            tagline: string | null;
+            website: string | null;
+            logoUrl: string | null;
+            label: string;
+        };
+        BrandSurveyCard: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            label: string;
+            questionCount: number;
+            /** Format: date */
+            endsOn: string | null;
+        };
+        BrandAdCard: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["AdKind"];
+            /** @enum {string} */
+            label: "Ad" | "Sponsored";
+            headline: string;
+            body: string | null;
+            imageUrl: string | null;
+            linkUrl: string | null;
+            ctaLabel: string | null;
+        };
+        BrandPage: {
+            brand: components["schemas"]["BrandHead"];
+            surveys: components["schemas"]["BrandSurveyCard"][];
+            ads: components["schemas"]["BrandAdCard"][];
         };
         ConfigEntry: {
             key: string;
@@ -11682,6 +12315,518 @@ export interface operations {
             404: components["responses"]["E404"];
             409: components["responses"]["E409"];
             422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListSurveys: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from nextCursor */
+                cursor?: string;
+                /** @description 1 to 50, default 20 */
+                limit?: number;
+                /** @description AdStatus */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSurveyPage"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminCreateSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertSurveyRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSurvey"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminGetSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSurvey"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminUpdateSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertSurveyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSurvey"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminSubmitSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSurvey"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminSurveyDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SurveyDecision"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSurvey"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminSurveyReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyReport"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminSurveyFreeAnswers: {
+        parameters: {
+            query?: {
+                /** @description Opaque, signed page link from nextCursor. Pages can only be walked in order; a link that is not valid is 422 */
+                cursor?: string;
+                /** @description 1 to 50, default 50 */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyFreeAnswers"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminHideSurveyFreeAnswer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HideFreeAnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HideFreeAnswerResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminReleaseSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyReleaseResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminListBrands: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBrandList"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminCreateBrand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBrand"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    adminUpdateBrand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBrand"];
+                };
+            };
+            401: components["responses"]["E401"];
+            403: components["responses"]["E403"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getSurveyPlacement: {
+        parameters: {
+            query?: {
+                questionId?: string;
+                categoryId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyPlacementResponse"];
+                };
+            };
+            401: components["responses"]["E401"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Survey"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            429: components["responses"]["E429"];
+        };
+    };
+    recordSurveyEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SurveyEventRequest"];
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    answerSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SurveyResponseRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyResponseResult"];
+                };
+            };
+            401: components["responses"]["E401"];
+            404: components["responses"]["E404"];
+            409: components["responses"]["E409"];
+            422: components["responses"]["E422"];
+            429: components["responses"]["E429"];
+        };
+    };
+    getBrandPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandPage"];
+                };
+            };
+            404: components["responses"]["E404"];
             429: components["responses"]["E429"];
         };
     };

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sponsored survey, phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+.c-scroll{scrollbar-width:none}.c-scroll::-webkit-scrollbar{display:none}.c-scroll>*,.c-scroll>.sc-host-x>*{flex-shrink:0}
+.c-tabbar .vx-bottombar{margin:0;border-radius:0;box-shadow:none;background:none}
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-direction: column;">
+<header style="flex: none; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; padding: 47px 16px 12px; background: var(--bg);">
+<div style="display: flex; align-items: center; gap: 8px; height: 48px; margin: 0 -8px;">
+<x-import component-from-global-scope="Voices.IconButton" icon="x" label="Leave the survey"></x-import>
+<span style="flex: 1; display: flex; justify-content: center;"><x-import component-from-global-scope="Voices.Badge" tone="sponsored" icon="clipboard-list">Sponsored Survey</x-import></span>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; font: 600 15px/20px var(--font-body); color: var(--green-text); text-decoration: none;">Skip</a>
+</div>
+<div style="display: flex; justify-content: space-between; font: 600 14px/20px var(--font-body); color: var(--ink-2);"><span>Question 2 of 3</span><span>About 1 min</span></div>
+<div role="progressbar" aria-label="Survey progress" aria-valuemin="0" aria-valuemax="3" aria-valuenow="2" style="height: 8px; border-radius: var(--radius-pill); background: var(--surface-2); overflow: hidden;"><div style="width: 66%; height: 100%; border-radius: var(--radius-pill); background: var(--green);"></div></div>
+</header>
+<main class="c-scroll" style="flex: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 4px 16px 40px; display: flex; flex-direction: column; gap: 16px;">
+<x-import component-from-global-scope="Voices.SponsoredSurvey" brand="Zobo Fresh" question="How do you keep cool when there is no light?" options="{{opts}}" voice-too="{{yes}}" questions="{{n3}}" minutes="{{n1}}"></x-import>
+<div style="display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border-radius: var(--radius-l); background: var(--surface-2);"><x-import component-from-global-scope="Voices.Icon" name="info" size="{{n18}}"></x-import><p style="margin: 0; font: 500 14px/20px var(--font-body);">Zobo Fresh paid for this survey and WAWU approved it. Answering is free, optional, and never uses a free post. <a href="#" style="font-weight: 700; color: var(--green-text);">Why am I seeing this?</a></p></div>
+</main>
+<div class="c-tabbar" style="flex: none; position: relative; z-index: 5; background: var(--surface); box-shadow: 0 -1px 0 var(--line); padding-bottom: 20px;">
+<x-import component-from-global-scope="Voices.BottomNav" active="home"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n1: 1, n3: 3, n18: 18,
+      opts: ['A fan on battery', 'Cold drinks', 'Sleep outside', 'I just bear it']
+    };
+  }
+}
+</script>
+</body>
+</html>
