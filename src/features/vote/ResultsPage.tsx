@@ -222,7 +222,7 @@ function Explain({ pollId, label, questionId, signedIn, moodOptions }: { pollId:
                 disabled={!signedIn || (needsWord && !word)}
                 hint={<p className="vx-rec__hint">{needsWord && !word ? <b>Pick one word first.</b> : <>{"Tap to record. You have "}<b>{`${maxSeconds} seconds`}</b>{". Explaining your vote is free."}</>}</p>}
                 sendLabel={() => "Send"}
-                onSend={async (clip) => { await explainMyVoteByVoice(pollId, clip.clipId, clip.key, needsWord ? word : null, questionId); setState("done"); }}
+                onSend={async (clip) => { await explainMyVoteByVoice(pollId, clip.clipId, clip.key, needsWord ? word : null, questionId, clip.subject); setState("done"); }}
                 onCancel={() => setMode(null)}
               />
               <Button variant="ghost" onClick={() => setMode(null)}>Back</Button>

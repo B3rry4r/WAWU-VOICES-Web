@@ -8,7 +8,9 @@ import { listMyAnswers } from "@/lib/api/profile";
 import { getAdPlacement, getFlashPolls, type AdPlacement, type Poll } from "@/lib/api/polls";
 import { isSignedIn } from "@/lib/api/auth";
 import { closesIn, comingUp, questionStart, shortCount, soonest, topicStart, uniqueVoices, voicesOf } from "@/lib/feed-format";
+import { getSurveyPlacement, type SurveyCard } from "@/lib/api/surveys";
 import { AdCard } from "./AdCard";
+import { SurveyFeedCard } from "./SurveyFeedCard";
 import { AudioAdCard } from "./AudioAdCard";
 import { OverrideMessage } from "./OverrideMessage";
 import { FlashPoll } from "./FlashPoll";
@@ -25,6 +27,7 @@ interface Data {
   flash: Poll | null;
   trending: ReturnType<typeof trendItems>;
   ad: AdPlacement | null;
+  survey: SurveyCard | null;
   /** V-FIX-B: the short audio advert, between the posts and the new conversations, for everyone. */
   audioAd: AdPlacement | null;
   firstName: string | null;
@@ -41,12 +44,13 @@ export function HomeScreen() {
   useFinishProfile();
   const [shareNode, share] = useShareSheet();
   const load = useLoad<Data>(async () => {
-    const [home, flash, trending, ad, audioAd, who] = await Promise.all([
+    const [home, flash, trending, ad, audioAd, survey, who] = await Promise.all([
       getHome(),
       signedIn ? getFlashPolls().then((r) => r.items[0] ?? null, () => null) : Promise.resolve(null),
       getTrendingQuestions(3).then((r) => trendItems(r.items), () => []),
       getAdPlacement().catch(() => null),
       getAdPlacement("AUDIO_SLOT").catch(() => null),
+      signedIn ? getSurveyPlacement() : Promise.resolve(null),
       signedIn
         ? getMe().then(
             // Me carries no suspendedUntil (checked against 6a): the banner reads the end day from the suspension notice.
@@ -57,11 +61,11 @@ export function HomeScreen() {
     ]);
     const today = home.dailyQuestion?.id;
     const answered = signedIn && today ? await listMyAnswers().then((p) => p.items.some((i) => i.answer?.questionId === today), () => false) : false;
-    return { home, flash, trending, ad, audioAd, firstName: who.firstName, suspended: who.suspended, answered };
+    return { home, flash, trending, ad, audioAd, survey, firstName: who.firstName, suspended: who.suspended, answered };
   }, [signedIn], (d) => soonest(questionStart(d.home.dailyQuestion), topicStart(d.home.topicOfWeek)));
   if (signedIn === null || load.state === "loading") return <Loading />;
   if (load.state === "error") return <Failed load={load} />;
-  const { home: h, flash, trending, ad, audioAd, firstName, suspended, answered } = load.data;
+  const { home: h, flash, trending, ad, audioAd, survey, firstName, suspended, answered } = load.data;
   const q = h.dailyQuestion;
   const go = (path: string) => () => router.push(path);
   const talk = q ? go(`/q/${q.id}`) : undefined;
@@ -142,6 +146,7 @@ export function HomeScreen() {
         ) : null}
 
         {signedIn ? <div className="order-8 dt:hidden"><AdCard ad={ad} /></div> : null}
+        {survey ? <div className="order-9"><SurveyFeedCard survey={survey} /></div> : null}
       </div>
 
       {shareNode}

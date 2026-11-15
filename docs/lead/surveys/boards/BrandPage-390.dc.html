@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brand page, phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+.c-scroll{scrollbar-width:none}.c-scroll::-webkit-scrollbar{display:none}.c-scroll>*,.c-scroll>.sc-host-x>*{flex-shrink:0}.c-hs{scrollbar-width:none}.c-hs::-webkit-scrollbar{display:none}
+.c-tabbar .vx-bottombar{margin:0;border-radius:0;box-shadow:none;background:none}
+body{margin:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-direction: column;">
+<header style="flex: none; display: flex; align-items: center; gap: 4px; box-sizing: border-box; height: 103px; padding: 47px 8px 0; background: var(--bg);">
+<x-import component-from-global-scope="Voices.IconButton" icon="arrow-left" label="Back"></x-import>
+<span style="flex: 1; font: 700 16px/20px var(--font-body); color: var(--ink-2);">Brand page</span>
+<x-import component-from-global-scope="Voices.IconButton" icon="ellipsis" label="More: why this ad, report this ad"></x-import>
+</header>
+<main class="c-scroll" style="flex: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 4px 16px 40px; display: flex; flex-direction: column; gap: 20px;">
+<section aria-labelledby="b-h" style="display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: var(--radius-xl); background: var(--sponsor-bg); border: 1px dashed var(--sponsor-line);">
+<div style="display: flex; align-items: center; gap: 14px;">
+<x-import component-from-global-scope="Voices.Avatar" name="Zobo Fresh" size="l" tone="sun"></x-import>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+<h1 id="b-h" style="margin: 0; display: flex; align-items: center; gap: 6px; font: 400 24px/28px var(--font-display);">Zobo Fresh<x-import component-from-global-scope="Voices.Icon" name="badge-check" size="{{n20}}" label="Verified brand"></x-import></h1>
+<x-import component-from-global-scope="Voices.Badge" tone="sponsored">Sponsored</x-import>
+</div>
+</div>
+<p style="margin: 0; font: 400 16px/24px var(--font-body); color: var(--ink);">Cold zobo and kunu, brewed in Lagos every morning. Delivered on Lagos Island and Lekki.</p>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font: 600 13px/18px var(--font-body); color: var(--sponsor);">A voice note from the brand · plays only when you tap</span>
+<x-import component-from-global-scope="Voices.VoicePlayer" duration="{{n15}}" seed="{{n8}}" tone="surface"></x-import>
+</div>
+<x-import component-from-global-scope="Voices.Button" block="{{yes}}" icon="link">Visit Zobo Fresh</x-import>
+</section>
+<section aria-labelledby="p-h" style="display: flex; flex-direction: column; gap: 12px;">
+<h2 id="p-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">From Zobo Fresh</h2>
+<x-import component-from-global-scope="Voices.AdSlot" brand="Zobo Fresh" headline="Cold zobo, delivered in 30 minutes" body="Lagos Island and Lekki only. Order before 6pm." cta="Order now"></x-import>
+<x-import component-from-global-scope="Voices.SponsoredSurvey" brand="Zobo Fresh" question="How do you keep cool when there is no light?" options="{{opts}}" voice-too="{{yes}}" questions="{{n3}}" minutes="{{n1}}"></x-import>
+</section>
+<section aria-labelledby="w-h" style="display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="w-h" style="margin: 0; font: 700 16px/22px var(--font-body);">Why brands are here</h2>
+<p style="margin: 0; font: 400 15px/22px var(--font-body); color: var(--ink-2);">Brands pay for labelled spots, approved by WAWU before they run. They never change rankings or poll results, and never see who you are.</p>
+<a href="#" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font: 600 15px/20px var(--font-body); color: var(--green-text); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="flag" size="{{n18}}"></x-import>Report this ad</a>
+</section>
+</main>
+<div class="c-tabbar" style="flex: none; position: relative; z-index: 5; background: var(--surface); box-shadow: 0 -1px 0 var(--line); padding-bottom: 20px;">
+<x-import component-from-global-scope="Voices.BottomNav" active="home"></x-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n1: 1, n3: 3, n8: 8, n15: 15, n18: 18, n20: 20,
+      opts: ['A fan on battery', 'Cold drinks', 'Sleep outside', 'I just bear it']
+    };
+  }
+}
+</script>
+</body>
+</html>

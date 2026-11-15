@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sponsored survey, desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../ds/voices/tokens.css">
+<link rel="stylesheet" href="../ds/voices/components/bundle.css">
+<script src="../ds/voices/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&amp;family=Bagel+Fat+One&amp;display=swap">
+<style>
+body{margin:0}
+.vx-sidenav{border-right:0}
+a{color:var(--green-text)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div style="min-height: 1100px; background: var(--bg); color: var(--ink); font-family: var(--font-body); display: flex; flex-wrap: wrap; align-items: stretch;">
+<div style="flex: 0 0 248px; box-sizing: border-box; border-right: 1px solid var(--line);">
+<x-import component-from-global-scope="Voices.SideNav" active="home" units="12.5" free-left="{{n7}}" style="height: 900px;"></x-import>
+</div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 0 32px 48px; display: flex; flex-direction: column; align-items: center;">
+<div style="width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; align-items: center; gap: 12px; height: 76px;">
+<a href="#" style="flex: 1; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font: 600 15px/20px var(--font-body); color: var(--ink-2); text-decoration: none;"><x-import component-from-global-scope="Voices.Icon" name="x" size="{{n18}}"></x-import>Leave the survey</a>
+<x-import component-from-global-scope="Voices.Badge" tone="sponsored" icon="clipboard-list">Sponsored Survey</x-import>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; justify-content: space-between; font: 600 14px/20px var(--font-body); color: var(--ink-2);"><span>Question 2 of 3</span><span>About 1 min</span></div>
+<div role="progressbar" aria-label="Survey progress" aria-valuemin="0" aria-valuemax="3" aria-valuenow="2" style="height: 8px; border-radius: var(--radius-pill); background: var(--surface-2); overflow: hidden;"><div style="width: 66%; height: 100%; border-radius: var(--radius-pill); background: var(--green);"></div></div>
+</div>
+<x-import component-from-global-scope="Voices.SponsoredSurvey" brand="Zobo Fresh" question="How do you keep cool when there is no light?" options="{{opts}}" voice-too="{{yes}}" questions="{{n3}}" minutes="{{n1}}"></x-import>
+<div style="display: flex; justify-content: space-between; gap: 8px;">
+<x-import component-from-global-scope="Voices.Button" variant="ghost" icon="chevron-left">Back</x-import>
+<x-import component-from-global-scope="Voices.Button" variant="ghost">Skip this question</x-import>
+</div>
+</div>
+</main>
+<aside aria-label="About this survey" style="flex: 1 1 340px; max-width: 340px; box-sizing: border-box; padding: 24px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 16px;">
+<section aria-labelledby="ab-h" style="display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: var(--radius-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+<h2 id="ab-h" class="vx-eyebrow" style="margin: 0; color: var(--ink-2);">About this survey</h2>
+<div style="display: flex; align-items: center; gap: 12px;"><x-import component-from-global-scope="Voices.Avatar" name="Zobo Fresh" tone="sun"></x-import><span style="display: flex; flex-direction: column;"><b style="font: 700 16px/22px var(--font-body);">Zobo Fresh</b><a href="BrandPage-1440.dc.html" style="font: 600 14px/20px var(--font-body); color: var(--green-text);">See the brand page</a></span></div>
+<div style="display: flex; gap: 10px; font: 500 14px/20px var(--font-body);"><x-import component-from-global-scope="Voices.Icon" name="lock" size="{{n18}}"></x-import><span>The brand sees totals only, never your name, handle or number.</span></div>
+<div style="display: flex; gap: 10px; font: 500 14px/20px var(--font-body);"><x-import component-from-global-scope="Voices.Icon" name="shield-check" size="{{n18}}"></x-import><span>Checked and approved by WAWU before it ran.</span></div>
+<div style="display: flex; gap: 10px; font: 500 14px/20px var(--font-body);"><x-import component-from-global-scope="Voices.Icon" name="coins" size="{{n18}}"></x-import><span>Free and optional. It never uses a free post.</span></div>
+</section>
+<section aria-labelledby="why-h" style="display: flex; flex-direction: column; gap: 8px; padding: 20px; border-radius: var(--radius-l); background: var(--surface-2);">
+<h2 id="why-h" style="margin: 0; font: 700 15px/21px var(--font-body);">Why am I seeing this?</h2>
+<p style="margin: 0; font: 500 14px/20px var(--font-body); color: var(--ink-2);">The brand asked to reach people who follow Power and light in Lagos. Nothing else about you was used.</p>
+</section>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      yes: true, n1: 1, n3: 3, n7: 7, n18: 18,
+      opts: ['A fan on battery', 'Cold drinks', 'Sleep outside', 'I just bear it']
+    };
+  }
+}
+</script>
+</body>
+</html>

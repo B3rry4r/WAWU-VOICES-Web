@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Banner, Button, Icon, NotFoundState, Skeleton, StageBar } from "@/components/vx";
 import { short } from "@/components/vx/helpers";
 import { isSignedIn } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, WrongPersonError } from "@/lib/api/client";
 import { BUSY_TEXT, BUSY_TITLE, isBusy } from "@/lib/api/busy";
 import * as api from "@/lib/api/speak";
 import { baseMime } from "@/lib/audio-ref/mime";
@@ -335,7 +335,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   function dropTake(removeClip: boolean) {
     const st = sendState.current;
-    if (removeClip && st?.clipId && signedIn) void api.deleteVoiceClip(st.clipId).catch(() => undefined);
+    if (removeClip && st?.clipId && signedIn) void api.deleteVoiceClip(st.clipId, openedFor() ?? undefined).catch(() => undefined);
     sendState.current = null;
     setTake(null);
     setPhase("idle");
@@ -381,7 +381,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
 
   async function waitReady(clipId: string): Promise<void> {
     for (let i = 0; i < 90; i++) {
-      const c = await api.getVoiceClip(clipId);
+      const c = await api.getVoiceClip(clipId, openedFor() ?? undefined);
       if (c.status === "READY") return;
       if (c.status === "FAILED" || c.status === "REMOVED") throw new Error("CLIP_FAILED");
       await new Promise((r) => setTimeout(r, 1000));
@@ -436,6 +436,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     let st = sendState.current;
     if (!st || st.key !== take.key) st = sendState.current = { key: take.key };
     let stage: "create" | "upload" | "later" = "create";
+    const subject = openedFor() ?? undefined; // the tab's person: every call below goes out only as them
     try {
       if (!st.clipId) {
         const tok = tokenFor(tokens, take.seconds, freeSeconds, freeLeft);
@@ -444,7 +445,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
           sizeBytes: take.blob.size,
           durationMs: Math.round(take.seconds * 1000),
           extraVoiceTokenId: tok?.id,
-        });
+        }, subject);
         st.clipId = up.clip.id;
         st.putUrl = up.putUrl;
         st.tokenId = tok?.id;
@@ -456,14 +457,14 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       }
       stage = "later";
       if (!st.completed) {
-        await api.completeVoiceClip(st.clipId);
+        await api.completeVoiceClip(st.clipId, subject);
         st.completed = true;
       }
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
       if (signedInAsSomeoneElse(openedFor())) throw new OtherTabError();
-      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current, tagFields(tag));
+      const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current, tagFields(tag), subject);
       writeAnonPref(qid, false);
       notePublished();
       await clearDraft(openedFor());
@@ -475,10 +476,10 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       releaseSend(take.key);
       setSending(null);
       if (stage === "upload" && st.clipId) {
-        void api.deleteVoiceClip(st.clipId).catch(() => undefined);
+        void api.deleteVoiceClip(st.clipId, subject).catch(() => undefined);
         sendState.current = null;
       }
-      if (e instanceof OtherTabError) {
+      if (e instanceof OtherTabError || e instanceof WrongPersonError) {
         sendState.current = null;
         sayOtherTab();
         return;

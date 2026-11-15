@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/api/client";
+import { ApiError, WrongPersonError, asPerson } from "@/lib/api/client";
 import { freshKey, needsNewKey } from "@/lib/api/keys";
 import * as api from "@/lib/api/speak";
 import { createVoiceReply } from "@/lib/api/talk";
@@ -7,7 +7,7 @@ import { baseMime } from "@/lib/audio-ref/mime";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { tokensLabel } from "@/lib/shared/text-price";
 import { freeCovers, tokenFor, voicePriceMilli } from "./logic";
-import { saveDraft, signedInAsSomeoneElse, type Draft } from "./draft";
+import { OTHER_TAB_NOTE, saveDraft, signedInAsSomeoneElse, type Draft } from "./draft";
 
 /**
  * Recordings made offline (addendum 7.7). A recording whose Send could not go is kept on the device with `queued` set. When the
@@ -52,9 +52,9 @@ export type SendResult =
   | { ok: true; answerId: null; questionId: string; byOtherTab: true }
   | { ok: false; reason: "busy" | "offline" | "needs_tokens" | "failed"; message?: string; draft?: Draft };
 
-async function waitReady(clipId: string): Promise<void> {
+async function waitReady(clipId: string, subject?: string): Promise<void> {
   for (let i = 0; i < 90; i++) {
-    const c = await api.getVoiceClip(clipId);
+    const c = await api.getVoiceClip(clipId, subject);
     if (c.status === "READY") return;
     if (c.status === "FAILED" || c.status === "REMOVED") throw new Error("CLIP_FAILED");
     await new Promise((r) => setTimeout(r, 1000));
@@ -67,6 +67,7 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
   // A kept recording is its owner's: it is never sent while someone else is signed in (it would post under their name).
   if (d.owner !== undefined && signedInAsSomeoneElse(d.owner)) return { ok: false, reason: "failed" };
   if (!claimSend(d.key)) return { ok: false, reason: "busy" };
+  const subject = d.owner ?? undefined; // the kept recording's own person: every call goes out only as them
   let clipId: string | undefined;
   let uploaded = false;
   try {
@@ -76,23 +77,24 @@ async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
       durationMs: Math.round(d.seconds * 1000),
       extraVoiceTokenId: tokenId,
       ...(d.reply ? { purpose: "REPLY" as const } : {}),
-    });
+    }, subject);
     clipId = up.clip.id;
     await putWithRetry({ url: up.putUrl, key: "", headers: {} }, d.blob, () => undefined);
     uploaded = true;
-    await api.completeVoiceClip(clipId);
-    await waitReady(clipId);
+    await api.completeVoiceClip(clipId, subject);
+    await waitReady(clipId, subject);
     if (d.reply) {
       // The same reply it was made as: the parent answer, the stance, the name switch and the Idempotency-Key it was kept with.
-      const rr = await createVoiceReply(d.reply.answerId, d.reply.stance, clipId, d.key, tokenId, !!d.anonymous);
+      const rr = await asPerson(subject, () => createVoiceReply(d.reply!.answerId, d.reply!.stance, clipId!, d.key, tokenId, !!d.anonymous));
       return { ok: true, answerId: String((rr as { reply?: { id?: string } }).reply?.id ?? d.reply.answerId), questionId: d.questionId, replyTo: d.reply.answerId };
     }
-    const r = await api.createVoiceAnswer(d.questionId, clipId, d.key, tokenId, (d.mood as Mood | null | undefined) ?? null, !!d.anonymous);
+    const r = await asPerson(subject, () => api.createVoiceAnswer(d.questionId, clipId!, d.key, tokenId, (d.mood as Mood | null | undefined) ?? null, !!d.anonymous));
     return { ok: true, answerId: r.answer.id, questionId: d.questionId };
   } catch (e) {
-    if (clipId && !uploaded) void api.deleteVoiceClip(clipId).catch(() => undefined);
+    if (clipId && !uploaded) void api.deleteVoiceClip(clipId, subject).catch(() => undefined);
     // The recording's key is dropped only when the server says it is spent (a 409 asking for a new key). A 500, 502, 504, 429 or a
     // network failure keeps it, so the retry is the same request and the server can hand the first post back.
+    if (e instanceof WrongPersonError) return { ok: false, reason: "failed", message: OTHER_TAB_NOTE };
     if (needsNewKey(e)) {
       const next: Draft = { ...d, key: freshKey() };
       await saveDraft(next, d.owner ?? null);

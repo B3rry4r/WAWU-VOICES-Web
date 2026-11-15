@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AdSlot, Button, EmptyState, Icon, TextField, TopicChip } from "@/components/vx";
 import { createAd, decideAd, listAds, updateAd } from "@/lib/api/admin";
+import { listBrands, type AdminBrand } from "@/lib/api/admin-surveys";
 import type { AdminAd, UpsertAdRequest } from "@/lib/api/admin";
 import { getCategories } from "@/lib/api/feed";
 import { useAdmin } from "./AdminFrame";
@@ -251,6 +252,7 @@ export function changedFields(ad: AdminAd, next: UpsertAdRequest): Partial<Upser
     endsOn: ad.endsOn,
     frequencyCapPerDay: ad.frequencyCapPerDay,
     priceKobo: ad.priceKobo,
+    brandId: ad.brandId ?? null,
   };
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(next)) if (!same(v, saved[k])) out[k] = v;
@@ -272,6 +274,14 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
   const [kind, setKind] = useState<AdminAd["kind"]>(ad?.kind ?? "FEED_CARD");
   const [picked, setPicked] = useState<string[]>(ad?.categoryIds ?? []);
   const [states, setStates] = useState(ad?.states.join(", ") ?? "");
+  const [brandId, setBrandId] = useState(ad?.brandId ?? "");
+  const [brands, setBrands] = useState<AdminBrand[] | null>(null);
+  const [brandsFailed, setBrandsFailed] = useState(false);
+  useEffect(() => {
+    let live = true;
+    listBrands().then((r) => { if (live) setBrands(r.items); }, () => { if (live) setBrandsFailed(true); });
+    return () => { live = false; };
+  }, []);
   // V-FIX-B: a recording for the audio slot and a picture for any advert. Only a file chosen now is sent; an edit keeps what is set.
   const [audio, setAudio] = useState<Picked | null>(null);
   const [picture, setPicture] = useState<Picked | null>(null);
@@ -292,6 +302,8 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
       ...(f.endsOn ? { endsOn: f.endsOn } : {}),
       ...(f.cap ? { frequencyCapPerDay: Number(f.cap) } : {}),
       ...(f.price ? { priceKobo: Math.round(Number(f.price) * 100) } : {}),
+      // A new advert sends the brand page only when one is chosen; an edit sends null to clear it (changedFields keeps it out when nothing changed).
+      ...(brandId ? { brandId } : ad ? { brandId: null } : {}),
       ...(audio && kind === "AUDIO_SLOT" ? { audioClipId: audio.id } : {}),
       ...(picture ? { imageFileId: picture.id } : {}),
     };
@@ -330,6 +342,20 @@ function AdForm({ ad, cats, onClose, onSaved }: { ad?: AdminAd; cats: Record<str
         <TextField label="Ends" type="date" value={f.endsOn} onChange={set("endsOn")} />
         <TextField label="Most times a day per person" inputMode="numeric" value={f.cap} onChange={set("cap")} />
         <TextField label="Price in naira (flat fee)" inputMode="numeric" value={f.price} onChange={set("price")} hint="Leave empty to use the admin price list." />
+        <div className="vx-field col-span-2">
+          <label className="vx-field__label" htmlFor="ad-brand">Brand page (optional)</label>
+          <div className="vx-field__box">
+            <select id="ad-brand" className="vx-field__input" value={brandId} disabled={brandsFailed} onChange={(e) => setBrandId(e.target.value)}>
+              <option value="">No brand page</option>
+              {brandId && brands && !brands.some((b) => b.id === brandId) ? <option value={brandId}>Current brand page</option> : null}
+              {!brands && brandId ? <option value={brandId}>Current brand page</option> : null}
+              {(brands ?? []).map((b) => (
+                <option key={b.id} value={b.id}>{b.active ? b.name : `${b.name} (off)`}</option>
+              ))}
+            </select>
+          </div>
+          <div className="vx-field__hint"><span>{brandsFailed ? "The brand pages did not load. Reload to choose one." : "The advert shows on that brand's page."}</span></div>
+        </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-4">
         {kind === "AUDIO_SLOT" ? (

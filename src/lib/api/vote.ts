@@ -63,8 +63,8 @@ export const explainMyVote = (pollId: string, body: string, idempotencyKey: stri
   apiFetch<PostReceipt>(`/polls/${enc(pollId)}/explanation`, { method: "POST", authed: true, idempotencyKey, body: { kind: "TEXT", body, ...(mood ? { mood } : {}), ...(questionId ? { questionId } : {}) } });
 
 /** Explain my vote by voice: the clip (purpose VOTE_EXPLANATION) is already uploaded and READY. Free, like the written reason. */
-export const explainMyVoteByVoice = (pollId: string, clipId: string, idempotencyKey: string, mood?: S["Mood"] | null, questionId?: string) =>
-  apiFetch<PostReceipt>(`/polls/${enc(pollId)}/explanation`, { method: "POST", authed: true, idempotencyKey, body: { kind: "VOICE", clipId, ...(mood ? { mood } : {}), ...(questionId ? { questionId } : {}) } });
+export const explainMyVoteByVoice = (pollId: string, clipId: string, idempotencyKey: string, mood?: S["Mood"] | null, questionId?: string, expectSubject?: string) =>
+  apiFetch<PostReceipt>(`/polls/${enc(pollId)}/explanation`, { method: "POST", authed: true, expectSubject, idempotencyKey, body: { kind: "VOICE", clipId, ...(mood ? { mood } : {}), ...(questionId ? { questionId } : {}) } });
 
 export const getWhatNext = (questionId: string, sort: ProposalSort = "SUPPORT") =>
   apiFetch<WhatNext>(`/questions/${enc(questionId)}/what-next?sort=${sort}`, read());
