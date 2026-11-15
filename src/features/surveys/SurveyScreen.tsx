@@ -31,7 +31,7 @@ export function SurveyScreen({ id }: { id: string }) {
   // Another tab signed someone else in (or out): nothing of this person is shown or sent, and nothing is kept or cleared.
   if (same.stale || (who !== undefined && signedInAsSomeoneElse(who))) return <StaleTab />;
   if (signed === null || load.state === "loading") return <SurveySkeleton />;
-  if (!signed) {
+  if (!signed || same.out) {
     return (
       <Centre>
         <EmptyState icon="lock" title="Sign in to answer" body="Surveys are for people with a VOICES account. Listening stays free without one." action="Sign in" onAction={() => window.location.assign(`/sign-in?next=${encodeURIComponent(`/surveys/${id}`)}`)} />
@@ -232,6 +232,8 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
         if (e instanceof WrongPersonError) {
           // The sign-in changed while the answers were on their way: nothing went out under it. The tab turns stale (its notice says so).
           if (check()) setProblem("Nothing was sent, because the sign-in changed. Tap Send again.");
+        } else if (e instanceof ApiError && e.status === 401 && !check()) {
+          // The session ended and could not be refreshed: check() has switched the screen to its signed-out state. The draft stays stored.
         } else if (e instanceof ApiError && e.status === 409 && /closed/i.test(e.message)) {
           // The survey ended before this answer arrived: say so in the server's words. Nothing more to count, and the draft goes.
           finished.current = true;
@@ -465,6 +467,7 @@ function QuestionCard(p: {
         sendLabel={() => "Send answer"}
         onSend={(c) => p.onVoice({ clipId: c.clipId, seconds: c.seconds })}
         canWrite={p.check}
+        errorText={(e) => (e instanceof ApiError && e.status === 401 && !p.check() ? "" : null)} // no session left: check() switches the screen to its signed-out state
         onReady={(c) => p.onVoiceReady({ clipId: c.clipId, seconds: c.seconds })}
       />
     </SponsoredSurveyCard>
