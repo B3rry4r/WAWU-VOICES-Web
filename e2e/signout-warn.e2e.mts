@@ -119,6 +119,43 @@ for (const w of [390, 1440]) {
     await c.ctx.close();
   });
 }
+
+const keys = (page: Page) => page.evaluate(async () => {
+  const db: IDBDatabase = await new Promise((res, rej) => { const r = indexedDB.open('voices-speak', 1); r.onupgradeneeded = () => r.result.createObjectStore('drafts'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const k = await new Promise<string[]>((res) => { const rq = db.transaction('drafts').objectStore('drafts').getAllKeys(); rq.onsuccess = () => res(rq.result.map(String).sort()); });
+  db.close(); return k;
+});
+for (const w of [390, 1440]) {
+  await t(`r2 HIGH 1 [${w}] IndexedDB open never answers: signed out within about a second, no dialog`, async () => {
+    const { page, ctx } = await open(w, { mood: false });
+    await page.addInitScript(() => { if (localStorage.getItem('hang-idb')) { const real = indexedDB.open.bind(indexedDB); indexedDB.open = ((...a: Parameters<typeof real>) => { if (a[0] === 'voices-speak') return {} as IDBOpenDBRequest; return real(...a); }) as typeof indexedDB.open; } });
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A');
+    await page.goto(`${ORIGIN}/speak`); await record(page);
+    await page.evaluate(() => localStorage.setItem('hang-idb', '1'));
+    await page.goto(`${ORIGIN}/settings`); await signOutBtn(page).waitFor();
+    const t0 = Date.now(); await signOutBtn(page).click();
+    const busy = await signOutBtn(page).getAttribute('aria-busy').catch(() => null);
+    await page.waitForFunction(() => !localStorage.getItem('voices-web-session') || !JSON.parse(localStorage.getItem('voices-web-session')!).accessToken, null, { timeout: 4000 });
+    const ms = Date.now() - t0;
+    console.log(`     signed out after ${ms} ms, busy while waiting: ${busy}, dialog count ${await page.getByRole('dialog').count()}, url ${new URL(page.url()).pathname}`);
+    assert.ok(ms < 2500); assert.equal(await page.getByRole('dialog').count(), 0);
+    await ctx.close();
+  });
+  await t(`r2 HIGH 2 [${w}] Alice's dialog is open, Bob signs in in tab 2: Sign out anyway leaves Bob signed in and both recordings`, async () => {
+    const { page, ctx, calls } = await open(w, { mood: false });
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A');
+    await page.goto(`${ORIGIN}/speak`); await record(page);
+    await page.goto(`${ORIGIN}/settings`); await signOutBtn(page).waitFor(); await signOutBtn(page).click();
+    const dlg = page.getByRole('dialog'); await dlg.waitFor();
+    const t2 = await ctx.newPage(); await t2.goto(`${ORIGIN}/terms`); await seed(t2, { owner: 'B', key: 'b-key', queued: false }); await setPerson(t2, 'B'); // no reload: the app's own start-up would remove A's recording as B
+    const before = await keys(t2);
+    await dlg.getByRole('button', { name: 'Sign out anyway' }).click(); await page.waitForTimeout(1000);
+    const after = await keys(t2); const tok2 = await tokenOf(t2);
+    console.log(`     keys before ${JSON.stringify(before)}, after ${JSON.stringify(after)}, token is Bob's: ${tok2 === tok('B', 0)}, logout calls ${calls.filter((c) => c.path.includes('logout')).length}, dialog ${await page.getByRole('dialog').count()}`);
+    assert.deepEqual(after, before); assert.deepEqual(after, ['rec:A', 'rec:B']); assert.equal(tok2, tok('B', 0)); assert.equal(await page.getByRole('dialog').count(), 0);
+    await ctx.close();
+  });
+}
 await browser.close();
 console.log(failed ? `${failed} of ${total} FAILED` : `all ${total} ok`);
 process.exit(failed ? 1 : 0);
