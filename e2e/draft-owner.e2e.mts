@@ -214,6 +214,109 @@ for (const w of [390, 1440]) {
     await ctx.close();
   });
 }
+
+// ---- Round 2
+const hashOf = (page: Page) => page.evaluate(async () => {
+  const db: IDBDatabase = await new Promise((res, rej) => { const r = indexedDB.open('voices-speak', 1); r.onupgradeneeded = () => r.result.createObjectStore('drafts'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const d = await new Promise<any>((res) => { const rq = db.transaction('drafts').objectStore('drafts').get('current'); rq.onsuccess = () => res(rq.result ?? null); });
+  db.close(); if (!d) return null;
+  const h = await crypto.subtle.digest('SHA-256', await d.blob.arrayBuffer()); return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('') + ':' + JSON.stringify({ k: d.key, o: d.owner, q: d.queued });
+});
+const own = (page: Page, sub: string | null) => page.evaluate((s) => { if (s) localStorage.setItem('voices-web-session', JSON.stringify({ accessToken: s, refreshToken: 'r' })); else localStorage.removeItem('voices-web-session'); }, sub ? tok(sub) : null);
+
+for (const w of [390, 1440]) {
+  await t(`R1a [${w}] A signs out in ANOTHER tab, tab 1 records: kept under A (not a guest); B signs in and gets nothing`, async () => {
+    const { page, ctx } = await open(w, { mood: false });
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/speak`); await page.getByRole('button', { name: 'Start recording' }).waitFor();
+    const t2 = await ctx.newPage(); await t2.goto(`${ORIGIN}/terms`); await setPerson(t2, null);
+    await record(page);
+    const d = await read(page); console.log(`     kept while nobody is signed in: ${JSON.stringify(d)}, line ${await line(page)}`);
+    assert.equal(d?.owner, 'A'); assert.equal(await line(page), 0);
+    await setPerson(t2, 'B'); await t2.goto(`${ORIGIN}/speak`); await t2.getByRole('button', { name: 'Start recording' }).waitFor(); await t2.waitForTimeout(700);
+    console.log(`     B's record screen: Send ${await sendBtn(t2).count()}, Play ${await t2.getByRole('button', { name: /^Play/ }).filter({ hasNotText: /song/i }).count()}, draft ${JSON.stringify(await read(t2))}`);
+    assert.equal(await sendBtn(t2).count(), 0); assert.ok(!(await read(t2)) || (await read(t2))!.owner !== 'B');
+    await ctx.close();
+  });
+  await t(`R1b [${w}] ... and when A signs in again, A gets the take back`, async () => {
+    const { page, ctx } = await open(w, { mood: false });
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/speak`); await page.getByRole('button', { name: 'Start recording' }).waitFor();
+    const t2 = await ctx.newPage(); await t2.goto(`${ORIGIN}/terms`); await setPerson(t2, null);
+    await record(page); await setPerson(t2, 'A'); await t2.goto(`${ORIGIN}/speak`); await sendBtn(t2).waitFor({ timeout: 8000 });
+    console.log(`     A's new tab: Send ${await sendBtn(t2).count()}, draft ${JSON.stringify(await read(t2))}`);
+    assert.equal((await read(t2))?.owner, 'A'); await ctx.close();
+  });
+  await t(`R1c [${w}] a lone person's session runs out in the one tab: kept for A, A signs in again and has it`, async () => {
+    const { page, calls, ctx } = await open(w, { mood: false });
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/speak`); await page.getByRole('button', { name: 'Start recording' }).waitFor();
+    await own(page, null); // this tab's own session ends: no event
+    await record(page);
+    const d = await read(page); console.log(`     kept after the session ran out: ${JSON.stringify(d)}, line ${await line(page)}`);
+    assert.equal(d?.owner, 'A'); assert.equal(await line(page), 0);
+    await own(page, 'A'); await page.reload(); await page.waitForTimeout(1500);
+    await sendBtn(page).click(); await page.waitForTimeout(2500);
+    console.log(`     after signing in again: clips ${n(calls, 'POST', '/voice-clips', 'A')}, posts ${n(calls, 'POST', '/questions/q1/answers', 'A')}`);
+    assert.equal(n(calls, 'POST', '/voice-clips'), 1); assert.equal(n(calls, 'POST', '/questions/q1/answers'), 1); await ctx.close();
+  });
+  await t(`R2a [${w}] pick screen for 3 s as A, B signs in, A taps "Say it in" and records: nothing under B, line shown`, async () => {
+    const { page, calls, ctx } = await open(w);
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/q/q1/mood`); await page.getByRole('button', { name: /^HOPEFUL/ }).click(); await page.waitForTimeout(3000);
+    const t2 = await ctx.newPage(); await t2.goto(`${ORIGIN}/terms`); await setPerson(t2, 'B');
+    await page.getByRole('button', { name: /^Say it in/ }).click(); await record(page);
+    const d = await read(page); console.log(`     draft ${JSON.stringify(d)}, line ${await line(page)}`);
+    assert.equal(d, null); assert.equal(await line(page), 1);
+    await sendBtn(page).click(); await page.waitForTimeout(800); assert.equal(n(calls, 'POST', '/voice-clips'), 0); await ctx.close();
+  });
+  await t(`R2b [${w}] B has a kept recording: A's tab shows no take, no Send, no Play, no Delete; B's recording is byte for byte the same`, async () => {
+    const { page, ctx } = await open(w);
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/q/q1/mood`); await page.getByRole('button', { name: /^HOPEFUL/ }).click(); await page.waitForTimeout(3000);
+    const t2 = await ctx.newPage(); await t2.goto(`${ORIGIN}/terms`); await setPerson(t2, 'B'); await seed(t2, { owner: 'B', key: 'b-key', queued: false });
+    const before = await hashOf(t2);
+    await page.getByRole('button', { name: /^Say it in/ }).click(); await page.waitForTimeout(1800);
+    const names = await page.getByRole('button').allInnerTexts(); const labels = await page.locator('button').evaluateAll((b) => b.map((x) => x.getAttribute('aria-label') ?? ''));
+    const bad = [...names, ...labels].filter((x) => /^(Send|Play|Delete|Remove|Record again)/i.test(x.trim()) && !/song/i.test(x));
+    for (const x of ['Delete', 'Remove', 'Discard', 'Record again']) { const el = page.getByRole('button', { name: new RegExp(x, 'i') }); if (await el.count()) await el.first().click().catch(() => undefined); }
+    await page.waitForTimeout(500);
+    const after = await hashOf(t2);
+    console.log(`     take controls in A's tab: ${JSON.stringify(bad)}; hash before ${before?.slice(0, 16)}, after ${after?.slice(0, 16)}; same ${before === after}`);
+    assert.equal(bad.length, 0); assert.equal(before, after); assert.ok(before); await ctx.close();
+  });
+  await t(`R2c [${w}] A's tab goes Home, to the record screen inside the app after B signed in: still A's tab, refused`, async () => {
+    const { page, calls, ctx } = await open(w, { mood: false });
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/`); await page.waitForTimeout(1500);
+    const t2 = await ctx.newPage(); await t2.goto(`${ORIGIN}/terms`); await setPerson(t2, 'B'); await seed(t2, { owner: 'B', key: 'b-key', queued: false });
+    const before = await hashOf(t2);
+    await page.getByText('Speak', { exact: true }).locator('visible=true').first().click(); await page.getByRole('button', { name: 'Start recording' }).waitFor({ timeout: 8000 });
+    await page.locator('a[href="/"]:visible').first().click().catch(() => undefined); await page.waitForTimeout(500);
+    await page.getByText('Speak', { exact: true }).locator('visible=true').first().click(); await page.getByRole('button', { name: 'Start recording' }).waitFor({ timeout: 8000 });
+    const shownTake = await sendBtn(page).count();
+    await record(page); const l = await line(page); const after = await hashOf(t2);
+    console.log(`     take shown at restore ${shownTake}; after recording: line ${l}; B's recording same: ${before === after}; clips ${n(calls, 'POST', '/voice-clips')}`);
+    assert.equal(shownTake, 0); assert.equal(l, 1); assert.equal(before, after); await ctx.close();
+  });
+  await t(`R2d [${w}] a tab that never got the event (B signed in with a write this tab did not hear): refused by the comparison`, async () => {
+    const { page, ctx } = await open(w, { mood: false });
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/speak`); await page.getByRole('button', { name: 'Start recording' }).waitFor();
+    await page.evaluate(() => { window.addEventListener = ((orig) => (type: string, ...rest: any[]) => (type === 'storage' ? undefined : (orig as any).call(window, type, ...rest)))(window.addEventListener) as any; });
+    await own(page, 'B'); // written from inside this tab: it hears no event, so it believes what it last knew
+    await record(page); const d = await read(page);
+    console.log(`     draft ${JSON.stringify(d)}, line ${await line(page)}`);
+    assert.equal(d, null); assert.equal(await line(page), 1); await ctx.close();
+  });
+  await t(`R3 [${w}] typed words: type, leave, come back (same person gets them); B sees none; A's open tab cannot overwrite B's`, async () => {
+    const { page, ctx } = await open(w, { mood: false });
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/q/q1/write`);
+    await page.getByRole('textbox').fill('A typed this'); await page.waitForTimeout(400);
+    await page.goto(`${ORIGIN}/terms`); await page.goto(`${ORIGIN}/q/q1/write`); await page.waitForTimeout(1200);
+    const back = await page.getByRole('textbox').inputValue(); console.log(`     A comes back: "${back}"`); assert.equal(back, 'A typed this');
+    const t2 = await ctx.newPage(); await t2.goto(`${ORIGIN}/terms`); await setPerson(t2, 'B'); await t2.goto(`${ORIGIN}/q/q1/write`); await t2.waitForTimeout(1200);
+    const bsees = await t2.getByRole('textbox').inputValue(); console.log(`     B opens it: "${bsees}"`); assert.equal(bsees, '');
+    await t2.getByRole('textbox').fill('B typed this'); await t2.waitForTimeout(400);
+    await page.getByRole('textbox').fill('A types more'); await page.waitForTimeout(400);
+    const stored = await page.evaluate(() => ({ t: localStorage.getItem('voices-typing-drafts'), o: localStorage.getItem('voices-typing-owners') }));
+    console.log(`     stored: ${JSON.stringify(stored)}`); assert.ok(stored.t!.includes('A typed this')); assert.ok(!stored.t!.includes('B typed this')); assert.ok(!stored.t!.includes('A types more'));
+    await ctx.close();
+  });
+}
 await browser.close();
 console.log(failed ? `${failed} of ${total} FAILED` : `all ${total} ok`);
 process.exit(failed ? 1 : 0);

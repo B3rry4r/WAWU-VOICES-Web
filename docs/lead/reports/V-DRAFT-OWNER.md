@@ -59,3 +59,45 @@ Hard rule, each at 390 and 1440:
 
 ## Totals
 `npx tsc --noEmit` clean. `npx next lint` clean. `npx vitest run`: 136 files, 1391 tests, all pass (one earlier run had `tests/round4.test.tsx` fail once; it passed alone and on the next full run). `npx next build` compiled. Browser: 22 of 22.
+
+# Round 2
+
+## 1. Signed out in another tab is not a guest
+`src/features/speak/draft.ts` (`openedFor`, `leaveTab`, `signedInAsSomeoneElse`, `saveDraft`, `loadDraft`).
+- A tab is for one person for the life of the page. It follows who is signed in until another tab writes the session (the `storage` event, sent only for other tabs' writes); that first event pins the person the tab had (from the event's old value). The session going away (a sign-out in another tab, or a session that ran out) never lets go of it.
+- Only something done in THIS tab changes it: a sign-in here when no session was stored (`onOwnTokenWrite`, a small notice added to `src/lib/auth/session-storage.ts`; tokens are stored exactly as before; a refresh of someone else's stored session does not count), or `leaveTab()` from `signOut` in `src/lib/api/auth.ts`. A tab that was a guest at load stays a guest until a sign-in here, so the guest claim works as before.
+- `saveDraft` now stamps the screen's person, never null for A. While nobody is signed in, A's tab keeps the take with owner A. `loadDraft(A)` returns it only for A; `loadDraft` claims a guest recording only when the person is signed in as that person. If another person signs in on the browser, the old rule still removes the recording when they open a screen (it was already so on main; the recording is lost, not leaked).
+- A session that runs out in a lone person's one tab: kept for A, and A has it back after signing in again (browser R1c, unit 1c).
+
+## 2. A remount must not change the tab's person
+The person is module state, so a remount, going Home and back, or a new screen in the same tab gets the same person. It does not depend on timing.
+(d) A tab that missed the event: it believes the last person it knew (A). That is safe because the event only decides who the tab is for; every write, restore and clear also compares that person with who is signed in right then (`signedInAsSomeoneElse`), so if B is signed in the tab is refused whatever it believes. Proved in the browser (R2d: this tab's `storage` listener switched off, B written into storage from inside this tab: nothing written, line shown) and in the unit test 2d. I did not use per-tab `sessionStorage`: the person is already kept per page and the comparison covers the rest; a reload reads the signed-in person again, which is what "Reload to carry on" says.
+The Outbox now uses the tab's person too (`openedFor()`), so A's tab no longer shows or sends B's waiting recording from Home.
+
+## 3. The typed draft
+Additive; a draft stored without a person behaves exactly as today.
+- Held words after "out of posts" (`src/features/units/draft.ts`): `HeldDraft.owner?`. Every function takes the person as an optional last argument. Given: another person's draft is never shown, overwritten or cleared, and nothing is read or written while someone else is signed in. Callers (`WriteScreen`, `OutOfPostsSheet`, `BuyUnitsScreen`, `PaymentDoneScreen`, `post-draft.ts`) pass `openedFor()`.
+- Typed text in the box (`talk/lib.tsx` `typedDraft`/`saveTyped`, used by `WriteScreen` and `ReplyComposer`): the owner is kept beside it in `voices-typing-owners`, so the words keep their old shape.
+- `WriteScreen` and `ReplyComposer` send nothing, and say the same line, when someone else is signed in.
+- Consequence to know: if A left typed words for a question and B (same browser) opens that question, B's typing for that slot is not stored until A's words are sent or cleared by A. That follows "never overwritten".
+
+## Tests and logs
+- `tests/draft-owner-2.test.tsx` (10): cases 1, 1b, 1c, 1d, 2, 2d, 2e, the guest tab, held words, typed words.
+- One existing test file got one setup line, not an assertion: `tests/share-card-guest-return.test.tsx` calls `leaveTab()` in `beforeEach`, because each test there is a new page load and the tab person is now module state.
+- Browser (built app, two tabs in one context, 390 and 1440), `e2e/draft-owner.e2e.mts`: all of round 1 again, plus
+  - R1a: A signed out in another tab, tab 1 records: `kept ... owner "A"`, line 0; B opens the record screen: Send 0, draft null.
+  - R1b: A signs in again in a new tab: Send 1, draft owner A.
+  - R1c: A's session ends in the one tab, records: kept owner A; sign in again, reload, Send: clips 1, posts 1.
+  - R2a: pick screen 3 s, B signs in, "Say it in", record: draft null, line 1, Send sends 0.
+  - R2b: B's recording: A's tab has no Send, no Play, no Delete, no Record again; SHA-256 of B's blob before and after `ba7816bf8f01cfea...` both, same true.
+  - R2c: Home, then the record screen inside the app: take shown 0, line 1, B's recording same, clips 0.
+  - R2d: as above, draft null, line 1.
+  - R3: A types, leaves, comes back: "A typed this"; B opens it: ""; stored words stay `{"q:q1":"A typed this"}` with owner A (B's and A's new typing refused). Typed 10 runs at each width still post once (clips 0, posts 1, line 0 every run).
+- Full run `/tmp/full4.log` (RUNS=10): everything ok except R2c at 390, where my test clicked a hidden link; fixed the test only (no app change) and re-ran R2c at 390 and 1440: ok. The R1a log line `Play 1` is the "Play the VOICES song" button, counted by an old regex; the assertion was on Send and the draft.
+- The hard rule at both widths (voice 10, typed 10, refresh 10 each, offline kept and reload, two tabs, guest sign-in) ok again.
+
+## Totals, round 2
+`npx tsc --noEmit` clean. `npx next lint` clean. `npx vitest run` exit 0: 137 files, 1401 tests, no unhandled errors. `npx next build` compiled.
+
+## Not proved, round 2
+Real sign-in screens (stubbed), real phones and Safari, and a guest tab refreshing a token the other person's tab stored (a guest has no refresh token to use, so it should not happen).
