@@ -1,4 +1,5 @@
-VERDICT: FIX
+VERDICT: MERGE
+INTERIM
 
 # Check of "Sign out warns first" (branch v/signout-warn, head bfe4953)
 
@@ -58,3 +59,28 @@ no busy mark). The person will tap again. Double taps are safe (see below), but 
 - "Sign out anyway" was not diffed against a build of main (same landing page `/`, token removed, one sign-out request are seen; storage and request were not compared side by side).
 - Deletion pending screen in a browser (the code change mirrors Settings; the builder's unit test covers it). Dark mode only at 360 and by the builder's screenshots.
 - Two tabs of the same person, and a sign-out done in another tab: not covered (the order says that cannot be warned about).
+
+# Re-check of round 2 (head 6a29c1e)
+
+INTERIM. Built app of the new head, Chromium, stubs for API and sign-in (nothing live), 390x844 and 1440x900.
+
+## Diff
+- `origin/main` (eefa0a4) is inside the branch. `git diff origin/main -- src` shows only 4 files: `useSignOutConfirm.tsx` (new, 53 lines), `SettingsPage.tsx`, `DeletionPending.tsx`, `speak/draft.ts` (the one function, 12 lines, read-only). `git diff origin/main --stat -- tests`: only `tests/signout-warn.test.tsx`. The surveys files come from main.
+- Only the four rulings changed: 1 second limit (`CHECK_MS`), "same person" check on "Sign out anyway", page-held take counted, busy button (`loading`).
+
+## Your four findings
+- **HIGH 1: CLOSED (both widths).** `open` never answers: the button shows busy at 300 ms (disabled, aria-busy), no dialog, signed out at about 1.1 s, one sign-out request. Store answers late at 2 s and 5 s: nothing happens (no dialog, no second sign-out request, still on `/`).
+  Answer at 900 ms with a kept recording: the dialog shows (about 1.0 s after the tap). Answer at 1100 ms with a kept recording: **signs out and the recording is removed with no warning.** That is the accepted cost of never blocking sign-out.
+- **HIGH 2: CLOSED (both widths).** Alice's dialog open, Bob signs in in tab 2 with a kept recording, "Sign out anyway": dialog closes, Bob still signed in, 0 sign-out requests, IndexedDB (`rec:A`, `rec:B`) byte for byte unchanged. Nobody signed in when tapped: dialog closes, 0 requests, storage unchanged, page stays on Settings. Alice signs out and in again in tab 2 (new token, same person): "Sign out anyway" signs out, 1 request.
+- **MEDIUM 3: CLOSED (both widths).** Put made to fail, take recorded, moved to Settings with the app's own router (no reload): dialog shows. Go back, tap again: dialog shows again, so the take is kept. (The record screen did not show that take again after I went back to it; the screen only reads the page-held copy when storage errors, which is not this branch's change. I did not compare with main.)
+- **MEDIUM 4: CLOSED (both widths).** While waiting, the button is disabled and busy. 10 taps on every Sign out button in the page (desktop and phone together): 1 dialog, 0 sign-outs.
+
+## New ways to break it
+- Tap Sign out, move to another page within the second (storage never answers): no sign-out later, still signed in, no dialog on the next page.
+- Desktop and phone buttons together: one hook per page, one dialog.
+- Deletion pending (both widths): with a kept recording the dialog shows, Go back keeps the person signed in, "Sign out anyway" signs out to `/welcome` with 1 request. Without one it signs out at once.
+- Read-only proof, tap then Go back, for a kept recording, a guest recording, another person's recording and the old `current` slot: every IndexedDB key, value and blob hash, and localStorage, identical before, during and after.
+- Console: a "Cannot read properties of undefined (reading 'filter')" showed in every run, also before any tap. I believe it is my stub's answer to a Settings call, not sign-out. Not checked against main.
+
+## Still to run
+Gates counts on the new head (tsc 0 and lint clean and build ok so far; vitest x3 running), `draft-owner`, `surveys-r9`, `signout-warn` e2e, my voice 5 / typed 5, the console error against main.
