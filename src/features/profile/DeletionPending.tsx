@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Banner, Button } from "@/components/vx";
 import { signOut } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
+import { useSignOutConfirm } from "./useSignOutConfirm";
 import { cancelDeletion, getMe } from "@/lib/api/profile";
 import type { Me } from "@/lib/api/profile";
 import { date } from "@/lib/format/date";
@@ -35,11 +36,11 @@ export function DeletionPending({ scheduledFor, onUndone }: { scheduledFor?: str
     return () => { on = false; };
   }, [scheduledFor]);
   const when = day ? date(day.length <= 10 ? `${day}T12:00:00+01:00` : day) : null;
-  const signOutNow = () => {
+  const { ask: signOutNow, dialog: signOutDialog } = useSignOutConfirm(() => {
     setOut(true);
     signOut();
     router.replace("/welcome");
-  };
+  });
   async function undo() {
     if (busy) return;
     setBusy(true);
@@ -63,6 +64,7 @@ export function DeletionPending({ scheduledFor, onUndone }: { scheduledFor?: str
       {err ? <p className="pf-body text-[var(--danger)]" role="alert">{err}</p> : null}
       <Button block loading={busy} disabled={out} onClick={() => void undo()}>Undo</Button>
       <Button variant="secondary" block disabled={out || busy} onClick={signOutNow}>Sign out</Button>
+      {signOutDialog}
     </div>
   );
 }
