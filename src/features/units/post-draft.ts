@@ -3,6 +3,7 @@ import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { postHeldAnswer } from "@/lib/api/units";
 import { AUTO_POST_MAX_AGE_MS, findPostedFor, getRecord, markPosted, renewDraftKey, setAwaiting } from "./draft";
 import { openedFor } from "@/features/speak/draft";
+import { forgetPostedWords } from "@/features/talk/lib";
 
 export type DraftOutcome =
   | { status: "none" }
@@ -10,6 +11,12 @@ export type DraftOutcome =
   | { status: "offer"; questionId: string }
   | { status: "kept"; questionId: string; message: string }
   | { status: "retry"; questionId: string };
+
+/** The held post is recorded as posted: the typed words for that question (the write box) go with it, so a Post tap cannot send them a second time. */
+function forgetWords(questionId: string): void {
+  const rec = getRecord(questionId, openedFor());
+  if (rec?.posted) forgetPostedWords(`q:${questionId}`, rec.body, openedFor());
+}
 
 /** After a tokens purchase succeeds: post THE draft this purchase was made for, once.
  *  - No draft id (a token purchase, a refresh of an old page whose attempt is gone): nothing is posted.
@@ -23,17 +30,19 @@ export async function postDraftForPurchase(
 ): Promise<DraftOutcome> {
   if (!questionId) {
     const was = findPostedFor(paymentId, openedFor()); // this browser already posted the draft for this payment (another tab won)
+    if (was) forgetWords(was);
     return was ? { status: "posted", questionId: was } : { status: "none" };
   }
   const d = getRecord(questionId, openedFor());
   if (!d) return { status: "none" };
-  if (d.posted === paymentId) return { status: "posted", questionId };
+  if (d.posted === paymentId) { forgetWords(questionId); return { status: "posted", questionId }; }
   if (d.posted || (!d.awaitingUnits && !opts.force)) return { status: "none" };
   if (!opts.force && (opts.now ?? Date.now()) - d.savedAt > AUTO_POST_MAX_AGE_MS) return { status: "offer", questionId };
   const post = opts.post ?? postHeldAnswer;
   try {
     await post(d.questionId, d.body, d.key);
     markPosted(d.questionId, paymentId, openedFor());
+    forgetWords(d.questionId);
     return { status: "posted", questionId };
   } catch (e) {
     if (e instanceof NetworkError || (e instanceof ApiError && (e.status >= 500 || e.status === 429))) return { status: "retry", questionId };
