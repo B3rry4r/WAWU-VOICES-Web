@@ -13,7 +13,7 @@ import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { needsNewKey } from "@/lib/api/keys";
 import { InView } from "@/components/InView";
-import { clearDraft, draftIsStale, loadDraft, openedFor, OTHER_TAB_NOTE, saveDraft, saveDraftKeepingReply, signedInAsSomeoneElse, STALE_NOTE, type Draft, type Owner } from "./draft";
+import { clearDraft, draftIsStale, loadDraft, openedFor, OTHER_TAB_NOTE, saveDraft, saveDraftKeepingReply, signedInAsSomeoneElse, STALE_NOTE, type Draft } from "./draft";
 import { claimSend, releaseSend } from "./outbox";
 import { freeCovers, peaksFromLevels, refusalText, tokenFor, uuidKey, voicePriceMilli } from "./logic";
 import { BackLink, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
@@ -54,8 +54,6 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const qParam = questionId ?? params.get("q") ?? undefined;
 
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  // The person this screen was opened for (a guest is null), read once. A kept recording belongs to them, whoever signs in on another tab later.
-  const [owner] = useState<Owner>(() => openedFor());
   const [info, setInfo] = useState<Info | null>(null);
   const [loadErr, setLoadErr] = useState<ApiError | Error | null>(null);
   const [reload, setReload] = useState(0);
@@ -143,8 +141,8 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   // Another person signed in on another tab: this screen writes, restores, clears and sends nothing, and keeps what it has in memory.
   const sayOtherTab = () => pushNote({ tone: "danger", text: OTHER_TAB_NOTE });
   const keepReply = async (d: Draft): Promise<boolean> => {
-    const ok = await saveDraftKeepingReply(d, owner);
-    if (!ok && signedInAsSomeoneElse(owner)) sayOtherTab();
+    const ok = await saveDraftKeepingReply(d, openedFor());
+    if (!ok && signedInAsSomeoneElse(openedFor())) sayOtherTab();
     return ok;
   };
 
@@ -152,12 +150,12 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   useEffect(() => {
     if (!qid) return;
     let live = true;
-    loadDraft(owner).then((d) => {
-      if (live && !d && signedInAsSomeoneElse(owner)) { sayOtherTab(); return; }
+    loadDraft(openedFor()).then((d) => {
+      if (live && !d && signedInAsSomeoneElse(openedFor())) { sayOtherTab(); return; }
       if (!live || !d || d.questionId !== qid || d.reply) return; // a kept voice reply belongs to the outbox, never to this screen
       // addendum 7.7: a saved recording is removed after 7 days, with a plain note.
       if (draftIsStale(d)) {
-        void clearDraft(owner);
+        void clearDraft(openedFor());
         pushNote({ tone: "info", text: STALE_NOTE });
         return;
       }
@@ -341,7 +339,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     setTake(null);
     setPhase("idle");
     clearNotes();
-    void clearDraft(owner);
+    void clearDraft(openedFor());
   }
 
   function close() {
@@ -352,7 +350,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       discard.current = true;
       rec.current.stop();
     }
-    void clearDraft(owner);
+    void clearDraft(openedFor());
     // lead ruling WF, 6 Nov (A-L6): Close replaces the recorder in history, so Back never returns to it.
     // WF-6b: while recording, the page pushed one extra entry (the trap). Step back over it first, then replace the recorder's own entry.
     const dest = qid ? `/q/${qid}` : "/";
@@ -394,13 +392,13 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   async function keepForLater(t: Take, replace = false) {
     if (!qid) return;
     // One kept recording only. A voice reply already waiting is never replaced without the person saying so.
-    const cur = await loadDraft(owner);
+    const cur = await loadDraft(openedFor());
     if (!replace && cur?.reply && cur.key !== t.key) {
       pushNote({ tone: "info", text: "A voice reply is already waiting to be sent on this device. Saving this recording will replace it.", action: "Replace it", onAction: () => void keepForLater(t, true) });
       return;
     }
-    const kept = await saveDraft({ ...t, questionId: qid, savedAt: Date.now(), queued: true, anonymous: anonRef.current, mood: mood.word ?? null, shareCode: shareVisitCode() } satisfies Draft, owner);
-    if (!kept && signedInAsSomeoneElse(owner)) { sayOtherTab(); return; }
+    const kept = await saveDraft({ ...t, questionId: qid, savedAt: Date.now(), queued: true, anonymous: anonRef.current, mood: mood.word ?? null, shareCode: shareVisitCode() } satisfies Draft, openedFor());
+    if (!kept && signedInAsSomeoneElse(openedFor())) { sayOtherTab(); return; }
     if (!kept) {
       // The device could not keep it (storage full or blocked): never say it is saved.
       pushNote({ tone: "danger", text: "We could not keep your recording on this device. Stay on this page until you are back online, then tap Send.", action: "Try again", onAction: () => void send() });
@@ -419,9 +417,9 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
     // V-FIX-B (addendum 1): a post cannot publish without a tag the person chose.
     if (!tagReady(tag)) return;
     // Someone else is signed in on another tab: nothing is sent and nothing is kept; the take stays on this screen.
-    if (signedInAsSomeoneElse(owner)) { sayOtherTab(); return; }
-    if (!signedIn) {
-      await saveDraft({ ...take, questionId: qid, savedAt: Date.now(), tag }, owner);
+    if (signedInAsSomeoneElse(openedFor())) { sayOtherTab(); return; }
+    if (!signedIn && !isSignedIn()) { // (a session that appeared in another tab since this screen opened counts: the guest tab follows that person)
+      await saveDraft({ ...take, questionId: qid, savedAt: Date.now(), tag }, openedFor());
       window.location.assign(joinHref());
       return;
     }
@@ -463,11 +461,11 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
       setSending({ step: "process" });
       await waitReady(st.clipId);
       setSending({ step: "post" });
-      if (signedInAsSomeoneElse(owner)) throw new OtherTabError();
+      if (signedInAsSomeoneElse(openedFor())) throw new OtherTabError();
       const r = await api.createVoiceAnswer(qid, st.clipId, take.key, st.tokenId, mood.word, anonRef.current, tagFields(tag));
       writeAnonPref(qid, false);
       notePublished();
-      await clearDraft(owner);
+      await clearDraft(openedFor());
       releaseSend(take.key);
       writePick(qid, null);
       sendState.current = null;
@@ -515,7 +513,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
         return;
       }
       if (e instanceof ApiError && (e.code === "UNAUTHENTICATED" || e.code === "TOKEN_EXPIRED")) {
-        if (!(await keepReply({ ...take, questionId: qid, savedAt: Date.now(), tag })) && signedInAsSomeoneElse(owner)) return;
+        if (!(await keepReply({ ...take, questionId: qid, savedAt: Date.now(), tag })) && signedInAsSomeoneElse(openedFor())) return;
         window.location.assign(joinHref());
         return;
       }

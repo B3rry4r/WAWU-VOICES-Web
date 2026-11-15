@@ -5,7 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Banner, Button } from "@/components/vx";
 import { isSignedIn } from "@/lib/api/auth";
 import * as api from "@/lib/api/speak";
-import { clearDraft, draftIsStale, loadDraft, openedFor, OTHER_TAB_NOTE, signedInAsSomeoneElse, STALE_NOTE, type Draft, type Owner } from "./draft";
+import { sweepOldHeld } from "@/features/units/draft";
+import { sweepOldTyped } from "@/features/talk/lib";
+import { clearDraft, draftIsStale, sweepOldRecordings, loadDraft, openedFor, OTHER_TAB_NOTE, signedInAsSomeoneElse, STALE_NOTE, type Draft, type Owner } from "./draft";
 import { isSending, planFor, sendKeptRecording, type SendPlan } from "./outbox";
 import { isMoodQuestion } from "@/features/mood/mood";
 import { publishedFromLink } from "@/features/share/share-visit";
@@ -99,6 +101,12 @@ export function Outbox() {
       running.current = false;
     }
   }, [onSpeak, send]);
+
+  // App start: anything kept on this device for more than 7 days is removed, whoever's it is (recordings without reading the audio).
+  useEffect(() => {
+    void sweepOldRecordings().catch(() => undefined);
+    try { sweepOldHeld(); sweepOldTyped(); } catch { /* storage blocked: nothing to sweep */ }
+  }, []);
 
   useEffect(() => {
     void look();

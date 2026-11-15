@@ -59,60 +59,49 @@ export type Owner = string | null;
 export const OTHER_TAB_NOTE = "You are signed in as someone else in another tab. Nothing was saved. Reload to carry on.";
 
 /**
- * The person THIS tab is for, for the life of the page. The sign-in is shared by every tab of the browser, so reading the token
- * when a screen mounts would hand a screen opened later in this tab (record, voice reply, the box) to whoever signed in on another tab.
- *  - It follows who is signed in until another tab writes the session (the `storage` event, which a tab only gets for OTHER tabs'
- *    writes). That first event pins the person this tab had, taken from the event's old value.
- *  - It is never let go because the session went away (a sign-out in another tab, or a session that ran out): a tab opened for A
- *    stays A's, so a recording made while nobody is signed in is kept under A and only A gets it back.
- *  - It changes only by something done in THIS tab: a sign-in here when no session was there, or `leaveTab()` from the sign-out here.
- *    A tab that was a guest when it loaded stays a guest until a sign-in here, so the guest claim works as before.
- * Every write, restore and clear also compares this person with who is signed in right then (`signedInAsSomeoneElse`), so a missed
- * event cannot let the wrong person through: the event only decides who the tab is for, the comparison decides what is allowed.
+ * The person THIS tab is for, for the life of the page.
+ *  - A real person A stays A whatever other tabs do (signed out elsewhere, or someone else signed in elsewhere). Only a sign-in or
+ *    sign-out done in THIS tab, or a page load, changes it (`onOwnTokenWrite`, `leaveTab`).
+ *  - A GUEST tab follows: when a session appears, here or in another tab, the tab becomes that person's tab, and what the guest kept
+ *    moves to that person (the guest claim).
+ * Before every write, restore and clear the person is compared with who is signed in right then (`signedInAsSomeoneElse`); a missed
+ * `storage` event can therefore never let the wrong person through.
  */
 let person: Owner = typeof window === "undefined" ? null : currentOwner();
-let pinned = false;
 if (typeof window !== "undefined") {
-  window.addEventListener("storage", (e) => {
-    if (e.key !== "voices-web-session" || pinned) return;
-    pinned = true;
-    try {
-      const before = subOf((JSON.parse(e.oldValue ?? "null") as { accessToken?: string } | null)?.accessToken);
-      if (before !== null) person = before; // no session before: the tab keeps who it already was (a guest stays a guest)
-    } catch { /* keeps what it knew */ }
-  });
   // Tokens written by THIS tab (a sign-in here, or a refresh here).
   onOwnTokenWrite((access, hadSession) => {
     const s = subOf(access);
     // A refresh of someone else's session (the stored refresh token is theirs) never changes whose tab this is.
-    if (!hadSession || person === null || s === person) { person = s; pinned = false; }
+    if (!hadSession || person === null || s === person) person = s;
   });
 }
 export function openedFor(): Owner {
   const now = currentOwner();
-  if (!pinned && now !== null) person = now;
+  if (person === null && now !== null) person = now; // a guest tab follows the person who signed in
   return person;
 }
 /** The sign-out done in this tab: the tab is nobody's again. */
 export function leaveTab(): void {
   person = null;
-  pinned = false;
 }
 
 /**
  * True when someone is signed in here who is not `owner`. A screen opened for A must then keep, restore, clear and send
  * nothing: the kept recording is A's, and the person now signed in is not. Nobody signed in (a session that ended) is not a
- * different person, so that case behaves as it always did.
+ * different person, and a guest (null) is never "someone else" of a person who signed in: it follows them.
  */
 export function signedInAsSomeoneElse(owner: Owner): boolean {
   const me = currentOwner();
-  return me !== null && me !== owner;
+  return me !== null && owner !== null && me !== owner;
 }
 
 const DB = "voices-speak";
 const STORE = "drafts";
-const ID = "current";
-let memory: Draft | null = null;
+const LEGACY_ID = "current"; // main's one slot, with an `owner` inside
+/** Each person's kept recording lives under their own key; a guest's under `rec:guest`. Nothing is written under another person's key. */
+const keyOf = (o: Owner): string => `rec:${o ?? "guest"}`;
+const memory = new Map<string, Draft>();
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -139,85 +128,87 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
   }
 }
 
-/** True when the recording is really kept on this device. False means only this page holds it (storage blocked or full). */
+const isDraft = (d: unknown): d is Draft => !!d && (d as Draft).blob instanceof Blob;
+async function idbGet(key: string): Promise<Draft | undefined> {
+  try { const d = await run<unknown>("readonly", (s) => s.get(key)); return isDraft(d) ? d : undefined; } catch { return memory.get(key); }
+}
+/** True when it is really on the device; false when only this page holds it (storage blocked or full). */
+async function idbPut(key: string, d: Draft): Promise<boolean> {
+  memory.set(key, d);
+  try { await run("readwrite", (s) => s.put(d, key)); return true; } catch { return false; }
+}
+async function idbDel(key: string): Promise<void> {
+  memory.delete(key);
+  try { await run("readwrite", (s) => s.delete(key)); } catch { /* nothing to clear */ }
+}
+async function idbKeys(): Promise<string[]> {
+  try { return (await run<IDBValidKey[]>("readonly", (s) => s.getAllKeys())).map(String); } catch { return [...memory.keys()]; }
+}
+
+/** What main kept (one slot, `current`, with an owner inside) goes to its owner's key, once. */
+let migrated: Promise<void> | null = null;
+function migrate(): Promise<void> {
+  return (migrated ??= (async () => {
+    const old = await idbGet(LEGACY_ID);
+    if (!old) return;
+    const k = keyOf(old.owner ?? null);
+    if (!(await idbGet(k))) await idbPut(k, { ...old, owner: old.owner ?? null });
+    await idbDel(LEGACY_ID);
+  })().catch(() => undefined));
+}
+
+/** The guest claim: what a guest kept moves to the person who is now signed in, unless that person already has a recording of their own. */
+async function claimGuest(me: Owner): Promise<void> {
+  if (me === null || currentOwner() !== me) return;
+  const g = await idbGet(keyOf(null));
+  if (!g) return;
+  if (!(await idbGet(keyOf(me)))) await idbPut(keyOf(me), { ...g, owner: me });
+  else return;
+  await idbDel(keyOf(null));
+}
+
+/** True when the recording is really kept on this device. False means only this page holds it (storage blocked or full), or it was refused (see signedInAsSomeoneElse). */
 export async function saveDraft(input: Draft, owner: Owner): Promise<boolean> {
-  if (signedInAsSomeoneElse(owner)) return false; // refused: nothing is written; the caller says why with signedInAsSomeoneElse()
-  const d: Draft = { ...input, owner }; // always the person the screen was opened for, even when the session has ended meanwhile
-  memory = d;
-  try {
-    await run("readwrite", (s) => s.put(d, ID));
-    return true;
-  } catch {
-    /* blocked or full storage: the memory copy still serves this page, and the caller says so */
-    return false;
-  }
+  if (signedInAsSomeoneElse(owner)) return false; // refused: nothing is written
+  await migrate();
+  await claimGuest(owner);
+  return idbPut(keyOf(owner), { ...input, owner });
 }
 
-async function rawLoad(): Promise<Draft | null> {
-  try {
-    const d = await run<Draft | undefined>("readonly", (s) => s.get(ID));
-    if (d && d.blob instanceof Blob) return d;
-  } catch {
-    /* fall through to memory */
-  }
-  return memory;
-}
-
-/** The kept recording for this person. A guest's recording is handed to the first person who signs in, once; another person's is never shown and is removed. */
+/** The kept recording for this person. A guest's is handed to the person who signs in, once. Another person's is never shown; on a shared browser a signed-in person's load removes recordings other people left behind (as before). */
 export async function loadDraft(owner: Owner): Promise<Draft | null> {
   if (signedInAsSomeoneElse(owner)) return null; // refused: nothing is returned and nothing is removed
-  const d = await rawLoad();
-  if (!d) return null;
+  await migrate();
   const me = currentOwner();
-  const stored = d.owner ?? null;
-  if (stored === owner) return d;
-  if (stored === null && owner !== null && me === owner) {
-    const claimed = { ...d, owner };
-    memory = claimed;
-    try { await run("readwrite", (s) => s.put(claimed, ID)); } catch { /* memory copy serves */ }
-    return claimed;
+  await claimGuest(owner);
+  const d = (await idbGet(keyOf(owner))) ?? null;
+  if (me !== null) {
+    for (const k of await idbKeys()) if (k.startsWith("rec:") && k !== keyOf(me) && k !== keyOf(null)) await idbDel(k);
   }
-  if (me !== null) await wipeIfStill(d); // someone else's recording on this browser
-  return null;
-}
-
-/** Removes the kept recording only if it is still the very one that was read: a recording kept by someone else a moment later is never swept away with it. */
-async function wipeIfStill(seen: Draft): Promise<void> {
-  if (memory && memory.key === seen.key && memory.owner === seen.owner) memory = null;
-  try {
-    const db = await open();
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(STORE, "readwrite");
-        const g = tx.objectStore(STORE).get(ID);
-        g.onsuccess = () => {
-          const cur = g.result as Draft | undefined;
-          if (cur && cur.key === seen.key && (cur.owner ?? null) === (seen.owner ?? null)) tx.objectStore(STORE).delete(ID);
-        };
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error ?? new Error("indexedDB"));
-        tx.onabort = () => reject(tx.error ?? new Error("indexedDB"));
-      });
-    } finally {
-      db.close();
-    }
-  } catch {
-    /* nothing to clear */
-  }
+  return d;
 }
 
 export async function clearDraft(owner: Owner): Promise<void> {
   if (signedInAsSomeoneElse(owner)) return; // refused: not this person's to clear
-  await wipeDraft();
+  await migrate();
+  await claimGuest(owner);
+  await idbDel(keyOf(owner));
 }
 
-/** Removes the kept recording whoever it belongs to. Only for sign-out, which ends the session for every tab, and for removing a recording that is not the signed-in person's. */
-export async function wipeDraft(): Promise<void> {
-  memory = null;
-  try {
-    await run("readwrite", (s) => s.delete(ID));
-  } catch {
-    /* nothing to clear */
+/** After a sign-out done in this tab: the tab is nobody's, and that person's kept recording is removed (typed words and held posts stay under their own key). */
+export async function afterSignOut(tokenBefore: string | null): Promise<void> {
+  const who = subOf(tokenBefore) ?? person;
+  leaveTab();
+  if (who !== null) await idbDel(keyOf(who));
+}
+
+/** App start: any recording kept more than 7 days is removed, whoever's it is, without reading the audio. */
+export async function sweepOldRecordings(now = Date.now()): Promise<void> {
+  await migrate();
+  for (const k of await idbKeys()) {
+    if (!k.startsWith("rec:")) continue;
+    const d = await idbGet(k);
+    if (d && draftIsStale(d, now)) await idbDel(k);
   }
 }
 

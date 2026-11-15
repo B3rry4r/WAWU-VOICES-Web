@@ -14,12 +14,18 @@ import { getPlayUrl } from "@/lib/api/talk";
 import { trackListen } from "./listen-track";
 import { makePlayer, playWithResign } from "@/lib/audio-ref/player";
 import { claimPlayback } from "@/features/profile/playback";
-import { signedInAsSomeoneElse, type Owner } from "@/features/speak/draft";
+import { currentOwner, signedInAsSomeoneElse, type Owner } from "@/features/speak/draft";
 
 /** Signed in or not, read in the browser (the session lives in local storage). null until the first effect. */
 export function useSignedIn(): boolean | null {
   const [v, setV] = useState<boolean | null>(null);
-  useEffect(() => setV(isSignedIn()), []);
+  useEffect(() => {
+    setV(isSignedIn());
+    // The same person signing in on another tab (a code link opens a new one) must not leave this screen asking them to sign in.
+    const on = (e: StorageEvent) => { if (e.key === "voices-web-session") setV((cur) => (cur === false || cur === null ? isSignedIn() : cur)); };
+    window.addEventListener("storage", on);
+    return () => window.removeEventListener("storage", on);
+  }, []);
   return v;
 }
 
@@ -100,30 +106,63 @@ export function SignInNote({ children, from }: { children: ReactNode; from?: str
 }
 
 /** What a person has typed so far on the Write screen, kept in this browser only (V-19). One per question or per reply.
- *  The person it belongs to is kept beside it (TYPING_OWNERS), so the words stay in the same shape as before. Given a person, words
- *  stored for someone else are never shown, never overwritten and never cleared by this one; words stored without a person behave as before. */
+ *  Given a person, the words live in that person's own table (`TYPING_V2`): nobody else's words are ever shown, block, overwrite or clear
+ *  them, and a guest's words move to the person who signs in. Words in main's table (`TYPING`, no person) are taken, once, by the first
+ *  person or guest who opens that slot. Not given a person: main's table, exactly as before. */
 const TYPING = "voices-typing-drafts";
-const TYPING_OWNERS = "voices-typing-owners";
-const readMap = <T,>(key: string): Record<string, T> => { try { return JSON.parse(window.localStorage.getItem(key) ?? "{}") as Record<string, T>; } catch { return {}; } };
-const typedMine = (slot: string, person: Owner | undefined): boolean => {
-  if (person === undefined) return true;
-  if (signedInAsSomeoneElse(person)) return false;
-  const o = readMap<string | null>(TYPING_OWNERS)[slot];
-  return o === undefined || o === person || (o === null && person !== null);
-};
+const TYPING_V2 = "voices-typing-v2";
+type TypedItem = { t: string; at: number };
+type TypedPeople = Record<string, Record<string, TypedItem>>;
+const readJson = <T,>(key: string): T => { try { return JSON.parse(window.localStorage.getItem(key) ?? "{}") as T; } catch { return {} as T; } };
+const typedMemory: TypedPeople = {}; // when storage throws, this page keeps its own copy
+let typedBlocked = false;
+const readPeopleTyped = (): TypedPeople => { if (typedBlocked) return typedMemory; const v = readJson<TypedPeople>(TYPING_V2); return v && typeof v === "object" ? v : {}; };
+function writePeopleTyped(all: TypedPeople): void {
+  Object.keys(typedMemory).forEach((k) => delete typedMemory[k]);
+  Object.assign(typedMemory, all);
+  try { window.localStorage.setItem(TYPING_V2, JSON.stringify(all)); } catch { typedBlocked = true; }
+}
+/** A real person's table for this slot, after taking main's words for this slot if there are any (the guest claim, and the first opener after the update). */
+function typedTable(person: string, slot: string): { all: TypedPeople; mine: Record<string, TypedItem> } {
+  const all = readPeopleTyped();
+  const mine = (all[person] ??= {});
+  const legacy = readJson<Record<string, string>>(TYPING);
+  if (currentOwner() === person && typeof legacy[slot] === "string" && legacy[slot] && !mine[slot]) {
+    mine[slot] = { t: legacy[slot], at: Date.now() };
+    delete legacy[slot];
+    try { window.localStorage.setItem(TYPING, JSON.stringify(legacy)); } catch { /* ignore */ }
+    writePeopleTyped(all);
+  }
+  return { all, mine };
+}
 export function typedDraft(slot: string, person?: Owner): string {
-  if (!typedMine(slot, person)) return "";
-  try { return readMap<string>(TYPING)[slot] ?? ""; } catch { return ""; }
+  if (person === undefined || person === null) { try { return readJson<Record<string, string>>(TYPING)[slot] ?? ""; } catch { return ""; } }
+  if (signedInAsSomeoneElse(person)) return "";
+  return typedTable(person, slot).mine[slot]?.t ?? "";
 }
 export function saveTyped(slot: string, text: string, person?: Owner): void {
-  if (!typedMine(slot, person)) return;
-  try {
-    const t = readMap<string>(TYPING);
-    const o = readMap<string | null>(TYPING_OWNERS);
-    if (text) { t[slot] = text; if (person !== undefined) o[slot] = person; } else { delete t[slot]; delete o[slot]; }
-    window.localStorage.setItem(TYPING, JSON.stringify(t));
-    if (person !== undefined || Object.keys(o).length) window.localStorage.setItem(TYPING_OWNERS, JSON.stringify(o));
-  } catch { /* ignore */ }
+  if (person === undefined || person === null) {
+    try {
+      const t = readJson<Record<string, string>>(TYPING);
+      if (text) t[slot] = text; else delete t[slot];
+      window.localStorage.setItem(TYPING, JSON.stringify(t));
+    } catch { /* ignore */ }
+    return;
+  }
+  if (signedInAsSomeoneElse(person)) return;
+  const { all, mine } = typedTable(person, slot);
+  if (text) mine[slot] = { t: text, at: Date.now() }; else delete mine[slot];
+  writePeopleTyped(all);
+}
+/** App start: typed words kept more than 7 days are removed, whoever's they are. */
+export function sweepOldTyped(now = Date.now()): void {
+  const all = readPeopleTyped();
+  let ch = false;
+  for (const k of Object.keys(all)) {
+    for (const slot of Object.keys(all[k])) if (now - all[k][slot].at > 7 * 24 * 3600 * 1000) { delete all[k][slot]; ch = true; }
+    if (!Object.keys(all[k]).length) delete all[k];
+  }
+  if (ch) writePeopleTyped(all);
 }
 
 export function outOfPostsHref(questionId: string): string {

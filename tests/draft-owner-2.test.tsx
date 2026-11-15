@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, afterEach, describe, expect, it } from "vitest";
-import { clearDraft, leaveTab, loadDraft, openedFor, saveDraft, type Draft } from "@/features/speak/draft";
+import { afterSignOut, clearDraft, leaveTab, loadDraft, openedFor, saveDraft, type Draft } from "@/features/speak/draft";
 import { sessionStorage as session } from "@/lib/auth/session-storage";
 import * as held from "@/features/units/draft";
 import { saveTyped, typedDraft } from "@/features/talk/lib";
@@ -80,60 +80,75 @@ describe("the tab keeps its person", () => {
     session.setTokens(tokenFor("B"), "r9"); // this tab refreshed the stored (B's) refresh token
     expect(openedFor()).toBe("A");
   });
-  it("a tab that was a guest from its load stays a guest, and its sign-in here claims the guest recording", async () => {
+  it("a guest tab follows the person who signs in, here or elsewhere: what the guest kept is that person's now, nothing refuses", async () => {
     expect(openedFor()).toBeNull();
-    otherTab(null, "B");
-    expect(openedFor()).toBeNull();
-    expect(await saveDraft(d(), null)).toBe(false); // refused while B is signed in
-    window.localStorage.clear();
-    await saveDraft(d({ key: "guest" }), null);
-    session.setTokens(tokenFor("U"), "r"); // signs in here
-    expect(openedFor()).toBe("U");
-    expect((await loadDraft("U"))?.key).toBe("guest");
+    await saveDraft(d({ key: "guest" }), openedFor()); // the guest has a take
+    otherTab(null, "B"); // the same person signs in in tab 2
+    expect(openedFor()).toBe("B");
+    expect(await saveDraft(d({ key: "guest2" }), openedFor())).not.toBe(undefined); // not refused
+    expect((await loadDraft(openedFor()))?.key).toBe("guest2");
+    expect((await loadDraft("B"))?.owner).toBe("B");
+  });
+  it("a guest take made before the sign-in elsewhere is the person's: loaded by them, once", async () => {
+    await saveDraft(d({ key: "g" }), null);
+    otherTab(null, "U");
+    expect((await loadDraft(openedFor()))?.key).toBe("g");
+    otherTab("U", "V"); // someone else later: the first person's recording is not theirs
+    expect(await loadDraft("V")).toBeNull();
+  });
+  it("sign-out in this tab removes that person's recording only", async () => {
+    window.localStorage.setItem(KEY, raw("A")!);
+    await saveDraft(d({ key: "a" }), "A");
+    const before = window.localStorage.getItem(KEY);
+    session.clear();
+    await afterSignOut(before ? (JSON.parse(before) as { accessToken: string }).accessToken : null);
+    window.localStorage.setItem(KEY, raw("A")!);
+    expect(await loadDraft("A")).toBeNull();
+    expect(openedFor()).toBe("A"); // follows the session again (a fresh sign-in here)
   });
 });
 
-describe("the typed draft remembers its person", () => {
-  it("held words (units): another person's are never shown, overwritten or cleared; old ones behave as before", () => {
+describe("typed words and held posts: each person's own", () => {
+  it("held posts: B has B's own beside A's; A's are still A's; a guest's go to the first person who opens that question, once", () => {
     window.localStorage.setItem(KEY, raw("A")!);
     held.saveDraft("q1", "A's words", 1, "A");
-    expect(held.getDraft("q1", "A")?.body).toBe("A's words");
     window.localStorage.setItem(KEY, raw("B")!);
     expect(held.getDraft("q1", "B")).toBeUndefined();
-    expect(held.saveDraft("q1", "B's words", 2, "B")).toBeUndefined();
-    held.clearDraft("q1", "B"); held.setAwaiting("q1", true, "B"); held.renewDraftKey("q1", "B");
-    expect(held.awaitingDrafts("B")).toEqual([]);
+    expect(held.saveDraft("q1", "B's words", 2, "B")?.body).toBe("B's words");
+    held.setAwaiting("q1", true, "B");
+    expect(held.awaitingDrafts("B").map((x) => x.body)).toEqual(["B's words"]);
     window.localStorage.setItem(KEY, raw("A")!);
     expect(held.getDraft("q1", "A")?.body).toBe("A's words");
-    expect(held.getDraft("q1", "A")?.awaitingUnits).toBe(false);
+    expect(held.awaitingDrafts("A")).toEqual([]);
     // A's open tab while B is signed in: nothing shown, nothing written
     window.localStorage.setItem(KEY, raw("B")!);
     expect(held.getDraft("q1", "A")).toBeUndefined();
     expect(held.saveDraft("q1", "A again", 3, "A")).toBeUndefined();
-    window.localStorage.setItem(KEY, raw("A")!);
-    expect(held.getDraft("q1", "A")?.body).toBe("A's words");
-    held.clearDraft("q1", "A");
-    // a draft stored before this change has no person and behaves exactly as today
+    expect(held.getDraft("q1", "B")?.body).toBe("B's words");
+    // words with no person (main's table, or a guest's) are taken once, by whoever opens that question first
     held.saveDraft("q2", "old words");
-    expect(held.getDraft("q2")?.body).toBe("old words");
-    window.localStorage.setItem(KEY, raw("B")!);
     expect(held.getDraft("q2", "B")?.body).toBe("old words");
-  });
-  it("typed words in a slot: same person gets them back; another person sees none and cannot overwrite or clear", () => {
     window.localStorage.setItem(KEY, raw("A")!);
-    saveTyped("q:q1", "my words", "A");
-    expect(typedDraft("q:q1", "A")).toBe("my words");
+    expect(held.getDraft("q2", "A")).toBeUndefined();
+    expect(held.getDraft("q2")).toBeUndefined();
+  });
+  it("typed words: each person's own; sign-out leaves them; a guest's words are taken once; none shown to others", () => {
+    window.localStorage.setItem(KEY, raw("A")!);
+    saveTyped("q:q1", "A words", "A");
     window.localStorage.setItem(KEY, raw("B")!);
     expect(typedDraft("q:q1", "B")).toBe("");
     saveTyped("q:q1", "B words", "B");
-    saveTyped("q:q1", "", "B");
+    expect(typedDraft("q:q1", "B")).toBe("B words");
     expect(typedDraft("q:q1", "A")).toBe(""); // A's open tab while B is signed in sees none
+    saveTyped("q:q1", "A more", "A"); // and cannot write
     window.localStorage.setItem(KEY, raw("A")!);
-    expect(typedDraft("q:q1", "A")).toBe("my words");
-    // before this change: a plain string, no person, as today
-    window.localStorage.setItem("voices-typing-drafts", JSON.stringify({ "q:old": "old typed" }));
-    expect(typedDraft("q:old")).toBe("old typed");
+    expect(typedDraft("q:q1", "A")).toBe("A words");
+    window.localStorage.removeItem(KEY);
+    saveTyped("q:g", "guest words", null);
+    expect(typedDraft("q:g", null)).toBe("guest words");
+    window.localStorage.setItem(KEY, raw("A")!);
+    expect(typedDraft("q:g", "A")).toBe("guest words");
     window.localStorage.setItem(KEY, raw("B")!);
-    expect(typedDraft("q:old", "B")).toBe("old typed");
+    expect(typedDraft("q:g", "B")).toBe("");
   });
 });

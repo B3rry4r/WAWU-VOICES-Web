@@ -6,7 +6,7 @@ import { freeCovers, tokenFor, voicePriceMilli } from "@/features/speak/logic";
 import * as api from "@/lib/api/talk";
 import type { Allowances, ReplyStance } from "@/lib/api/talk";
 import { tokensLabel } from "@/lib/shared/text-price";
-import { currentOwner, loadDraft, openedFor, OTHER_TAB_NOTE, saveDraft, signedInAsSomeoneElse, type Owner } from "@/features/speak/draft";
+import { currentOwner, loadDraft, openedFor, OTHER_TAB_NOTE, saveDraft, signedInAsSomeoneElse } from "@/features/speak/draft";
 import { isOutOfPosts } from "./lib";
 import { OWN_NAMELESS_NOTE, replyAnonSlot } from "./reply-anon";
 
@@ -30,8 +30,6 @@ export function VoiceReplySheet({ aid, qid, who, stance, allow, onClose, onPoste
   aid: string; who: string; stance?: ReplyStance; allow: Allowances; onClose: () => void; onPosted: () => void; onBuy: () => void;
 }) {
   const [pick, setPick] = useState<ReplyStance | undefined>(stance);
-  // The person this sheet was opened for, read once: a recording kept from it belongs to them.
-  const [owner] = useState<Owner>(() => openedFor());
   const [short, setShort] = useState(false);
   const c = allow.costs;
   const limit = allow.maxVoiceSeconds ?? c.voiceMaxSeconds ?? 60;
@@ -54,7 +52,7 @@ export function VoiceReplySheet({ aid, qid, who, stance, allow, onClose, onPoste
           sendLabel={(sec) => ((allow.freePostsRemaining > 0 && freeCovers(sec, freeSeconds)) || tokenFor(allow.extraVoiceTokens, sec, freeSeconds, allow.freePostsRemaining) ? "Send" : `Send for ${tokensLabel(voicePriceMilli(sec, c))} tokens`)}
           onSend={async (clip) => {
             if (!pick) return;
-            if (signedInAsSomeoneElse(owner)) throw new OtherTabError(); // sends nothing
+            if (signedInAsSomeoneElse(openedFor())) throw new OtherTabError(); // sends nothing
             setShort(false);
             await api.createVoiceReply(aid, pick, clip.clipId, clip.key, clip.tokenId, ownNameless ? true : clip.anonymous);
             onPosted();
@@ -70,11 +68,11 @@ export function VoiceReplySheet({ aid, qid, who, stance, allow, onClose, onPoste
           onKept={() => { onKept?.(); onClose(); }}
           keep={async (t, replace) => {
             // Offline: the recording goes into the same on-device store a voice answer uses, with all it needs to be sent later as this same reply.
-            if (signedInAsSomeoneElse(owner)) return "other_tab";
+            if (signedInAsSomeoneElse(openedFor())) return "other_tab";
             if (!pick || !currentOwner()) return "failed";
-            const cur = await loadDraft(owner);
+            const cur = await loadDraft(openedFor());
             if (!replace && cur && cur.key !== t.key) return "exists";
-            const ok = await saveDraft({ blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: t.key, savedAt: Date.now(), questionId: qid, queued: true, anonymous: ownNameless ? true : t.anonymous, reply: { answerId: aid, stance: pick } }, owner);
+            const ok = await saveDraft({ blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: t.key, savedAt: Date.now(), questionId: qid, queued: true, anonymous: ownNameless ? true : t.anonymous, reply: { answerId: aid, stance: pick } }, openedFor());
             return ok ? "kept" : "failed";
           }}
           anonSlot={ownNameless ? undefined : replyAnonSlot(aid)}
