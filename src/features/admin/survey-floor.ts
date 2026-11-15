@@ -15,3 +15,8 @@ export function underFloor<T extends Counted>(rows: T[], other: Counted | null |
   return { rows: keep, other: o && o.responses >= floor ? o : null };
 }
 
+
+export const TOO_FEW_LEFT = "Too few answers left to show.";
+/** A written or voice question that was answered but whose list came back empty: too few answers are left, so the list is hidden. The count stays. */
+export const listHidden = (q: { kind: string; answered?: number | null; texts: unknown[]; voices: unknown[] }): boolean =>
+  (q.kind === "TEXT" || q.kind === "VOICE") && typeof q.answered === "number" && q.answered > 0 && (q.kind === "TEXT" ? q.texts : q.voices).length === 0;
