@@ -199,6 +199,18 @@ export async function clearDraft(owner: Owner): Promise<void> {
   await idbDel(keyOf(owner));
 }
 
+/** True when this person has a recording kept on this device that was not sent (not older than 7 days), or one held only by this page when storage is blocked or full. Reads only their own key: writes, claims and removes nothing. Storage that cannot be read counts as "no recording". */
+export async function hasKeptRecording(owner: Owner): Promise<boolean> {
+  if (owner === null) return false;
+  const fresh = (d: unknown): boolean => isDraft(d) && !draftIsStale(d);
+  if (fresh(memory.get(keyOf(owner)))) return true;
+  try {
+    return fresh(await run<unknown>("readonly", (s) => s.get(keyOf(owner))));
+  } catch {
+    return false;
+  }
+}
+
 /** After a sign-out done in this tab: the tab is nobody's, and that person's kept recording is removed (typed words and held posts stay under their own key). */
 export async function afterSignOut(tokenBefore: string | null): Promise<void> {
   const who = subOf(tokenBefore) ?? person;

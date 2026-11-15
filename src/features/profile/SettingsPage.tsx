@@ -16,6 +16,7 @@ import { LoadError, LoadingBlock, NeedsProfileNotice, Section, SignedOutNotice, 
 import { minuteLabel } from "./format";
 import { applyAccountTheme, chooseTheme, deviceChoice, type ThemeChoice } from "./theme";
 import { useMe } from "./useMe";
+import { useSignOutConfirm } from "./useSignOutConfirm";
 import "./profile.css";
 
 function Switch({ label, detail, checked, onChange, disabled }: { label: string; detail?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
@@ -161,6 +162,7 @@ function SettingsBody({ me }: { me: Me }) {
   const [alertTopics, setAlertTopics] = useState<string[] | null>(null);
   const [blockedCount, setBlockedCount] = useState<number | null>(null);
   const [deleted, setDeleted] = useState(false);
+  const { ask: askSignOut, checking: signingOut, dialog: signOutDialog } = useSignOutConfirm(() => { signOut(); router.push("/"); });
 
   useEffect(() => { applyAccountTheme(me.settings.theme); }, [me.settings.theme]);
   useEffect(() => { listBlocks().then((p) => setBlockedCount(p.items.length + (p.nextCursor ? 1 : 0)), () => setBlockedCount(null)); }, []);
@@ -191,7 +193,7 @@ function SettingsBody({ me }: { me: Me }) {
         <h1 className="pf-h1 pf-bar__h1">Settings</h1>
         <span className="pf-bar__sp pf-only-desk" />
         <span className="pf-signed pf-only-desk">{`Signed in as @${me.handle}`}</span>
-        <Button className="pf-only-desk" variant="secondary" onClick={() => { signOut(); router.push("/"); }}>Sign out</Button>
+        <Button className="pf-only-desk" variant="secondary" loading={signingOut} onClick={askSignOut}>Sign out</Button>
       </header>
       {error ? <p className="pf-note pf-note--err" role="alert">{error}</p> : null}
 
@@ -252,9 +254,10 @@ function SettingsBody({ me }: { me: Me }) {
         </div>
       </Section>
 
-      <Button className="pf-only-phone" variant="secondary" block onClick={() => { signOut(); router.push("/"); }}>Sign out</Button>
+      <Button className="pf-only-phone" variant="secondary" block loading={signingOut} onClick={askSignOut}>Sign out</Button>
       <p className="pf-signed pf-only-phone">{`Signed in as @${me.handle}${me.phoneMasked ? " · " + me.phoneMasked : ""}`}</p>
 
+      {signOutDialog}
       {sheet === "cats" ? <CategoryAlertsSheet settings={s} patch={patch} onClose={() => setSheet(null)} /> : null}
       {sheet === "blocked" ? <BlockedSheet onClose={() => setSheet(null)} onCount={setBlockedCount} /> : null}
       {sheet === "delete" ? <DeleteSheet me={me} onClose={() => setSheet(null)} onDone={() => { setSheet(null); setDeleted(true); }} /> : null}
