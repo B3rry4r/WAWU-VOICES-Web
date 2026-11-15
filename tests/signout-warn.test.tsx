@@ -12,7 +12,7 @@ vi.mock("@/features/dm/live", () => ({ DMS_LIVE: false }));
 
 import { DeletionPending } from "@/features/profile/DeletionPending";
 import { SettingsPage } from "@/features/profile/SettingsPage";
-import { DRAFT_MAX_AGE_MS, hasKeptRecording, loadDraft, type Draft } from "@/features/speak/draft";
+import { DRAFT_MAX_AGE_MS, clearDraft, hasKeptRecording, loadDraft, saveDraft, type Draft } from "@/features/speak/draft";
 
 const SENTENCE = "You have a recording you have not sent. Sign out anyway?";
 const tokenFor = (sub: string) => "x." + btoa(JSON.stringify({ sub })).replace(/=+$/, "") + ".y";
@@ -24,7 +24,7 @@ const draft = (over: Partial<Draft> = {}): Draft => ({ questionId: "q1", blob: n
 function fakeStore() {
   const data = new Map<string, unknown>();
   const log = { gets: [] as string[], puts: [] as string[], dels: [] as string[], keys: 0 };
-  const st = { broken: false };
+  const st = { broken: false, hang: false, delay: 0, hung: null as null | { onsuccess?: () => void } };
   const store = (tx: { oncomplete?: () => void }) => {
     const op = <T,>(fn: () => T) => { const req: { result?: T } = {}; setTimeout(() => { req.result = fn(); setTimeout(() => tx.oncomplete?.(), 0); }, 0); return req; };
     return {
@@ -39,7 +39,8 @@ function fakeStore() {
       if (st.broken) throw new Error("storage blocked");
       const req: { result: unknown; onsuccess?: () => void } = { result: undefined };
       req.result = { createObjectStore: () => undefined, close: () => undefined, transaction: () => { const tx: { oncomplete?: () => void; objectStore?: () => unknown } = {}; tx.objectStore = () => store(tx); return tx; } };
-      setTimeout(() => req.onsuccess?.(), 0);
+      if (st.hang) { st.hung = req; return req; }
+      setTimeout(() => req.onsuccess?.(), st.delay);
       return req;
     },
   };
@@ -199,5 +200,74 @@ describe("hasKeptRecording", () => {
     expect(await hasKeptRecording("tunde")).toBe(false);
     expect(s.data.has("rec:guest")).toBe(true);
     expect(await loadDraft(null)).not.toBeNull(); // sanity: the guest's recording is still there to be claimed by the screen that owns that
+  });
+});
+
+describe("Round 2: the wait, the person, the page-held take, the busy button", () => {
+  it("a. storage that never answers: signed out within about a second, no dialog, and a late answer shows nothing", async () => {
+    s.data.set("rec:tunde", draft({ owner: "tunde" }));
+    s.st.hang = true;
+    await openSettings();
+    await userEvent.click(signOutButton());
+    await waitFor(() => expect(tokenNow()).toBeNull(), { timeout: 2500 });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(push).toHaveBeenCalledWith("/");
+    s.st.hung?.onsuccess?.();
+    await new Promise((r) => setTimeout(r, 200));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(push).toHaveBeenCalledTimes(1);
+  });
+
+  it("b. the dialog is open for A, B signs in: Sign out anyway does nothing to B or to either recording", async () => {
+    for (const nobody of [false, true]) {
+      calls.length = 0; s.log.dels.length = 0; s.data.clear();
+      signInAs("tunde");
+      s.data.set("rec:tunde", draft({ owner: "tunde" }));
+      s.data.set("rec:bola", draft({ owner: "bola", key: "b" }));
+      await openSettings();
+      await userEvent.click(signOutButton());
+      await screen.findByRole("dialog");
+      if (nobody) window.localStorage.clear(); else signInAs("bola");
+      await userEvent.click(screen.getByRole("button", { name: "Sign out anyway" }));
+      await new Promise((r) => setTimeout(r, 100));
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(tokenNow()).toBe(nobody ? null : tokenFor("bola"));
+      expect(loggedOut()).toBe(false);
+      expect(push).not.toHaveBeenCalled();
+      expect(s.log.dels).toEqual([]);
+      expect([...s.data.keys()].sort()).toEqual(["rec:bola", "rec:tunde"]);
+      cleanup();
+    }
+  });
+
+  it("d. while the read is pending the button is disabled and busy, and a second tap does nothing", async () => {
+    s.data.set("rec:tunde", draft({ owner: "tunde" }));
+    s.st.delay = 400;
+    await openSettings();
+    const b = signOutButton();
+    await userEvent.click(b);
+    await waitFor(() => expect((b as HTMLButtonElement).disabled).toBe(true));
+    expect(b.getAttribute("aria-busy")).toBe("true");
+    await userEvent.click(b);
+    expect((await screen.findByRole("dialog")).textContent).toContain(SENTENCE);
+    expect(s.log.gets.filter((k) => k === "rec:tunde").length).toBe(1); // the second tap started no second read
+    expect(screen.getAllByRole("dialog").length).toBe(1);
+    expect((signOutButton() as HTMLButtonElement).disabled).toBe(false);
+    expect(tokenNow()).toBe(tokenFor("tunde"));
+  });
+
+  it("c. storage blocked and the take held only by the page: the dialog shows, and the check writes nothing", async () => {
+    s.st.broken = true;
+    try {
+      expect(await saveDraft(draft({ owner: "tunde" }), "tunde")).toBe(false); // held by the page only
+      await openSettings();
+      await userEvent.click(signOutButton());
+      expect((await screen.findByRole("dialog")).textContent).toContain(SENTENCE);
+      expect(s.log.puts).toEqual([]);
+      expect(tokenNow()).toBe(tokenFor("tunde"));
+    } finally {
+      s.st.broken = false;
+      await clearDraft("tunde");
+    }
   });
 });

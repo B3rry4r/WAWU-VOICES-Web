@@ -199,12 +199,13 @@ export async function clearDraft(owner: Owner): Promise<void> {
   await idbDel(keyOf(owner));
 }
 
-/** True when this person has a recording kept on this device that was not sent (not older than 7 days). Reads only their own key: writes, claims and removes nothing. Storage that cannot be read counts as "no recording". */
+/** True when this person has a recording kept on this device that was not sent (not older than 7 days), or one held only by this page when storage is blocked or full. Reads only their own key: writes, claims and removes nothing. Storage that cannot be read counts as "no recording". */
 export async function hasKeptRecording(owner: Owner): Promise<boolean> {
   if (owner === null) return false;
+  const fresh = (d: unknown): boolean => isDraft(d) && !draftIsStale(d);
+  if (fresh(memory.get(keyOf(owner)))) return true;
   try {
-    const d = await run<unknown>("readonly", (s) => s.get(keyOf(owner)));
-    return isDraft(d) && !draftIsStale(d);
+    return fresh(await run<unknown>("readonly", (s) => s.get(keyOf(owner))));
   } catch {
     return false;
   }

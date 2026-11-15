@@ -36,7 +36,7 @@ export function DeletionPending({ scheduledFor, onUndone }: { scheduledFor?: str
     return () => { on = false; };
   }, [scheduledFor]);
   const when = day ? date(day.length <= 10 ? `${day}T12:00:00+01:00` : day) : null;
-  const { ask: signOutNow, dialog: signOutDialog } = useSignOutConfirm(() => {
+  const { ask: signOutNow, checking: signingOut, dialog: signOutDialog } = useSignOutConfirm(() => {
     setOut(true);
     signOut();
     router.replace("/welcome");
@@ -63,7 +63,7 @@ export function DeletionPending({ scheduledFor, onUndone }: { scheduledFor?: str
       <p className="pf-body">{when ? `To keep your account, tap Undo before ${when}.` : DELETE_WORDS.keep}</p>
       {err ? <p className="pf-body text-[var(--danger)]" role="alert">{err}</p> : null}
       <Button block loading={busy} disabled={out} onClick={() => void undo()}>Undo</Button>
-      <Button variant="secondary" block disabled={out || busy} onClick={signOutNow}>Sign out</Button>
+      <Button variant="secondary" block loading={signingOut} disabled={out || busy} onClick={signOutNow}>Sign out</Button>
       {signOutDialog}
     </div>
   );
