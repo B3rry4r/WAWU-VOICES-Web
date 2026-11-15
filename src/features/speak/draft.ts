@@ -135,8 +135,11 @@ async function idbGet(key: string): Promise<Draft | undefined> {
 /** True when it is really on the device; false when only this page holds it (storage blocked or full). */
 async function idbPut(key: string, d: Draft): Promise<boolean> {
   memory.set(key, d);
-  try { await run("readwrite", (s) => s.put(d, key)); return true; } catch { return false; }
+  try { await run("readwrite", (s) => s.put(d, key)); lastPutFailed = false; return true; } catch { lastPutFailed = true; return false; }
 }
+let lastPutFailed = false;
+/** True when the last write could not reach the device's storage (blocked, missing or full): the take is held by this page only. */
+export const keepFailed = (): boolean => lastPutFailed;
 async function idbDel(key: string): Promise<void> {
   memory.delete(key);
   try { await run("readwrite", (s) => s.delete(key)); } catch { /* nothing to clear */ }

@@ -38,6 +38,7 @@ export function WriteScreen({ qid }: { qid: string }) {
   const [loadErr, setLoadErr] = useState<unknown>(null);
   const [tries, setTries] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
+  const [keepFail, setKeepFail] = useState(false); // this device could not keep what was typed (storage blocked or full)
   const [sending, setSending] = useState(false);
   const busy = useRef(false);
   const [text, setText] = useState("");
@@ -151,13 +152,14 @@ export function WriteScreen({ qid }: { qid: string }) {
             {mood.word ? <div className="mt-3"><MoodWordNote mood={mood.word} changeHref={pickHref(qid)} /></div> : null}
           </div>
         )}
+        {keepFail ? <div className="mb-3"><Banner tone="info">This device could not keep what you typed. Stay on this page until you post it.</Banner></div> : null}
         <div>
           <Composer
             freeLeft={left}
             maxChars={textLimit(c)}
             countChars={countChars}
             value={text}
-            onChange={(t) => { setText(t); saveTyped(slot, t, openedFor()); }}
+            onChange={(t) => { setText(t); if (!saveTyped(slot, t, openedFor()) && t && !signedInAsSomeoneElse(openedFor())) setKeepFail(true); }}
             replyTo={replyTo ? whoLabel : undefined}
             intent={intent ?? undefined}
             onIntentChange={setIntent}

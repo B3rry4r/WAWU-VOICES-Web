@@ -13,7 +13,7 @@ import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { needsNewKey } from "@/lib/api/keys";
 import { InView } from "@/components/InView";
-import { clearDraft, draftIsStale, loadDraft, openedFor, OTHER_TAB_NOTE, saveDraft, saveDraftKeepingReply, signedInAsSomeoneElse, STALE_NOTE, type Draft } from "./draft";
+import { clearDraft, draftIsStale, keepFailed, loadDraft, openedFor, OTHER_TAB_NOTE, saveDraft, saveDraftKeepingReply, signedInAsSomeoneElse, STALE_NOTE, type Draft } from "./draft";
 import { claimSend, releaseSend } from "./outbox";
 import { freeCovers, peaksFromLevels, refusalText, tokenFor, uuidKey, voicePriceMilli } from "./logic";
 import { BackLink, PhoneBar, Pill, RecordStage, RecordingTimeCard, TakePlayer } from "./parts";
@@ -143,6 +143,7 @@ export function SpeakScreen({ questionId }: { questionId?: string }) {
   const keepReply = async (d: Draft): Promise<boolean> => {
     const ok = await saveDraftKeepingReply(d, openedFor());
     if (!ok && signedInAsSomeoneElse(openedFor())) sayOtherTab();
+    else if (!ok && keepFailed() && !d.queued) pushNote({ tone: "info", text: "This device could not keep your recording. Stay on this page until you send it." });
     return ok;
   };
 

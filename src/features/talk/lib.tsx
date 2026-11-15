@@ -120,7 +120,7 @@ const readPeopleTyped = (): TypedPeople => { if (typedBlocked) return typedMemor
 function writePeopleTyped(all: TypedPeople): void {
   Object.keys(typedMemory).forEach((k) => delete typedMemory[k]);
   Object.assign(typedMemory, all);
-  try { window.localStorage.setItem(TYPING_V2, JSON.stringify(all)); } catch { typedBlocked = true; }
+  try { window.localStorage.setItem(TYPING_V2, JSON.stringify(all)); typedBlocked = false; } catch { typedBlocked = true; }
 }
 /** A real person's table for this slot, after taking main's words for this slot if there are any (the guest claim, and the first opener after the update). */
 function typedTable(person: string, slot: string): { all: TypedPeople; mine: Record<string, TypedItem> } {
@@ -140,19 +140,21 @@ export function typedDraft(slot: string, person?: Owner): string {
   if (signedInAsSomeoneElse(person)) return "";
   return typedTable(person, slot).mine[slot]?.t ?? "";
 }
-export function saveTyped(slot: string, text: string, person?: Owner): void {
+/** True when the words are kept on this device. False: storage is blocked or full (they stay on this page), or someone else is signed in (nothing is written). */
+export function saveTyped(slot: string, text: string, person?: Owner): boolean {
   if (person === undefined || person === null) {
     try {
       const t = readJson<Record<string, string>>(TYPING);
       if (text) t[slot] = text; else delete t[slot];
       window.localStorage.setItem(TYPING, JSON.stringify(t));
-    } catch { /* ignore */ }
-    return;
+      return true;
+    } catch { return false; }
   }
-  if (signedInAsSomeoneElse(person)) return;
+  if (signedInAsSomeoneElse(person)) return false;
   const { all, mine } = typedTable(person, slot);
   if (text) mine[slot] = { t: text, at: Date.now() }; else delete mine[slot];
   writePeopleTyped(all);
+  return !typedBlocked;
 }
 /** App start: typed words kept more than 7 days are removed, whoever's they are. */
 export function sweepOldTyped(now = Date.now()): void {
