@@ -135,7 +135,7 @@ try {
     assert.equal(find(calls, 'POST', '/questions/q1/answers').length, 0);
     const kept = await page.evaluate(() => new Promise<{ queued?: boolean; key?: string } | null>((res) => {
       const r = indexedDB.open('voices-speak', 1);
-      r.onsuccess = () => { const g = r.result.transaction('drafts').objectStore('drafts').get('current'); g.onsuccess = () => res(g.result ? { queued: g.result.queued, key: g.result.key } : null); };
+      r.onsuccess = () => { const g = r.result.transaction('drafts').objectStore('drafts').getAll(); g.onsuccess = () => { const x = g.result.find((y: any) => y && y.blob); res(x ? { queued: x.queued, key: x.key } : null); }; };
       r.onerror = () => res(null);
     }));
     assert.equal(kept?.queued, true, 'the kept recording is not marked as waiting');

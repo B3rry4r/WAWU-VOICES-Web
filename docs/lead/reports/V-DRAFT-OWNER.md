@@ -101,3 +101,44 @@ Additive; a draft stored without a person behaves exactly as today.
 
 ## Not proved, round 2
 Real sign-in screens (stubbed), real phones and Safari, and a guest tab refreshing a token the other person's tab stored (a guest has no refresh token to use, so it should not happen).
+
+# Round 3: one rule, per person
+
+Both HIGH findings fixed. The one shared slot and "never overwritten" are gone.
+
+## The rule as built (keys and shapes)
+- **Recording** (`src/features/speak/draft.ts`): IndexedDB `voices-speak` / `drafts`, one key per person: `rec:<personId>` or `rec:guest`. Same `Draft` shape, `owner` inside. Nothing is written under another person's key.
+- **Held posts** (`src/features/units/draft.ts`): `voices-held-v2` = `{ <personId>: { <questionId>: HeldDraft } }`. A guest's (and anyone's with no person) stay in main's table `voices-held-drafts`, so "guest" = main's table and old code and tests read it unchanged.
+- **Typed words** (`src/features/talk/lib.tsx`): `voices-typing-v2` = `{ <personId>: { <slot>: { t, at } } }`; guest = main's `voices-typing-drafts`.
+- **Tab person** (`openedFor()`): a real person A stays A for the life of the page whatever other tabs do; only a sign-in or sign-out done in this tab (`onOwnTokenWrite`, `leaveTab`) or a page load changes it. A GUEST tab follows: when a session appears, here or elsewhere, the tab becomes that person's. The `storage` event is no longer used.
+- **R3**: before a write, restore or clear, if the tab's person is A and a different real person is signed in right now (`signedInAsSomeoneElse`), nothing touches storage, nothing is sent, and the line is shown. Nobody signed in: A's key. A guest is never "someone else".
+- **R5**: sign-out in this tab removes that person's recording (`afterSignOut`); typed words and held posts stay under their key.
+- **R6**: at app start (`Outbox` mount) `sweepOldRecordings`, `sweepOldHeld`, `sweepOldTyped` remove anything older than 7 days, any person's key (recordings without reading audio).
+- **R7**: main's recording slot `current` goes to its owner's key on first access (owner null: guest). Main's typed words and held posts (no person) are taken, once, by the person or guest who first opens that question. The guest claim moves a guest recording to the person who is signed in (only when that person has none), and a question's guest words and held post on first open.
+- **Deviation to rule on**: main (and the existing test "another account never sees a signed-in person's recording, and it is removed when they sign in", which I did not edit) removes other people's recordings when a signed-in person loads. I kept that for recordings only. Per-person keys mean it no longer blocks anything. If you want A's recording to survive B's sign-in, that one assertion must change; I did not touch it.
+- Also changed for fault 1: `useSignedIn` (`talk/lib.tsx`) follows a session that appears in another tab, so a guest's write screen turns into the box; the record screen's Send checks `isSignedIn()` at send time. When this device cannot keep a recording or typed words (storage missing, full, throwing) the screen says so (`keepFailed()`, `saveTyped` returns false).
+
+## Every call site (person = `openedFor()` read at use)
+speak/SpeakScreen.tsx 144-145 (keepReply), 154-155 (restore), 159 (stale), 343, 354 (drop, close), 396, 401-402 (keep offline), 421-423 (guest asked to sign in), 465-469 (post, clear), 517 (sign in again). speak/Outbox.tsx 39, 73 (look, send, remove; sweeps at start). speak/outbox.ts (sendHere checks the draft's owner; renewed key saved under the draft's own owner). talk/VoiceReply.tsx 55, 71-75 (send, keep). talk/WriteScreen.tsx 63, 94-134, 162, 173 (typed words, held post, send guard). talk/ReplyComposer.tsx 34, 42, 53, 60, 76. units/BuyUnitsScreen.tsx 19, 66. units/OutOfPostsSheet.tsx 28, 62. units/post-draft.ts 25-43. units/PaymentDoneScreen.tsx 174, 322. lib/api/auth.ts `signOut` -> `afterSignOut`. lib/auth/session-storage.ts `onOwnTokenWrite` (a notice after the write; tokens stored as before). `client.ts` untouched.
+
+## Tests touched
+Vitest: only my own branch files changed in this round: `tests/draft-owner-2.test.tsx` (the guest-tab, held-words and typed-words tests rewritten to the new rule; the round 2 cases 1, 1b, 1c, 1d, 2, 2d, 2e stay) and new cases in it. `tests/draft-owner.test.tsx` unchanged. Tests from main: only the person argument and one `leaveTab()` setup line (`share-card-guest-return`), as in earlier rounds: w4-recorder, w4-speak, wf6b-people, fixd-outbox, fixd-outbox-r2, fixd-round3, share-card-guest-return. No assertion edited.
+E2E scripts (not vitest): the three old browser scripts `fixd`, `fixd-round3`, `fixb` and my round 1 and 2 script read the recording from the old `current` slot; their read helper now reads any `rec:*` key. Their seeds still write the old `current` slot, which exercises the migration.
+
+## Browser proof (built app, one context, several tabs, 390x844 and 1440x900)
+Real sign-in screen driven against a stub of the sign-in host in the fault 1, S1, S2 and H1 cases.
+- Fault 1 voice, 5 runs per width: tab 1 a guest on the record screen, the same person signs in on tab 2, tab 1 records and Sends: `clips 1, posts 1 (all 1), line 0` every run. Guest already HAS a take: `guest take kept: ["rec:guest"]`, after the sign-in elsewhere Send: clips 1, posts 1, recording keys left [], line 0.
+- Fault 1 typed, 5 runs per width: guest write screen turns into the box when the session appears; types, Posts: posts 1, line 0 every run.
+- Fault 2 S1: A types "A words here", signs out, B signs in on the same tab: B opens "" , types, leaves, comes back: "B words here"; A signs in later: "A words here"; stored `{A:{q:q1:...},B:{q:q1:...}}`.
+- Fault 2 S2: out of posts (402) for A, then B: `voices-held-v2` holds both, A's "A held words" and B's "B held words"; B back in has "B held words". Paying and posting after payment, also as a full page load back from the payment page, is covered by the existing vitest (`units-checkout`, `c23-held-draft`, `talk`), which pass; I did not drive the payment pages in the browser.
+- Rounds 1 and 2 again (`e2e/draft-owner.e2e.mts`, RUNS=10): 38 of 38 ok at both widths, including A signed out elsewhere keeps owner A, B's bytes SHA-256 same before and after, in-app navigation, a missed event, the hard rule (voice 10, typed 10, refresh 10, offline kept and reload, two tabs, guest sign-in).
+- H1 sign out and in again in the same tab: keys before `["rec:A"]`, after `[]`; the new take sends once. H2 three tabs of the same person, one kept recording: clips 1, posts 1, line 0. H3 storage errors: IndexedDB missing, IndexedDB full, `localStorage` throwing for typed words: online recording and typing work, 1 post each, the screen says it could not keep it.
+- Line count over the round 3 script: `LINE TOTAL over 32 sends: 0`. Over the 10-run hard rule of rounds 1 and 2 the line count was 0 as well (every run printed `line 0`).
+- Old browser scripts on this build: `fixd-round3` all ok, `fixb` all passed, `fixd`: all ok except "two tabs with one kept recording", which fails the same way on `origin/main` (it expects both tabs to print the posted note; main prints it in one). `anon` could not start (hard-coded browser path).
+- Upgrade (R7): built `origin/main`, served it on a port, kept a recording (owner A), typed words and a held post with a persistent profile; stopped it; served this branch on the same port and same profile. Result: recording moved to `rec:A` and shows Send on the record screen; typed words come back "old typed words" (taken once into `voices-typing-v2`); the held post was taken by A with the same key `545c84b4...` on the next out-of-posts, main's table left `{}`; Send then posted once. A alone lost nothing.
+
+## Totals, round 3
+`npx tsc --noEmit` clean. `npx next lint` clean. `npx vitest run` exit 0: 137 files, 1403 tests, no unhandled errors. `npx next build` compiled.
+
+## Could not prove
+Real sign-up with the emailed code in the browser (covered by the existing vitest `share-card-guest-return`); a voice reply and a typed reply as new e2e cases (covered by the old `fixd` and `fixd-round3` scripts, which pass); the payment pages as a full page load; real phones, Safari and private windows; a guest tab that refreshes a token stored for someone else (a guest has none).

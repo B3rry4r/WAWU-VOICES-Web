@@ -51,8 +51,8 @@ const setPerson = (page: Page, sub: string | null, n = 0) => page.evaluate(([s, 
 const idb = <T,>(page: Page, fn: string, arg?: unknown) => page.evaluate(async ([f, a]) => {
   const db: IDBDatabase = await new Promise((res, rej) => { const r = indexedDB.open('voices-speak', 1); r.onupgradeneeded = () => r.result.createObjectStore('drafts'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
   const out = await new Promise<any>((res, rej) => {
-    if (f === 'seed') { const tx = db.transaction('drafts', 'readwrite'); tx.objectStore('drafts').put({ blob: new Blob(['abc'], { type: 'audio/webm' }), mime: 'audio/webm', seconds: 4, peaks: [], savedAt: Date.now(), questionId: 'q1', ...(a as object) }, 'current'); tx.oncomplete = () => res(null); tx.onerror = () => rej(tx.error); }
-    else { const rq = db.transaction('drafts').objectStore('drafts').get('current'); rq.onsuccess = () => res(rq.result ? { key: rq.result.key, owner: rq.result.owner, queued: rq.result.queued } : null); }
+    if (f === 'seed') { const o = (a as any).owner ?? null; const tx = db.transaction('drafts', 'readwrite'); tx.objectStore('drafts').put({ blob: new Blob(['abc'], { type: 'audio/webm' }), mime: 'audio/webm', seconds: 4, peaks: [], savedAt: Date.now(), questionId: 'q1', ...(a as object) }, 'rec:' + (o ?? 'guest')); tx.oncomplete = () => res(null); tx.onerror = () => rej(tx.error); }
+    else { const rq = db.transaction('drafts').objectStore('drafts').getAll(); rq.onsuccess = () => { const r = rq.result.find((x: any) => x && x.blob); res(r ? { key: r.key, owner: r.owner, queued: r.queued } : null); }; }
   });
   db.close(); return out;
 }, [fn, arg] as [string, unknown]) as Promise<T>;
@@ -218,7 +218,7 @@ for (const w of [390, 1440]) {
 // ---- Round 2
 const hashOf = (page: Page) => page.evaluate(async () => {
   const db: IDBDatabase = await new Promise((res, rej) => { const r = indexedDB.open('voices-speak', 1); r.onupgradeneeded = () => r.result.createObjectStore('drafts'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-  const d = await new Promise<any>((res) => { const rq = db.transaction('drafts').objectStore('drafts').get('current'); rq.onsuccess = () => res(rq.result ?? null); });
+  const d = await new Promise<any>((res) => { const rq = db.transaction('drafts').objectStore('drafts').getAll(); rq.onsuccess = () => res(rq.result.find((x: any) => x && x.blob) ?? null); });
   db.close(); if (!d) return null;
   const h = await crypto.subtle.digest('SHA-256', await d.blob.arrayBuffer()); return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('') + ':' + JSON.stringify({ k: d.key, o: d.owner, q: d.queued });
 });
@@ -302,7 +302,7 @@ for (const w of [390, 1440]) {
     console.log(`     draft ${JSON.stringify(d)}, line ${await line(page)}`);
     assert.equal(d, null); assert.equal(await line(page), 1); await ctx.close();
   });
-  await t(`R3 [${w}] typed words: type, leave, come back (same person gets them); B sees none; A's open tab cannot overwrite B's`, async () => {
+  await t(`R3 [${w}] typed words: type, leave, come back (same person gets them); B sees none; A's open tab cannot overwrite B's (B has B's own)`, async () => {
     const { page, ctx } = await open(w, { mood: false });
     await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/q/q1/write`);
     await page.getByRole('textbox').fill('A typed this'); await page.waitForTimeout(400);
@@ -312,8 +312,8 @@ for (const w of [390, 1440]) {
     const bsees = await t2.getByRole('textbox').inputValue(); console.log(`     B opens it: "${bsees}"`); assert.equal(bsees, '');
     await t2.getByRole('textbox').fill('B typed this'); await t2.waitForTimeout(400);
     await page.getByRole('textbox').fill('A types more'); await page.waitForTimeout(400);
-    const stored = await page.evaluate(() => ({ t: localStorage.getItem('voices-typing-drafts'), o: localStorage.getItem('voices-typing-owners') }));
-    console.log(`     stored: ${JSON.stringify(stored)}`); assert.ok(stored.t!.includes('A typed this')); assert.ok(!stored.t!.includes('B typed this')); assert.ok(!stored.t!.includes('A types more'));
+    const stored = await page.evaluate(() => ({ t: localStorage.getItem('voices-typing-v2'), o: null }));
+    console.log(`     stored: ${JSON.stringify(stored)}`); assert.ok(stored.t!.includes('A typed this')); assert.ok(stored.t!.includes('B typed this')); assert.ok(!stored.t!.includes('A types more')); assert.ok(JSON.parse(stored.t!).A['q:q1'].t === 'A typed this');
     await ctx.close();
   });
 }
