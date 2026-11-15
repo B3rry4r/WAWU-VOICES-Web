@@ -1,5 +1,4 @@
 VERDICT: MERGE
-INTERIM
 
 # Check of "Sign out warns first" (branch v/signout-warn, head bfe4953)
 
@@ -62,7 +61,7 @@ no busy mark). The person will tap again. Double taps are safe (see below), but 
 
 # Re-check of round 2 (head 6a29c1e)
 
-INTERIM. Built app of the new head, Chromium, stubs for API and sign-in (nothing live), 390x844 and 1440x900.
+Final. Built app of the new head, Chromium, stubs for API and sign-in (nothing live), 390x844 and 1440x900.
 
 ## Diff
 - `origin/main` (eefa0a4) is inside the branch. `git diff origin/main -- src` shows only 4 files: `useSignOutConfirm.tsx` (new, 53 lines), `SettingsPage.tsx`, `DeletionPending.tsx`, `speak/draft.ts` (the one function, 12 lines, read-only). `git diff origin/main --stat -- tests`: only `tests/signout-warn.test.tsx`. The surveys files come from main.
@@ -80,7 +79,18 @@ INTERIM. Built app of the new head, Chromium, stubs for API and sign-in (nothing
 - Desktop and phone buttons together: one hook per page, one dialog.
 - Deletion pending (both widths): with a kept recording the dialog shows, Go back keeps the person signed in, "Sign out anyway" signs out to `/welcome` with 1 request. Without one it signs out at once.
 - Read-only proof, tap then Go back, for a kept recording, a guest recording, another person's recording and the old `current` slot: every IndexedDB key, value and blob hash, and localStorage, identical before, during and after.
-- Console: a "Cannot read properties of undefined (reading 'filter')" showed in every run, also before any tap. I believe it is my stub's answer to a Settings call, not sign-out. Not checked against main.
+- Console: a "Cannot read properties of undefined (reading 'filter')" shows when Settings loads, with no tap at all (checked). It comes from my stub's answer to a Settings call, not from sign-out. Not compared with main.
 
-## Still to run
-Gates counts on the new head (tsc 0 and lint clean and build ok so far; vitest x3 running), `draft-owner`, `surveys-r9`, `signout-warn` e2e, my voice 5 / typed 5, the console error against main.
+## Gates and suites on the new head (6a29c1e)
+- `npx tsc --noEmit` 0 errors. `npx next lint` no warnings or errors. `npx next build` ok.
+- `npx vitest run` exit 0 three times on the head: 156 files, 1591 tests each time. (One earlier run showed 2 failed files; that was me switching branches under it. Rerun clean three times.)
+- `origin/main` is inside the branch. Main's tests byte-identical: only `tests/signout-warn.test.tsx` differs.
+- `e2e/draft-owner.e2e.mts` (main's, unchanged, both widths): 38 ok, 0 FAIL, neither known miss occurred.
+- `e2e/surveys-r9.e2e.mts`: ALL PASSED 6, 0 FAIL.
+- Builder's `e2e/signout-warn.e2e.mts`: 5 of 6 on the first run. The miss was "r2 HIGH 2 [390]" (Bob signs in in tab 2). I ran it again alone: 8 of 8 ok. Under load I made it fail again and looked: the miss is in the script's own set-up, not the code. Tab 2's own start-up (main's behaviour: a signed-in tab removes other people's recordings on load) removed Bob's recording before the tap, so "before" already lacked `rec:B`; after the tap the keys were the same as before, Bob still signed in, 0 sign-out requests. Where Bob's recording survived to the tap (2 of 3 loaded runs), the test passed.
+- My own voice x5 and typed x5 with the word screen, both widths: each Send exactly 1 clip (voice) and 1 post. All ok.
+
+## Not proven
+- The record screen not showing a page-held take after an in-app return (see MEDIUM 3 note): not compared with main.
+- The 1100 ms case is by design: the person is signed out and the recording removed with no warning.
+- Two tabs of the same person, and a sign-out done in another tab: not covered (ruling).
