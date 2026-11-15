@@ -53,6 +53,7 @@ const SCREENS: [string, () => JSX.Element, (t: string) => boolean][] = [
 async function tick(ms: number) { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); }
 
 describe("every screen turns live at the opening by itself", () => {
+  let spreadDraw: { mockRestore: () => void };
   beforeEach(() => {
     vi.useFakeTimers({ now: BEFORE });
     window.localStorage.clear();
@@ -60,8 +61,11 @@ describe("every screen turns live at the opening by itself", () => {
     hidden = false;
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => (hidden ? "hidden" : "visible") });
     stub();
+    // The first ask comes 0 to 5 s after the instant, drawn with Math.random (useStartWatch). A draw under 0.1 s put the second ask inside the first step
+    // of "asks again after 5, 15, 30" (about 2 runs in 100). The test fixes the draw at the middle (2.5 s).
+    spreadDraw = vi.spyOn(Math, "random").mockReturnValue(0.5);
   });
-  afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+  afterEach(() => { spreadDraw.mockRestore(); cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
   for (const [name, el, live] of SCREENS) {
     it(`${name}: loaded 30 seconds before, untouched, is live within 10 seconds of the instant; no polling before it`, async () => {

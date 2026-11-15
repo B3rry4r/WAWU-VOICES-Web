@@ -38,6 +38,12 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("round 4: a share page never ends on an error page because of a failed draw", () => {
+  // The first ask of a waiting page comes 0 to 5 s after the instant, drawn with Math.random (useStartWatch). A draw under 0.1 s moved the second ask into
+  // the first 5.1 s step and broke the counts below (about 2 runs in 100, on any machine, on c934e9b as on 8f7e287). The test fixes the draw at the middle (2.5 s).
+  let spreadDraw: { mockRestore: () => void };
+  beforeEach(() => { spreadDraw = vi.spyOn(Math, "random").mockReturnValue(0.5); });
+  afterEach(() => { spreadDraw.mockRestore(); });
+
   it("waiting page at the instant: the server's own refresh is never used, the page is drawn from the browser's answer", async () => {
     vi.useFakeTimers({ now: OPENS - 10_000 });
     render(<ShareGate code="c1" opensAt={OPENS} serverNow={Date.now()}><p>COMING UP</p></ShareGate>);
