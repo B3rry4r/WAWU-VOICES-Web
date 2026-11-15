@@ -85,7 +85,7 @@ await t('HIGH 2: A on the record screen, B signs in, A records (no send): no slo
 await t('HIGH 2 mirror: B has a kept recording, A\'s open tab taps "Say it in 60 seconds": A\'s tab does not show B\'s recording', async () => {
   const { B, ctx, p1, p2 } = await two();
   await pick(p1); await signIn(p2, B);
-  await seedDraft(p2, { slot: 'u:B', owner: 'B', key: 'kept-B', queued: false });
+  await seedDraft(p2, { slot: 'rec:B', owner: 'B', key: 'kept-B', queued: false });
   await p1.getByRole('button', { name: /^Say it in 60 seconds/ }).click(); await p1.waitForTimeout(1500);
   console.log(`     A's tab: Send ${await p1.getByRole('button', { name: /^Send/ }).count()}, Play ${await p1.getByRole('button', { name: /play/i }).count()}, slots ${JSON.stringify(await draftKeys(p1))}`);
   assert.equal(await p1.getByRole('button', { name: /^Send/ }).count(), 0);
@@ -96,7 +96,7 @@ await t('HIGH 2 mirror: B has a kept recording, A\'s open tab taps "Say it in 60
 await t('MEDIUM 1: B signs in at the post: one post as A; A\'s slot stays while B is in; later A signs in: nothing sent again, slot cleared', async () => {
   const { w, A, B, ctx, p1, p2 } = await two();
   await p1.goto(`${ORIGIN}/terms`);
-  await seedDraft(p1, { slot: 'u:A', owner: 'A', key: 'kept-A', queued: true });
+  await seedDraft(p1, { slot: 'rec:A', owner: 'A', key: 'kept-A', queued: true });
   await ctx.route('**/api/v1/questions/q1/answers', async (route) => { if (route.request().method() === 'POST') await signIn(p2, B); await route.fallback(); });
   await p1.goto(`${ORIGIN}/`); await p1.waitForTimeout(6000);
   const mid = await draftKeys(p1);

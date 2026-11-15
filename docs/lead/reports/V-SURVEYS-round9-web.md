@@ -1,0 +1,58 @@
+# V-SURVEYS round 9 (website): one rule for a kept recording
+
+Branch `v/surveys`. No pull request. Main (557bcbe) is merged in. The branch's own rule is gone; main's draft-owner rule is the only one.
+
+## The join (merge commit 6df173e)
+Taken from main exactly (the branch's version dropped): `speak/draft.ts`, `SpeakScreen.tsx`, `Outbox.tsx`, `outbox.ts`, `VoiceBox.tsx`, `talk/VoiceReply.tsx`, `WriteScreen.tsx`, `ReplyComposer.tsx`, `lib.tsx`, `units/draft.ts`, `post-draft.ts`, `BuyUnitsScreen.tsx`, `OutOfPostsSheet.tsx`, `PaymentDoneScreen.tsx`, `lib/api/auth.ts`, `lib/auth/session-storage.ts`.
+Deleted: `src/features/speak/opened-for.ts`, `tests/round7-draft-slots.test.ts`, `tests/round8-draft-owner.test.tsx` (the lead ruling of 15 Nov). Nothing imports `opened-for`.
+Main's tests taken as they are on main: `draft-owner`, `draft-owner-2`, `round4`, `opening`, `fixd-outbox`, `fixd-outbox-r2`, `fixd-round3`, `share-card-guest-return`, `w4-recorder`, `w4-speak`, `wf6b-people`. They pass unchanged.
+`HomeScreen.tsx`: the code was not in conflict; it has both main's `trending.slice(0, 5)` and the survey card. `contract/openapi.yaml` and `types.ts`: the branch's. `DMS_LIVE` is false.
+Kept from the branch: `client.ts` (`expectSubject`, `WrongPersonError`, `tokenSubject`, `sessionSubject`, compare-and-set refresh), `speak.ts`, `talk.ts`, `vote.ts` arguments, `tests/refresh-compare-and-set.test.ts`, `tests/voice-clip-subject.test.tsx`, the floor rows (`survey-floor.ts`, round 6 and 7 floor tests).
+
+## Every line changed on top of main in the record, reply, outbox and units code
+Diff against main on the guarded paths: 4 files, 76 insertions, 34 deletions, 109 changed lines. `units/`, `WriteScreen`, `ReplyComposer`, `lib.tsx`, `session-storage.ts`, `auth.ts`, `draft.ts`, `Outbox.tsx`: no change at all.
+
+**`SpeakScreen.tsx`** (17 lines): imports `WrongPersonError`. `deleteVoiceClip`, `getVoiceClip` get `openedFor() ?? undefined`. In `send`: `const subject = openedFor() ?? undefined`, passed to `createVoiceClip`, `completeVoiceClip`, `createVoiceAnswer`, and the `deleteVoiceClip` in the catch. The catch that shows `OTHER_TAB_NOTE` for `OtherTabError` also takes `WrongPersonError` (recording kept, as main does). A guest is `undefined`, never a subject; main still asks a guest to sign in first.
+
+**`outbox.ts`** (22 lines): `subject = d.owner ?? undefined` (the owner stored with the kept item) goes to `createVoiceClip`, `completeVoiceClip`, `getVoiceClip` (new optional argument on the local `waitReady`) and `deleteVoiceClip`. `WrongPersonError` returns `failed` with `OTHER_TAB_NOTE` (the item stays kept). The two final posts use `asPerson(subject, () => ...)` instead of a trailing argument, because main's tests (`fixd-outbox`, `fixd-round3`) pin the exact arguments of `createVoiceAnswer` and `createVoiceReply`.
+
+**`VoiceReply.tsx`** (5 lines): `clip.subject` is the last argument of `createVoiceReply`; `WrongPersonError` shows `OTHER_TAB_NOTE` like `OtherTabError`.
+
+**`VoiceBox.tsx`** (66 lines). This is more than "pass-through", and it is the one place I went past the brief:
+- the pass-through: `subject = openedFor() ?? undefined` on `createVoiceClip`, `completeVoiceClip`, `getVoiceClip`, `deleteVoiceClip` (3 places), `ReadyClip.subject` handed to `onSend`, `WrongPersonError` shows `OTHER_TAB_NOTE`, purpose `SURVEY_ANSWER`.
+- survey-only optional props the survey voice question needs and main's box does not have: `previewHint`, `postingText`, `onReady` (the clip is sent up when the recording stops and handed back READY, not posted), `canWrite` (asked before each upload call; the survey screen's own check). These were already on the branch before round 7 and are unused by every other caller, so the other boxes behave as on main. If you want them out of `VoiceBox`, the survey voice question needs its own recorder; say so and I will do that.
+
+**`client.ts`** (+69): the branch's code, plus `asPerson(subject, call)` (a few lines): runs one call tied to a person without a new argument; `apiFetch` picks it up in the same step. Used only by the outbox.
+
+## The survey on the same rule
+`who.ts` is now only `useSameWho` (its own copy of the rule is gone). The tab's person is `openedFor()`; `check()` is `!signedInAsSomeoneElse(person)`, run before a START, SKIP, save, restore, send and clip delete, and on focus, visibility, page show and the storage event. The notice is main's `OTHER_TAB_NOTE`. `answerSurvey`, `recordSurveyEvent` and the clip calls carry `expectSubject`. A "signed out in another tab" is no longer a stale tab (main's rule: not someone else). The shell no longer calls `sessionSubject` at all (grep: only `client.ts`), so the five client-mock tests need no change.
+
+## Tests I changed (survey tests only, all pin the dropped survey rule)
+`surveys-round3-public`, `surveys-round4-who`, `surveys-round5-send`, `voice-clip-subject`: `leaveTab()` in `beforeEach` and where a test simulates a page load by a new mount with another person (the same one-line setup main added to `share-card-guest-return`); `voice-clip-subject` also clears kept recordings in `beforeEach`. The wording constants now use `OTHER_TAB_NOTE`. Two tests in `surveys-round4-who` about "signed out in another tab shows a different line" now assert main's rule instead: the tab stays A's, no someone-else line, nothing sent; B signing in then shows the line. Every other assertion is as it was. No test skipped or deleted beyond the two files named.
+
+## Round 8 check findings
+- HIGH 1 (A's tab writes, shows, plays, sends, deletes B's recording): **CLOSED**. Main's `e2e/draft-owner.e2e.mts` R2a and R2b at 390 and 1440: B's kept recording byte for byte the same (SHA-256) after A's tab taps "Say it in 60 seconds", records, and tries Send, Delete, Remove, Discard, Record again; A's tab shows the line, no Send/Play/Delete; clips 0. The survey's voice question, same case (my `d2`): clips 0, answers 0, posts 0, deletes 0, line shown, B's `rec:B` slot unchanged.
+- MEDIUM 1 (A signed out elsewhere, tab records as guest, next person takes it): **CLOSED** by main's R1a/R1b/R1c (kept under A, B gets nothing, A gets it back).
+- MEDIUM 2 (vitest exit 1, unhandled rejections in five shell tests): **CLOSED**, see gates.
+- LOW 1 (lint warning on `SpeakScreen.tsx`): **CLOSED**; the file is main's and lint has 0 warnings.
+- Round 7 HIGH 1 (sender check on the wire): kept and working: `voice-clip-subject` and `refresh-compare-and-set` pass; browser `surveys-round6` (survey voice, B signs in during a 401 wait at create and at complete) all ok.
+- Round 7 MEDIUM 1 (floor rows): kept; `surveys-round6-floor` and `surveys-round7-floor` pass; browser "Admin results ... below the minimum" ok.
+
+## Gates
+GATES
+
+## Browser (built app, `next build` + `next start`, Chromium, fake microphone, API and sign-in stubbed in the page, no live service)
+- a. `e2e/draft-owner.e2e.mts` unchanged, RUNS=10: **38 of 38 ok** (both widths).
+- b. `e2e/round7.e2e.mts` (one person): voice 10 and typed 10 at 390 and at 1440, 1 clip and 1 post per Send, no refresh, line never shown; token runs out at create, complete, ready, post: 1 refresh, 1 clip, 1 post; typed post run-out: 1 refresh, 1 post; outbox answer and outbox reply, A alone, token out at the post: sent once; A's outbox with B signing in during the wait: 0 posts as B, B's tokens untouched. **14 of 14.** Main's script also did voice 10 / typed 10 at both widths, so each width has 20 plain sends. A live voice reply (`e2e/surveys-r9`, 390): 1 clip, 1 reply as A, line 0.
+- c. Two people, two tabs: main's R2a, R2b, R2c at both widths (above), and the survey version (d2).
+- d. `e2e/surveys-r9.e2e.mts` **6 of 6**: Home card, choice, written, voice (record, Send), done at 390 and 1440 (1 clip with purpose SURVEY_ANSWER, 1 answer as A with the clip id); two people on the voice question at both widths; guest opens a survey, is asked to sign in, signs in, comes back, answers once (1 answer). Plus `e2e/surveys.e2e.mts`: 21 ok, 5 FAIL (see below), and `e2e/surveys-round6.e2e.mts` all ok.
+- e. admin in `surveys.e2e.mts` at 1440: Surveys list, new survey form, results with totals and the minimum floor, CSV saved with its rows, Brands: ok.
+- Screenshots: `docs/lead/proof/surveys-r9/` (390 and 1440, light theme; `r9-*` are from this round's script).
+- I ported `e2e/round7.e2e.mts` and `round8.e2e.mts` seeds from slot `u:A` to main's `rec:A`, and removed two expectations from `round7` that belonged to the dropped design (A's recording surviving B's visit; main deletes other people's recordings when a signed-in person loads, and a test of main's pins that). `round8.e2e.mts` still tests slot sweeps and slot shapes of the dropped design: not run as proof, not deleted.
+
+## What I could not prove
+- `e2e/surveys.e2e.mts`: 5 cases fail (H1 "no VIEW below the fold" and four H3 cases that expect no VIEW before START). They show one extra VIEW from the Home card. Home code is identical to the branch head (no diff in `src/components/feed`), so I think it is the script's stub (empty trending list, so the card sits in the first screen), but I did not run the old build to confirm.
+- A live voice reply on the desktop: the thread has no voice-reply door at 1440 (the mic is in the phone dock only). Not changed.
+- A survey tab flips to the stale notice as soon as the other tab's storage event arrives, so "A taps record" on a flipped tab is not possible; my case checks that nothing goes out after the flip.
+- A real sign-in page, real phones, Safari, a browser restart. The sign-in is a stub written into storage; guest "sign in" is the stub too.
+- The old `fixd`, `fixb`, `anon` scripts were not re-run.

@@ -96,10 +96,10 @@ await t('offline then back, two tabs of A open: 1 clip, 1 post', async () => {
 
 /** H1: A's saved recording is sent by the outbox; A's token runs out at the post; B signs in in tab 2 while the refresh waits. */
 for (const kind of ['answer', 'reply'] as const) {
-  await t(`H1 outbox ${kind}: A's token runs out at the post, B signs in during the wait: no post as B, B's tokens untouched, A's recording kept`, async () => {
+  await t(`H1 outbox ${kind}: A's token runs out at the post, B signs in during the wait: no post as B, B's tokens untouched`, async () => {
     const { w, person } = world(); const A = person('A'); const B = person('B'); const ctx = await newWorld(browser, 390, w, A); const page = await ctx.newPage();
     await page.goto(`${ORIGIN}/terms`);
-    await seedDraft(page, { slot: 'u:A', owner: 'A', key: 'kept-' + kind, queued: true, ...(kind === 'reply' ? { reply: { answerId: 'a1', stance: 'AGREE' } } : {}) });
+    await seedDraft(page, { slot: 'rec:A', owner: 'A', key: 'kept-' + kind, queued: true, ...(kind === 'reply' ? { reply: { answerId: 'a1', stance: 'AGREE' } } : {}) });
     w.expireAt = kind === 'reply' ? '/replies' : '/questions/q1/answers';
     let release!: () => void; w.gate = new Promise<void>((r) => { release = r; });
     const p2 = await ctx.newPage(); await p2.goto(`${ORIGIN}/terms`);
@@ -110,13 +110,13 @@ for (const kind of ['answer', 'reply'] as const) {
     console.log(`     posts as A ${aPosts.length}, as B ${bPosts.length}; B refresh tokens spent ${bRefreshUsed.length}; stored ${JSON.stringify((await stored(page))?.refreshToken)}; kept ${JSON.stringify(await draftKeys(page))}`);
     assert.equal(bPosts.length, 0); assert.equal(bRefreshUsed.length, 0);
     assert.equal((await stored(page))?.accessToken, B.access); assert.equal((await stored(page))?.refreshToken, B.refresh);
-    assert.equal((await draftKeys(page)).some((d) => d.slot === 'u:A'), true, 'A recording must still be kept');
+    // main's rule (draft-owner): a signed-in person's load removes recordings other people left behind, so A's copy may be gone; what matters is no post as B.
     await ctx.close();
   });
   await t(`H1 outbox ${kind}: A alone, token runs out at the post: sent once`, async () => {
     const { w, person } = world(); const A = person('A'); const ctx = await newWorld(browser, 390, w, A); const page = await ctx.newPage();
     await page.goto(`${ORIGIN}/terms`);
-    await seedDraft(page, { slot: 'u:A', owner: 'A', key: 'kept-' + kind, queued: true, ...(kind === 'reply' ? { reply: { answerId: 'a1', stance: 'AGREE' } } : {}) });
+    await seedDraft(page, { slot: 'rec:A', owner: 'A', key: 'kept-' + kind, queued: true, ...(kind === 'reply' ? { reply: { answerId: 'a1', stance: 'AGREE' } } : {}) });
     w.expireAt = kind === 'reply' ? '/replies' : '/questions/q1/answers';
     await page.goto(`${ORIGIN}/`); await page.waitForTimeout(6000);
     console.log(`     ${counts(w)}, posts ${w.posts.map((p) => p.sub + ':' + p.key).join(',')}, kept ${JSON.stringify(await draftKeys(page))}`);
@@ -125,31 +125,7 @@ for (const kind of ['answer', 'reply'] as const) {
   });
 }
 
-/** M2: A's kept recording stays when B opens pages in the same browser; B records and sends their own; A gets A's back. */
-await t('M2: B opens Home and the record screen, sends their own; A signs in again and A\'s recording is there and sends once', async () => {
-  const { w, person } = world(); const A = person('A'); const B = person('B'); const ctx = await newWorld(browser, 390, w, A); const page = await ctx.newPage();
-  await page.goto(`${ORIGIN}/terms`);
-  await seedDraft(page, { slot: 'u:A', owner: 'A', key: 'kept-A', queued: false });
-  await signIn(page, B);
-  await page.goto(`${ORIGIN}/`); await page.waitForTimeout(1500);
-  assert.equal(await page.getByText(/saved voice|kept recording|waiting to send/i).count(), 0);
-  await voice(page); // B records and sends their own
-  assert.equal(w.posts.length, 1); assert.equal(w.posts[0].sub, 'B'); assert.equal(w.clips[0].sub, 'B');
-  const mid = await draftKeys(page);
-  console.log(`     after B: ${JSON.stringify(mid)}`);
-  assert.equal(mid.some((d) => d.slot === 'u:A' && d.key === 'kept-A'), true);
-  await signIn(page, A);
-  await page.goto(`${ORIGIN}/q/q1/speak`); await page.waitForTimeout(1500);
-  await page.getByRole('button', { name: 'PROUD' }).click(); await page.getByRole('button', { name: /^Say it in 60 seconds/ }).click();
-  await page.waitForTimeout(1500);
-  const send = page.getByRole('button', { name: /^Send/ });
-  console.log(`     A is back: Send visible ${await send.count()}`);
-  assert.equal(await send.count() > 0, true, 'A sees the kept recording');
-  await send.first().click(); await page.waitForURL(/\/posted/, { timeout: 15000 });
-  const aPosts = w.posts.filter((p) => p.sub === 'A'); console.log(`     A posts ${aPosts.length}, key ${aPosts[0]?.key}`);
-  assert.equal(aPosts.length, 1); assert.equal(aPosts[0].key, 'kept-A'); assert.equal(w.posts.length, 2);
-  await ctx.close();
-});
+// M2 (A's kept recording survives B's visit) belonged to the per-person slot design that was dropped; main's draft-owner rule removes it when B loads (pinned by tests/draft-owner.test.tsx).
 
 await browser.close();
 console.log(failed ? `FAILED ${failed}, passed ${passed}` : `ALL PASSED ${passed}`);
