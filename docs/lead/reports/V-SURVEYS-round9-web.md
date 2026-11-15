@@ -39,7 +39,8 @@ Diff against main on the guarded paths: 4 files, 76 insertions, 34 deletions, 10
 - Round 7 MEDIUM 1 (floor rows): kept; `surveys-round6-floor` and `surveys-round7-floor` pass; browser "Admin results ... below the minimum" ok.
 
 ## Gates
-GATES
+- `npx tsc --noEmit`: 0 errors. `npx next lint`: 0 warnings, 0 errors. `npx next build`: ok.
+- `npx vitest run`: 150 files, 1543 of 1543 tests, exit 0, 0 unhandled errors. 3 quiet runs: all exit 0, 1543 each. 3 runs under 4 busy loops (`yes`, stopped afterwards): all exit 0, 1543 each.
 
 ## Browser (built app, `next build` + `next start`, Chromium, fake microphone, API and sign-in stubbed in the page, no live service)
 - a. `e2e/draft-owner.e2e.mts` unchanged, RUNS=10: **38 of 38 ok** (both widths).
