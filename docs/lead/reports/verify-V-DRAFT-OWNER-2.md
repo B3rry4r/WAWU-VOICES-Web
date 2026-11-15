@@ -67,3 +67,45 @@ Sign-in tokens: `session-storage.ts` diff read: `setTokens` writes the same keys
 - The rollback run (branch storage read by main); LOW 2 is from code reading.
 - `useSignedIn` on every screen (Home, a question, Profile, the shell bar): only the record screen, the write screen and Home were looked at.
 - Real phones, Safari, private windows.
+
+# Follow-up (three loose ends)
+
+**Would I still release it? Yes.** The verdict stays MERGE. On every step I ran, the branch behaves like `origin/main`, and the held post and the voice take each post once and charge once. Stubs only, `next start` builds of `origin/main` and of `v/draft-owner` (3686987), Chromium, 390 and 1440 wide, attack scripts not committed.
+
+## 1. "The write screen did not show the box within 7 s"
+**What it was: the install screen, not the held post.** In my upgrade profile the first page load showed "Install VOICES / Continue in the browser" in front of the app (`src/features/install/InstallGate.tsx`). The app sits behind it, so my "is there a textbox" check found none until I clicked "Continue in the browser". It is the same on `origin/main`. It was my test, not the fix. I should have said so in the first report.
+
+With that screen dismissed, same profile and steps, held post for the question (typed, Post, out of posts, sheet shown):
+
+| | box shows | time | on screen instead | words in the box | A posts them once |
+|---|---|---|---|---|---|
+| (a) main only | yes | 4 to 7 ms | nothing else | "A held words" | yes, 1 post |
+| (b) main stored it, then this branch | yes | 4 to 8 ms | nothing else | "A held words" | yes, 1 post |
+| (c) this branch stored it | yes | 5 to 6 ms | nothing else | "A held words" | yes, 1 post |
+
+Also with typed words added after the held post: (a) and (b) both show "A later typed", 1 post. Run twice per profile (leave and come back), same each time. **No difference between (a) and (b) that a person would notice. No finding.**
+The words in the box come from the typed-words slot (`WriteScreen.tsx:~58`, `saveTyped` on the out-of-posts path). Main's typed words move to `voices-typing-v2` for A on first open, as designed.
+
+## 2. The pay path with a held post
+Stubbed payment provider: Post, "Get tokens", buy, Pay, off to `/__pay`, back to `/units/done` as a full page load, back to the question. I counted `POST /payments`, `/verify` and answer posts.
+
+| case | width | charges | verifies | answers posted | what the person sees |
+|---|---|---|---|---|---|
+| held by this branch, typed | 1440 and 390 | 1 | 1 | 1 | done screen "Your answer is posted"; back on the question the box still holds the words |
+| held by main before the upgrade (main's table), then this branch finishes the flow | 1440 | 1 | 1 | 1 (same Idempotency-Key main stored) | same |
+| same flow on `origin/main` only | 1440 and 390 | 1 | 1 | 1 | same |
+| voice take, signed in: Send, no posts, Get tokens, pay, back to Record, Send | 1440 and 390 | 1 | 1 | 1 | "Free posts used / Get tokens"; take kept; Send there after paying; kept recording gone after Send |
+| same voice flow on `origin/main` | 1440 and 390 | 1 | 1 | 1 | same (main keeps it in `current`) |
+
+- **Guest who typed, then signed in:** a guest cannot type here. The write screen shows the sign-in note (`WriteScreen.tsx` `signedIn === false`), so there are no guest typed words to carry. The guest voice take that signs in is covered in the main report (guest records, signs in in the same tab, sends once).
+- **Notice, same on main, not new:** after the held post posts on the done screen, going back to the write screen still shows the words in the box (typed slot is not cleared by the post-after-payment path). If the person taps Post again it is a second post. Main does exactly this (I measured it: "A pay words" in the box on main too). Worth an owner decision, not a blocker for this change.
+- I did not run: the buy screen with a pack that needs a bank transfer, or a failed payment.
+
+## 3. LOW 1: two `POST /voice-clips` calls
+- Reproduced twice out of 11 real upgrade runs (main keeps a recording, queued; branch loads), plus 10 of 10 clean runs with `current` seeded directly on this branch (1 clip, 1 post every time) and 10 of 10 clean on main (1 clip, 1 post).
+- Cause found in the logs: in my upgrade script the session from the main phase was still stored, so the branch started sending from `/terms` straight after load, and my script then navigated to `/` in the middle of that send. The first page's calls were already counted and the new page sent again. In the six runs I logged with detail, the one-clip runs have every call from the same page; I did not capture the keys on the two doubles. So: **the second clip is a test artifact (my navigation mid-send), not the app sending twice by itself.**
+- The part that is real and the same on main: leaving a page mid-send and sending again on the next page creates a second clip record. The clip create carries no Idempotency-Key on main or on this branch (blank in my logs); the answer post carries the recording's key, which is what stops a second post on the server. Nothing in this change touches that; `outbox.ts` changed by 6 lines (person arguments).
+- Is the second clip posted, orphaned, or deleted? In my stub, the second clip was created and completed but never attached to a second post that I could see in the clean runs. I cannot say what the real server does with the extra clip record. I did not prove "orphaned" or "deleted".
+
+## Gaps in this follow-up
+Bank transfer and failed payments; real provider redirect; 3 or more tabs during pay; the upgrade at 390; the keys on the two doubled runs.
