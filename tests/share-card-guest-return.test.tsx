@@ -27,7 +27,7 @@ import { Verify } from "@/features/entry/Verify";
 import { Topics } from "@/features/entry/Topics";
 import { ProfileSetup } from "@/features/entry/ProfileSetup";
 import { readPick } from "@/features/mood/mood";
-import { currentOwner, saveDraft as saveSpeakDraft, clearDraft as clearSpeakDraft } from "@/features/speak/draft";
+import { saveDraft as saveSpeakDraft, clearDraft as clearSpeakDraft, currentOwner, leaveTab } from "@/features/speak/draft";
 
 const idp = new WawuIdStandIn(14306);
 beforeAll(async () => { await idp.start(); });
@@ -51,6 +51,7 @@ beforeEach(() => {
   search = ""; path = "/"; me = ME_DONE;
   push.mockReset(); replace.mockReset();
   window.sessionStorage.clear(); window.localStorage.clear(); window.history.replaceState({}, "", "/");
+  leaveTab(); // each test is a new page load: the tab is nobody's until someone signs in here
   URL.createObjectURL = () => "blob:preview"; URL.revokeObjectURL = () => undefined;
   vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q, addEventListener: () => undefined, removeEventListener: () => undefined }));
   vi.stubGlobal("fetch", vi.fn(async (input: string, init: RequestInit = {}) => {
@@ -163,7 +164,7 @@ describe("a guest who came by a share link", () => {
   it("joins from Say it (a held recording): every step, then back on the recorder with the word and from, and the voice posts by itself", async () => {
     const blob = new Blob(["abc"], { type: "audio/webm" });
     await pickAndTap("Say it in 60 seconds");
-    await saveSpeakDraft(currentOwner(), { questionId: "q1", blob, mime: "audio/webm", seconds: 5, peaks: [1, 2, 3], key: "k1", savedAt: Date.now() });
+    await saveSpeakDraft({ questionId: "q1", blob, mime: "audio/webm", seconds: 5, peaks: [1, 2, 3], key: "k1", savedAt: Date.now() }, currentOwner());
     // The recorder as a guest: send leaves for /join with the way back.
     const assign = vi.fn();
     const realLocation = window.location;

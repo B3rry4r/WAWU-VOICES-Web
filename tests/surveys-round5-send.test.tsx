@@ -2,6 +2,7 @@
 // V-SURVEYS round 5: a survey send is only ever made with the sign-in of the person the screen loaded for (H1);
 // the survey's own words when a send fails (M2); the failure line sits beside Send and is announced (M3).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { leaveTab, OTHER_TAB_NOTE } from "@/features/speak/draft";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SurveyScreen } from "@/features/surveys/SurveyScreen";
@@ -65,9 +66,9 @@ async function toLast(u: ReturnType<typeof userEvent.setup>) {
   await screen.findByText("Question 2 of 2");
   await u.click(screen.getByRole("radio", { name: "Fan" }));
 }
-const STALE = "You are signed in as someone else in another tab. Reload to carry on.";
+const STALE = OTHER_TAB_NOTE;
 
-beforeEach(() => { window.localStorage.clear(); window.sessionStorage.clear(); setSession(A1, "rA1"); });
+beforeEach(() => { leaveTab(); window.localStorage.clear(); window.sessionStorage.clear(); setSession(A1, "rA1"); });
 afterEach(async () => { cleanup(); await new Promise((r) => setTimeout(r, 5)); vi.unstubAllGlobals(); window.localStorage.clear(); window.sessionStorage.clear(); });
 
 describe("H1: the send, and its retry after a refresh, carry only the sign-in of the person the screen loaded for", () => {

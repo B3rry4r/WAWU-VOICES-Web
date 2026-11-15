@@ -4,9 +4,10 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Banner, Button } from "@/components/vx";
 import { isSignedIn } from "@/lib/api/auth";
-import { sessionSubject } from "@/lib/api/client";
 import * as api from "@/lib/api/speak";
-import { clearDraft, draftIsStale, loadDraft, notePostedKey, STALE_NOTE, sweepStaleDrafts, wasPostedKey, type Draft } from "./draft";
+import { sweepOldHeld } from "@/features/units/draft";
+import { sweepOldTyped } from "@/features/talk/lib";
+import { clearDraft, draftIsStale, sweepOldRecordings, loadDraft, openedFor, OTHER_TAB_NOTE, signedInAsSomeoneElse, STALE_NOTE, type Draft, type Owner } from "./draft";
 import { isSending, planFor, sendKeptRecording, type SendPlan } from "./outbox";
 import { isMoodQuestion } from "@/features/mood/mood";
 import { publishedFromLink } from "@/features/share/share-visit";
@@ -33,80 +34,79 @@ export function Outbox() {
   const pathname = usePathname() ?? "/";
   const [view, setView] = useState<View | null>(null);
   const running = useRef(false);
+  // The person this tab is for (see openedFor), read at the start of each look and held for that whole pass: load, send and clear all
+  // name this person, and none of them acts if someone else has signed in since.
+  const owner = useRef<Owner>(openedFor());
+  // Who a banner on screen was opened for. Closing it removes that person's recording only, never one kept by someone who signed in since.
+  const shownFor = useRef<Owner>(null);
   const onSpeak = /(^|\/)speak(\/|$)/.test(pathname);
 
-  // The person the banner was opened for: the recording on it belongs to them, whoever is signed in later.
-  const forWho = useRef<string | null>(null);
-
   const send = useCallback(async (d: Draft, plan: SendPlan) => {
-    const me = forWho.current;
-    // Someone else is signed in now: nothing is read, sent or cleared in any slot.
-    if (sessionSubject() !== me) {
-      setView({ kind: "offer", draft: d, plan, error: "You are signed in as someone else in another tab. Nothing was sent. Reload to carry on." });
-      return;
-    }
     setView({ kind: "sending", reply: !!d.reply });
-    const stillMine = async () => sessionSubject() === me && (await loadDraft(me))?.key === d.key;
-    const r = await sendKeptRecording(d, plan.tokenId, stillMine, async () => {
+    const who = owner.current;
+    const r = await sendKeptRecording(d, plan.tokenId, async () => (await loadDraft(who))?.key === d.key, async () => {
       publishedFromLink(d.shareCode);
-      // Cleared for the person it was kept for, only while they are still the one signed in; otherwise it is remembered as posted and cleared when they are back.
-      if (sessionSubject() === me) await clearDraft(me);
-      else notePostedKey(d.key);
-    }, stillMine, me);
+      await clearDraft(who);
+    }, async () => (await loadDraft(who))?.key === d.key);
     if (r.ok && r.answerId === null) {
       setView(null); // another tab posted it: it says so, this one says nothing
     } else if (r.ok) {
       setView(r.replyTo
         ? { kind: "note", tone: "success", text: "Your saved voice reply was posted.", href: `/q/${r.questionId}/a/${r.replyTo}`, hrefLabel: "See it" }
         : { kind: "note", tone: "success", text: "Your saved voice was posted.", href: r.answerId ? `/q/${r.questionId}/posted?a=${r.answerId}` : undefined, hrefLabel: "See it" });
+    } else if (signedInAsSomeoneElse(who)) {
+      setView({ kind: "note", tone: "danger", text: OTHER_TAB_NOTE });
     } else if (r.reason === "offline") {
       setView(null); // stays kept; the next time the connection is back it is tried again
     } else if (r.reason === "needs_tokens") {
       setView({ kind: "note", tone: "danger", text: r.message ?? "You need more tokens to send your saved recording.", href: "/units/buy?from=%2F", hrefLabel: "Get tokens" });
     } else {
+      shownFor.current = who;
       setView({ kind: "offer", draft: r.draft ?? d, plan, error: r.message ?? "We could not send it. It is kept on this device." });
     }
   }, []);
 
   const look = useCallback(async () => {
-    void sweepStaleDrafts(Date.now(), isSignedIn() ? sessionSubject() : undefined);
     if (running.current || onSpeak || !isSignedIn()) return;
     running.current = true;
     try {
-      const me = sessionSubject();
-      forWho.current = me;
-      const d = await loadDraft(me);
+      owner.current = openedFor();
+      const who = owner.current;
+      if (signedInAsSomeoneElse(who)) return; // another person signed in on another tab: their recordings are theirs to send, from their own tab
+      const d = await loadDraft(who);
       if (!d) return;
-      if (wasPostedKey(d.key)) { // it went out while someone else was signed in: it is sent, never sent again
-        await clearDraft(me);
-        return;
-      }
       if (draftIsStale(d)) {
-        await clearDraft(me);
+        await clearDraft(who);
         setView({ kind: "note", tone: "info", text: STALE_NOTE });
         return;
       }
       if (!d.queued || isSending(d.key) || (typeof navigator !== "undefined" && navigator.onLine === false)) return;
       const [question, config, allowance] = await Promise.all([api.getQuestion(d.questionId), api.getPublicConfig(), api.getAllowance()]);
-      if (sessionSubject() !== me) return;
       if (question.status !== "LIVE") {
-        await clearDraft(me);
+        await clearDraft(who);
         setView({ kind: "note", tone: "info", text: "The question for your saved recording has closed, so it was not sent and has been removed." });
         return;
       }
       if (!d.reply && isMoodQuestion(question) && !d.mood) {
+        shownFor.current = who;
         setView({ kind: "finish", draft: d });
         return;
       }
       const plan = planFor(d, { allowance, config });
       if (plan.free) await send(d, plan);
-      else setView({ kind: "offer", draft: d, plan });
+      else { shownFor.current = who; setView({ kind: "offer", draft: d, plan }); }
     } catch {
       /* offline again, or the server is busy: the recording is kept and this runs again on the next open or reconnect */
     } finally {
       running.current = false;
     }
   }, [onSpeak, send]);
+
+  // App start: anything kept on this device for more than 7 days is removed, whoever's it is (recordings without reading the audio).
+  useEffect(() => {
+    void sweepOldRecordings().catch(() => undefined);
+    try { sweepOldHeld(); sweepOldTyped(); } catch { /* storage blocked: nothing to sweep */ }
+  }, []);
 
   useEffect(() => {
     void look();
@@ -116,9 +116,9 @@ export function Outbox() {
   }, [look, pathname]);
 
   async function remove() {
-    // The X clears the slot of the person the banner was opened for, and only if they are still the one signed in.
-    const me = forWho.current;
-    if (sessionSubject() === me) await clearDraft(me);
+    // Closing a banner opened for A while B has kept a recording: B's is left alone, and the banner says why.
+    if (signedInAsSomeoneElse(shownFor.current)) { setView({ kind: "note", tone: "danger", text: OTHER_TAB_NOTE }); return; }
+    await clearDraft(shownFor.current);
     setView(null);
   }
 

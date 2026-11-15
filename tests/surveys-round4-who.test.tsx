@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // V-SURVEYS round 4: a tab knows who it belongs to; keeps are per person; signing out clears and sends nothing.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { leaveTab, OTHER_TAB_NOTE } from "@/features/speak/draft";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SurveyScreen } from "@/features/surveys/SurveyScreen";
@@ -13,7 +14,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back }), usePathna
 vi.mock("next/link", () => ({ default: ({ href, children, ...r }: { href: string; children: React.ReactNode }) => <a href={href} {...r}>{children}</a> }));
 
 const jwt = (sub: string) => `h.${btoa(JSON.stringify({ sub })).replace(/=+$/, "")}.s`;
-beforeEach(() => { push.mockClear(); back.mockClear(); signIn(jwt("userA")); });
+beforeEach(() => { leaveTab(); push.mockClear(); back.mockClear(); signIn(jwt("userA")); });
 afterEach(async () => { cleanup(); await new Promise((r) => setTimeout(r, 5)); vi.unstubAllGlobals(); window.localStorage.clear(); window.sessionStorage.clear(); });
 
 const opt = (id: string, label: string) => ({ id, label });
@@ -28,7 +29,7 @@ const survey = () => ({
 const table = (extra: Record<string, unknown> = {}) => ({ "GET /surveys/s1": survey(), "POST /surveys/s1/events": null, "POST /surveys/s1/responses": { ok: true, note: "" }, ...extra });
 const surveyCalls = () => calls.filter((c) => c.path.startsWith("/surveys/s1/") );
 const keys = () => Object.keys(window.sessionStorage).filter((k) => k.startsWith("wawu.survey.")).sort();
-const NOTICE = "You are signed in as someone else in another tab. Reload to carry on.";
+const NOTICE = OTHER_TAB_NOTE;
 /** What another tab does to the shared session in local storage, then the browser's storage event reaches this tab. */
 const otherTab = (token: string | null) => {
   const KEY = "voices-web-session";
@@ -95,27 +96,33 @@ describe("rule 2: a tab knows who it belongs to", () => {
     otherTab(jwt("userB"));
     await screen.findByText(NOTICE);
     a.unmount();
-    render(<SurveyScreen id="s1" />); // what a reload does
+    leaveTab(); // what a reload does
+    render(<SurveyScreen id="s1" />);
     expect(await screen.findByText("Question 1 of 2")).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Cold drinks" }).getAttribute("aria-checked")).toBe("false");
     await waitFor(() => expect(keys()).toContain("wawu.survey.userB.s1.started"));
   });
-  it("another tab signs out: a different line, nothing sent", async () => {
+  it("another tab signs out: same rule as the record screen, the tab stays A's, no someone-else line, nothing is sent as anyone", async () => {
     mockApi(table());
     render(<SurveyScreen id="s1" />);
     await screen.findByText("Question 1 of 2");
+    const before = calls.length;
     otherTab(null);
-    expect(await screen.findByText("You are signed out in another tab. Reload to carry on.")).toBeTruthy();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByText(NOTICE)).toBeNull();
+    expect(screen.getByText("Question 1 of 2")).toBeTruthy();
+    expect(calls.length).toBe(before);
   });
 });
 
 describe("the notice follows the session", () => {
-  it("signed out in the other tab, then B signed in: the line changes to the someone-else line", async () => {
+  it("signed out in the other tab, then B signed in: the someone-else line shows", async () => {
     mockApi(table());
     render(<SurveyScreen id="s1" />);
     await screen.findByText("Question 1 of 2");
     otherTab(null);
-    await screen.findByText("You are signed out in another tab. Reload to carry on.");
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByText(NOTICE)).toBeNull();
     otherTab(jwt("userB"));
     expect(await screen.findByText(NOTICE)).toBeTruthy();
   });
@@ -132,6 +139,7 @@ describe("rule 1: keeps are per person and per survey; nothing crosses", () => {
     a.unmount();
     signOut();
     signIn(jwt("userB"));
+    leaveTab(); // a page load
     const b = render(<SurveyScreen id="s1" />);
     await u.click(await screen.findByRole("radio", { name: "Cold drinks" }));
     await u.click(screen.getByRole("button", { name: "Send answer" }));
@@ -140,6 +148,7 @@ describe("rule 1: keeps are per person and per survey; nothing crosses", () => {
     signOut();
     expect(keys().filter((k) => k.endsWith(".draft"))).toEqual(["wawu.survey.userA.s1.draft", "wawu.survey.userB.s1.draft"]);
     signIn(jwt("userA"));
+    leaveTab(); // a page load
     render(<SurveyScreen id="s1" />);
     expect(await screen.findByText("Question 2 of 2")).toBeTruthy(); // A's own position
     expect(JSON.parse(window.sessionStorage.getItem("wawu.survey.userA.s1.draft") as string).given.q1.optionId).toBe("o1");

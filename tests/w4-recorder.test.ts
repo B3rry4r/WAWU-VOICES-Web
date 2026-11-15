@@ -107,24 +107,24 @@ describe("draft ownership", () => {
 
   it("reads the owner from the token", () => { as("u-1"); expect(currentOwner()).toBe("u-1"); as(null); expect(currentOwner()).toBeNull(); });
   it("a guest's recording goes to the first person who signs in, once", async () => {
-    await saveDraft(currentOwner(), d);
+    await saveDraft(d, currentOwner());
     as("u-1");
     expect((await loadDraft(currentOwner()))?.owner).toBe("u-1");
     as("u-2");
     expect(await loadDraft(currentOwner())).toBeNull();
     expect(await loadDraft(currentOwner())).toBeNull();
   });
-  it("another account never sees a signed-in person's recording, and it is kept for the person who made it (round 7 ruling)", async () => {
+  it("another account never sees a signed-in person's recording, and it is removed when they sign in", async () => {
     as("u-1");
-    await saveDraft(currentOwner(), d);
+    await saveDraft(d, currentOwner());
     as("u-2");
     expect(await loadDraft(currentOwner())).toBeNull();
     as("u-1");
-    expect((await loadDraft(currentOwner()))?.owner).toBe("u-1");
+    expect(await loadDraft(currentOwner())).toBeNull();
   });
   it("a guest does not see a signed-in person's recording", async () => {
     as("u-1");
-    await saveDraft(currentOwner(), d);
+    await saveDraft(d, currentOwner());
     as(null);
     expect(await loadDraft(currentOwner())).toBeNull();
     as("u-1");
@@ -132,7 +132,7 @@ describe("draft ownership", () => {
   });
   it("sign-out clears it", async () => {
     as("u-1");
-    await saveDraft(currentOwner(), d);
+    await saveDraft(d, currentOwner());
     const { signOut } = await import("@/lib/api/auth");
     signOut();
     await new Promise((r) => setTimeout(r, 20));

@@ -1,4 +1,4 @@
-import { ApiError, WrongPersonError, sessionSubject } from "@/lib/api/client";
+import { ApiError, WrongPersonError, asPerson } from "@/lib/api/client";
 import { freshKey, needsNewKey } from "@/lib/api/keys";
 import * as api from "@/lib/api/speak";
 import { createVoiceReply } from "@/lib/api/talk";
@@ -7,7 +7,7 @@ import { baseMime } from "@/lib/audio-ref/mime";
 import { putWithRetry } from "@/lib/audio-ref/upload";
 import { tokensLabel } from "@/lib/shared/text-price";
 import { freeCovers, tokenFor, voicePriceMilli } from "./logic";
-import { saveDraft, type Draft } from "./draft";
+import { OTHER_TAB_NOTE, saveDraft, signedInAsSomeoneElse, type Draft } from "./draft";
 
 /**
  * Recordings made offline (addendum 7.7). A recording whose Send could not go is kept on the device with `queued` set. When the
@@ -63,14 +63,13 @@ async function waitReady(clipId: string, subject?: string): Promise<void> {
 }
 
 /** Sends one kept recording as a voice answer: create the clip, upload, complete, wait until READY, post with the recording's own key. */
-async function sendHere(d: Draft, tokenId?: string, forOwner?: string | null): Promise<SendResult> {
-  // A recording is sent only for the person it was opened for: if someone else is signed in now, nothing goes and nothing is touched.
-  if (forOwner !== undefined && sessionSubject() !== forOwner) return { ok: false, reason: "failed", message: "You are signed in as someone else in another tab. Nothing was sent." };
+async function sendHere(d: Draft, tokenId?: string): Promise<SendResult> {
+  // A kept recording is its owner's: it is never sent while someone else is signed in (it would post under their name).
+  if (d.owner !== undefined && signedInAsSomeoneElse(d.owner)) return { ok: false, reason: "failed" };
   if (!claimSend(d.key)) return { ok: false, reason: "busy" };
+  const subject = d.owner ?? undefined; // the kept recording's own person: every call goes out only as them
   let clipId: string | undefined;
   let uploaded = false;
-  // The recording goes out only as the person signed in when the send began.
-  const subject = (forOwner !== undefined ? forOwner : sessionSubject()) ?? undefined;
   try {
     const up = await api.createVoiceClip({
       mime: baseMime(d.mime) as "audio/webm" | "audio/mp4" | "audio/ogg",
@@ -80,27 +79,25 @@ async function sendHere(d: Draft, tokenId?: string, forOwner?: string | null): P
       ...(d.reply ? { purpose: "REPLY" as const } : {}),
     }, subject);
     clipId = up.clip.id;
-    if (subject !== undefined && sessionSubject() !== subject) throw new WrongPersonError();
     await putWithRetry({ url: up.putUrl, key: "", headers: {} }, d.blob, () => undefined);
     uploaded = true;
     await api.completeVoiceClip(clipId, subject);
     await waitReady(clipId, subject);
-    // Asked again right before the post: a slow step above may have outlasted the sign-in.
-    if (subject !== undefined && sessionSubject() !== subject) throw new WrongPersonError();
     if (d.reply) {
       // The same reply it was made as: the parent answer, the stance, the name switch and the Idempotency-Key it was kept with.
-      const rr = await createVoiceReply(d.reply.answerId, d.reply.stance, clipId, d.key, tokenId, !!d.anonymous, subject);
+      const rr = await asPerson(subject, () => createVoiceReply(d.reply!.answerId, d.reply!.stance, clipId!, d.key, tokenId, !!d.anonymous));
       return { ok: true, answerId: String((rr as { reply?: { id?: string } }).reply?.id ?? d.reply.answerId), questionId: d.questionId, replyTo: d.reply.answerId };
     }
-    const r = await api.createVoiceAnswer(d.questionId, clipId, d.key, tokenId, (d.mood as Mood | null | undefined) ?? null, !!d.anonymous, null, subject);
+    const r = await asPerson(subject, () => api.createVoiceAnswer(d.questionId, clipId!, d.key, tokenId, (d.mood as Mood | null | undefined) ?? null, !!d.anonymous));
     return { ok: true, answerId: r.answer.id, questionId: d.questionId };
   } catch (e) {
     if (clipId && !uploaded) void api.deleteVoiceClip(clipId, subject).catch(() => undefined);
     // The recording's key is dropped only when the server says it is spent (a 409 asking for a new key). A 500, 502, 504, 429 or a
     // network failure keeps it, so the retry is the same request and the server can hand the first post back.
+    if (e instanceof WrongPersonError) return { ok: false, reason: "failed", message: OTHER_TAB_NOTE };
     if (needsNewKey(e)) {
       const next: Draft = { ...d, key: freshKey() };
-      if (sessionSubject() === (subject ?? null)) await saveDraft(subject ?? null, next);
+      await saveDraft(next, d.owner ?? null);
       return { ok: false, reason: "failed", message: e instanceof ApiError && e.explained && e.message.trim() ? e.message : undefined, draft: next };
     }
     if (e instanceof ApiError && e.status === 402) return { ok: false, reason: "needs_tokens", message: e.explained && e.message.trim() ? e.message : undefined };
@@ -128,13 +125,11 @@ export async function sendKeptRecording(
   onPosted: () => Promise<void> = async () => undefined,
   /** Asked once the lock is held, before anything is sent: is this same recording still the one waiting? When it was posted by another tab in the meantime, it is gone and nothing is sent. */
   stillWaiting: () => Promise<boolean> = async () => true,
-  /** The person this recording was kept for (the one signed in when the screen or banner opened). Left out: whoever is signed in when the send begins. */
-  forOwner?: string | null,
 ): Promise<SendResult> {
   const sendThenTidy = async (): Promise<SendResult> => {
     // A tab that waited for the lock reads the kept copy again: the first tab may have posted and cleared it already.
     if (!(await stillWaiting())) return { ok: true, answerId: null, questionId: d.questionId, byOtherTab: true };
-    const r = await sendHere(d, tokenId, forOwner);
+    const r = await sendHere(d, tokenId);
     if (r.ok) await onPosted();
     return r;
   };

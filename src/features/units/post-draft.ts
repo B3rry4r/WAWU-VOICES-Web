@@ -2,6 +2,7 @@ import { ApiError, NetworkError } from "@/lib/api/client";
 import { needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { postHeldAnswer } from "@/lib/api/units";
 import { AUTO_POST_MAX_AGE_MS, findPostedFor, getRecord, markPosted, renewDraftKey, setAwaiting } from "./draft";
+import { openedFor } from "@/features/speak/draft";
 
 export type DraftOutcome =
   | { status: "none" }
@@ -21,10 +22,10 @@ export async function postDraftForPurchase(
   opts: { force?: boolean; now?: number; post?: typeof postHeldAnswer } = {},
 ): Promise<DraftOutcome> {
   if (!questionId) {
-    const was = findPostedFor(paymentId); // this browser already posted the draft for this payment (another tab won)
+    const was = findPostedFor(paymentId, openedFor()); // this browser already posted the draft for this payment (another tab won)
     return was ? { status: "posted", questionId: was } : { status: "none" };
   }
-  const d = getRecord(questionId);
+  const d = getRecord(questionId, openedFor());
   if (!d) return { status: "none" };
   if (d.posted === paymentId) return { status: "posted", questionId };
   if (d.posted || (!d.awaitingUnits && !opts.force)) return { status: "none" };
@@ -32,14 +33,14 @@ export async function postDraftForPurchase(
   const post = opts.post ?? postHeldAnswer;
   try {
     await post(d.questionId, d.body, d.key);
-    markPosted(d.questionId, paymentId);
+    markPosted(d.questionId, paymentId, openedFor());
     return { status: "posted", questionId };
   } catch (e) {
     if (e instanceof NetworkError || (e instanceof ApiError && (e.status >= 500 || e.status === 429))) return { status: "retry", questionId };
-    setAwaiting(d.questionId, false);
+    setAwaiting(d.questionId, false, openedFor());
     if (needsNewKey(e)) {
       // The key is spent: the same words get a new one now, so the next Post tap on the write screen goes out with it and posts.
-      renewDraftKey(d.questionId);
+      renewDraftKey(d.questionId, openedFor());
       return { status: "kept", questionId, message: newKeyLine("Post") };
     }
     const message = e instanceof ApiError && e.explained && e.message ? e.message : "It could not be posted.";

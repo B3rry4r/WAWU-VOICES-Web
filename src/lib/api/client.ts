@@ -261,7 +261,20 @@ export async function apiBlob(path: string, opts: RequestOptions = {}): Promise<
 }
 
 /** The only place raw fetch lives. Components call domain modules in src/lib/api, never fetch. */
+let pendingSubject: string | undefined;
+/** Runs one API call tied to one person without a new argument on it: the call must reach `apiFetch` in the same step (no await before it). */
+export function asPerson<T>(subject: string | undefined, call: () => T): T {
+  pendingSubject = subject;
+  try {
+    return call();
+  } finally {
+    pendingSubject = undefined;
+  }
+}
+
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
+  if (opts.expectSubject === undefined && pendingSubject !== undefined) opts = { ...opts, expectSubject: pendingSubject };
+  pendingSubject = undefined;
   const res = await raw(path, opts);
   if (res.status === 204) return undefined as T;
   // Any success with an empty body (a 202 with no content, or a zero length) is "no data", never a parse error.

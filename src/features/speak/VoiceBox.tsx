@@ -4,10 +4,11 @@ import { needsNewKey } from "@/lib/api/keys";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Banner, Button, Icon } from "@/components/vx";
 import * as api from "@/lib/api/speak";
-import { ApiError, WrongPersonError, sessionSubject } from "@/lib/api/client";
+import { ApiError, WrongPersonError } from "@/lib/api/client";
 import { baseMime } from "@/lib/audio-ref/mime";
 import { VoiceRecorder, type RecorderError } from "@/lib/audio-ref/recorder";
 import { putWithRetry } from "@/lib/audio-ref/upload";
+import { openedFor, OTHER_TAB_NOTE } from "./draft";
 import { peaksFromLevels, refusalText, tokenFor, uuidKey } from "./logic";
 import { RecordStage, TakePlayer } from "./parts";
 import { AnonymousSwitch } from "@/features/talk/AnonymousSwitch";
@@ -29,21 +30,29 @@ const MIC_HELP: Record<RecorderError, { title: string; body: string }> = {
 
 /** `anonymous` is the "Post without my name" switch as it stood when Send was tapped (always false when the box has no switch). */
 export interface ReadyClip { clipId: string; tokenId?: string; key: string; seconds: number; anonymous: boolean;
-  /** The person this box was opened for. A post that carries this clip should go out only as them (expectSubject). Left out for a guest. */
+  /** The tab's person (openedFor). A post that carries this clip goes out only as them (expectSubject). Left out for a guest. */
   subject?: string }
 
 /** What a box hands to `keep` when the person sends while offline: the take, and the Idempotency-Key and name switch it would have been sent with. */
 export interface KeepInput { blob: Blob; mime: string; seconds: number; peaks: number[]; key: string; anonymous: boolean }
 /** "kept": saved on this device. "exists": another recording already waits there (the person is asked before it is replaced). "failed": the device could not keep it. */
-export type KeepResult = "kept" | "exists" | "failed";
+export type KeepResult = "kept" | "exists" | "failed" | "other_tab";
 
 export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, hint, sendLabel, onSend, errorText, disabled, extra, onCancel, anonSlot, keyPart, keep, onKept, previewHint, postingText, onReady, canWrite }: {
   /** Part of what the post says besides the recording (a reply's stance): a different one is a different request, so it gets a different Idempotency-Key. */
   keyPart?: string;
   /** Keeps the take on this device when Send is tapped offline, to be sent later. Without it, offline only says the take stays on this page. */
-  keep?: (t: KeepInput, replace: boolean, owner: string | null) => Promise<KeepResult>;
+  keep?: (t: KeepInput, replace: boolean) => Promise<KeepResult>;
   /** Called after `keep` saved the take, so the caller can close and say so. */
   onKept?: () => void;
+  /** Survey answers only. The line under the played-back take. Left out: "Listen back. Nothing posts until you tap Send." */
+  previewHint?: string;
+  /** Survey answers only. The words for the last step of the send. Left out: "Posting". */
+  postingText?: string;
+  /** Survey answers only: the take is sent up when the recording stops, and this is called once the clip is READY, before anything is posted. */
+  onReady?: (clip: ReadyClip) => void;
+  /** Survey answers only: asked before each upload call; false stops it, nothing is sent (the screen shows its own notice). */
+  canWrite?: () => boolean;
   purpose: Purpose;
   maxSeconds: number;
   /** The length a free post covers; a longer take may need an old voice token, as on the record screen. */
@@ -62,24 +71,10 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   /** Anything the caller wants under a refusal, for example a Get tokens button. */
   extra?: ReactNode;
   onCancel?: () => void;
-  /** The line under the played-back take. Left out: "Listen back. Nothing posts until you tap Send." */
-  previewHint?: string;
-  /** The words for the last step of the send. Left out: "Posting". */
-  postingText?: string;
-  /** Survey answers: the take is sent up the moment the recording stops, and this is called once the clip is READY, before anything is posted. The caller keeps the clip id. Left out: nothing is sent until the person taps Send. */
-  onReady?: (clip: ReadyClip) => void;
-  /** Asked before each upload call (create, complete, send): false stops the upload, nothing is sent. Only the survey answer passes it (the signed-in person must still be the one the tab loaded for). */
-  canWrite?: () => boolean;
   /** Shows "Post without my name" under the take. The choice is kept under this slot (anon-pref) and is read when Send runs. */
   anonSlot?: string;
 }) {
-  // The person this box was opened for. Every call that carries their recording goes out only with their sign-in (expectSubject),
-  // and the bytes are not uploaded if someone else is signed in by then.
-  const [owner] = useState<string | null>(() => sessionSubject());
-  const subject = owner ?? undefined;
-  const staleLine = () => (sessionSubject() === null ? "You are signed out in another tab. Nothing was sent. Reload to carry on." : "You are signed in as someone else in another tab. Nothing was sent. Reload to carry on.");
-  /** True when the recording may go out now: the caller's own check, and the sign-in is still the one this box opened with. */
-  const mayWrite = () => (!canWrite || canWrite()) && (owner === null || sessionSubject() === owner);
+  const subject = openedFor() ?? undefined; // the tab's person: the clip calls go out only as them
   const anonRef = useRef(false);
   const [anon, setAnon] = useState(false);
   useEffect(() => {
@@ -162,7 +157,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
 
   function drop() {
     const st = state.current;
-    if (st?.clipId) void api.deleteVoiceClip(st.clipId, subject).catch(() => undefined);
+    if (st?.clipId) void api.deleteVoiceClip(st.clipId).catch(() => undefined);
     state.current = null;
     setTake(null);
     setNote(null);
@@ -184,10 +179,8 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
 
   async function tryKeep(t: Take, replace: boolean): Promise<boolean> {
     if (!keep) return false;
-    // The recording is kept for the person this box opened for; someone else signed in means nothing is written or read.
-    if (!mayWrite()) { setSending(null); setNote(staleLine()); return true; }
     const anonNow = !!anonSlot && anonRef.current;
-    const r = await keep({ blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: keyNow(t, anonNow), anonymous: anonNow }, replace, owner);
+    const r = await keep({ blob: t.blob, mime: t.mime, seconds: t.seconds, peaks: t.peaks, key: keyNow(t, anonNow), anonymous: anonNow }, replace);
     if (!alive.current) return true;
     setSending(null);
     if (r === "kept") {
@@ -197,6 +190,8 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
     } else if (r === "exists") {
       setNote("A recording is already waiting to be sent on this device. Saving this one will replace it.");
       setReplaceOk(true);
+    } else if (r === "other_tab") {
+      setNote(OTHER_TAB_NOTE);
     } else {
       setNote("We could not keep your recording on this device. Stay on this page until you are back online, then tap Send.");
     }
@@ -206,7 +201,6 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   async function send(holdOnly = false) {
     if (!take || sending || disabled) return;
     if (take.seconds > maxSeconds + 0.5) return;
-    if (!mayWrite()) { if (!canWrite) setNote(staleLine()); return; }
     setNote(null);
     setReplaceOk(false);
     if (keep && typeof navigator !== "undefined" && navigator.onLine === false) { setSending({ step: "post" }); await tryKeep(take, false); return; }
@@ -230,28 +224,26 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
       }
       stage = "upload";
       if (!st.uploaded) {
-        // Asked again right before the bytes go up: a refresh or a slow create may have outlasted the person's sign-in.
-        if (!mayWrite()) throw new Error("STALE_TAB");
+        if (canWrite && !canWrite()) throw new WrongPersonError();
         await putWithRetry({ url: st.putUrl as string, key: "", headers: {} }, take.blob, (f) => setSending({ step: "upload", pct: Math.round(f * 100) }));
         st.uploaded = true;
       }
       stage = "later";
       if (!st.completed) {
-        if (!mayWrite()) throw new Error("STALE_TAB");
+        if (canWrite && !canWrite()) throw new WrongPersonError();
         await api.completeVoiceClip(st.clipId, subject);
         st.completed = true;
       }
       setSending({ step: "process" });
-      if (!mayWrite()) throw new Error("STALE_TAB");
       await waitReady(st.clipId);
       if (holdOnly && onReady) {
-        // Ready, and kept by the caller, but not posted.
+        // Survey answer: ready and kept by the caller, not posted.
         state.current = null;
         if (alive.current) setSending(null);
-        if (alive.current) onReady({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds, anonymous: false, subject });
+        if (alive.current) onReady({ clipId: st.clipId, tokenId: st.tokenId, key: take.key, seconds: take.seconds, anonymous: false });
         return;
       }
-      if (!mayWrite()) throw new Error("STALE_TAB");
+      if (canWrite && !canWrite()) throw new WrongPersonError();
       setSending({ step: "post" });
       // The key belongs to the exact body: the same recording sent unnamed is a different request from the named one.
       const anonNow = !!anonSlot && anonRef.current;
@@ -267,10 +259,9 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
         return;
       }
       setSending(null);
-      if ((e instanceof Error && e.message === "STALE_TAB") || e instanceof WrongPersonError) {
-        // Another person is signed in: nothing more is sent. The survey screen shows its own notice; the other boxes say it here. The take stays on the screen.
-        if (canWrite) canWrite();
-        else setNote(staleLine());
+      if (e instanceof WrongPersonError) {
+        // Someone else is signed in in another tab: nothing more is sent, the recording stays on the screen.
+        if (canWrite) canWrite(); else setNote(OTHER_TAB_NOTE);
         return;
       }
       if (stage === "upload" && st.clipId) { void api.deleteVoiceClip(st.clipId, subject).catch(() => undefined); state.current = null; }
@@ -287,7 +278,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
     }
   }
 
-  // A survey answer is sent up as soon as the recording stops, so a reload finds it ready.
+  // Survey answers: sent up as soon as the recording stops, so a reload finds it ready.
   const heldKey = useRef<string | null>(null);
   useEffect(() => {
     if (!onReady || !take || phase !== "preview" || take.seconds > maxSeconds + 0.5 || heldKey.current === take.key) return;

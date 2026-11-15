@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { peaksFromLevels, tokenFor, refusalText, durationLabel, voicePriceMilli, freeCovers } from "@/features/speak/logic";
 import { voiceCostMilli } from "@/lib/shared/text-price";
-import { currentOwner, clearDraft, loadDraft, saveDraft } from "@/features/speak/draft";
+import { clearDraft, loadDraft, saveDraft, currentOwner } from "@/features/speak/draft";
 import { SpeakScreen } from "@/features/speak/SpeakScreen";
 import { ApiError } from "@/lib/api/client";
 import type { ExtraVoiceOffer, ExtraVoiceToken } from "@/lib/api/speak";
@@ -59,7 +59,7 @@ describe("draft store", () => {
     await clearDraft(currentOwner());
     expect(await loadDraft(currentOwner())).toBeNull();
     const blob = new Blob(["abc"], { type: "audio/webm" });
-    await saveDraft(currentOwner(), { questionId: "q1", blob, mime: "audio/webm", seconds: 4, peaks: [1, 2], key: "k", savedAt: 1 });
+    await saveDraft({ questionId: "q1", blob, mime: "audio/webm", seconds: 4, peaks: [1, 2], key: "k", savedAt: 1 }, currentOwner());
     const d = await loadDraft(currentOwner());
     expect(d?.questionId).toBe("q1");
     expect(d?.seconds).toBe(4);

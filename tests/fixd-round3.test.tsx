@@ -32,7 +32,7 @@ vi.mock("@/lib/api/speak", async (orig) => ({ ...(await orig<typeof import("@/li
 import { WriteScreen } from "@/features/talk/WriteScreen";
 import { VoiceReplySheet } from "@/features/talk/VoiceReply";
 import { Outbox } from "@/features/speak/Outbox";
-import { currentOwner, clearDraft, loadDraft, saveDraft, type Draft } from "@/features/speak/draft";
+import { clearDraft, loadDraft, saveDraft, type Draft, currentOwner } from "@/features/speak/draft";
 import { sendKeptRecording } from "@/features/speak/outbox";
 import { ApiError } from "@/lib/api/client";
 
@@ -174,7 +174,7 @@ describe("M2: two callers on one kept recording post it once", () => {
   it("the slower caller takes the lock after the first finished, looks again, finds nothing, and sends nothing", async () => {
     Object.defineProperty(navigator, "locks", { value: fakeLocks(), configurable: true });
     const d = draft();
-    await saveDraft(currentOwner(), d);
+    await saveDraft(d, currentOwner());
     // Both read the kept recording first (it was there), then race for the lock.
     const stillKept = async () => (await loadDraft(currentOwner()))?.key === d.key;
     const onPosted = async () => { await clearDraft(currentOwner()); };
@@ -197,7 +197,7 @@ describe("M2: two callers on one kept recording post it once", () => {
 
   it("the outbox shows nothing for the second caller", async () => {
     const d = draft();
-    await saveDraft(currentOwner(), d);
+    await saveDraft(d, currentOwner());
     // Another tab posts it and clears it just after this one read it: loadDraft(currentOwner()) inside the lock then finds nothing.
     const real = speak.getAllowance.getMockImplementation();
     speak.getAllowance.mockImplementation(async (...a: unknown[]) => { await clearDraft(currentOwner()); return real ? real(...a) : { freePostsRemaining: 5, costs: COSTS, extraVoiceTokens: [] }; });
@@ -241,7 +241,7 @@ describe("M3: a voice reply sent offline is really kept", () => {
     render(<Outbox />);
     await screen.findByText(/Your saved voice reply was posted/);
     expect(talk.createVoiceReply).toHaveBeenCalledTimes(1);
-    expect(talk.createVoiceReply.mock.calls[0]).toEqual(["a1", "DISAGREE", "clip1", kept!.key, undefined, true, "u1"]);
+    expect(talk.createVoiceReply.mock.calls[0]).toEqual(["a1", "DISAGREE", "clip1", kept!.key, undefined, true]);
     expect(speak.createVoiceClip.mock.calls[0][0]).toMatchObject({ purpose: "REPLY" });
     expect(speak.createVoiceAnswer).not.toHaveBeenCalled();
     expect(await loadDraft(currentOwner())).toBeNull();

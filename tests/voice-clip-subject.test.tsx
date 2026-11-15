@@ -22,7 +22,7 @@ vi.mock("@/lib/audio-ref/recorder", () => ({
 
 import { VoiceBox } from "@/features/speak/VoiceBox";
 import { SpeakScreen } from "@/features/speak/SpeakScreen";
-import { currentOwner, clearDraft } from "@/features/speak/draft";
+import { currentOwner, clearDraft, leaveTab } from "@/features/speak/draft";
 
 const KEY = "voices-web-session";
 const jwt = (sub: string, n: string) => `h.${btoa(JSON.stringify({ sub, n })).replace(/=+$/, "")}.s`;
@@ -40,8 +40,8 @@ const config = { currency: "NGN", freePosts: 10, voiceFreeSeconds: 10, costs: { 
 let log: string[] = [];
 let refreshGate: Promise<void> = Promise.resolve();
 let rejectAt: "create" | "complete" | null = null;
-beforeEach(() => {
-  log = []; puts.length = 0; refreshGate = Promise.resolve(); rejectAt = null;
+beforeEach(async () => {
+  leaveTab(); await clearDraft("userA"); await clearDraft("userB"); await clearDraft(null); log = []; puts.length = 0; refreshGate = Promise.resolve(); rejectAt = null;
   URL.createObjectURL = () => "blob:x"; URL.revokeObjectURL = () => undefined;
   window.localStorage.clear(); window.sessionStorage.clear();
   vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q, addEventListener: () => undefined, removeEventListener: () => undefined }));

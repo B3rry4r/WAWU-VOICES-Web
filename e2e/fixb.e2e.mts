@@ -205,7 +205,7 @@ try {
     await page.waitForTimeout(700);
     await page.getByRole('button', { name: /^Send/ }).click();
     await page.waitForURL((u) => u.pathname.startsWith('/join') || u.pathname.includes('sign'), { timeout: 20000 });
-    const tag = await page.evaluate(() => new Promise((res, rej) => { const r = indexedDB.open('voices-speak', 1); r.onsuccess = () => { const g = r.result.transaction('drafts').objectStore('drafts').get('current'); g.onsuccess = () => res(g.result?.tag ?? null); g.onerror = () => rej(g.error); }; r.onerror = () => rej(r.error); }));
+    const tag = await page.evaluate(() => new Promise((res, rej) => { const r = indexedDB.open('voices-speak', 1); r.onsuccess = () => { const g = r.result.transaction('drafts').objectStore('drafts').getAll(); g.onsuccess = () => res(g.result.find((y: any) => y && y.blob)?.tag ?? null); g.onerror = () => rej(g.error); }; r.onerror = () => rej(r.error); }));
     assert.deepEqual(tag, { pick: 'REQUEST_VERIFIED', sourceName: 'Lagos State Emergency Agency', sourceUrl: '' });
     await ctx.close();
   });

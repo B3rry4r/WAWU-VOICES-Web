@@ -12,6 +12,7 @@ import { useDesktop, useSignedIn } from "./hooks";
 import { postDraftForPurchase, type DraftOutcome } from "./post-draft";
 import { isFinal, runReturn, type ReturnState } from "./payment-return";
 import { SignInNeeded } from "./ui";
+import { openedFor } from "@/features/speak/draft";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -170,7 +171,7 @@ export function PaymentDoneScreen() {
   useEffect(() => {
     if (state.kind !== "success" || state.payment.kind !== "UNITS") return undefined;
     const check = () => {
-      const q = findPostedFor(paymentId);
+      const q = findPostedFor(paymentId, openedFor());
       if (q) setDraft((cur) => (cur?.status === "posted" ? cur : { status: "posted", questionId: q }));
     };
     window.addEventListener("storage", check);
@@ -318,7 +319,7 @@ export function PaymentDoneScreen() {
     rows.push(["Payment reference", <CopyRef key="ref" full={paymentRef(p)} />]);
   }
   const qd = attemptRef.current?.draftQuestionId;
-  const hold = !!qd && !!getDraft(qd);
+  const hold = !!qd && !!getDraft(qd, openedFor());
   const canSwitch = p?.kind === "UNITS" && state.kind !== "mismatch";
   return (
     <Shell onClose={close}>

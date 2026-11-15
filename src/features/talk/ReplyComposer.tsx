@@ -10,6 +10,7 @@ import { OWN_NAMELESS_NOTE, useReplyAnon } from "./reply-anon";
 import { InView } from "@/components/InView";
 import { failText, isOutOfPosts, needsNewKey, postPrice, saveTyped, typedDraft, unitsText, uuidKey } from "./lib";
 import { textLimit } from "./textLimit";
+import { openedFor, OTHER_TAB_NOTE, signedInAsSomeoneElse } from "@/features/speak/draft";
 
 const INTENT_OF: Record<string, IntentKind> = { AGREE: "agree", DISAGREE: "disagree", EXPERIENCE: "experience" };
 const STANCE_OF: Record<IntentKind, ReplyStance> = { agree: "AGREE", disagree: "DISAGREE", experience: "EXPERIENCE" };
@@ -30,7 +31,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
   const slot = `r:${aid}`;
   // V-FIX-D: "Post without my name". send() reads anon.ref at the moment it sends, never a value captured when an earlier try began.
   const anon = useReplyAnon(aid);
-  const [text, setText] = useState(() => typedDraft(slot));
+  const [text, setText] = useState(() => typedDraft(slot, openedFor()));
   const [intent, setIntent] = useState<IntentKind | null>(stance ? INTENT_OF[stance] : null);
   const c = allow.costs;
   const price = postPrice(text, allow);
@@ -38,6 +39,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
     if (busy.current) return;
     const body = text.trim();
     if (!body) return;
+    if (signedInAsSomeoneElse(openedFor())) return setMsg(OTHER_TAB_NOTE); // someone else is signed in on another tab: nothing is sent under their name
     const st = intent ? STANCE_OF[intent] : null;
     if (!st) return setMsg("Pick how you are replying: I agree, I disagree or My experience.");
     busy.current = true;
@@ -48,14 +50,14 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
     if (!key.current || key.current.text !== body || key.current.anon !== anonNow || key.current.st !== st) key.current = { text: body, anon: anonNow, st, k: uuidKey() };
     try {
       await api.createReply(aid, st, body, key.current.k, anonNow);
-      saveTyped(slot, "");
+      saveTyped(slot, "", openedFor());
       anon.clear();
       key.current = null;
       setText("");
       setIntent(stance ? INTENT_OF[stance] : null);
       onPosted();
     } catch (e) {
-      if (isOutOfPosts(e)) { saveTyped(slot, body); onBuy(`/units/buy?from=${encodeURIComponent(`/q/${qid}/a/${aid}`)}`); return; }
+      if (isOutOfPosts(e)) { saveTyped(slot, body, openedFor()); onBuy(`/units/buy?from=${encodeURIComponent(`/q/${qid}/a/${aid}`)}`); return; }
       if (needsNewKey(e)) key.current = null; // the server refused the key as spent: the next tap carries a new one
       setMsg(failText(e));
     } finally {
@@ -71,7 +73,7 @@ export function ReplyComposer({ aid, qid, who, stance, allow, onPosted, onBuy, o
         maxChars={textLimit(c)}
         countChars={countChars}
         value={text}
-        onChange={(t) => { setText(t); saveTyped(slot, t); }}
+        onChange={(t) => { setText(t); saveTyped(slot, t, openedFor()); }}
         replyTo={who}
         intent={intent ?? undefined}
         onIntentChange={setIntent}

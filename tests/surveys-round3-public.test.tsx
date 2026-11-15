@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // V-SURVEYS round 3, public side: SKIP only for a real choice to leave and once; everything kept is the person's own; a ready voice answer is kept; the closed survey.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { leaveTab } from "@/features/speak/draft";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SurveyScreen } from "@/features/surveys/SurveyScreen";
@@ -13,7 +14,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back }), usePathna
 vi.mock("next/link", () => ({ default: ({ href, children, ...r }: { href: string; children: React.ReactNode }) => <a href={href} {...r}>{children}</a> }));
 
 const jwt = (sub: string) => `h.${btoa(JSON.stringify({ sub })).replace(/=+$/, "")}.s`;
-beforeEach(() => { push.mockClear(); back.mockClear(); signIn(jwt("userA")); });
+beforeEach(() => { leaveTab(); push.mockClear(); back.mockClear(); signIn(jwt("userA")); });
 afterEach(async () => { cleanup(); await new Promise((r) => setTimeout(r, 5)); vi.unstubAllGlobals(); window.localStorage.clear(); window.sessionStorage.clear(); });
 
 const opt = (id: string, label: string) => ({ id, label });
@@ -77,6 +78,7 @@ describe("N1: SKIP only for a real choice to leave, and once", () => {
     await waitFor(() => expect(events()).toEqual(["START", "SKIP"]));
     signOut();
     signIn(jwt("userB"));
+    leaveTab(); // a page load
     render(<SurveyScreen id="s1" />);
     await screen.findByText("Question 1 of 3");
     await waitFor(() => expect(events()).toEqual(["START", "SKIP", "START"]));
@@ -96,6 +98,7 @@ describe("N2: what is kept belongs to the person (and signing out clears nothing
     // round 4, ruling 3: signing out clears nothing; A's keys stay, under A
     expect(keys().sort()).toEqual(["wawu.survey.userA.s1.draft", "wawu.survey.userA.s1.started"]);
     signIn(jwt("userB"));
+    leaveTab(); // a page load
     render(<SurveyScreen id="s1" />);
     expect(await screen.findByText("Question 1 of 3")).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Cold drinks" }).getAttribute("aria-checked")).toBe("false");

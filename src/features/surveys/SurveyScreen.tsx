@@ -11,23 +11,25 @@ import { ApiError, WrongPersonError } from "@/lib/api/client";
 import { freshKey, needsNewKey, newKeyLine } from "@/lib/api/keys";
 import { deleteVoiceClip } from "@/lib/api/speak";
 import { answerSurvey, getSurvey, recordSurveyEvent, type Survey, type SurveyQuestionView } from "@/lib/api/surveys";
-import { useSameWho, useWhoNow, whoNow } from "./who";
+import { isSignedIn } from "@/lib/api/auth";
+import { openedFor, OTHER_TAB_NOTE, signedInAsSomeoneElse, type Owner } from "@/features/speak/draft";
+import { useSameWho } from "./who";
 import { aboutMinutes, surveySendFailText, clearDraft, clock, loadDraft, markSkipped, markStarted, recapLine, saveDraft, TEXT_MAX, toInputs, wasSkipped, wasStarted, type Given, type GivenByQuestion } from "./logic";
 
 /** The Sponsored Survey, one question at a time (Survey boards), then the Done screen. Answering is free; nothing here touches tokens or a free post. */
 export function SurveyScreen({ id }: { id: string }) {
-  // The tab knows who it belongs to: the person signed in when it loaded. Every write compares this with the session in storage (see who.ts).
-  const [who, setWho] = useState<string | null | undefined>(undefined);
-  useEffect(() => setWho(whoNow()), []);
+  // The tab's person is main's openedFor(), as on the record screen. Every write, restore and clear first checks nobody else is signed in (see who.ts).
+  const [who, setWho] = useState<Owner | undefined>(undefined);
+  const [signed, setSigned] = useState<boolean | null>(null);
+  useEffect(() => { setWho(openedFor()); setSigned(isSignedIn()); }, []);
   const same = useSameWho(who);
-  const signed = who === undefined ? null : who !== null;
   const load = useLoad<Survey | null>(async () => {
     if (!signed) return null;
     return getSurvey(id);
   }, [id, signed]);
 
   // Another tab signed someone else in (or out): nothing of this person is shown or sent, and nothing is kept or cleared.
-  if (same.stale) return <StaleTab />;
+  if (same.stale || (who !== undefined && signedInAsSomeoneElse(who))) return <StaleTab />;
   if (signed === null || load.state === "loading") return <SurveySkeleton />;
   if (!signed) {
     return (
@@ -56,17 +58,16 @@ export function SurveyScreen({ id }: { id: string }) {
   }
   const survey = load.data as Survey;
   if (survey.myStatus === "ANSWERED" || survey.questions.length === 0) return <Done survey={survey} recap={null} />;
-  return <Ask survey={survey} owner={who as string} check={same.check} />;
+  return <Ask survey={survey} owner={who ?? "unknown"} check={same.check} />;
 }
 
 function StaleTab() {
-  const signedOut = useWhoNow() === null;
   return (
     <Centre>
       <div data-testid="survey-stale" role="alert">
         <EmptyState
           icon="user"
-          title={signedOut ? "You are signed out in another tab. Reload to carry on." : "You are signed in as someone else in another tab. Reload to carry on."}
+          title={OTHER_TAB_NOTE}
           body="Nothing was sent. Your answers stay with the person who gave them."
           action="Reload"
           onAction={() => window.location.reload()}
@@ -132,8 +133,8 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
 
   // What a reload must bring back is written as it changes.
   useEffect(() => {
-    if (!finished.current) saveDraft(survey.id, { idx, given, anonymous, shareState, ageBand }, owner);
-  }, [survey.id, owner, idx, given, anonymous, shareState, ageBand]);
+    if (!finished.current && check()) saveDraft(survey.id, { idx, given, anonymous, shareState, ageBand }, owner);
+  }, [check, survey.id, owner, idx, given, anonymous, shareState, ageBand]);
 
   // SKIP is for a real choice to leave: Skip, Leave, Back with no answers, or a link away inside the app. A reload, a hidden tab, switching app and closing the tab send nothing.
   // At most once per survey per person per tab (the flag is in session storage, keyed by person), and leaving by any of these routes also removes the draft.
@@ -317,7 +318,7 @@ function Ask({ survey, owner, check }: { survey: Survey; owner: string; check: (
           onSendVoice={() => keep(given[q.id])}
           onRerecord={() => {
             const g = given[q.id];
-            if (g?.kind === "voice" && check()) void deleteVoiceClip(g.clipId).catch(() => undefined);
+            if (g?.kind === "voice" && check()) void deleteVoiceClip(g.clipId, owner).catch(() => undefined);
             const next = { ...given };
             delete next[q.id];
             setGiven(next);
