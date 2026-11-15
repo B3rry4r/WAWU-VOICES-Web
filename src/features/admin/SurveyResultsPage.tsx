@@ -1,6 +1,6 @@
 "use client";
 
-import { choiceShown, otherShown, underFloor } from "./survey-floor";
+import { TOO_FEW_LEFT, choiceShown, listHidden, otherShown, underFloor } from "./survey-floor";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Banner, Button, Dialog, EmptyState, Icon } from "@/components/vx";
@@ -278,6 +278,8 @@ function ReleasedStage({ r }: { r: SurveyReport }) {
                     </li>
                   ) : null}
                 </ul>
+              ) : listHidden(q) ? (
+                <p className="m-0 text-body text-ink-2" data-testid="list-too-few">{TOO_FEW_LEFT}</p>
               ) : q.kind === "TEXT" ? (
                 q.texts.length ? (
                   <ul className="m-0 flex list-none flex-col gap-2 p-0">
