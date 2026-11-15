@@ -56,7 +56,7 @@ export class NetworkError extends ApiError {
   }
 }
 
-/** A call that must go out only as one named person found that the sign-in in storage is someone else's (or nobody's). Nothing was sent. */
+/** A call that must go out only as one named person found that a DIFFERENT person is signed in now. Nothing was sent. Nobody signed in is not a refusal. */
 export class WrongPersonError extends Error {
   constructor() {
     super("The sign-in changed in another tab. Nothing was sent.");
@@ -76,6 +76,12 @@ export function tokenSubject(token: string | null): string | null {
   }
 }
 
+/** True only when a DIFFERENT person is signed in: the token has a subject (a string) and it is not `expect`. No token, or a token without a subject, is not someone else (main's rule). */
+export function isOtherPerson(token: string | null | undefined, expect: string): boolean {
+  const s = tokenSubject(token ?? null);
+  return s !== null && s !== "unknown" && s !== expect;
+}
+
 /** Who is signed in right now in this browser (the stored token's subject), or null when nobody is. */
 export function sessionSubject(): string | null {
   return tokenSubject(sessionStorage.getToken());
@@ -91,8 +97,9 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   /** Sent as the Idempotency-Key header (required on every money POST). */
   idempotencyKey?: string;
   /**
-   * Opt in: send only with the sign-in of this person (a token subject). Checked right before the first send and again before any
-   * retry after a refresh; on a mismatch nothing is sent and WrongPersonError is thrown. A refresh never
+   * Opt in: never send with the sign-in of a DIFFERENT person (a token subject). Checked right before the first send and again before any
+   * retry after a refresh; when another person is signed in nothing is sent and WrongPersonError is thrown. Nobody signed in is not a
+   * refusal: the call goes out as it does without this option (no bearer, the 401, the refresh attempt). A refresh never
    * overwrites or clears a sign-in that belongs to someone else (for every call, see doRefresh). Only meaningful with `authed`.
    */
   expectSubject?: string;
@@ -137,7 +144,7 @@ async function rotatedElsewhere(before: string): Promise<boolean> {
  * One refresh, as compare and set. It remembers the refresh token it started from (`current`) and writes the answer
  * only if storage still holds that same token. If someone else changed storage meanwhile (another tab of the same person
  * refreshed first, or another person signed in), the answer is dropped and `true` is returned: the caller then retries
- * with whatever is in storage now, and a call tied to one person (expectSubject) checks that sign-in is still theirs.
+ * with whatever is in storage now, and a call tied to one person (expectSubject) checks that no different person is signed in.
  * A refused refresh clears the shared session only if storage still holds the token it started from.
  */
 async function doRefresh(before: string, retried = false): Promise<boolean | null> {
@@ -213,7 +220,7 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   if (authed || token) {
     const t = token ?? sessionStorage.getToken();
     // Tied to one person: the token that goes out is the one checked, read once in the same step.
-    if (expectSubject !== undefined && !token && tokenSubject(t) !== expectSubject) throw new WrongPersonError();
+    if (expectSubject !== undefined && !token && isOtherPerson(t, expectSubject)) throw new WrongPersonError();
     if (t) headers.set("Authorization", `Bearer ${t}`);
   }
   const controller = new AbortController();
@@ -235,7 +242,7 @@ async function raw(path: string, opts: RequestOptions, isRetry = false): Promise
   if (typeof window !== "undefined" && !baseUrl) noteServerDate(res.headers?.get?.("date"), res.headers?.get?.("age"));
   if (res.status === 401 && authed && !token && !isRetry) {
     // Tied to one person: if the stored sign-in is no longer theirs, do not refresh with it, and leave it alone.
-    if (expectSubject !== undefined && tokenSubject(sessionStorage.getToken()) !== expectSubject) throw new WrongPersonError();
+    if (expectSubject !== undefined && isOtherPerson(sessionStorage.getToken(), expectSubject)) throw new WrongPersonError();
     if (!refreshing) refreshing = refreshSession().finally(() => { refreshing = null; });
     const ok = await refreshing;
     if (ok) return raw(path, opts, true);

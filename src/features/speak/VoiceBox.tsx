@@ -74,7 +74,8 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   /** Shows "Post without my name" under the take. The choice is kept under this slot (anon-pref) and is read when Send runs. */
   anonSlot?: string;
 }) {
-  const subject = openedFor() ?? undefined; // the tab's person: the clip calls go out only as them
+  // Pin the tab's person when the box opens (a guest tab follows a session only until it has been read); the calls read it again when they run.
+  useState(() => openedFor());
   const anonRef = useRef(false);
   const [anon, setAnon] = useState(false);
   useEffect(() => {
@@ -165,6 +166,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
   }
 
   async function waitReady(clipId: string) {
+    const subject = openedFor() ?? undefined; // read when used, so a guest tab that became a person's tab sends as them
     for (let i = 0; i < 90; i++) {
       const c = await api.getVoiceClip(clipId, subject);
       if (c.status === "READY") return;
@@ -208,6 +210,7 @@ export function VoiceBox({ purpose, maxSeconds, freeSeconds, freeLeft, tokens, h
     let st = state.current;
     if (!st || st.key !== take.key) st = state.current = { key: take.key };
     let stage: "create" | "upload" | "later" = "create";
+    const subject = openedFor() ?? undefined; // the tab's person, read now: the clip calls go out only as them
     try {
       if (!st.clipId) {
         const tok = purpose === "REPLY" ? tokenFor(tokens ?? [], take.seconds, freeSeconds, freeLeft) : undefined;
