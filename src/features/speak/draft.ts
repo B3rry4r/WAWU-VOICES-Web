@@ -186,7 +186,8 @@ export async function loadDraft(owner: Owner): Promise<Draft | null> {
   await claimGuest(owner);
   const d = (await idbGet(keyOf(owner))) ?? null;
   if (me !== null) {
-    for (const k of await idbKeys()) if (k.startsWith("rec:") && k !== keyOf(me) && k !== keyOf(null)) await idbDel(k);
+    // Only while the person this pass began for is still the one signed in: someone who signed in meanwhile (another tab) keeps theirs.
+    for (const k of await idbKeys()) { if (currentOwner() !== me) break; if (k.startsWith("rec:") && k !== keyOf(me) && k !== keyOf(null)) await idbDel(k); }
   }
   return d;
 }

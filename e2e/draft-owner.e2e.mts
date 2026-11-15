@@ -66,14 +66,6 @@ async function record(page: Page, ms = 1300) {
   await page.getByRole('button', { name: 'Stop recording' }).click();
   await sendBtn(page).waitFor();
 }
-// A tab's start-up look at the kept recordings (Outbox: loadDraft + sweep) is a run of IndexedDB steps. Under load it can still be running
-// when the script changes who is signed in or seeds the other person's recording; that pass (which started as A) would then remove it by the
-// "a signed-in person's load removes other people's recordings" rule. These two lines let the script wait until the pass is over. They only count.
-const IDB_COUNT = `(() => { const S = { pending: 0, keys: 0, last: performance.now() }; window.__idb = S;
-  const done = (r, k) => { r.addEventListener('success', () => { S.pending--; S.last = performance.now(); if (k) S.keys++; }); r.addEventListener('error', () => { S.pending--; S.last = performance.now(); }); return r; };
-  for (const n of ['get', 'getAll', 'getAllKeys', 'put', 'delete']) { const o = IDBObjectStore.prototype[n]; IDBObjectStore.prototype[n] = function (...a) { S.pending++; return done(o.apply(this, a), n === 'getAllKeys'); }; }
-  const oo = indexedDB.open.bind(indexedDB); indexedDB.open = (...a) => { S.pending++; return done(oo(...a)); }; })();`;
-const startupDone = (page: Page) => page.waitForFunction(() => { const S = (window as any).__idb; return !!S && S.keys >= 1 && S.pending === 0 && performance.now() - S.last > 300; }, null, { timeout: 60000, polling: 100 });
 const n = (calls: Call[], method: string, path: string, who?: string) => calls.filter((c) => c.method === method && c.path === path && (!who || c.who === who)).length;
 
 for (const w of [390, 1440]) {
@@ -289,9 +281,9 @@ for (const w of [390, 1440]) {
     assert.equal(bad.length, 0); assert.equal(before, after); assert.ok(before); await ctx.close();
   });
   await t(`R2c [${w}] A's tab goes Home, to the record screen inside the app after B signed in: still A's tab, refused`, async () => {
-    const { page, calls, ctx } = await open(w, { mood: false }); await ctx.addInitScript(IDB_COUNT);
-    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/`); await page.waitForTimeout(1500); await startupDone(page);
-    const t2 = await ctx.newPage(); await t2.goto(`${ORIGIN}/terms`); await startupDone(t2); await setPerson(t2, 'B'); await seed(t2, { owner: 'B', key: 'b-key', queued: false });
+    const { page, calls, ctx } = await open(w, { mood: false });
+    await page.goto(`${ORIGIN}/terms`); await setPerson(page, 'A'); await page.goto(`${ORIGIN}/`); await page.waitForTimeout(1500);
+    const t2 = await ctx.newPage(); await t2.goto(`${ORIGIN}/terms`); await setPerson(t2, 'B'); await seed(t2, { owner: 'B', key: 'b-key', queued: false });
     const before = await hashOf(t2);
     await page.getByText('Speak', { exact: true }).locator('visible=true').first().click(); await page.getByRole('button', { name: 'Start recording' }).waitFor({ timeout: 8000 });
     await page.locator('a[href="/"]:visible').first().click().catch(() => undefined); await page.waitForTimeout(500);
