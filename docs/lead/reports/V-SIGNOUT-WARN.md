@@ -33,3 +33,20 @@ Record screen unchanged: `e2e/draft-owner.e2e.mts` (both widths) all 38 ok (the 
 - jsdom has no IndexedDB, so the unit tests use a small stand-in store; the real IndexedDB is covered by the browser run.
 - The check is a quick storage read, so on a very slow device the tap takes a moment before signing out. A sign-out in another tab cannot be warned about (as ordered).
 - The commit trailers use the session attribution given in this session's instructions, not the one in the order text.
+
+## Round 2 (fixes for the check's 2 HIGH and 2 MEDIUM)
+Merged `origin/main` (eefa0a4) first, as a merge commit.
+
+1. HIGH 1, storage that never answers. The 1 second limit is one constant, `CHECK_MS`, in the hook (`useSignOutConfirm.tsx:8`, used in `ask`), not in `hasKeptRecording`: the hook owns how long the person waits, and the read stays a plain read. No answer in time counts as "no recording" and signs out as before. A late answer does nothing (it is settled once, and the hook ignores it after unmount).
+2. HIGH 2, "Sign out anyway" on someone else. The hook remembers who the warning was for (`useSignOutConfirm.tsx:37`). On "Sign out anyway" it signs out only if that same person is still signed in (`useSignOutConfirm.tsx:49`); otherwise it closes the dialog and does nothing else. The no-dialog path is unchanged.
+3. MEDIUM 3, a take held only by the page. `hasKeptRecording` now also says yes for this person's fresh take in the in-page `memory` map (`draft.ts:206`). Still read-only. `git diff origin/main -- src/features/speak` is only `hasKeptRecording` (12 lines).
+4. MEDIUM 4, nothing shows while waiting. The hook returns `checking`; the three Sign out buttons use the `Button` `loading` prop (`SettingsPage.tsx:196`, `SettingsPage.tsx:257`, `DeletionPending.tsx:66`). That disables the button and shows the usual busy spinner, so a second tap does nothing.
+
+Failures on bfe4953 (new tests a to d, same test file): a "expected token to be null" (still signed in after 2.5 s); b "expected null to be Bola's token" (the other person was signed out); d "expected false to be true" (button not disabled while waiting); c "Unable to find role=dialog". All four pass now.
+
+Browser (built app, 390 and 1440), `e2e/signout-warn.e2e.mts`: all 6 ok. HIGH 1: IndexedDB `open` never answers, signed out after about 1050 ms, button busy while waiting, no dialog. HIGH 2: Alice's dialog open, Bob signs in in tab 2 with a kept recording, "Sign out anyway": Bob still signed in, no sign-out call, keys before and after both `rec:A`, `rec:B`. The everyday flow (record, Settings, Sign out, dialog, Go back, Send: 1 clip, 1 post; Sign out anyway: signed out; nothing recorded: at once) passes at both widths.
+Other browser runs: `e2e/draft-owner.e2e.mts` 37 of 38 ok at both widths together; the one miss is case "4" at 1440, the known script-timing miss. `e2e/surveys-r9.e2e.mts`: ALL PASSED 6.
+
+Gates: `tsc --noEmit` 0 errors; `next lint` no warnings or errors; `next build` ok; `vitest run` exit 0 three times (156 files, 1591 tests each time).
+
+Could not prove: a real browser whose IndexedDB `open` hangs (a stub stands in); the page-held take (finding 3) is covered by a unit test only, not in a browser; Deletion pending in a browser (unit test only).
