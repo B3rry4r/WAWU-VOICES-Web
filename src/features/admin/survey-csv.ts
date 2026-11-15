@@ -1,4 +1,4 @@
-import { choiceShown, otherShown, underFloor } from "./survey-floor";
+import { TOO_FEW_LEFT, choiceShown, listHidden, otherShown, underFloor } from "./survey-floor";
 import type { SurveyReport } from "@/lib/api/admin-surveys";
 
 /** One CSV cell. Quotes are doubled; a cell that a spreadsheet could read as a formula gets a leading apostrophe. */
@@ -61,6 +61,8 @@ export function reportToCsv(r: SurveyReport): string {
       } else if (q.kind === "SINGLE_CHOICE") {
         for (const o of q.options) { const on = choiceShown(o, r.minGroupSize ?? 20); row("Choice", q.prompt, o.label, on ? o.count : "hidden", on ? o.share : null); }
         if (q.other && otherShown(q.other, r.minGroupSize ?? 20)) row("Choice", q.prompt, q.other.label, q.other.count, q.other.share);
+      } else if (listHidden(q)) {
+        row("Note", q.prompt, TOO_FEW_LEFT);
       } else if (q.kind === "TEXT") {
         for (const x of q.texts) row("Free answer", q.prompt, scrub(x));
       } else {
