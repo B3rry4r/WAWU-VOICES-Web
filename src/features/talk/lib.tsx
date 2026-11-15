@@ -156,6 +156,24 @@ export function saveTyped(slot: string, text: string, person?: Owner): boolean {
   writePeopleTyped(all);
   return !typedBlocked;
 }
+/** The held post for this question is recorded as posted: drop the typed words that were its text, so the write box opens empty.
+ *  Only this person's own words, only when they are still those words (newer words stay), and nothing is claimed or moved from main's table. */
+export function forgetPostedWords(slot: string, body: string, person?: Owner): void {
+  const same = (t: unknown) => typeof t === "string" && t.trim() === body.trim();
+  if (person === undefined || person === null) {
+    try {
+      const t = readJson<Record<string, string>>(TYPING);
+      if (same(t[slot])) { delete t[slot]; window.localStorage.setItem(TYPING, JSON.stringify(t)); }
+    } catch { /* ignore */ }
+    return;
+  }
+  const all = readPeopleTyped();
+  const mine = all[person];
+  if (!mine || !same(mine[slot]?.t)) return;
+  delete mine[slot];
+  if (!Object.keys(mine).length) delete all[person];
+  writePeopleTyped(all);
+}
 /** App start: typed words kept more than 7 days are removed, whoever's they are. */
 export function sweepOldTyped(now = Date.now()): void {
   const all = readPeopleTyped();
