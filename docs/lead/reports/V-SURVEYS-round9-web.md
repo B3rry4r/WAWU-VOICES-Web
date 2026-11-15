@@ -57,3 +57,30 @@ Diff against main on the guarded paths: 4 files, 76 insertions, 34 deletions, 10
 - A survey tab flips to the stale notice as soon as the other tab's storage event arrives, so "A taps record" on a flipped tab is not possible; my case checks that nothing goes out after the flip.
 - A real sign-in page, real phones, Safari, a browser restart. The sign-in is a stub written into storage; guest "sign in" is the stub too.
 - The old `fixd`, `fixb`, `anon` scripts were not re-run.
+
+## Round 9 fix 1: a person who is alone never sees the someone-else line
+
+Cause (as the check said): `raw()` in `client.ts` refused when `tokenSubject(t) !== expectSubject`, which is also true when no token is stored.
+
+### Lines changed
+- `src/lib/api/client.ts`: new `isOtherPerson(token, expect)` (true only when the token has a string subject that differs from `expect`; no token, no subject or a subject that is not a string is false). Used at both places in `raw()`: before the first send (was line 216) and before the retry after a 401 (was line 238). `WrongPersonError` and `expectSubject` doc comments say "nobody signed in is not a refusal". `doRefresh` comment reworded. `tokenSubject`, `sessionSubject`, `asPerson`, the compare-and-set refresh are untouched. No other file compares subjects (the survey screen uses main's `signedInAsSomeoneElse`; `asPerson` only passes the subject on to `apiFetch`).
+- `src/features/speak/VoiceBox.tsx`: `subject` is read when used (`openedFor()` inside `send` and `waitReady`) and not at render. The box also reads `openedFor()` once when it opens, so the tab's person is pinned at that moment (a bare read at Send would let a guest box follow B, found by `voice-clip-subject` "B is already signed in when A taps Send").
+
+### Tests
+- Added `tests/sender-check-nobody.test.tsx` (10 tests): `isOtherPerson` table; (1) A alone with nothing stored, and A's session removed while the call is on the wire: plain `ApiError`, no `WrongPersonError`, one send, no bearer; (2) B stored: `WrongPersonError`, nothing sent; (3) token without a subject, or a numeric subject: goes out with its bearer. Same three for a voice box (A signed out in another tab: the create-clip call goes out with no bearer and the line is never shown; B signed in: nothing goes out, line shown; a guest box that became A's sends as A) and for the outbox (`sendKeptRecording`: A alone, call goes out, answer is not the someone-else line; B: nothing goes out).
+- Changed lines in existing tests: none were needed. `voice-clip-subject`, `refresh-compare-and-set`, the survey tests and every test that exists on `origin/main` pass as they were. No test on main touched.
+
+### What main does for the same steps (built `origin/main`, same stub, 390 and 1440)
+A signed in, record screen, records (Send shown), A signed out in tab 2, tap Send: main sends `POST /voice-clips` with no bearer (the stub answers 401), no clip, no post, the someone-else line count is 0, the page stays on the record screen with the take. Tab 2 signs in B instead: main shows the line, sends nothing. This branch now does exactly the same: line 0 and one no-bearer `POST /voice-clips` for the sign-out; line shown and no call for B. (`e2e/surveys-r9-fix1.e2e.mts`, run on both builds.)
+Survey voice question (branch only): A signed out in tab 2 after the recording was sent up: line 0, the answer goes out with no bearer (the stub accepts it; a real server answers 401); B signed in: the line is shown, no call goes out, 0 answers and 0 clips as B.
+
+### Proof numbers
+- `tsc` 0 errors; `next lint` 0 warnings; `next build` ok (after joining main).
+- Join: main 53538d4 merged (merge commit). `talk/lib.tsx`, `units/post-draft.ts`, `tests/paid-post-box.test.tsx`, `e2e/paid-post-box.e2e.mts` are main's exactly (no diff against main).
+- `vitest run`: 152 files, 1560 of 1560, exit 0, 0 unhandled errors, 3 runs.
+- Browser: `e2e/draft-owner.e2e.mts` unchanged 38 of 38 (both widths); `surveys-r9.e2e` 6 of 6; `round7.e2e` 14 of 14; `surveys-r9-fix1` as above.
+
+### Could not prove
+- The survey voice question with the session removed uses a stub that accepts a response without a bearer, so what a real server returns there is not shown.
+- The outbox with the session removed is proven in vitest, not in a browser.
+- Not re-run after the join: `surveys.e2e` (5 known VIEW failures from before) and the old `fixd` scripts.
