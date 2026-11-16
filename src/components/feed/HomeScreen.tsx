@@ -68,6 +68,9 @@ export function HomeScreen() {
   const { home: h, flash, trending, ad, audioAd, survey, firstName, suspended, answered } = load.data;
   const q = h.dailyQuestion;
   const go = (path: string) => () => router.push(path);
+  const shown = h.trending.slice(0, 5);
+  // The server may fill the block from other open questions when today's has few voices: the desktop heading says "today's question" only when every card is from it.
+  const sameQuestion = !!q && shown.every((a) => a.questionId === q.id);
   const talk = q ? go(`/q/${q.id}`) : undefined;
 
   return (
@@ -121,17 +124,17 @@ export function HomeScreen() {
         {h.trending.length ? (
         <Section
           className="order-6 dt:order-6"
-          title={<><span className="dt:hidden">Trending answers</span><span className="hidden dt:inline">Top voices on today’s question</span></>}
+          title={sameQuestion ? <><span className="dt:hidden">Trending answers</span><span className="hidden dt:inline">Top voices on today’s question</span></> : "Trending answers"}
           aside={
-            q ? (
+            q && voicesOf(q) > 0 ? (
               <TextLink href={`/q/${q.id}`}>
-                <span className={voicesOf(q) > 0 ? "dt:hidden" : undefined}>See all</span>
-                {voicesOf(q) > 0 ? <span className="hidden dt:inline">{`See all ${shortCount(voicesOf(q))}`}</span> : null}
+                <span className="dt:hidden">See all</span>
+                <span className="hidden dt:inline">{`See all ${shortCount(voicesOf(q))}`}</span>
               </TextLink>
             ) : undefined
           }
         >
-          <Answers items={h.trending.slice(0, 5)} signedIn={signedIn} />
+          <Answers items={shown} signedIn={signedIn} questionId={q?.id ?? null} />
         </Section>
         ) : null}
 

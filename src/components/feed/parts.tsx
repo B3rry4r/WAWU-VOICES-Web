@@ -57,7 +57,7 @@ function OpenOnTap({ questionId, questionText, children }: { questionId: string;
 }
 
 /** A list of voice cards (Home, a category, search). Each is the conversation page's own card, so every control works in place. */
-export function Answers({ items, unfolded, signedIn }: { items: Answer[]; unfolded?: boolean; signedIn?: boolean | null }) {
+export function Answers({ items, unfolded, signedIn, questionId }: { items: Answer[]; unfolded?: boolean; signedIn?: boolean | null; /** A list that may mix questions (Home): a card from any other question than this one says which question it answers, as Profile does ("On:"). Omit it and no card does. */ questionId?: string | null }) {
   const [toast, push] = useToast();
   const own = useSignedIn();
   const known = signedIn ?? own;
@@ -70,7 +70,16 @@ export function Answers({ items, unfolded, signedIn }: { items: Answer[]; unfold
           signedIn={!!known}
           push={push}
           unfolded={unfolded && a.kind === "VOICE" ? true : undefined}
-          frame={(card) => <OpenOnTap questionId={a.questionId} questionText={a.questionText}>{card}</OpenOnTap>}
+          frame={(card) => (
+            <OpenOnTap questionId={a.questionId} questionText={a.questionText}>
+              {questionId !== undefined && a.questionId !== questionId && a.questionText ? (
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-[6px]">
+                  <Link data-testid="on-question" href={`/q/${a.questionId}`} className="block max-w-full truncate px-1 text-caption text-[var(--ink-2)] no-underline hover:text-[var(--ink)] hover:underline hover:underline-offset-[3px]">On: {a.questionText}</Link>
+                  {card}
+                </div>
+              ) : card}
+            </OpenOnTap>
+          )}
         />
       ))}
       {toast}
