@@ -1,6 +1,46 @@
-VERDICT: FIX
+VERDICT: MERGE
 
-# Check of V-HOME-NEVER-EMPTY (web)
+# Round 2: re-check at a058b8b
+
+Head checked: `origin/v/home-never-empty` at a058b8b. I built it and `origin/main` (8851c92) in clean scratch copies and ran them on my own ports against my own stub. No live service called. Both of the builder's answers hold. No new finding.
+
+## 1. The diff (`git diff d3a737d origin/v/home-never-empty`)
+- Product: one line, `src/components/feed/parts.tsx:76`, the "On:" wrapper `grid gap-[6px]` becomes `grid grid-cols-[minmax(0,1fr)] gap-[6px]`. Nothing else under `src/` changed (so `src/features/speak/` is still untouched).
+- Tests: only the builder's own two files changed (`tests/home-never-empty.test.tsx`, `tests/fixtures/home-trending-today.html`). No existing test edited. The rest is the builder's report and two pictures under `docs/`.
+
+## 2. MEDIUM 1 (red test): fixed
+- `npx vitest run`, twice: 157 files passed, 1595 tests passed, 0 failed, exit 0 both times.
+- The test now finds the block by its heading text (`trendingBlock()`) and checks the html holds "Trending answers", "Body of voice1" and "Body of voice2". The fixture is now the real block (1 mention of "Trending answers").
+- The fixture is what main writes: in a clean copy of `origin/main` I ran the new test file with `WRITE_FIXTURE=1` and the file came out byte for byte the same as the fixture on the branch (`cmp` says identical).
+- It goes red on one character: fixture "Body of voice2" changed to "voice3" gives 1 failed, 3 passed; put back, 4 passed. In the product, `gap-3` changed to `gap-4` at `parts.tsx:65` (the list inside the block) gives 1 failed, 3 passed; put back, 4 passed. (Both changes were in my scratch copy only.)
+- No longer depends on the day: with the machine date moved 0, +1 and +30 days (a preload that shifts `Date`; I proved it reaches the test by printing 2026-12-16 inside vitest at +30), the file passes 4 of 4 each time. For contrast the old test from d3a737d failed 1 of 4 at +0 and at +30.
+
+## 3. MEDIUM 2 (card to the screen edge): fixed
+Measured with Chromium, light, my stub. Reference = `origin/main` build, written card and voice card from today's question. New build: written and voice card from another question, from today's question, and with a 200-character question (written and voice). Left edge, right edge and farthest edge inside the card:
+
+| width | main written / voice | new: all 5 kinds of card |
+|---|---|---|
+| 360 | 16 to 344, farthest 336 | 16 to 344, farthest 336 (5 of 5 equal) |
+| 390 | 16 to 374, farthest 366 | 16 to 374, farthest 366 (5 of 5 equal) |
+| 1440 | 354 to 994, farthest 986 | 354 to 994, farthest 986 (5 of 5 equal) |
+
+- 15 of 15 cards equal main's edges; 0 failing. (Before the fix the voice card was 16 to 360 at 360.)
+- No sideways scroll at 360, 390, 1440 (page width equals window width).
+- The "On:" line with a 200-character question: one line (height 18 px), cut with an ellipsis, right edge 344, 374, 994 = the column's edge, so it widens nothing.
+- No console errors in the new build. Picture: `docs/lead/reports/verify-home-never-empty/r2-edge-360-new.png` (compare with `edge-360-branch.png` and `edge-360-main.png` from round 1).
+
+## Same as today again (16 cells)
+2 cards, and 3 admin cards + 2; signed in and guest; 390 and 1440; light and dark, new head against main: block outerHTML identical 16 of 16; full-page screenshots byte-identical 16 of 16; whole page identical 16 of 16 once script tags (build hashes only) are set aside.
+
+## 4. Gates
+`npx tsc --noEmit`: 0 errors. `npx next lint`: no warnings or errors. `npx next build`: passed. `npx vitest run`: 1595 of 1595, twice.
+
+## Not re-run
+The rest of round 1 (controls on the right card, record screen, 422 case, e2e) was not repeated: the product change is one class. The round 1 text below is for the earlier head d3a737d.
+
+---
+
+# Round 1: check of d3a737d (superseded by Round 2 for the two MEDIUMs)
 
 Branch checked: `v/home-never-empty` at d3a737d. Built (`npx next build`) and run (`npx next start`) on my own ports, next to a build of `origin/main` (8851c92). API always my own stub in the browser; no live service called, nothing sent to usevoices.com.
 
