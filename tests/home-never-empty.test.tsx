@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Home's trending block is never empty: it draws what the Hub sends (maybe from other open questions) and names a card's question when it is not today's.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 let trending: unknown[] = [];
@@ -37,11 +37,14 @@ import { HomeScreen } from "@/components/feed/HomeScreen";
 const base = { id: "x", questionId: "q1", questionText: question.text, kind: "TEXT", body: "", createdAt: "2026-11-14T10:00:00Z", labels: [], likeCount: 0, iLiked: false, replyCount: 0, reactionCount: 0, reactionBreakdown: [] };
 const post = (handle: string, over: Record<string, unknown> = {}) => ({ ...base, id: `a-${handle}`, body: `Body of ${handle}`, author: { id: `u-${handle}`, handle, displayName: handle, avatarUrl: null, admin: false }, ...over });
 const other = { questionId: "q2", questionText: "Is fuel too dear?" };
-const block = () => document.querySelector("section h2")?.closest("section")?.outerHTML ?? "";
-const lines = () => [...document.querySelectorAll("[data-testid=on-question]")] as HTMLAnchorElement[];
+// The Trending block is found by its heading text, never by position (the top question card is a section too).
+const trendingBlock = (): HTMLElement | null => [...document.querySelectorAll("section")].find((s) => /Trending answers/.test(s.querySelector("h2")?.textContent ?? "")) as HTMLElement | undefined ?? null;
+const block = () => within(trendingBlock()!);
+const lines = () => [...trendingBlock()!.querySelectorAll("[data-testid=on-question]")] as HTMLAnchorElement[];
 
-beforeEach(() => { window.localStorage.clear(); window.sessionStorage.clear(); today = question; });
-afterEach(() => cleanup());
+// A fixed date for the whole file, so "Closes in N days" and every age never depend on the day the test runs. Only Date is faked: waitFor keeps its real timers.
+beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-14T12:00:00Z")); window.localStorage.clear(); window.sessionStorage.clear(); today = question; });
+afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("Home trending block is never empty", () => {
   it("every card from today's question: the block is the one drawn before this change", async () => {
@@ -49,27 +52,30 @@ describe("Home trending block is never empty", () => {
     render(<HomeScreen />);
     await screen.findByText("Body of voice2");
     expect(lines()).toHaveLength(0);
-    const html = block();
+    const html = trendingBlock()!.outerHTML;
+    expect(html).toContain("Trending answers");
+    expect(html).toContain("Body of voice1");
+    expect(html).toContain("Body of voice2");
     const file = "tests/fixtures/home-trending-today.html";
-    // The fixture was written by the code before this change (WRITE_FIXTURE=1 on origin/main 8851c92).
+    // The fixture was written by the code before this change (WRITE_FIXTURE=1 in a clean worktree of origin/main 8851c92, with this same file and the fixed clock).
     if (process.env.WRITE_FIXTURE) writeFileSync(file, html);
     else expect(html).toBe(readFileSync(file, "utf8"));
-    expect(screen.getByText("Trending answers")).toBeTruthy();
-    expect(screen.getByText("Top voices on today’s question")).toBeTruthy();
-    expect(screen.getByText("See all")).toBeTruthy();
+    expect(block().getByText("Trending answers")).toBeTruthy();
+    expect(block().getByText("Top voices on today’s question")).toBeTruthy();
+    expect(block().getByText("See all")).toBeTruthy();
   });
 
   it("mixed cards: names the question of a card from another one, links to it, keeps the Trending heading", async () => {
     trending = [post("admin1", { ...other }), post("voice1"), post("voice2", { questionId: "q3", questionText: "Who won?" })];
     render(<HomeScreen />);
     await screen.findByText("Body of voice2");
-    expect(screen.queryByText("Top voices on today’s question")).toBeNull();
-    expect(screen.getByText("Trending answers")).toBeTruthy();
+    expect(block().queryByText("Top voices on today’s question")).toBeNull();
+    expect(block().getByText("Trending answers")).toBeTruthy();
     const l = lines();
     expect(l.map((a) => a.textContent)).toEqual(["On: Is fuel too dear?", "On: Who won?"]);
     expect(l.map((a) => a.getAttribute("href"))).toEqual(["/q/q2", "/q/q3"]);
-    expect(screen.getAllByText("See all").length).toBe(1);
-    expect(document.querySelectorAll(".vx-answer").length).toBe(3);
+    expect(block().getAllByText("See all").length).toBe(1);
+    expect(trendingBlock()!.querySelectorAll(".vx-answer").length).toBe(3);
   });
 
   it("today's question has 0 voices: no See all, Trending heading on desktop, the question line and its link", async () => {
@@ -77,9 +83,9 @@ describe("Home trending block is never empty", () => {
     trending = [post("admin1", { ...other }), post("voice1", { ...other })];
     render(<HomeScreen />);
     await screen.findByText("Body of voice1");
-    expect(screen.queryByText("See all")).toBeNull();
-    expect(screen.queryByText("Top voices on today’s question")).toBeNull();
-    expect(screen.getByText("Trending answers")).toBeTruthy();
+    expect(block().queryByText("See all")).toBeNull();
+    expect(block().queryByText("Top voices on today’s question")).toBeNull();
+    expect(block().getByText("Trending answers")).toBeTruthy();
     expect(lines()).toHaveLength(2);
     expect(lines()[0].getAttribute("href")).toBe("/q/q2");
   });
@@ -88,6 +94,7 @@ describe("Home trending block is never empty", () => {
     trending = [];
     render(<HomeScreen />);
     await screen.findByText(/Nigeria right now/);
+    expect(trendingBlock()).toBeNull();
     expect(screen.queryByText("Trending answers")).toBeNull();
     expect(screen.queryByText("See all")).toBeNull();
   });
