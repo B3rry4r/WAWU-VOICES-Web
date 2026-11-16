@@ -243,7 +243,7 @@ export function TalkCard({ answer, signedIn, freeReactions, onAllowance, push, t
     <>
       {/* LCH-02: the word sits above the card, as the MoodAnswers board draws it. */}
       {(() => {
-        const body = a.mood ? <div className="grid gap-[6px]"><MoodChip mood={a.mood} className="justify-self-start" />{cardEl}</div> : cardEl;
+        const body = a.mood ? <div className="grid grid-cols-[minmax(0,1fr)] gap-[6px]"><MoodChip mood={a.mood} className="justify-self-start" />{cardEl}</div> : cardEl;
         return frame ? frame(body) : body;
       })()}
       {shareNode}
