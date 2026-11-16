@@ -41,3 +41,27 @@ Only `tests/home-never-empty.test.tsx` and `tests/fixtures/home-trending-today.h
 - Can it fail: one character of the fixture changed in a scratch edit (`text-label` to `text-labe1`): the test went red. Put back: green. The change was not committed.
 - `npx vitest run` twice: exit 0 both times, 157 files, 1595 tests passed. `npx tsc --noEmit`: 0 errors. `npx next lint`: no warnings or errors.
 - Clock moved: `faketime` is not installed here. Instead a scratch setup file (not committed, deleted) moved the real clock +0, +1 and +30 days; the file passed 4 of 4 each time. Because the test fixes its own date, that run shows the file ignores the real date; it did not run the old broken version under the shift.
+
+## Round 3 (checker MEDIUM 2: a voice card from another question ran to the right edge at 360)
+Fix: `src/components/feed/parts.tsx` (the wrapper around the "On:" line and the card, about line 73) now has `grid-cols-[minmax(0,1fr)]`, so its column can shrink. `TalkCard.tsx` not touched.
+
+Measured in a built app against my own stub, Playwright, light. Numbers are left / right of the card, and the farthest right edge of anything inside it (px). Written and voice cards were identical in every row, so one pair is shown.
+
+| Build | Cards | Width | Card left / right | Farthest inside | Sideways scroll |
+|---|---|---|---|---|---|
+| origin/main | today's question | 360 | 16 / 344 | 336 | 0 |
+| origin/main | today's question | 390 | 16 / 374 | 366 | 0 |
+| origin/main | today's question | 1440 | 354 / 994 | 986 | 0 |
+| branch | today's question | 360, 390, 1440 | same as main in all three | same | 0 |
+| branch | another question | 360 | 16 / 344 | 336 | 0 |
+| branch | another question | 390 | 16 / 374 | 366 | 0 |
+| branch | another question | 1440 | 354 / 994 | 986 | 0 |
+| branch | another question, 200-character question | 360, 390, 1440 | same as above | same | 0 |
+
+The "On:" line is 18 px high (one line) in every case. With the 200-character question it is cut with an ellipsis and the card and column do not widen.
+
+Screenshots added: `home-other-voice-360.png`, `home-other-long-question-360.png` (360x740, scrolled to the block).
+
+Runs: `npx vitest run` exit 0, 157 files, 1595 tests passed. `npx tsc --noEmit` 0 errors. `npx next lint` no warnings or errors.
+
+Not proven: I did not rebuild the branch with the old wrapper to see the 360 fault myself; the fix is shown only by the "after" numbers. I did not take a main screenshot at 360.

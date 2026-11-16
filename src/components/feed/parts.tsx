@@ -73,7 +73,7 @@ export function Answers({ items, unfolded, signedIn, questionId }: { items: Answ
           frame={(card) => (
             <OpenOnTap questionId={a.questionId} questionText={a.questionText}>
               {questionId !== undefined && a.questionId !== questionId && a.questionText ? (
-                <div className="grid gap-[6px]">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-[6px]">
                   <Link data-testid="on-question" href={`/q/${a.questionId}`} className="block max-w-full truncate px-1 text-caption text-[var(--ink-2)] no-underline hover:text-[var(--ink)] hover:underline hover:underline-offset-[3px]">On: {a.questionText}</Link>
                   {card}
                 </div>
